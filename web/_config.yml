@@ -1,0 +1,5 @@
+theme: null
+plugins: []
+exclude:
+  - "*.md"
+  - SPECS

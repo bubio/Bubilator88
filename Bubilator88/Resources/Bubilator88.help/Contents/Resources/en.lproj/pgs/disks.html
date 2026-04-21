@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="Using Disks">
+    <meta name="description" content="Mount disk images, open supported archives, and create blank disks">
+    <meta name="keywords" content="disk, D88, mount, eject, drive, floppy, blank, archive, ZIP, LZH, CAB, RAR">
+    <meta name="robots" content="index">
+    <title>Using Disks</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>Contents</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 Help</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li><a href="disks.html">Using Disks</a></li>
+            <li><a href="cassette.html">Cassette Tape</a></li>
+            <li><a href="keyboard.html">Keyboard</a></li>
+            <li><a href="display.html">Display</a></li>
+            <li><a href="audio.html">Audio</a></li>
+            <li><a href="savestates.html">Save States</a></li>
+            <li><a href="controller.html">Game Controller</a></li>
+            <li><a href="shortcuts.html">Shortcuts</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="disks"></a>
+    <h1>Using Disks</h1>
+
+    <h2>Supported Formats</h2>
+    <p>Bubilator88 can open the following files:</p>
+    <ul>
+        <li><strong>D88</strong> disk images</li>
+        <li><strong>ZIP</strong>, <strong>LZH</strong>, <strong>CAB</strong>, and <strong>RAR</strong> archives
+            (when they contain D88 disk images)</li>
+    </ul>
+    <p>It also supports D88 files that contain multiple disk images.</p>
+    <div class="note">Some RAR variants need <code>unar</code>, <code>unrar</code>, or <code>7z</code> installed on your Mac. Direct 7z archive loading is not implemented.</div>
+
+    <h2>Mounting Disks</h2>
+    <table>
+        <tr><th>Menu</th><th>Shortcut</th></tr>
+        <tr><td><strong>Disk &gt; Drive 1 &gt; Mount...</strong></td><td><kbd>&#8984;1</kbd></td></tr>
+        <tr><td><strong>Disk &gt; Drive 2 &gt; Mount...</strong></td><td><kbd>&#8984;2</kbd></td></tr>
+        <tr><td><strong>Disk &gt; Drive 1&amp;2 &gt; Mount...</strong></td><td><kbd>&#8984;3</kbd></td></tr>
+    </table>
+    <h2>Multiple Images and Archives</h2>
+    <p>If the selected file contains multiple disk images, a picker sheet appears before mounting. After mounting, you can switch images from <strong>Disk &gt; Drive 1</strong> / <strong>Drive 2</strong> or from the status-bar drive menus.</p>
+    <p><strong>Drive 1&amp;2 &gt; Mount...</strong> assigns the first image to Drive 1 and the second image to Drive 2. If there is no second image, Drive 2 stays empty.</p>
+    <p>If an archive contains multiple disk files, you first choose which file to open.</p>
+
+    <h2>Creating Blank Disks</h2>
+    <p>Use <strong>Disk &gt; Create Blank Disk...</strong> (<kbd>&#8679;&#8984;N</kbd>) to create a formatted blank D88 image. After saving, the new disk is mounted automatically in Drive 1.</p>
+    <ul>
+        <li><strong>2D</strong> (320KB) — Single-sided double-density</li>
+        <li><strong>2DD</strong> (640KB) — Double-sided double-density (default)</li>
+        <li><strong>2HD</strong> (1.2MB) — Double-sided high-density</li>
+    </ul>
+
+    <h2>Ejecting and Recent Files</h2>
+    <p>Use <strong>Disk &gt; Drive 1 &gt; Eject</strong> or <strong>Disk &gt; Drive 2 &gt; Eject</strong> to remove a disk.</p>
+    <p><strong>Disk &gt; Recent Files</strong> stores up to 10 recently opened files. Choosing one mounts it again in <strong>Drive 1&amp;2</strong> mode.</p>
+
+    <p><a href="../index.html">Back to Bubilator88 Help</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>

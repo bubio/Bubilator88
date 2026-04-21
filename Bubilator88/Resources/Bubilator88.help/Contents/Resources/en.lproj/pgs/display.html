@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="Display">
+    <meta name="description" content="Window scaling, Video Filter, translation overlay, and screenshots">
+    <meta name="keywords" content="display, window, scale, Video Filter, scanline, xBRZ, CRT, fullscreen, AI Upscale, translation, screenshot">
+    <meta name="robots" content="index">
+    <title>Display</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>Contents</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 Help</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li><a href="disks.html">Using Disks</a></li>
+            <li><a href="cassette.html">Cassette Tape</a></li>
+            <li><a href="keyboard.html">Keyboard</a></li>
+            <li><a href="display.html">Display</a></li>
+            <li><a href="audio.html">Audio</a></li>
+            <li><a href="savestates.html">Save States</a></li>
+            <li><a href="controller.html">Game Controller</a></li>
+            <li><a href="shortcuts.html">Shortcuts</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="display"></a>
+    <h1>Display</h1>
+
+    <h2>Window Size</h2>
+    <p>The base display resolution is 640 x 400 pixels. Use the <strong>View</strong> menu to change the window scale:</p>
+    <table>
+        <tr><th>Size</th><th>Shortcut</th></tr>
+        <tr><td><strong>View &gt; Actual Size (x1)</strong></td><td><kbd>&#8963;&#8984;1</kbd></td></tr>
+        <tr><td><strong>View &gt; Double Size (x2)</strong></td><td><kbd>&#8963;&#8984;2</kbd></td></tr>
+        <tr><td><strong>View &gt; Quad Size (x4)</strong></td><td><kbd>&#8963;&#8984;4</kbd></td></tr>
+    </table>
+    <p>Use the standard macOS fullscreen control, usually the green window button.</p>
+
+    <h2>Fullscreen</h2>
+    <p>Choose the fullscreen scaling mode in <strong>Settings &gt; Display &gt; Scaling Mode</strong>:</p>
+    <ul>
+        <li><strong>Fit to Screen</strong> — Use as much screen space as possible while preserving aspect ratio.</li>
+        <li><strong>Integer Scaling</strong> — Keep integer scaling for a pixel-perfect result, even with black borders.</li>
+    </ul>
+    <p>In full screen, moving the mouse reveals a temporary bottom overlay with drive controls, volume, and the translation toggle.</p>
+
+    <h2>Video Filter</h2>
+    <p>Select a filter from <strong>View &gt; Video Filter</strong>:</p>
+    <table>
+        <tr><th>Filter</th><th>Description</th></tr>
+        <tr><td>None</td><td>Nearest-neighbor (sharp pixels)</td></tr>
+        <tr><td>Linear</td><td>Bilinear interpolation</td></tr>
+        <tr><td>Bicubic</td><td>Smooth bicubic interpolation</td></tr>
+        <tr><td>CRT</td><td>CRT monitor simulation with phosphor and curvature</td></tr>
+        <tr><td>xBRZ</td><td>Edge-smoothing pixel art upscaler</td></tr>
+        <tr><td>Enhanced</td><td>Two-pass: de-dithering + xBRZ</td></tr>
+        <tr><td>AI Upscale (Fast)</td><td>Lightweight SRVGGNet (32ch × 12 layers, ~115K params). Prioritizes real-time speed</td></tr>
+        <tr><td>AI Upscale (Balanced)</td><td>Standard SRVGGNet (64ch × 16 layers, ~600K params). Balanced quality and speed</td></tr>
+        <tr><td>AI Upscale (Quality)</td><td>Real-ESRGAN. Highest quality, best for static screens</td></tr>
+    </table>
+
+    <h2>Scanlines</h2>
+    <p>Toggle a scanline overlay with <strong>View &gt; Scanlines</strong>. It is available only with <strong>None</strong>, <strong>Linear</strong>, and <strong>Bicubic</strong>.</p>
+
+    <h2>Translation Overlay</h2>
+    <p>Toggle it with <kbd>&#8984;T</kbd> or <strong>View &gt; Translation Overlay</strong>. The source language is Japanese.</p>
+    <p>When enabled, the app runs OCR immediately on the current frame, then re-runs OCR roughly every 3 seconds when the screen content changes. Set the target language in <strong>Settings &gt; Display &gt; Target Language</strong>.</p>
+    <p>The required translation language data must be downloaded in macOS System Settings.</p>
+
+    <h2>Screenshots</h2>
+    <p>Use <strong>Control &gt; Save Screenshot...</strong> to save the current frame. The file format is chosen in <strong>Settings &gt; General &gt; Format</strong> and can be <strong>PNG</strong>, <strong>JPEG</strong>, or <strong>HEIC</strong>.</p>
+
+    <p><a href="../index.html">Back to Bubilator88 Help</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>

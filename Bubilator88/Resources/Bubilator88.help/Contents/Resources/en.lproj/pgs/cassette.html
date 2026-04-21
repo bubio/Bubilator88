@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="Cassette Tape">
+    <meta name="description" content="Mount, rewind and eject cassette tapes (CMT / T88)">
+    <meta name="keywords" content="tape, cassette, CMT, T88, CLOAD, RUN, rewind">
+    <meta name="robots" content="index">
+    <title>Cassette Tape</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>Contents</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 Help</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li><a href="disks.html">Using Disks</a></li>
+            <li><a href="cassette.html">Cassette Tape</a></li>
+            <li><a href="keyboard.html">Keyboard</a></li>
+            <li><a href="display.html">Display</a></li>
+            <li><a href="audio.html">Audio</a></li>
+            <li><a href="savestates.html">Save States</a></li>
+            <li><a href="controller.html">Game Controller</a></li>
+            <li><a href="shortcuts.html">Shortcuts</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="cassette"></a>
+    <h1>Cassette Tape</h1>
+
+    <h2>Supported Formats</h2>
+    <ul>
+        <li><strong>.cmt</strong> — raw byte-stream tape image</li>
+        <li><strong>.t88</strong> — tape image with data-carrier tags</li>
+    </ul>
+
+    <h2>Mounting a Tape</h2>
+    <table>
+        <tr><th>Command</th><th>Shortcut</th></tr>
+        <tr><td><strong>Tape &gt; Open...</strong></td><td><kbd>&#8679;&#8984;T</kbd></td></tr>
+        <tr><td><strong>Tape &gt; Rewind</strong></td><td>—</td></tr>
+        <tr><td><strong>Tape &gt; Eject</strong></td><td>—</td></tr>
+    </table>
+    <p>When a tape is mounted, the status bar shows a tape icon together with the current tape name (requires <strong>Settings &gt; General &gt; Show Tape in Status Bar</strong>).</p>
+
+    <h2>Loading a Program</h2>
+    <ol>
+        <li>Set Boot Mode to <strong>V1H</strong> (or V1S) so the N88-BASIC prompt appears.</li>
+        <li>Choose a <code>.cmt</code> or <code>.t88</code> file via <strong>Tape &gt; Open...</strong>.</li>
+        <li>Type <code>LOAD "CAS:"</code> + <kbd>Return</kbd> in BASIC.</li>
+        <li>When loading completes and <code>Ok</code> returns, type <code>RUN</code> + <kbd>Return</kbd>.</li>
+    </ol>
+
+    <h2>Recent Tapes</h2>
+    <p><strong>Tape &gt; Recent Files</strong> keeps up to 10 of your most recently opened tapes.</p>
+
+    <h2>Known Limitations</h2>
+    <ul>
+        <li><strong>Writing to tape (<code>SAVE "CAS:"</code> and friends) is not supported.</strong> BASIC won't raise a <code>Syntax error</code>, but nothing is written to the tape.</li>
+        <li>Tapes with waveform-timing based copy protection may fail to load.</li>
+    </ul>
+
+    <p><a href="../index.html">Back to Bubilator88 Help</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>

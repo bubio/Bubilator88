@@ -1,0 +1,76 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(swift test:*)",
+      "Bash(swift build:*)",
+      "Bash(swift build)",
+      "Bash(swift run:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(BOOTTEST_:*)",
+      "Bash(CLOCK_4MHZ=:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "Bash(xxd:*)",
+      "Bash(awk:*)",
+      "Bash(cd:*)",
+      "WebSearch",
+      "Bash(gh api:*)",
+      "Skill(update-config)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(cat /dev/stdin | jq -r '.tool_input.file_path // .tool_input.filePath // empty'); if echo \"$FILE\" | grep -qE '\\.(d88|rom|bin)$'; then echo \"BLOCK: Protected file type: $FILE\"; exit 2; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(cat /dev/stdin | jq -r '.tool_input.file_path // .tool_input.filePath // empty'); if echo \"$FILE\" | grep -qE '\\.swift$'; then cd \"$CLAUDE_PROJECT_DIR/Packages/EmulatorCore\" && swift build 2>&1 | tail -20; fi",
+            "timeout": 120,
+            "statusMessage": "Swift build checking..."
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Claude needs your input\" with title \"Bubilator88\"'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"$CLAUDE_PROJECT_DIR/.claude/post-compact-rules.md\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="Getting Started">
+    <meta name="description" content="ROM ファイルの準備、起動、ブートモードと CPUクロックの使い方">
+    <meta name="keywords" content="ROM, セットアップ, 起動, ブートモード, CPUクロック, N88-BASIC, N80.ROM, DISK.ROM">
+    <meta name="robots" content="index">
+    <title>はじめに</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>目次</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 ヘルプ</a></li>
+            <li><a href="getting-started.html">はじめに</a></li>
+            <li><a href="disks.html">ディスク操作</a></li>
+            <li><a href="cassette.html">カセットテープ</a></li>
+            <li><a href="keyboard.html">キーボード</a></li>
+            <li><a href="display.html">表示設定</a></li>
+            <li><a href="audio.html">サウンド</a></li>
+            <li><a href="savestates.html">ステートセーブ</a></li>
+            <li><a href="controller.html">ゲームコントローラ</a></li>
+            <li><a href="shortcuts.html">ショートカット一覧</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="getting-started"></a>
+    <h1>はじめに</h1>
+
+    <h2>ROM ファイル</h2>
+    <p>起動時に <code>~/Library/Application Support/Bubilator88/</code> から ROM を読み込みます。このフォルダは初回起動時に自動作成されます。</p>
+
+    <h3>最低限必要なファイル</h3>
+    <table>
+        <tr><th>ファイル名</th><th>用途</th><th>補足</th></tr>
+        <tr><td><code>N88.ROM</code></td><td>N88-BASIC ROM</td><td>これがないと起動できません。</td></tr>
+    </table>
+
+    <h3>強く推奨されるファイル</h3>
+    <table>
+        <tr><th>ファイル名</th><th>用途</th><th>補足</th></tr>
+        <tr><td><code>N80.ROM</code></td><td>N-BASIC ROM</td><td>N-BASIC で起動したいときに使います。</td></tr>
+        <tr><td><code>DISK.ROM</code></td><td>ディスク用 ROM</td><td>ディスクを使うソフトで必要になることがあります。</td></tr>
+        <tr><td><code>N88_0.ROM</code> 〜 <code>N88_3.ROM</code></td><td>N88 拡張 ROM</td><td>対応ソフトで使われます。<code>N88EXT0.ROM</code> 〜 <code>N88EXT3.ROM</code> という名前でも読み込みます。</td></tr>
+    </table>
+
+    <h3>オプション</h3>
+    <table>
+        <tr><th>ファイル名</th><th>用途</th><th>補足</th></tr>
+        <tr><td><code>FONT.ROM</code></td><td>フォント ROM</td><td>ない場合は内蔵の英数字フォントを使用します。</td></tr>
+        <tr><td><code>KANJI1.ROM</code></td><td>漢字 ROM 第一水準</td><td>漢字表示に使用します。</td></tr>
+        <tr><td><code>KANJI2.ROM</code></td><td>漢字 ROM 第二水準</td><td>漢字表示に使用します。</td></tr>
+    </table>
+
+    <h3>リズム音源 WAV ファイル</h3>
+    <p>YM2608 (OPNA) のリズム音を鳴らすには、同じフォルダに以下の WAV ファイルを置いてください。16-bit PCM 形式が必要です。なくてもアプリは動作しますが、リズム音は鳴りません。</p>
+    <table>
+        <tr><th>ファイル名</th><th>音色</th></tr>
+        <tr><td><code>2608_BD.WAV</code></td><td>バスドラム</td></tr>
+        <tr><td><code>2608_SD.WAV</code></td><td>スネアドラム</td></tr>
+        <tr><td><code>2608_TOP.WAV</code></td><td>シンバル</td></tr>
+        <tr><td><code>2608_HH.WAV</code></td><td>ハイハット</td></tr>
+        <tr><td><code>2608_TOM.WAV</code></td><td>タム</td></tr>
+        <tr><td><code>2608_RIM.WAV</code></td><td>リムショット</td></tr>
+    </table>
+
+    <div class="note">ROM ファイルおよび WAV ファイルには著作権があるため、Bubilator88 には同梱されていません。</div>
+
+    <h2>初回起動</h2>
+    <p>ROM を配置したら Bubilator88 を起動してください。ROM を追加・差し替えたときは、<strong>エミュレータ &gt; リセット</strong> で読み直せます。</p>
+    <p>ディスクソフトを起動するときは、まず <strong>ディスク &gt; ドライブ 1 &gt; マウント...</strong> または <strong>ディスク &gt; ドライブ 1&amp;2 &gt; マウント...</strong> でディスクを挿入し、その後 <strong>エミュレータ &gt; リセット</strong>（<kbd>&#8984;E</kbd>）を実行してください。</p>
+
+    <h2>ブートモード</h2>
+    <p><strong>エミュレータ &gt; ブートモード</strong> から選択します。変更するとその場でリセットがかかります。</p>
+    <table>
+        <tr><th>モード</th><th>説明</th></tr>
+        <tr><td>N88-BASIC V2</td><td>SR以降の標準モード。ほとんどのソフトがこれを使用します。</td></tr>
+        <tr><td>N88-BASIC V1H</td><td>V1高速モード。SR より前の機種のソフト向け。</td></tr>
+        <tr><td>N88-BASIC V1S</td><td>V1標準モード。SR より前の機種のソフト向け。</td></tr>
+        <tr><td>N-BASIC</td><td>PC-8001互換モード。N-BASIC ROMを使用します。</td></tr>
+    </table>
+
+    <h2>CPUクロック</h2>
+    <p><strong>エミュレータ &gt; CPUクロック</strong> で <strong>8 MHz</strong> と <strong>4 MHz</strong> を切り替えられます。設定は次回起動後も保持され、ステータスバーにも現在値が表示されます。</p>
+
+    <p><a href="../index.html">Bubilator88 ヘルプに戻る</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>

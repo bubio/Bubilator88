@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="Save States">
+    <meta name="description" content="Quick Save / Load, 10 slots, and what save states include">
+    <meta name="keywords" content="save, load, state, Quick Save, Quick Load, slot, thumbnail">
+    <meta name="robots" content="index">
+    <title>Save States</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>Contents</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 Help</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li><a href="disks.html">Using Disks</a></li>
+            <li><a href="cassette.html">Cassette Tape</a></li>
+            <li><a href="keyboard.html">Keyboard</a></li>
+            <li><a href="display.html">Display</a></li>
+            <li><a href="audio.html">Audio</a></li>
+            <li><a href="savestates.html">Save States</a></li>
+            <li><a href="controller.html">Game Controller</a></li>
+            <li><a href="shortcuts.html">Shortcuts</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="savestates"></a>
+    <h1>Save States</h1>
+
+    <h2>Quick Save / Load</h2>
+    <table>
+        <tr><th>Action</th><th>Shortcut</th></tr>
+        <tr><td><strong>Control &gt; Quick Save</strong></td><td><kbd>&#8984;S</kbd></td></tr>
+        <tr><td><strong>Control &gt; Quick Load</strong></td><td><kbd>&#8984;L</kbd></td></tr>
+    </table>
+    <p>Quick Save stores one snapshot. When it exists, the <strong>Control</strong> menu shows the saved time and mounted disk names. Quick Load is enabled only when a quick save exists.</p>
+
+    <h2>Save State / Load State</h2>
+    <p>Open the slot manager with <strong>Control &gt; Save State...</strong> or <strong>Control &gt; Load State...</strong>. There are 10 slots, each with a thumbnail, timestamp, and mounted disk names.</p>
+    <p>In Load State mode, empty slots are disabled.</p>
+
+    <h2>What Is Saved</h2>
+    <p>Save states include:</p>
+    <ul>
+        <li>CPU registers and flags</li>
+        <li>All RAM and VRAM</li>
+        <li>Sound chip registers (YM2608)</li>
+        <li>FDC and disk controller state</li>
+        <li>I/O port state and interrupt controller</li>
+        <li>Boot Mode and CPU Clock</li>
+        <li>The mounted disk images themselves and the contents they had when you saved</li>
+    </ul>
+    <div class="note">Save states include the mounted disk images, so you do not need to remount the same disk before loading.</div>
+    <p>State files are stored in <code>~/Library/Application Support/Bubilator88/SaveStates/</code>.</p>
+
+    <p><a href="../index.html">Back to Bubilator88 Help</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>

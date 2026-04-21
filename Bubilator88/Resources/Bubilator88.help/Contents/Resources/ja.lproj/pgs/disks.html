@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="Using Disks">
+    <meta name="description" content="ディスクイメージのマウント、アーカイブ対応、空ディスク作成">
+    <meta name="keywords" content="ディスク, D88, マウント, イジェクト, ドライブ, フロッピー, アーカイブ, ZIP, LZH, CAB, RAR">
+    <meta name="robots" content="index">
+    <title>ディスク操作</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>目次</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 ヘルプ</a></li>
+            <li><a href="getting-started.html">はじめに</a></li>
+            <li><a href="disks.html">ディスク操作</a></li>
+            <li><a href="cassette.html">カセットテープ</a></li>
+            <li><a href="keyboard.html">キーボード</a></li>
+            <li><a href="display.html">表示設定</a></li>
+            <li><a href="audio.html">サウンド</a></li>
+            <li><a href="savestates.html">ステートセーブ</a></li>
+            <li><a href="controller.html">ゲームコントローラ</a></li>
+            <li><a href="shortcuts.html">ショートカット一覧</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="disks"></a>
+    <h1>ディスク操作</h1>
+
+    <h2>対応フォーマット</h2>
+    <p>Bubilator88 で開けるのは次のファイルです。</p>
+    <ul>
+        <li><strong>D88</strong> ディスクイメージ</li>
+        <li><strong>ZIP</strong>、<strong>LZH</strong>、<strong>CAB</strong>、<strong>RAR</strong> の各アーカイブ
+            （中に D88 ディスクイメージが入っている場合）</li>
+    </ul>
+    <p>1 つの D88 に複数のディスクイメージが入っている場合も開けます。</p>
+    <div class="note">RAR の一部は macOS の標準機能だけでは開けないことがあります。その場合は追加の展開ツールが必要です。7z ファイルをそのまま開くことはできません。</div>
+
+    <h2>ディスクのマウント</h2>
+    <table>
+        <tr><th>メニュー</th><th>ショートカット</th></tr>
+        <tr><td><strong>ディスク &gt; ドライブ 1 &gt; マウント...</strong></td><td><kbd>&#8984;1</kbd></td></tr>
+        <tr><td><strong>ディスク &gt; ドライブ 2 &gt; マウント...</strong></td><td><kbd>&#8984;2</kbd></td></tr>
+        <tr><td><strong>ディスク &gt; ドライブ 1&amp;2 &gt; マウント...</strong></td><td><kbd>&#8984;3</kbd></td></tr>
+    </table>
+    <h2>複数イメージとアーカイブ</h2>
+    <p>選択したファイルに複数のディスクイメージが入っている場合は、開く前に選択画面が表示されます。開いたあとは <strong>ディスク &gt; ドライブ 1</strong> / <strong>ドライブ 2</strong> のサブメニュー、またはステータスバーのドライブメニューから切り替えられます。</p>
+    <p><strong>ドライブ 1&amp;2 &gt; マウント...</strong> を使うと、1 枚目のイメージをドライブ 1、2 枚目をドライブ 2 に割り当てます。2 枚目がない場合、ドライブ 2 は空のままです。</p>
+    <p>アーカイブ内に複数のディスクファイルがある場合は、まずどのファイルを開くか選択します。</p>
+
+    <h2>空ディスクの作成</h2>
+    <p><strong>ディスク &gt; 空ディスク作成...</strong>（<kbd>&#8679;&#8984;N</kbd>）で、フォーマット済みの空 D88 イメージを作成できます。保存後は自動的にドライブ 1 に挿入されます。</p>
+    <ul>
+        <li><strong>2D</strong>（320KB）— 片面倍密度</li>
+        <li><strong>2DD</strong>（640KB）— 両面倍密度（デフォルト）</li>
+        <li><strong>2HD</strong>（1.2MB）— 両面高密度</li>
+    </ul>
+
+    <h2>取り出しと最近使ったファイル</h2>
+    <p>取り出しは <strong>ディスク &gt; ドライブ 1 &gt; 取り出し</strong> / <strong>ドライブ 2 &gt; 取り出し</strong> から行います。</p>
+    <p><strong>ディスク &gt; 最近使ったファイル</strong> には最近開いたファイルが最大 10 件保存されます。ここから開くと <strong>ドライブ 1&amp;2</strong> として開かれます。</p>
+
+    <p><a href="../index.html">Bubilator88 ヘルプに戻る</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>

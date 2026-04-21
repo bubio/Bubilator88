@@ -1,0 +1,4 @@
+/* Japanese Localization for Info.plist */
+
+/* Motion usage (head tracking for immersive audio) */
+"NSMotionUsageDescription" = "イマーシブオーディオのヘッドトラッキングに使用します。";
