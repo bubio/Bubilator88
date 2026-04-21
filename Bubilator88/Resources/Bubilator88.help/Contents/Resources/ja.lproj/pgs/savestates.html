@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="Save States">
+    <meta name="description" content="クイックセーブ / クイックロード、10 スロット管理、保存内容">
+    <meta name="keywords" content="セーブ, ロード, ステート, クイックセーブ, クイックロード, スロット, サムネイル">
+    <meta name="robots" content="index">
+    <title>ステートセーブ</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>目次</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 ヘルプ</a></li>
+            <li><a href="getting-started.html">はじめに</a></li>
+            <li><a href="disks.html">ディスク操作</a></li>
+            <li><a href="cassette.html">カセットテープ</a></li>
+            <li><a href="keyboard.html">キーボード</a></li>
+            <li><a href="display.html">表示設定</a></li>
+            <li><a href="audio.html">サウンド</a></li>
+            <li><a href="savestates.html">ステートセーブ</a></li>
+            <li><a href="controller.html">ゲームコントローラ</a></li>
+            <li><a href="shortcuts.html">ショートカット一覧</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="savestates"></a>
+    <h1>ステートセーブ</h1>
+
+    <h2>クイックセーブ / クイックロード</h2>
+    <table>
+        <tr><th>操作</th><th>ショートカット</th></tr>
+        <tr><td><strong>コントロール &gt; クイックセーブ</strong></td><td><kbd>&#8984;S</kbd></td></tr>
+        <tr><td><strong>コントロール &gt; クイックロード</strong></td><td><kbd>&#8984;L</kbd></td></tr>
+    </table>
+    <p>クイックセーブは 1 つだけ保存されます。保存済みの場合、<strong>コントロール</strong> メニューに日時と挿入中のディスク名が表示されます。クイックロードは保存があるときだけ使えます。</p>
+
+    <h2>ステートセーブ / ステートロード</h2>
+    <p><strong>コントロール &gt; ステートセーブ...</strong> と <strong>コントロール &gt; ステートロード...</strong> でスロット管理画面を開きます。スロットは 10 個あり、各スロットにサムネイル、保存日時、挿入中のディスク名が表示されます。</p>
+    <p>ステートロードでは、空のスロットは選べません。</p>
+
+    <h2>保存される内容</h2>
+    <p>ステートには次の情報が保存されます：</p>
+    <ul>
+        <li>保存した時点の実行状態</li>
+        <li>メモリや画面の状態</li>
+        <li>サウンドの状態</li>
+        <li>ディスクドライブまわりの状態</li>
+        <li>ブートモードと CPUクロック</li>
+        <li>挿入中のディスクと保存時の内容</li>
+    </ul>
+    <div class="note">ステートには挿入中のディスクも含まれるため、読み込み前に同じディスクを入れ直す必要はありません。</div>
+    <p>保存ファイルは <code>~/Library/Application Support/Bubilator88/SaveStates/</code> に作成されます。</p>
+
+    <p><a href="../index.html">Bubilator88 ヘルプに戻る</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>

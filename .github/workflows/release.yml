@@ -1,0 +1,132 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # Opt JavaScript actions (checkout, upload-artifact, action-gh-release)
+  # into Node.js 24 ahead of the June 2026 default switch.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show environment
+        run: |
+          sw_vers
+          xcode-select -p
+          xcodebuild -version
+          ls /Applications | grep -i '^Xcode' || true
+
+      - name: Select latest Xcode 26
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH=/Applications/Xcode.app
+          fi
+          echo "Using: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          xcodebuild -version
+
+      - name: Install Metal Toolchain
+        # Xcode 26 ships the Metal compiler as an on-demand component that
+        # isn't present on the runner image by default.
+        run: sudo xcodebuild -downloadComponent MetalToolchain
+
+      - name: Derive version
+        id: version
+        run: |
+          REF="${GITHUB_REF_NAME}"
+          if [[ "$REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            VERSION="${REF#v}"
+          else
+            # Non-tag run (workflow_dispatch): mark as dev build.
+            SHORT_SHA="${GITHUB_SHA:0:7}"
+            REF="dev-${SHORT_SHA}"
+            VERSION="0.0.0-${SHORT_SHA}"
+          fi
+          echo "ref=$REF"         >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build (Release, ad-hoc signed)
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -scheme Bubilator88 \
+            -configuration Release \
+            -derivedDataPath build \
+            -destination 'generic/platform=macOS' \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=YES \
+            MARKETING_VERSION="${{ steps.version.outputs.version }}" \
+            build
+
+      - name: Locate .app
+        id: locate
+        run: |
+          APP_PATH="build/Build/Products/Release/Bubilator88.app"
+          test -d "$APP_PATH"
+          echo "app=$APP_PATH" >> "$GITHUB_OUTPUT"
+          du -sh "$APP_PATH"
+
+      - name: Ad-hoc re-sign (deep)
+        run: |
+          codesign --force --deep --sign - "${{ steps.locate.outputs.app }}"
+          codesign --verify --verbose=2 "${{ steps.locate.outputs.app }}"
+
+      - name: Create DMG with /Applications symlink
+        id: dmg
+        run: |
+          set -euo pipefail
+          STAGE="dmg-stage"
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE"
+          cp -R "${{ steps.locate.outputs.app }}" "$STAGE/"
+          ln -s /Applications "$STAGE/Applications"
+
+          DMG_NAME="Bubilator88-${{ steps.version.outputs.ref }}.dmg"
+          hdiutil create \
+            -volname "Bubilator88" \
+            -srcfolder "$STAGE" \
+            -ov \
+            -format UDZO \
+            "$DMG_NAME"
+
+          du -sh "$DMG_NAME"
+          echo "name=$DMG_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact (for workflow_dispatch runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.dmg.outputs.name }}
+          path: ${{ steps.dmg.outputs.name }}
+          retention-days: 14
+
+      - name: Attach DMG to Release
+        if: github.event_name != 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.dmg.outputs.name }}
+          tag_name: ${{ steps.version.outputs.ref }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true

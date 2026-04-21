@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="Audio">
+    <meta name="description" content="音量、オーディオバッファ、FDDサウンド、疑似ステレオ、イマーシブオーディオ">
+    <meta name="keywords" content="オーディオ, サウンド, 音量, FM, SSG, ADPCM, Rhythm, YM2608, OPNA, イマーシブオーディオ, FDD, バッファ">
+    <meta name="robots" content="index">
+    <title>サウンド</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>目次</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 ヘルプ</a></li>
+            <li><a href="getting-started.html">はじめに</a></li>
+            <li><a href="disks.html">ディスク操作</a></li>
+            <li><a href="cassette.html">カセットテープ</a></li>
+            <li><a href="keyboard.html">キーボード</a></li>
+            <li><a href="display.html">表示設定</a></li>
+            <li><a href="audio.html">サウンド</a></li>
+            <li><a href="savestates.html">ステートセーブ</a></li>
+            <li><a href="controller.html">ゲームコントローラ</a></li>
+            <li><a href="shortcuts.html">ショートカット一覧</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="audio"></a>
+    <h1>サウンド</h1>
+
+
+    <h2>音量</h2>
+    <p><kbd>&#8984;&#8593;</kbd> / <kbd>&#8984;&#8595;</kbd> で 10% ずつ調整できます。ウィンドウ下部のステータスバー、またはフルスクリーン時の下部オーバーレイからもスライダーで変更できます。</p>
+
+    <h2>サウンドチップ</h2>
+    <p>Bubilator88 は <strong>YM2608 (OPNA)</strong> をエミュレートしています：</p>
+    <table>
+        <tr><th>チャンネル</th><th>説明</th></tr>
+        <tr><td>FM</td><td>6チャンネル、4オペレータFM音源</td></tr>
+        <tr><td>SSG</td><td>3チャンネルPSG（AY-3-8910互換）</td></tr>
+        <tr><td>ADPCM</td><td>PCMサンプル再生</td></tr>
+        <tr><td>Rhythm</td><td>6種類の内蔵リズム音源</td></tr>
+    </table>
+    <p>各音源の個別 ON/OFF は <strong>DEBUG</strong> メニューから切り替えられます。<strong>設定 &gt; 一般 &gt; DEBUGメニューを表示</strong> を有効にすると表示されます。</p>
+
+    <h2>オーディオバッファ</h2>
+    <p><strong>設定 &gt; オーディオ</strong> でバッファサイズを <strong>20〜500 ms</strong> の範囲で調整できます。値を小さくすると遅れは減りますが、環境によっては音が途切れやすくなります。</p>
+
+    <h2>FDDサウンド</h2>
+    <p><strong>設定 &gt; オーディオ &gt; FDDサウンドを有効にする</strong> を有効にすると、ディスクアクセス音を再生します。ドライブ 1 とドライブ 2 は左右で少し音の位置を変えています。</p>
+
+    <h2>疑似ステレオ</h2>
+    <p><strong>設定 &gt; オーディオ &gt; 疑似ステレオを有効にする</strong> で、モノラル寄りの FM / SSG 出力に広がりを加えます。</p>
+    <p>イマーシブオーディオが有効な間はこの設定を変更できません。一部の音では効果が控えめになることがあります。</p>
+
+    <h2>イマーシブオーディオ</h2>
+    <p><strong>設定 &gt; オーディオ &gt; イマーシブオーディオを有効にする</strong> を有効にすると、FM / SSG / ADPCM / Rhythm を立体的に配置して再生します。対応ヘッドフォンではヘッドトラッキングも使えます。</p>
+    <p>位置調整パッドでは各音源の左右ペアをまとめて動かします。<strong>位置をリセット</strong> で既定値に戻せます。</p>
+
+    <p><a href="../index.html">Bubilator88 ヘルプに戻る</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>

@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bubilator88 — A Modern PC-8801 Emulator for macOS</title>
+<meta name="description" content="NEC PC-8801mkIISR emulator for macOS. AI upscaling, CRT filters, spatial audio, real-time translation overlay, and more.">
+<meta property="og:title" content="Bubilator88">
+<meta property="og:description" content="A modern PC-8801 emulator for macOS, built almost entirely with AI.">
+<meta property="og:image" content="https://bubio.github.io/Bubilator88/assets/img/icon.png">
+<meta property="og:url" content="https://bubio.github.io/Bubilator88/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="assets/img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div class="scanlines" aria-hidden="true"></div>
+<div class="bg-grid" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="brand">
+    <img src="assets/img/icon.png" alt="Bubilator88" class="brand-icon">
+    <span class="brand-name">Bubilator88</span>
+  </div>
+  <nav class="site-nav">
+    <a href="#concept" data-i18n="nav.concept">Concept</a>
+    <a href="#featured" data-i18n="nav.featured">Highlights</a>
+    <a href="#features" data-i18n="nav.features">All Features</a>
+    <a href="#download" data-i18n="nav.download">Download</a>
+    <button class="lang-toggle" id="langToggle" aria-label="Toggle language">
+      <span data-lang="ja">日本語</span><span class="sep">/</span><span data-lang="en">EN</span>
+    </button>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="hero-inner">
+    <img src="assets/img/icon.png" alt="Bubilator88" class="hero-icon">
+    <h1 class="hero-title glitch" data-text="Bubilator88">Bubilator88</h1>
+    <p class="hero-tagline" data-i18n="hero.tagline">A Modern PC-8801 Emulator for macOS</p>
+    <p class="hero-sub" data-i18n="hero.sub">Built almost entirely with AI. For Apple Silicon, with spatial audio, AI upscaling, and real-time translation.</p>
+    <div class="hero-cta">
+      <a href="https://github.com/bubio/Bubilator88/releases/latest" class="btn btn-primary">
+        <span data-i18n="cta.download">Download Latest</span>
+      </a>
+      <a href="https://github.com/bubio/Bubilator88" class="btn btn-ghost">
+        <span data-i18n="cta.github">View on GitHub</span>
+      </a>
+    </div>
+    <div class="badges">
+      <a href="https://github.com/bubio/Bubilator88/releases/latest"><img src="https://img.shields.io/github/v/release/bubio/Bubilator88" alt="Release"></a>
+      <a href="https://github.com/bubio/Bubilator88/releases/latest"><img src="https://img.shields.io/github/downloads/bubio/Bubilator88/total.svg" alt="Downloads"></a>
+      <a href="https://github.com/bubio/Bubilator88/blob/main/LICENSE"><img src="https://img.shields.io/github/license/bubio/Bubilator88" alt="License"></a>
+      <a href="https://github.com/bubio/Bubilator88/stargazers"><img src="https://img.shields.io/github/stars/bubio/Bubilator88?style=social" alt="Stars"></a>
+    </div>
+  </div>
+
+  <figure class="hero-shot">
+    <div class="hero-shot-frame">
+      <img src="assets/img/hero.png" alt="Bubilator88 screenshot" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      <div class="shot-placeholder hero-shot-placeholder">
+        <span data-i18n="hero.shotAlt">Bubilator88 — Hero Shot</span>
+      </div>
+    </div>
+    <figcaption class="hero-credits" data-i18n="hero.credits">
+      The Man I Love © 1987 Thinking Rabbit ·
+      The Black Onyx © 1984 BPS ·
+      Valis: The Fantasm Soldier © 1986 Nihon Telenet ·
+      Xanadu: Dragon Slayer II © 1985 Nihon Falcom ·
+      Thexder © 1985 Game Arts ·
+      Snatcher © 1988 Konami ·
+      Wizardry: Proving Grounds of the Mad Overlord © 1981 Sir-Tech Software / © 1985 ASCII ·
+      The Scheme © 1988 Bothtec ·
+      Hydlide 3: The Space Memories © 1987 T&amp;E SOFT
+    </figcaption>
+  </figure>
+</section>
+
+<section id="concept" class="section concept reveal">
+  <h2 class="section-title" data-i18n="concept.title">Concept</h2>
+  <div class="concept-grid">
+    <div class="concept-block">
+      <div class="concept-eyebrow" data-i18n="concept.eyebrow1">THE EXPERIMENT</div>
+      <h3 data-i18n="concept.h1">Can AI build an emulator?</h3>
+      <p data-i18n="concept.p1">Retro PC emulation demands deeply specialized knowledge — undocumented hardware behavior, T-state-accurate timing, multiple LSIs cooperating in real time. Bubilator88 is the experiment: an emulator where nearly every line of code is written by AI (Claude / Codex).</p>
+    </div>
+    <div class="concept-block">
+      <div class="concept-eyebrow" data-i18n="concept.eyebrow2">THE MOTIVATION</div>
+      <h3 data-i18n="concept.h2">A PC-8801, made for the Mac.</h3>
+      <p data-i18n="concept.p2">Retro PC emulation has long been a Windows-centric world. Mac users were left with virtualization layers or non-native ports. Bubilator88 is built from the ground up for macOS — SwiftUI, Metal, AVAudioEngine, Apple Neural Engine, all the way down.</p>
+    </div>
+  </div>
+</section>
+
+<section id="featured" class="section reveal">
+  <h2 class="section-title" data-i18n="featured.title">Featured Highlights</h2>
+  <p class="section-lead" data-i18n="featured.lead">See, hear, and feel what makes Bubilator88 different.</p>
+
+  <!-- 1. AI Upscaler -->
+  <article class="featured-item">
+    <div class="featured-media">
+      <div class="ba-slider" style="--split: 50%;">
+        <img class="ba-slider-img ba-slider-after" src="assets/img/upscaler-after.png" alt="After"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="ba-placeholder ba-placeholder-after"><span>AI Upscaled</span></div>
+        <img class="ba-slider-img ba-slider-before" src="assets/img/upscaler-before.png" alt="Before"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="ba-placeholder ba-placeholder-before"><span>Original 640×400</span></div>
+        <div class="ba-slider-handle" aria-hidden="true"></div>
+        <input type="range" class="ba-slider-input" min="0" max="100" value="50" aria-label="Before / After">
+        <div class="ba-label ba-label-before" data-i18n="ba.before">Original</div>
+        <div class="ba-label ba-label-after" data-i18n="ba.afterAI">AI Upscaled</div>
+      </div>
+      <div class="media-caption" data-i18n="credit.upscaler">© [Game title] / [Publisher]</div>
+    </div>
+    <div class="featured-text">
+      <div class="featured-num">01</div>
+      <h3 data-i18n="f.upscaler.title">AI Upscaler</h3>
+      <p data-i18n="f.upscaler.body">Real-time super-resolution on Apple Neural Engine. Sharpen 640×400 pixel art while preserving edges and detail — three model sizes from ultra-fast to reference quality.</p>
+    </div>
+  </article>
+
+  <!-- 2. Screen Filters -->
+  <article class="featured-item reverse">
+    <div class="featured-media">
+      <div class="ba-filter-segmented" role="tablist" data-ba-segmented>
+        <button class="ba-seg active" role="tab" data-filter="crt" aria-selected="true">CRT</button>
+        <button class="ba-seg" role="tab" data-filter="enhanced" aria-selected="false">Enhanced</button>
+      </div>
+      <div class="ba-slider" data-ba-filter-slider style="--split: 50%;">
+        <img class="ba-slider-img ba-slider-after" src="assets/img/filter-crt-after.png" alt="After"
+             data-src-crt="assets/img/filter-crt-after.png"
+             data-src-enhanced="assets/img/filter-enhanced-after.png"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="ba-placeholder ba-placeholder-after"><span data-filter-placeholder>CRT</span></div>
+        <img class="ba-slider-img ba-slider-before" src="assets/img/filter-before.png" alt="Before"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="ba-placeholder ba-placeholder-before"><span>Original</span></div>
+        <div class="ba-slider-handle" aria-hidden="true"></div>
+        <input type="range" class="ba-slider-input" min="0" max="100" value="50" aria-label="Before / After">
+        <div class="ba-label ba-label-before" data-i18n="ba.before">Original</div>
+        <div class="ba-label ba-label-after" data-i18n="ba.afterFilter">CRT</div>
+      </div>
+      <div class="media-caption" data-i18n="credit.filter">© [Game title] / [Publisher]</div>
+    </div>
+    <div class="featured-text">
+      <div class="featured-num">02</div>
+      <h3 data-i18n="f.filter.title">Signature Screen Filters</h3>
+      <p data-i18n="f.filter.body">CRT scanlines and phosphor afterglow, or xBRZ pixel-art edge scaling — all implemented as native Metal shaders for 60 fps playback, even at retina resolution.</p>
+    </div>
+  </article>
+
+  <!-- 3. Immersive Spatial Audio -->
+  <article class="featured-item">
+    <div class="featured-media">
+      <div class="media-frame">
+        <img src="assets/img/spatial-audio.png" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="shot-placeholder"><span data-i18n="media.spatial">Immersive Position Pad</span></div>
+      </div>
+    </div>
+    <div class="featured-text">
+      <div class="featured-num">03</div>
+      <h3 data-i18n="f.spatial.title">Immersive Spatial Audio</h3>
+      <p data-i18n="f.spatial.body">Place each sound channel — FM, SSG, ADPCM, Rhythm — anywhere in 3D space using an intuitive position pad. Head-tracked through AirPods for true immersive audio.</p>
+    </div>
+  </article>
+
+  <!-- 4. Real-time Translation -->
+  <article class="featured-item reverse">
+    <div class="featured-media">
+      <div class="media-frame">
+        <img src="assets/img/translation.png" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="shot-placeholder"><span data-i18n="media.translation">Translation Overlay</span></div>
+      </div>
+      <div class="media-caption" data-i18n="credit.translation">© [Game title] / [Publisher]</div>
+    </div>
+    <div class="featured-text">
+      <div class="featured-num">04</div>
+      <h3 data-i18n="f.translate.title">Real-time Translation</h3>
+      <p data-i18n="f.translate.body">Apple Vision OCR combined with the Translation framework reads on-screen Japanese in real time and overlays your language on top of the emulated display.</p>
+    </div>
+  </article>
+
+  <!-- 5. Controller + Haptics -->
+  <article class="featured-item">
+    <div class="featured-media">
+      <div class="media-frame">
+        <img src="assets/img/controller.png" alt=""
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="shot-placeholder"><span data-i18n="media.controller">Controller + Haptics</span></div>
+      </div>
+      <div class="media-caption" data-i18n="credit.controller">© [Game title] / [Publisher]</div>
+    </div>
+    <div class="featured-text">
+      <div class="featured-num">05</div>
+      <h3 data-i18n="f.controller.title">Controller + Haptics</h3>
+      <p data-i18n="f.controller.body">Full game controller support with rumble synced to SSG sound effects. Every explosion, every footstep — you can feel it in your hands, just like the arcade.</p>
+    </div>
+  </article>
+
+  <!-- 6. Pseudo Stereo (audio A/B) -->
+  <article class="featured-item reverse">
+    <div class="featured-media">
+      <div class="audio-compare" data-audio-ab>
+        <div class="ba-filter-segmented" role="tablist" aria-label="Audio variant">
+          <button class="ba-seg active" role="tab" data-audio-variant="mono" aria-selected="true" data-i18n="audio.mono">Mono</button>
+          <button class="ba-seg" role="tab" data-audio-variant="pseudo" aria-selected="false" data-i18n="audio.pseudo">Pseudo Stereo</button>
+        </div>
+        <audio preload="auto" src="assets/audio/stereo-mono.mp3" data-variant="mono"></audio>
+        <audio preload="auto" src="assets/audio/stereo-pseudo.mp3" data-variant="pseudo" muted></audio>
+        <div class="audio-controls" data-audio-controls>
+          <button class="audio-play" type="button" aria-label="Play / Pause">
+            <svg class="icon-play" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 2 L11 7 L3 12 Z" fill="currentColor"/></svg>
+            <svg class="icon-pause" viewBox="0 0 14 14" aria-hidden="true"><rect x="3" y="2" width="3" height="10" fill="currentColor"/><rect x="8" y="2" width="3" height="10" fill="currentColor"/></svg>
+          </button>
+          <span class="audio-time audio-time-current">0:00</span>
+          <input type="range" class="audio-scrub" min="0" max="1000" value="0" step="1" aria-label="Seek">
+          <span class="audio-time audio-time-total">0:00</span>
+        </div>
+        <p class="audio-hint" data-i18n="audio.hint">Best experienced with headphones.</p>
+      </div>
+      <div class="media-caption" data-i18n="credit.stereo">© [Song title] / [Composer / Publisher]</div>
+    </div>
+    <div class="featured-text">
+      <div class="featured-num">06</div>
+      <h3 data-i18n="f.stereo.title">Pseudo Stereo</h3>
+      <p data-i18n="f.stereo.body">Add subtle per-channel delay differences to a mono source and retro music opens up into a wider stage. Compare the before and after — the effect is unmistakable on headphones.</p>
+    </div>
+  </article>
+
+  <!-- 7. Copy & Paste -->
+  <article class="featured-item">
+    <div class="featured-media">
+      <div class="media-frame">
+        <img src="assets/img/copy-paste.png" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="shot-placeholder"><span data-i18n="media.clip">Copy &amp; Paste</span></div>
+      </div>
+    </div>
+    <div class="featured-text">
+      <div class="featured-num">07</div>
+      <h3 data-i18n="f.clip.title">Copy &amp; Paste</h3>
+      <p data-i18n="f.clip.body">Copy on-screen text straight into the macOS clipboard, or paste BASIC listings back into the emulator as keystrokes — no more hand-typing program magazines.</p>
+    </div>
+  </article>
+
+  <!-- 8. Debugger -->
+  <article class="featured-item reverse">
+    <div class="featured-media">
+      <div class="media-frame">
+        <img src="assets/img/debugger.png" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="shot-placeholder"><span data-i18n="media.debugger">Debug Window</span></div>
+      </div>
+    </div>
+    <div class="featured-text">
+      <div class="featured-num">08</div>
+      <h3 data-i18n="f.debug.title">Full-Featured Debugger</h3>
+      <p data-i18n="f.debug.body">Disassembler, dual-CPU registers, six breakpoint types, instruction and PIO ring-buffer tracing with JSONL export, GVRAM and Text VRAM inspectors, and a live spectrum analyzer with per-channel mute.</p>
+    </div>
+  </article>
+</section>
+
+<section id="features" class="section reveal">
+  <h2 class="section-title" data-i18n="features.title">Other Features</h2>
+  <p class="section-lead" data-i18n="features.lead">The essentials that make the emulator tick.</p>
+  <div class="feature-grid compact">
+    <article class="feature">
+      <div class="feature-icon" style="--c1:#e8b3c8;--c2:#a8d0d4;">⚡</div>
+      <h3 data-i18n="features.cpu.title">Z80 T-State Accurate</h3>
+      <p data-i18n="features.cpu.body">Instruction-granular timing. Software-visible hardware behavior, reproduced faithfully.</p>
+    </article>
+    <article class="feature">
+      <div class="feature-icon" style="--c1:#e8d5b0;--c2:#e8b3c8;">🎵</div>
+      <h3 data-i18n="features.ym.title">YM2608 (OPNA)</h3>
+      <p data-i18n="features.ym.body">FM 6ch + SSG 3ch + Rhythm + ADPCM. Low-latency output via AVAudioEngine.</p>
+    </article>
+    <article class="feature">
+      <div class="feature-icon" style="--c1:#e8b3c8;--c2:#e8d5b0;">🔖</div>
+      <h3 data-i18n="features.save.title">Save States</h3>
+      <p data-i18n="features.save.body">10 slots plus Quick Save (Cmd+S / Cmd+L). Thumbnails and metadata per slot.</p>
+    </article>
+    <article class="feature">
+      <div class="feature-icon" style="--c1:#e8d5b0;--c2:#e8b3c8;">💾</div>
+      <h3 data-i18n="features.disk.title">Disk &amp; Tape</h3>
+      <p data-i18n="features.disk.body">D88 / D77 / 2D / 2HD floppies, T88 / CMT tapes. Drag in <strong>ZIP / LZH / CAB / RAR</strong> archives and pick images directly.</p>
+    </article>
+    <article class="feature">
+      <div class="feature-icon" style="--c1:#a8d0d4;--c2:#e8b3c8;">🍎</div>
+      <h3 data-i18n="features.native.title">Apple Silicon Native</h3>
+      <p data-i18n="features.native.body">Built with SwiftUI, Metal, AVAudioEngine, and CoreML. Optimized for M-series Macs.</p>
+    </article>
+    <article class="feature">
+      <div class="feature-icon" style="--c1:#e8b3c8;--c2:#e8d5b0;">🔊</div>
+      <h3 data-i18n="features.fdd.title">FDD Sound FX</h3>
+      <p data-i18n="features.fdd.body">Authentic floppy drive seek and access sounds. Togglable in settings.</p>
+    </article>
+  </div>
+</section>
+
+<section id="requirements" class="section reveal">
+  <h2 class="section-title" data-i18n="req.title">Requirements</h2>
+  <div class="req-grid">
+    <div class="req-card">
+      <h3>macOS</h3>
+      <p data-i18n="req.os">macOS 26.0 (Tahoe) or later</p>
+    </div>
+    <div class="req-card">
+      <h3>CPU</h3>
+      <p data-i18n="req.cpu">Apple Silicon (M1 or later). M4 Pro+ recommended for AI Upscaling.</p>
+    </div>
+    <div class="req-card">
+      <h3>ROM</h3>
+      <p data-i18n="req.rom">PC-8801 ROM files are <strong>not</strong> included. Place them in ~/Library/Application Support/Bubilator88/</p>
+    </div>
+  </div>
+</section>
+
+<section id="download" class="section reveal download-section">
+  <h2 class="section-title" data-i18n="dl.title">Download &amp; Get Started</h2>
+  <ol class="steps">
+    <li>
+      <span class="step-num">1</span>
+      <div>
+        <h3 data-i18n="dl.s1.title">Download</h3>
+        <p data-i18n="dl.s1.body">Grab the latest <code>.app</code> from GitHub Releases.</p>
+      </div>
+    </li>
+    <li>
+      <span class="step-num">2</span>
+      <div>
+        <h3 data-i18n="dl.s2.title">Bypass Gatekeeper</h3>
+        <p data-i18n="dl.s2.body">The app is not notarized. Run <code>xattr -cr /Applications/Bubilator88.app</code> or allow it in System Settings &gt; Privacy &amp; Security.</p>
+      </div>
+    </li>
+    <li>
+      <span class="step-num">3</span>
+      <div>
+        <h3 data-i18n="dl.s3.title">Add ROM files</h3>
+        <p data-i18n="dl.s3.body">Drop <code>N88.ROM</code>, <code>DISK.ROM</code>, and friends into <code>~/Library/Application Support/Bubilator88/</code>. See the README for the full list.</p>
+      </div>
+    </li>
+  </ol>
+  <div class="dl-cta">
+    <a href="https://github.com/bubio/Bubilator88/releases/latest" class="btn btn-primary btn-lg">
+      <span data-i18n="cta.download">Download Latest</span>
+    </a>
+  </div>
+</section>
+
+<section id="acks" class="section reveal">
+  <h2 class="section-title" data-i18n="acks.title">Acknowledgements</h2>
+  <p class="section-lead" data-i18n="acks.lead">Bubilator88 stands on the shoulders of incredible prior work. Deep thanks to everyone below.</p>
+  <div class="acks-grid">
+    <a class="ack-card" href="http://retropc.net/cisc/sound/" target="_blank" rel="noopener">
+      <div class="ack-eyebrow" data-i18n="acks.fmgen.role">FM Synthesis</div>
+      <h3>fmgen</h3>
+      <div class="ack-by">by cisc</div>
+      <p data-i18n="acks.fmgen.body">Ported to Swift as the core of the YM2608 sound engine.</p>
+    </a>
+    <a class="ack-card" href="https://www.eonet.ne.jp/~showtime/quasi88/" target="_blank" rel="noopener">
+      <div class="ack-eyebrow" data-i18n="acks.quasi88.role">Behavior Reference</div>
+      <h3>QUASI88</h3>
+      <div class="ack-by">by S.Fukunaga</div>
+      <p data-i18n="acks.quasi88.body">Consulted constantly as the authoritative behavioral reference.</p>
+    </a>
+    <a class="ack-card" href="https://takeda-toshiya.my.coocan.jp/common/index.html" target="_blank" rel="noopener">
+      <div class="ack-eyebrow" data-i18n="acks.csc.role">Reference Emulator</div>
+      <h3>Common Source Code Project</h3>
+      <div class="ack-by">by Takeda Toshiya</div>
+      <p data-i18n="acks.csc.body">Another indispensable reference implementation (BubiC-8801MA).</p>
+    </a>
+    <div class="ack-card ack-card-plain">
+      <div class="ack-eyebrow" data-i18n="acks.x88000.role">Reference Emulator</div>
+      <h3>X88000</h3>
+      <div class="ack-by">&nbsp;</div>
+      <p data-i18n="acks.x88000.body">A third indispensable reference, especially for Z80 undocumented instructions and countless implementation details.</p>
+    </div>
+    <a class="ack-card" href="http://www.maroon.dti.ne.jp/youkan/pc88/" target="_blank" rel="noopener">
+      <div class="ack-eyebrow" data-i18n="acks.youkan.role">Hardware Docs</div>
+      <h3>PC-8801 についてのページ</h3>
+      <div class="ack-by">by youkan</div>
+      <p data-i18n="acks.youkan.body">The go-to dictionary for PC-8801 hardware specifications.</p>
+    </a>
+    <a class="ack-card" href="http://mydocuments.g2.xrea.com/html/p8/vraminfo.html" target="_blank" rel="noopener">
+      <div class="ack-eyebrow" data-i18n="acks.vram.role">VRAM Spec</div>
+      <h3>PC-8801 VRAM情報</h3>
+      <div class="ack-by">&nbsp;</div>
+      <p data-i18n="acks.vram.body">The definitive guide to VRAM access behavior.</p>
+    </a>
+    <a class="ack-card" href="https://sourceforge.net/projects/xbrz/" target="_blank" rel="noopener">
+      <div class="ack-eyebrow" data-i18n="acks.xbrz.role">Scaling Algorithm</div>
+      <h3>xBRZ</h3>
+      <div class="ack-by">by Zenju</div>
+      <p data-i18n="acks.xbrz.body">The pixel-art scaling algorithm that became the base of the Enhanced filter.</p>
+    </a>
+    <a class="ack-card" href="https://github.com/xinntao/Real-ESRGAN" target="_blank" rel="noopener">
+      <div class="ack-eyebrow" data-i18n="acks.resrgan.role">AI Model</div>
+      <h3>Real-ESRGAN</h3>
+      <div class="ack-by">by xinntao</div>
+      <p data-i18n="acks.resrgan.body">Base super-resolution model, converted to CoreML.</p>
+    </a>
+    <a class="ack-card" href="https://claude.ai/code" target="_blank" rel="noopener">
+      <div class="ack-eyebrow" data-i18n="acks.ai.role">AI Pair Programmers</div>
+      <h3>Claude Code &amp; Codex</h3>
+      <div class="ack-by">Anthropic / OpenAI</div>
+      <p data-i18n="acks.ai.body">The partners who actually wrote nearly every line of this code.</p>
+    </a>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="assets/img/icon.png" alt="" class="footer-icon">
+      <div>
+        <div class="footer-title">Bubilator88</div>
+        <div class="footer-sub" data-i18n="footer.credit">Built almost entirely with Claude Code &amp; Codex.</div>
+      </div>
+    </div>
+    <nav class="footer-links">
+      <a href="https://github.com/bubio/Bubilator88">GitHub</a>
+      <a href="https://github.com/bubio/Bubilator88/issues" data-i18n="footer.issues">Issues</a>
+      <a href="https://github.com/bubio/Bubilator88/blob/main/LICENSE" data-i18n="footer.license">License (GPL-2.0)</a>
+      <a href="https://github.com/bubio/Bubilator88/blob/main/README.md">README</a>
+    </nav>
+  </div>
+  <div class="footer-tiny">© 2026 bubio · NEC PC-8801 is a trademark of its respective owner. This project is not affiliated with NEC.</div>
+</footer>
+
+<script src="assets/js/main.js"></script>
+</body>
+</html>

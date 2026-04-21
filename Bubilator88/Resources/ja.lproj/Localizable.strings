@@ -1,0 +1,205 @@
+/* Japanese Localization for Bubilator88 */
+
+/* ===== Bubilator88App.swift — App Menu ===== */
+"About Bubilator88" = "Bubilator88 について";
+
+/* ===== AboutView.swift ===== */
+"NEC PC-8801mkIISR Emulator for macOS" = "NEC PC-8801mkIISR以降 macOS エミュレータ";
+"Version %@ (%@)" = "バージョン %@ (%@)";
+"FM Synthesis" = "FM音源";
+"Reference" = "リファレンス";
+"Technical Docs" = "技術資料";
+"AI Upscale" = "AI超解像";
+"AI Coding" = "AIコーディング";
+"© 2026 bubio. Licensed under GPL v2.0" = "© 2026 bubio. GPL v2.0 ライセンス";
+
+/* ===== Bubilator88App.swift — Emulator Menu ===== */
+"Emulator" = "エミュレータ";
+"Pause" = "ポーズ";
+"Resume" = "再開";
+"Reset" = "リセット";
+"Boot Mode" = "ブートモード";
+"CPU Clock" = "CPUクロック";
+"8 MHz" = "8 MHz";
+"4 MHz" = "4 MHz";
+
+/* ===== Bubilator88App.swift — Disk Menu ===== */
+"Disk" = "ディスク";
+"Drive %lld" = "ドライブ %lld";
+"Drive 1&2" = "ドライブ 1&2";
+"Mount..." = "マウント...";
+"Eject" = "取り出し";
+"Create Blank Disk..." = "空ディスク作成...";
+"Create Blank Disk" = "空ディスク作成";
+"Disk Type:" = "ディスクタイプ:";
+"Recent Files" = "最近使ったファイル";
+"No Recent Files" = "履歴なし";
+"Clear Recent Files" = "履歴をクリア";
+
+/* ===== Bubilator88App.swift — Tape Menu ===== */
+"Tape" = "テープ";
+"Open..." = "開く...";
+"Rewind" = "巻き戻し";
+/* "Eject" — shared with Disk */
+/* "Recent Files" — shared with Disk */
+/* "No Recent Files" — shared with Disk */
+/* "Clear Recent Files" — shared with Disk */
+
+/* ===== Tape Load Failure Alert ===== */
+"Tape Load Error" = "テープ読み込みエラー";
+
+/* ===== SettingsView.swift — Display Tab (Status Bar) ===== */
+"Status Bar" = "ステータスバー";
+"Show Tape Icon" = "テープアイコンを表示";
+
+/* ===== Bubilator88App.swift — View Menu ===== */
+"Actual Size (x1)" = "等倍 (x1)";
+"Double Size (x2)" = "2倍 (x2)";
+"Quad Size (x4)" = "4倍 (x4)";
+"Scanlines" = "スキャンライン";
+"Video Filter" = "ビデオフィルタ";
+"Translation Overlay" = "翻訳オーバーレイ";
+
+/* ===== Bubilator88App.swift — Control Menu ===== */
+"Control" = "コントロール";
+"Increase Volume" = "音量を上げる";
+"Decrease Volume" = "音量を下げる";
+"CPU Speed" = "CPU速度";
+"Save Screenshot…" = "スクリーンショットを保存…";
+"Save Screenshot" = "スクリーンショットを保存";
+"Copy Screen" = "画面をコピー";
+"Copy Text" = "テキストをコピー";
+"Paste Text" = "テキストを貼り付け";
+"Screenshot copied to clipboard" = "クリップボードにコピーしました";
+"Screenshot saved" = "スクリーンショットを保存しました";
+
+/* ===== Alert titles (unified notification system) ===== */
+"ROM Not Found" = "ROMが見つかりません";
+"File Error" = "ファイルエラー";
+"Disk Error" = "ディスクエラー";
+"Screenshot Error" = "スクリーンショットエラー";
+"Dump Error" = "ダンプエラー";
+"Snapshot Error" = "スナップショットエラー";
+"Screenshot failed" = "スクリーンショットの作成に失敗しました";
+"File no longer accessible" = "ファイルにアクセスできません";
+"Failed to create blank disk" = "空のディスクの作成に失敗しました";
+"Ask save location every time" = "保存場所を毎回たずねる";
+"Choose..." = "選択...";
+"Quick Save" = "クイックセーブ";
+"Quick Load" = "クイックロード";
+"State saved" = "ステートをセーブしました";
+"State loaded" = "ステートをロードしました";
+"Save state not found" = "ステートファイルが見つかりません";
+"Load failed" = "ロードに失敗しました";
+"Load failed: not a save state file" = "ロードに失敗: ステートファイルではありません";
+"Load failed: incompatible save state (v%u)" = "ロードに失敗: 非互換のステート (v%u)";
+"Load failed: save state is corrupt" = "ロードに失敗: ステートが破損しています";
+"Save State..." = "ステートセーブ...";
+"Load State..." = "ステートロード...";
+
+/* ===== Bubilator88App.swift — Debug Menu ===== */
+"Dump Text DMA Snapshot" = "テキストDMAスナップショット出力";
+"Dump Memory…" = "メモリをダンプ…";
+"Show Text Layer" = "テキストレイヤー表示";
+
+/* ===== ContentView.swift — Status Bar ===== */
+"Translation Overlay (⌘T)" = "翻訳オーバーレイ (⌘T)";
+"Volume: %lld%%" = "音量: %lld%%";
+
+/* ===== ContentView.swift — Disk Image Picker ===== */
+"Select Disk Image" = "ディスクイメージを選択";
+"(unnamed)" = "(名称なし)";
+"Cancel" = "キャンセル";
+
+/* ===== Disk Load Failure Alert ===== */
+"Can't Load Disk Image" = "ディスクイメージを読み込めません";
+"\"%@\" could not be read. The file may be missing, unreadable, or on a disconnected volume." = "「%@」を読み込めませんでした。ファイルが存在しないか、アクセスできないか、接続されていないボリュームにある可能性があります。";
+"\"%@\" is an archive, but it does not contain any D88 disk images." = "「%@」はアーカイブですが、D88 ディスクイメージが含まれていません。";
+"\"%@\" is a PC-8801 tape image (T88), not a D88 disk image. Bubilator88 does not support T88 files." = "「%@」は PC-8801 テープイメージ (T88) であり、D88 ディスクイメージではありません。Bubilator88 は T88 ファイルに対応していません。";
+"\"%@\" is not a valid D88 disk image. The header is missing or the file is corrupted." = "「%@」は有効な D88 ディスクイメージではありません。ヘッダが欠落しているかファイルが破損しています。";
+
+/* ===== SaveStateSheetView.swift ===== */
+"Save State" = "ステートセーブ";
+"Load State" = "ステートロード";
+"Empty" = "空";
+"Slot %lld" = "スロット %lld";
+
+/* ===== ArchiveFilePickerView.swift ===== */
+"Select Disk Image from Archive" = "アーカイブからディスクイメージを選択";
+
+/* ===== ImmersivePositionPad.swift ===== */
+"FRONT" = "前方";
+
+/* ===== SettingsView.swift — Tab Items ===== */
+"General" = "一般";
+"Display" = "表示";
+"Audio" = "オーディオ";
+"Keyboard" = "キーボード";
+"Controller" = "コントローラ";
+
+/* ===== SettingsView.swift — General Tab ===== */
+"Screenshot" = "スクリーンショット";
+"Format" = "フォーマット";
+"Development" = "開発";
+"Show DEBUG Menu" = "DEBUGメニューを表示";
+
+/* ===== SettingsView.swift — Display Tab ===== */
+"Fullscreen" = "フルスクリーン";
+"Scaling Mode" = "拡大モード";
+"Fit to Screen" = "画面に合わせる";
+"Integer Scaling" = "整数倍スケーリング";
+"Pixel-perfect display with black borders. No scaling artifacts." = "黒枠付きのドット等倍表示。スケーリングによるにじみがありません。";
+"Fill the screen as much as possible while maintaining aspect ratio." = "アスペクト比を維持しながら画面いっぱいに表示します。";
+"Target Language" = "翻訳先言語";
+"Translates Japanese text detected on screen. Requires language download in System Settings." = "画面上の日本語テキストを翻訳します。システム設定で言語のダウンロードが必要です。";
+
+/* ===== SettingsView.swift — Audio Tab ===== */
+"Audio Buffer" = "オーディオバッファ";
+"Lower values reduce latency but may cause crackling." = "値を小さくするとレイテンシが減少しますが、音割れが発生する場合があります。";
+"FDD Sound" = "FDDサウンド";
+"Enable FDD Sound" = "FDDサウンドを有効にする";
+"Synthesized floppy disk seek and read sounds with stereo drive separation." = "合成によるフロッピーディスクのシーク/リード音をステレオで再生します。";
+"Pseudo Stereo" = "疑似ステレオ";
+"Enable Pseudo Stereo" = "疑似ステレオを有効にする";
+"Applies a chorus effect to mono FM output for stereo widening." = "モノラルFM出力にコーラスエフェクトを適用してステレオ感を拡張します。";
+"Immersive Audio" = "イマーシブオーディオ";
+"Enable Immersive Audio" = "イマーシブオーディオを有効にする";
+"Places FM, SSG, ADPCM, and Rhythm channels in 3D space with head tracking. Requires compatible headphones." = "FM、SSG、ADPCM、Rhythmチャンネルをヘッドトラッキング付きの3D空間に配置します。対応ヘッドフォンが必要です。";
+"Reset Positions" = "位置をリセット";
+
+/* ===== SettingsView.swift — Controller Tab ===== */
+"Game Controller" = "ゲームコントローラ";
+"Enable Game Controller" = "ゲームコントローラを有効にする";
+"No controller connected." = "コントローラが接続されていません。";
+"Active Controller" = "アクティブなコントローラ";
+"Haptic Feedback" = "触覚フィードバック";
+"Enable Haptic Feedback" = "触覚フィードバックを有効にする";
+"Vibrates the controller when SSG noise effects (explosions, impacts) are detected." = "SSGのノイズエフェクト（爆発・衝撃など）を検出したときにコントローラを振動させます。";
+"Reset to Defaults" = "デフォルトに戻す";
+"Press a key..." = "キーを押してください...";
+"None" = "なし";
+"Clear assignment" = "割り当てを解除";
+"Connected: %@" = "接続中: %@";
+"Button Mapping — %@" = "ボタン割り当て — %@";
+"Detected: %@" = "検出: %@";
+"Reset to default (%@)" = "デフォルトに戻す (%@)";
+
+/* ===== SettingsView.swift — Keyboard Tab ===== */
+"Layout" = "レイアウト";
+"Keyboard Layout" = "キーボードレイアウト";
+"Auto-detect" = "自動検出";
+"Numpad Emulation" = "テンキーエミュレーション";
+"Arrow Keys as Numpad" = "矢印キーをテンキーとして使用";
+"For keyboards without a numpad. Maps arrow keys to numpad 2/4/6/8 for game character movement." = "テンキーのないキーボード用。矢印キーをテンキー 2/4/6/8 に割り当て、ゲームキャラクターの移動に使用します。";
+"Number Row as Numpad" = "数字キーをテンキーとして使用";
+"For games that only accept numpad digits (e.g. adventure game menu selections). Maps number row 0-9 to numpad 0-9." = "テンキー数字のみ受け付けるゲーム用（アドベンチャーゲームのメニュー選択など）。数字キー 0-9 をテンキー 0-9 に割り当てます。";
+"Special Key Mapping" = "特殊キー割り当て";
+"PC-8801 keys not found on modern keyboards. Click to reassign." = "現代のキーボードにないPC-8801のキーです。クリックして再割り当てできます。";
+
+/* ===== AppDelegate.swift — Shortcut confirmation dialogs ===== */
+"Quit Bubilator88?" = "Bubilator88 を終了しますか?";
+"Close the emulator window?" = "エミュレータウィンドウを閉じますか?";
+"Unsaved emulator state will be lost." = "セーブしていないエミュレータの状態は失われます。";
+"Quit" = "終了";
+"Close" = "閉じる";
+"Cancel" = "キャンセル";

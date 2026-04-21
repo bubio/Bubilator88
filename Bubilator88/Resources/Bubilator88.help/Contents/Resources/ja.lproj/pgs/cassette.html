@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="Cassette Tape">
+    <meta name="description" content="カセットテープ (CMT / T88) のマウント、巻き戻し、取り出し">
+    <meta name="keywords" content="テープ, カセット, CMT, T88, CLOAD, RUN, 巻き戻し">
+    <meta name="robots" content="index">
+    <title>カセットテープ</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>目次</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 ヘルプ</a></li>
+            <li><a href="getting-started.html">はじめに</a></li>
+            <li><a href="disks.html">ディスク操作</a></li>
+            <li><a href="cassette.html">カセットテープ</a></li>
+            <li><a href="keyboard.html">キーボード</a></li>
+            <li><a href="display.html">表示設定</a></li>
+            <li><a href="audio.html">サウンド</a></li>
+            <li><a href="savestates.html">ステートセーブ</a></li>
+            <li><a href="controller.html">ゲームコントローラ</a></li>
+            <li><a href="shortcuts.html">ショートカット一覧</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="cassette"></a>
+    <h1>カセットテープ</h1>
+
+    <h2>対応フォーマット</h2>
+    <ul>
+        <li><strong>.cmt</strong> — バイト列そのままのテープイメージ</li>
+        <li><strong>.t88</strong> — データキャリアタグ付きテープイメージ</li>
+    </ul>
+
+    <h2>テープのマウント</h2>
+    <table>
+        <tr><th>操作</th><th>ショートカット</th></tr>
+        <tr><td><strong>テープ &gt; 開く...</strong></td><td><kbd>&#8679;&#8984;T</kbd></td></tr>
+        <tr><td><strong>テープ &gt; 巻き戻し</strong></td><td>—</td></tr>
+        <tr><td><strong>テープ &gt; 取り出し</strong></td><td>—</td></tr>
+    </table>
+    <p>テープをマウントすると、ステータスバーにテープアイコンと現在のテープ名が表示されます（<strong>設定 &gt; 一般 &gt; ステータスバーにテープを表示</strong> が有効なとき）。</p>
+
+    <h2>読み込み手順</h2>
+    <ol>
+        <li>ブートモードを <strong>V1H</strong>（もしくは V1S）にして N88-BASIC プロンプトを出します。</li>
+        <li><strong>テープ &gt; 開く...</strong> から <code>.cmt</code> または <code>.t88</code> を選択。</li>
+        <li>BASIC に <code>LOAD "CAS:"</code> + <kbd>Return</kbd> を入力。</li>
+        <li>読み込みが終わり <code>Ok</code> に戻ったら <code>RUN</code> + <kbd>Return</kbd>。</li>
+    </ol>
+
+    <h2>最近使ったテープ</h2>
+    <p><strong>テープ &gt; 最近使ったファイル</strong> から、最近開いたテープを最大 10 件までたどれます。</p>
+
+    <h2>既知の制限</h2>
+    <ul>
+        <li><strong>テープへの書き込み（<code>SAVE "CAS:"</code> など）には対応していません。</strong>BASIC は <code>Syntax error</code> にはなりませんが、テープには何も記録されません。</li>
+        <li>波形タイミングに依存するプロテクトが掛かったテープは読み込めないことがあります。</li>
+    </ul>
+
+    <p><a href="../index.html">Bubilator88 ヘルプに戻る</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>

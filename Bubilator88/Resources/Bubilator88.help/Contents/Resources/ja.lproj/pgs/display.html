@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="Display">
+    <meta name="description" content="ウィンドウ倍率、ビデオフィルタ、翻訳オーバーレイ、スクリーンショット">
+    <meta name="keywords" content="表示, ウィンドウ, スケール, ビデオフィルタ, スキャンライン, xBRZ, CRT, フルスクリーン, AI超解像, 翻訳, スクリーンショット">
+    <meta name="robots" content="index">
+    <title>表示設定</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>目次</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 ヘルプ</a></li>
+            <li><a href="getting-started.html">はじめに</a></li>
+            <li><a href="disks.html">ディスク操作</a></li>
+            <li><a href="cassette.html">カセットテープ</a></li>
+            <li><a href="keyboard.html">キーボード</a></li>
+            <li><a href="display.html">表示設定</a></li>
+            <li><a href="audio.html">サウンド</a></li>
+            <li><a href="savestates.html">ステートセーブ</a></li>
+            <li><a href="controller.html">ゲームコントローラ</a></li>
+            <li><a href="shortcuts.html">ショートカット一覧</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="display"></a>
+    <h1>表示設定</h1>
+
+    <h2>ウィンドウサイズ</h2>
+    <p>表示の基準解像度は 640 x 400 ピクセルです。<strong>表示</strong> メニューからウィンドウ倍率を変更できます：</p>
+    <table>
+        <tr><th>サイズ</th><th>ショートカット</th></tr>
+        <tr><td><strong>表示 &gt; 等倍 (x1)</strong></td><td><kbd>&#8963;&#8984;1</kbd></td></tr>
+        <tr><td><strong>表示 &gt; 2倍 (x2)</strong></td><td><kbd>&#8963;&#8984;2</kbd></td></tr>
+        <tr><td><strong>表示 &gt; 4倍 (x4)</strong></td><td><kbd>&#8963;&#8984;4</kbd></td></tr>
+    </table>
+    <p>フルスクリーンは macOS 標準のフルスクリーン機能で切り替えます。通常はウィンドウ左上の緑ボタンを使います。</p>
+
+    <h2>フルスクリーン</h2>
+    <p><strong>設定 &gt; 表示 &gt; 拡大モード</strong> で選択できます：</p>
+    <ul>
+        <li><strong>画面に合わせる</strong> — アスペクト比を維持したまま、できるだけ大きく表示します。</li>
+        <li><strong>整数倍スケーリング</strong> — 黒帯付きでも整数倍を維持し、にじみを避けます。</li>
+    </ul>
+    <p>フルスクリーン中はマウスを動かすと下部オーバーレイが現れ、ドライブメニュー、音量、翻訳トグルなどにアクセスできます。</p>
+
+    <h2>ビデオフィルタ</h2>
+    <p><strong>表示 &gt; ビデオフィルタ</strong> から選択できます：</p>
+    <table>
+        <tr><th>フィルタ</th><th>説明</th></tr>
+        <tr><td>None</td><td>ニアレストネイバー（ドットくっきり）</td></tr>
+        <tr><td>Linear</td><td>バイリニア補間</td></tr>
+        <tr><td>Bicubic</td><td>バイキュービック補間（なめらか）</td></tr>
+        <tr><td>CRT</td><td>CRTモニタシミュレーション（蛍光体・湾曲表現）</td></tr>
+        <tr><td>xBRZ</td><td>エッジスムージング ピクセルアートスケーラ</td></tr>
+        <tr><td>Enhanced</td><td>2パス処理：ディザリング除去 + xBRZ</td></tr>
+        <tr><td>AI Upscale (Fast)</td><td>軽量SRVGGNet（32ch×12層、約11.6万パラメータ）。リアルタイム最優先</td></tr>
+        <tr><td>AI Upscale (Balanced)</td><td>標準SRVGGNet（64ch×16層、約60万パラメータ）。画質と速度のバランス</td></tr>
+        <tr><td>AI Upscale (Quality)</td><td>Real-ESRGAN。最高品質、静的画面向き</td></tr>
+    </table>
+
+    <h2>スキャンライン</h2>
+    <p><strong>表示 &gt; スキャンライン</strong> で走査線オーバーレイを切り替えられます。使用できるのは <strong>なし</strong>、<strong>Linear</strong>、<strong>Bicubic</strong> のときだけです。</p>
+
+    <h2>翻訳オーバーレイ</h2>
+    <p><kbd>&#8984;T</kbd> または <strong>表示 &gt; 翻訳オーバーレイ</strong> で切り替えます。翻訳元は日本語固定です。</p>
+    <p>有効にすると現在の画面の文字を読み取り、画面が変わったときに数秒おきに翻訳を更新します。翻訳先は <strong>設定 &gt; 表示 &gt; 翻訳先言語</strong> で変更できます。</p>
+    <p>翻訳に必要な言語データは、あらかじめ macOS のシステム設定でダウンロードしてください。</p>
+
+    <h2>スクリーンショット</h2>
+    <p><strong>コントロール &gt; スクリーンショットを保存...</strong> で現在の画面を保存します。保存形式は <strong>設定 &gt; 一般 &gt; フォーマット</strong> で <strong>PNG</strong>、<strong>JPEG</strong>、<strong>HEIC</strong> から選べます。</p>
+
+    <p><a href="../index.html">Bubilator88 ヘルプに戻る</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>
