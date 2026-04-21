@@ -1463,7 +1463,16 @@ public final class UPD765A {
             let cmdSize = 0x80 << min(Int(startN), 7)
             if chrMatch.data.count < cmdSize {
                 var padded = chrMatch
-                padded.data = chrMatch.data + [UInt8](repeating: 0xFF, count: cmdSize - chrMatch.data.count)
+                padded.data = rawTrackContinuationBytes(
+                    disk: disk,
+                    track: track,
+                    startSector: chrMatch,
+                    targetByteCount: cmdSize
+                ) ?? contiguousTrackBytes(
+                    sectors: disk.tracks[track],
+                    startSector: chrMatch,
+                    targetByteCount: cmdSize
+                )
                 sector = padded
             } else {
                 sector = chrMatch
@@ -1488,6 +1497,316 @@ public final class UPD765A {
             sequence[0] = sector
         }
         return (track, sector, sequence, resolution.usedLogicalSlot)
+    }
+
+    private struct SyntheticTrackImage {
+        var bytes: [UInt8]
+        var dataPositions: [Int]
+    }
+
+    /// BubiC-style continuation for N-mismatch reads: rebuild the track stream
+    /// from the D88 sector list, then continue reading from the matched
+    /// sector's data field as if the controller kept clocking the medium.
+    private func rawTrackContinuationBytes(
+        disk: D88Disk,
+        track: Int,
+        startSector: D88Disk.Sector,
+        targetByteCount: Int
+    ) -> [UInt8]? {
+        guard targetByteCount > 0 else { return [] }
+        guard track >= 0, track < disk.tracks.count else { return nil }
+        guard let startIndex = disk.tracks[track].firstIndex(where: {
+            $0.c == startSector.c && $0.h == startSector.h && $0.r == startSector.r && $0.n == startSector.n
+        }) else { return nil }
+        guard let trackImage = syntheticTrackImage(disk: disk, track: track),
+              startIndex < trackImage.dataPositions.count,
+              !trackImage.bytes.isEmpty else { return nil }
+
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(targetByteCount)
+
+        var position = trackImage.dataPositions[startIndex]
+        while bytes.count < targetByteCount {
+            bytes.append(trackImage.bytes[position])
+            position += 1
+            if position >= trackImage.bytes.count {
+                position = 0
+            }
+        }
+        return bytes
+    }
+
+    private func syntheticTrackImage(
+        disk: D88Disk,
+        track: Int
+    ) -> SyntheticTrackImage? {
+        guard track >= 0, track < disk.tracks.count else { return nil }
+        let sectors = disk.tracks[track]
+        guard !sectors.isEmpty else { return nil }
+
+        let trackMFM = sectors.contains { $0.density == 0x00 }
+        let syncSize = trackMFM ? 12 : 6
+        let amSize = trackMFM ? 3 : 0
+        var gap0Size = trackMFM ? 80 : 40
+        var gap1Size = trackMFM ? 50 : 26
+        let gap2Size = trackMFM ? 22 : 11
+        var gap3Size = 0
+        let gapData: UInt8 = trackMFM ? 0x4E : 0xFF
+        let trackSize = syntheticTrackSize(diskType: disk.diskType, trackMFM: trackMFM)
+        let sectorCount = sectors.first(where: { $0.sectorCount > 0 }).map { Int($0.sectorCount) } ?? sectors.count
+        let referenceSize = sectors.last?.data.count ?? 0
+
+        if disk.diskType == .twoHD {
+            if trackMFM {
+                if referenceSize == 256 && sectorCount == 26 { gap3Size = 54 }
+                if referenceSize == 512 && sectorCount == 15 { gap3Size = 84 }
+                if referenceSize == 1024 && sectorCount == 8 { gap3Size = 116 }
+            } else {
+                if referenceSize == 128 && sectorCount == 26 { gap3Size = 27 }
+                if referenceSize == 256 && sectorCount == 15 { gap3Size = 42 }
+                if referenceSize == 512 && sectorCount == 8 { gap3Size = 58 }
+            }
+        } else {
+            if trackMFM {
+                if referenceSize == 256 && sectorCount == 16 { gap3Size = 51 }
+                if referenceSize == 512 && sectorCount == 9 { gap3Size = 80 }
+                if referenceSize == 1024 && sectorCount == 5 { gap3Size = 116 }
+            } else {
+                if referenceSize == 128 && sectorCount == 16 { gap3Size = 27 }
+                if referenceSize == 256 && sectorCount == 9 { gap3Size = 42 }
+                if referenceSize == 512 && sectorCount == 5 { gap3Size = 58 }
+            }
+        }
+
+        var syncPositions = Array(repeating: 0, count: sectors.count)
+        var dataPositions = Array(repeating: 0, count: sectors.count)
+        var total = 0
+        var validSectorCount = 0
+        for (index, sector) in sectors.enumerated() {
+            let dataSize = sector.data.count
+            syncPositions[index] = total
+            total += syncSize + (amSize + 1) + (4 + 2) + gap2Size
+            if dataSize > 0 {
+                total += syncSize + (amSize + 1)
+                total += dataSize + 2
+                validSectorCount += 1
+            }
+        }
+        total += syncSize + (amSize + 1)
+
+        if gap3Size == 0 {
+            gap3Size = (trackSize - total - gap0Size - gap1Size) / max(validSectorCount + 1, 1)
+        }
+        var gap4Size = trackSize - total - gap0Size - gap1Size - gap3Size * validSectorCount
+        var invalidFormat = false
+        if gap3Size < 8 || gap4Size < 8 {
+            let fallbackGap = (trackSize - total) / max(2 + validSectorCount + 1, 1)
+            gap0Size = fallbackGap
+            gap1Size = fallbackGap
+            gap3Size = fallbackGap
+            gap4Size = trackSize - total - gap0Size - gap1Size - gap3Size * validSectorCount
+        }
+        if gap3Size < 8 || gap4Size < 8 {
+            gap0Size = 8
+            gap1Size = 8
+            gap3Size = 8
+            gap4Size = 8
+            invalidFormat = true
+        }
+
+        let preambleSize = gap0Size + syncSize + (amSize + 1) + gap1Size
+        if invalidFormat, total > syncSize + (amSize + 1) {
+            let scaledSpan = max(trackSize - preambleSize - gap4Size, 0)
+            total -= syncSize + (amSize + 1)
+            for index in syncPositions.indices {
+                syncPositions[index] = total > 0 ? (syncPositions[index] * scaledSpan) / total : 0
+            }
+        }
+
+        total = preambleSize
+        for (index, sector) in sectors.enumerated() {
+            let dataSize = sector.data.count
+            if invalidFormat {
+                total = preambleSize + syncPositions[index]
+            }
+            syncPositions[index] = total
+            total += syncSize
+            total += amSize + 1
+            total += 4 + 2 + gap2Size
+            if dataSize > 0 {
+                total += syncSize + (amSize + 1)
+                dataPositions[index] = total
+                total += dataSize + 2
+                total += gap3Size
+            } else {
+                dataPositions[index] = total
+            }
+        }
+
+        var trackBytes = [UInt8](repeating: gapData, count: trackSize)
+        let preambleSyncPosition = gap0Size
+        var q = preambleSyncPosition
+        for _ in 0..<syncSize where q < trackBytes.count {
+            trackBytes[q] = 0x00
+            q += 1
+        }
+        for _ in 0..<amSize where q < trackBytes.count {
+            trackBytes[q] = 0xC2
+            q += 1
+        }
+        if q < trackBytes.count {
+            trackBytes[q] = 0xFC
+        }
+
+        for (index, sector) in sectors.enumerated() {
+            let dataSize = sector.data.count
+            var p = syncPositions[index]
+
+            for _ in 0..<syncSize where p < trackBytes.count {
+                trackBytes[p] = 0x00
+                p += 1
+            }
+
+            var crc: UInt16 = 0xFFFF
+            for _ in 0..<amSize {
+                if p < trackBytes.count {
+                    trackBytes[p] = 0xA1
+                    p += 1
+                }
+                crc = updateTrackCRC(crc, byte: 0xA1)
+            }
+            if p < trackBytes.count {
+                trackBytes[p] = 0xFE
+                p += 1
+            }
+            crc = updateTrackCRC(crc, byte: 0xFE)
+
+            for byte in [sector.c, sector.h, sector.r, sector.n] {
+                if p < trackBytes.count {
+                    trackBytes[p] = byte
+                    p += 1
+                }
+                crc = updateTrackCRC(crc, byte: byte)
+            }
+            for byte in [UInt8((crc >> 8) & 0xFF), UInt8(crc & 0xFF)] {
+                if p < trackBytes.count {
+                    trackBytes[p] = byte
+                    p += 1
+                }
+            }
+            for _ in 0..<gap2Size where p < trackBytes.count {
+                trackBytes[p] = gapData
+                p += 1
+            }
+
+            guard dataSize > 0 else { continue }
+
+            for _ in 0..<syncSize where p < trackBytes.count {
+                trackBytes[p] = 0x00
+                p += 1
+            }
+            crc = 0xFFFF
+            for _ in 0..<amSize {
+                if p < trackBytes.count {
+                    trackBytes[p] = 0xA1
+                    p += 1
+                }
+                crc = updateTrackCRC(crc, byte: 0xA1)
+            }
+            let dataAddressMark: UInt8 = sector.deleted ? 0xF8 : 0xFB
+            if p < trackBytes.count {
+                trackBytes[p] = dataAddressMark
+                p += 1
+            }
+            crc = updateTrackCRC(crc, byte: dataAddressMark)
+
+            for byte in sector.data {
+                if p < trackBytes.count {
+                    trackBytes[p] = byte
+                    p += 1
+                }
+                crc = updateTrackCRC(crc, byte: byte)
+            }
+            for byte in [UInt8((crc >> 8) & 0xFF), UInt8(crc & 0xFF)] {
+                if p < trackBytes.count {
+                    trackBytes[p] = byte
+                    p += 1
+                }
+            }
+        }
+
+        return SyntheticTrackImage(bytes: trackBytes, dataPositions: dataPositions)
+    }
+
+    private func syntheticTrackSize(diskType: D88Disk.DiskType, trackMFM: Bool) -> Int {
+        switch diskType {
+        case .twoHD:
+            return 10410
+        case .twoD, .twoDD:
+            return trackMFM ? 6250 : 3100
+        }
+    }
+
+    private func updateTrackCRC(_ crc: UInt16, byte: UInt8) -> UInt16 {
+        var crc = crc ^ (UInt16(byte) << 8)
+        for _ in 0..<8 {
+            if (crc & 0x8000) != 0 {
+                crc = (crc << 1) ^ 0x1021
+            } else {
+                crc <<= 1
+            }
+        }
+        return crc
+    }
+
+    /// Approximate the bytes a real controller would keep shifting out after
+    /// landing on a sector whose recorded size is smaller than the command's
+    /// requested N. D88 does not store raw track bytes or inter-sector gaps,
+    /// so the best available approximation is to continue through the
+    /// following physical sectors in on-disk order and only fall back to 0xFF
+    /// if the track data still runs short.
+    private func contiguousTrackBytes(
+        sectors: [D88Disk.Sector],
+        startSector: D88Disk.Sector,
+        targetByteCount: Int
+    ) -> [UInt8] {
+        guard targetByteCount > 0 else { return [] }
+        guard let startIndex = sectors.firstIndex(where: {
+            $0.c == startSector.c && $0.h == startSector.h && $0.r == startSector.r && $0.n == startSector.n
+        }), !sectors.isEmpty else {
+            let prefix = Array(startSector.data.prefix(targetByteCount))
+            if prefix.count >= targetByteCount {
+                return prefix
+            }
+            return prefix + [UInt8](repeating: 0xFF, count: targetByteCount - prefix.count)
+        }
+
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(targetByteCount)
+
+        var index = startIndex
+        var wrapped = false
+        while bytes.count < targetByteCount {
+            bytes.append(contentsOf: sectors[index].data)
+            index += 1
+            if index >= sectors.count {
+                if wrapped {
+                    break
+                }
+                index = 0
+                wrapped = true
+            }
+            if wrapped && index == startIndex {
+                break
+            }
+        }
+
+        if bytes.count < targetByteCount {
+            bytes.append(contentsOf: [UInt8](repeating: 0xFF, count: targetByteCount - bytes.count))
+        } else if bytes.count > targetByteCount {
+            bytes.removeSubrange(targetByteCount...)
+        }
+        return bytes
     }
 
     private func preferredReadCandidate(

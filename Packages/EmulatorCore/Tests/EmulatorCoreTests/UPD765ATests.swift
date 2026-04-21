@@ -330,6 +330,48 @@ struct UPD765ATests {
         #expect(results[5] == 6)
     }
 
+    @Test func readDataNMismatchContinuesThroughRawTrackBytes() {
+        var disk = D88Disk()
+        for record in 1...16 {
+            var sector = D88Disk.Sector()
+            sector.c = 39
+            sector.h = 1
+            sector.r = UInt8(record)
+            sector.n = 1
+            sector.sectorCount = 16
+            sector.density = 0x00
+            if record <= 2 {
+                sector.data = (0..<256).map { $0.isMultiple(of: 2) ? 0xFF : 0x00 }
+            } else {
+                sector.data = Array(repeating: 0x00, count: 256)
+            }
+            disk.tracks[79].append(sector)
+        }
+
+        let (fdc, _) = makeFDCWithDisk(disk)
+        fdc.pcn[0] = 39
+
+        writeReadDataCmd(fdc, drive: 0, head: 1, c: 39, h: 1, r: 1, n: 3, eot: 2, gpl: 0x35, dtl: 0xFF)
+
+        #expect(fdc.phase == .execution)
+        let data = readExecutionBytes(fdc, count: 1024)
+        #expect(data[0] == 0xFF)
+        #expect(data[1] == 0x00)
+        #expect(data[0x206] == 0x00)
+        #expect(data[0x207] == 0xFF)
+        #expect(data[0x208] == 0x00)
+        #expect(data[0x209] == 0xFF)
+        #expect(data[0x20A] == 0x00)
+        #expect(data[0x20B] == 0xFF)
+        #expect(data[0x20C] == 0x00)
+        #expect(data[0x20D] == 0xFF)
+
+        #expect(fdc.phase == .result)
+        let results = readResults(fdc)
+        #expect(results[0] & 0xC0 == 0x40)
+        #expect(results[1] & UPD765A.ST1_DE != 0)
+    }
+
     @Test func readDataSectorNotFound() {
         let disk = makeDisk(track: 0, c: 0, h: 0, sectors: [(r: 1, data: Array(repeating: 0, count: 256))])
         let (fdc, _) = makeFDCWithDisk(disk)
