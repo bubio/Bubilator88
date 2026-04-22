@@ -557,7 +557,8 @@ final class EmulatorViewModel {
         applyVolume()
         audio.setRate(cpuSpeed.audioRate)
         if Settings.shared.fddSound {
-            fddSound.start()
+            fddSound.volume = FDDSound.volume(for: Settings.shared.fddSoundVolumeLevel)
+            fddSound.start(outputDeviceUID: Settings.shared.fddSoundDeviceUID)
         }
         if Settings.shared.gameControllerEnabled {
             gameController.start(viewModel: self)

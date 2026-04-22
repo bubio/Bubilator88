@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreAudio
 
 /// Synthesized floppy disk drive access sounds.
 ///
@@ -27,6 +28,15 @@ final class FDDSound {
         (l: 0.3, r: 0.8),  // drive 0: right-leaning
         (l: 0.8, r: 0.3),  // drive 1: left-leaning
     ]
+
+    /// 音量レベル (0=小/1=中/2=大) を実際の音量値に変換する。
+    static func volume(for level: Int) -> Float {
+        switch level {
+        case 0:  return 0.06   // 小: 30%
+        case 1:  return 0.12   // 中: 60%
+        default: return 0.2    // 大: 100%
+        }
+    }
 
     /// Volume for FDD sounds (0.0 - 1.0)
     var volume: Float = 0.2 {
@@ -116,7 +126,7 @@ final class FDDSound {
 
     // MARK: - Start / Stop
 
-    func start() {
+    func start(outputDeviceUID: String = "") {
         guard !isEnabled, let format = stereoFormat else { return }
 
         let engine = AVAudioEngine()
@@ -136,9 +146,38 @@ final class FDDSound {
             self.engine = engine
             self.playerNodes = nodes
             isEnabled = true
+            applyOutputDeviceUID(outputDeviceUID)
         } catch {
             // FDD sound init failed — emulator runs without disk sounds
         }
+    }
+
+    /// 出力先デバイスを切り替える。空文字列 = システムデフォルト。エンジン起動済みのときのみ有効。
+    func applyOutputDeviceUID(_ uid: String) {
+        guard isEnabled, let engine else { return }
+        guard let au = engine.outputNode.audioUnit else { return }
+
+        let targetID: AudioDeviceID
+        if uid.isEmpty {
+            var id = AudioDeviceID(kAudioObjectUnknown)
+            var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+            var addr = AudioObjectPropertyAddress(
+                mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &id)
+            targetID = id
+        } else {
+            guard let id = AudioDeviceList.deviceID(forUID: uid) else { return }
+            targetID = id
+        }
+
+        var id = targetID
+        // 失敗時はデフォルト出力のまま継続（デバイスが切断済み等）
+        _ = AudioUnitSetProperty(au, kAudioOutputUnitProperty_CurrentDevice,
+                                 kAudioUnitScope_Global, 0,
+                                 &id, UInt32(MemoryLayout<AudioDeviceID>.size))
     }
 
     func stop() {

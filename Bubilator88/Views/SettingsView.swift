@@ -167,6 +167,7 @@ private struct AudioSettingsTab: View {
     let viewModel: EmulatorViewModel
     @State private var settings = Settings.shared
     @State private var audioBufferDebounceTask: Task<Void, Never>?
+    @State private var availableOutputDevices: [AudioDeviceInfo] = [.systemDefault]
 
     var body: some View {
         Form {
@@ -184,9 +185,24 @@ private struct AudioSettingsTab: View {
 
             Section("FDD Sound") {
                 Toggle("Enable FDD Sound", isOn: fddSoundBinding)
+                Picker("Volume", selection: fddVolumeLevelBinding) {
+                    Image(systemName: "speaker.wave.1").tag(0)
+                    Image(systemName: "speaker.wave.2").tag(1)
+                    Image(systemName: "speaker.wave.3").tag(2)
+                }
+                .pickerStyle(.segmented)
+                Picker("Output Device", selection: fddDeviceBinding) {
+                    ForEach(availableOutputDevices) { device in
+                        Text(device.name).tag(device.uid)
+                    }
+                }
+                .pickerStyle(.menu)
                 Text("Synthesized floppy disk seek and read sounds with stereo drive separation.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+            .task {
+                availableOutputDevices = AudioDeviceList.outputDevices()
             }
 
             Section("Pseudo Stereo") {
@@ -240,10 +256,30 @@ private struct AudioSettingsTab: View {
             set: { newValue in
                 settings.fddSound = newValue
                 if newValue {
-                    viewModel.fddSound.start()
+                    viewModel.fddSound.start(outputDeviceUID: settings.fddSoundDeviceUID)
                 } else {
                     viewModel.fddSound.stop()
                 }
+            }
+        )
+    }
+
+    private var fddVolumeLevelBinding: Binding<Int> {
+        Binding(
+            get: { settings.fddSoundVolumeLevel },
+            set: { newLevel in
+                settings.fddSoundVolumeLevel = newLevel
+                viewModel.fddSound.volume = FDDSound.volume(for: newLevel)
+            }
+        )
+    }
+
+    private var fddDeviceBinding: Binding<String> {
+        Binding(
+            get: { settings.fddSoundDeviceUID },
+            set: { newUID in
+                settings.fddSoundDeviceUID = newUID
+                viewModel.fddSound.applyOutputDeviceUID(newUID)
             }
         )
     }
