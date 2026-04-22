@@ -158,6 +158,9 @@
 "Lower values reduce latency but may cause crackling." = "値を小さくするとレイテンシが減少しますが、音割れが発生する場合があります。";
 "FDD Sound" = "FDDサウンド";
 "Enable FDD Sound" = "FDDサウンドを有効にする";
+"Volume" = "音量";
+"Output Device" = "出力デバイス";
+"System Default" = "システムデフォルト";
 "Synthesized floppy disk seek and read sounds with stereo drive separation." = "合成によるフロッピーディスクのシーク/リード音をステレオで再生します。";
 "Pseudo Stereo" = "疑似ステレオ";
 "Enable Pseudo Stereo" = "疑似ステレオを有効にする";
