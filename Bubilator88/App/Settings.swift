@@ -119,6 +119,16 @@ final class Settings {
         didSet { UserDefaults.standard.set(fddSound, forKey: "fddSound") }
     }
 
+    /// FDD アクセス音の出力先デバイス UID。空文字列 = システムデフォルト。
+    var fddSoundDeviceUID: String = "" {
+        didSet { UserDefaults.standard.set(fddSoundDeviceUID, forKey: "fddSoundDeviceUID") }
+    }
+
+    /// FDD アクセス音の音量レベル。0=小(30%), 1=中(60%), 2=大(100%)。デフォルトは大。
+    var fddSoundVolumeLevel: Int = 2 {
+        didSet { UserDefaults.standard.set(fddSoundVolumeLevel, forKey: "fddSoundVolumeLevel") }
+    }
+
     // MARK: - Game Controller
 
     /// Enable game controller input.
@@ -320,6 +330,12 @@ final class Settings {
         }
         if let v = UserDefaults.standard.object(forKey: "fddSound") as? Bool {
             fddSound = v
+        }
+        if let v = UserDefaults.standard.string(forKey: "fddSoundDeviceUID") {
+            fddSoundDeviceUID = v
+        }
+        if let v = UserDefaults.standard.object(forKey: "fddSoundVolumeLevel") as? Int {
+            fddSoundVolumeLevel = v
         }
         if let data = UserDefaults.standard.data(forKey: "immersivePositions"),
            let pos = try? JSONDecoder().decode(ImmersiveAudioPositions.self, from: data) {
