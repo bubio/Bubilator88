@@ -1,7 +1,7 @@
 # Bubilator88
 
 <p align="center">
-  <img src="Docs/AppIcon.png" alt="Bubilator88" width="128" height="128">
+  <img src="docs/AppIcon.png" alt="Bubilator88" width="128" height="128">
 </p>
 
 NEC PC-8801 エミュレーター for macOS
