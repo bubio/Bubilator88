@@ -157,6 +157,7 @@ body::before {
 }
 .hero-shot-frame {
   position: relative;
+  z-index: 1001;
   aspect-ratio: 16 / 10;
   border-radius: 18px;
   overflow: hidden;
@@ -463,6 +464,7 @@ body::before {
 /* Media frame (single image/video) */
 .media-frame {
   position: relative;
+  z-index: 1001;
   aspect-ratio: 16 / 10;
   border-radius: 14px;
   overflow: hidden;
