@@ -68,6 +68,7 @@ BOOTTEST_KEY_EVENTS="120:RETURN:tap,300:S:tap" \
 | `BOOTTEST_PC_WATCH` | `addr1,addr2,...` | Main CPU PC breakpoints (hex) |
 | `BOOTTEST_SUBPC_WATCH` | `addr1,addr2,...` | Sub-CPU PC breakpoints (hex) |
 | `BOOTTEST_RAM_WATCH` | `addr1,addr2,...` | Main RAM watch addresses (hex) |
+| `BOOTTEST_TVRAM_WATCH` | `addr1,addr2,...` | Text VRAM watch addresses (hex). Logs writes and first-change frame, reported alongside `BOOTTEST_RAM_WATCH` output. |
 | `BOOTTEST_MAINRAM_DUMP` | `addr:len,...` | Dump main-CPU memory regions at end (hex) |
 | `BOOTTEST_SUBRAM_DUMP` | `addr:len,...` | Dump sub-CPU memory regions at end (hex). Reads `subSystem.subBus.romram` — useful for inspecting loader code uploaded into sub RAM (e.g. F2グランプリSR's custom FDC driver around 0x5000). |
 | `BOOTTEST_IRQ_TRACE` | (set to enable) | Log interrupt dispatch events |
@@ -75,6 +76,10 @@ BOOTTEST_KEY_EVENTS="120:RETURN:tap,300:S:tap" \
 | `BOOTTEST_AUDIO_MASK` | `fm,ssg,...` | Audio channel filter (fm/ssg/adpcm/rhythm) |
 | `BOOTTEST_FM_TRACE` | `1` | Enable FM register tracing |
 | `BOOTTEST_FM_TRACE_PATH` | (none) | FM trace output file path |
+| `BOOTTEST_CPU_TRACE_PATH` | (none) | Per-opcode CPU register trace. Format: `seq=N f=F PC=XXXX AF=... R=... IFF=X`. Diff across emulators/branches to find the first divergent instruction. |
+| `BOOTTEST_CPU_TRACE_WHICH` | `main` | `main` or `sub` — selects which Z80's trace to emit. |
+| `BOOTTEST_CPU_TRACE_LIMIT` | `0` (unlimited) | Cap trace lines. |
+| `BOOTTEST_CPU_TRACE_START_FRAME` | `0` | Skip frames before this so late-boot traces stay small. |
 
 ### Text DMA Snapshot
 
