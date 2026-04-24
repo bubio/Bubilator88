@@ -128,6 +128,7 @@ extension EmulatorViewModel {
                 palette: graphicsPalette,
                 columns80: machine.bus.columns80,
                 textRows: crtcLines,
+                graphicsDisplayEnabled: machine.bus.graphicsDisplayEnabled,
                 into: &pixelBuffer
             )
         } else {
@@ -139,6 +140,7 @@ extension EmulatorViewModel {
                 palette: graphicsPalette,
                 columns80: machine.bus.columns80,
                 textRows: crtcLines,
+                graphicsDisplayEnabled: machine.bus.graphicsDisplayEnabled,
                 into: &pixelBuffer
             )
         }
