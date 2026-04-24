@@ -276,8 +276,10 @@ extension EmulatorViewModel {
                                     imageGroups: imageGroups)
         if drive == 0 {
             drive0Name = name; drive0FileName = fileName; drive0Info = info
+            drive0WriteProtected = disk.writeProtected
         } else {
             drive1Name = name; drive1FileName = fileName; drive1Info = info
+            drive1WriteProtected = disk.writeProtected
         }
         // (mount confirmation not shown — no user-facing toast needed)
     }
@@ -325,8 +327,10 @@ extension EmulatorViewModel {
                                     imageGroups: groups)
         if drive == 0 {
             drive0Name = displayName; drive0FileName = fileName; drive0Info = info
+            drive0WriteProtected = disk.writeProtected
         } else {
             drive1Name = displayName; drive1FileName = fileName; drive1Info = info
+            drive1WriteProtected = disk.writeProtected
         }
         // (mount confirmation not shown)
     }
@@ -344,10 +348,28 @@ extension EmulatorViewModel {
         let displayName = info.imageNames[index]
         if drive == 0 {
             drive0Info = updated; drive0Name = displayName
+            drive0WriteProtected = disk.writeProtected
         } else {
             drive1Info = updated; drive1Name = displayName
+            drive1WriteProtected = disk.writeProtected
         }
         // (switch confirmation not shown)
+    }
+
+    /// Toggle the write-protect flag on the disk mounted in the specified drive.
+    /// No-op when the drive is empty.
+    func toggleWriteProtect(drive: Int) {
+        let name = drive == 0 ? drive0Name : drive1Name
+        guard name != "Empty" else { return }
+        let newValue = !(drive == 0 ? drive0WriteProtected : drive1WriteProtected)
+        emuQueue.sync {
+            machine.setWriteProtect(drive: drive, protected: newValue)
+        }
+        if drive == 0 {
+            drive0WriteProtected = newValue
+        } else {
+            drive1WriteProtected = newValue
+        }
     }
 
     func ejectDisk(drive: Int) {
@@ -358,10 +380,12 @@ extension EmulatorViewModel {
             drive0Name = "Empty"
             drive0FileName = nil
             drive0Info = nil
+            drive0WriteProtected = false
         } else {
             drive1Name = "Empty"
             drive1FileName = nil
             drive1Info = nil
+            drive1WriteProtected = false
         }
         // FDD boot is always the default; no need to revert to ROM boot
         // (eject confirmation not shown)

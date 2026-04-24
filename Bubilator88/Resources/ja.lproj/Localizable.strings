@@ -29,6 +29,8 @@
 "Drive 1&2" = "ドライブ 1&2";
 "Mount..." = "マウント...";
 "Eject" = "取り出し";
+"Write Protect" = "書き込み禁止";
+"Write Protect ✓" = "書き込み禁止 ✓";
 "Create Blank Disk..." = "空ディスク作成...";
 "Create Blank Disk" = "空ディスク作成";
 "Disk Type:" = "ディスクタイプ:";

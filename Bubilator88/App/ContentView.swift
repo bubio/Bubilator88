@@ -300,6 +300,12 @@ struct ContentView: View {
             }
             .disabled(name == "Empty")
 
+            let wp = drive == 0 ? viewModel.drive0WriteProtected : viewModel.drive1WriteProtected
+            Button(wp ? "Write Protect ✓" : "Write Protect") {
+                viewModel.toggleWriteProtect(drive: drive)
+            }
+            .disabled(name == "Empty")
+
             if name != "Empty", let fileName {
                 Divider()
                 Text(fileName).disabled(true)

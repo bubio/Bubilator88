@@ -351,6 +351,10 @@ final class EmulatorViewModel {
     var drive0Info: MountedDiskInfo?
     var drive1Info: MountedDiskInfo?
 
+    /// Per-drive write-protect state, synced to the mounted D88Disk.
+    var drive0WriteProtected: Bool = false
+    var drive1WriteProtected: Bool = false
+
     /// Currently mounted cassette tape: display name ("Empty" when none),
     /// source URL (for save-state metadata / recent reload), and format.
     var tapeName: String = "Empty"
@@ -854,6 +858,8 @@ final class EmulatorViewModel {
         // Reconstruct MountedDiskInfo from saved source URL or restored disk
         drive0Info = reconstructDiskInfo(drive: 0, meta: meta)
         drive1Info = reconstructDiskInfo(drive: 1, meta: meta)
+        drive0WriteProtected = machine.isWriteProtected(drive: 0)
+        drive1WriteProtected = machine.isWriteProtected(drive: 1)
         activeClock8MHz = machine.clock8MHz
         renderScreen()
         if wasRunning { start() }
