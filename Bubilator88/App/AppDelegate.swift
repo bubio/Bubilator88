@@ -28,6 +28,11 @@ import AppKit
 /// stays false → the shouldTerminate / shouldClose hooks return
 /// without prompting. Exactly the behavior we want.
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+    /// Set by the root SwiftUI scene so terminate hooks can reach the
+    /// recorder. Weak to avoid a retain cycle; the view model outlives
+    /// the delegate in practice.
+    weak var viewModel: EmulatorViewModel?
+
     private var shortcutMonitor: Any?
 
     /// True if the most recent terminate attempt was triggered by Cmd+Q.
@@ -58,6 +63,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        // Finalize an in-progress recording. M4A/AAC needs its `moov` atom
+        // written at close — skipping stopRecording here leaves the file
+        // unreadable. Runs synchronously on the main thread before the
+        // process exits.
+        MainActor.assumeIsolated {
+            viewModel?.stopRecording()
+        }
         if let monitor = shortcutMonitor {
             NSEvent.removeMonitor(monitor)
             shortcutMonitor = nil

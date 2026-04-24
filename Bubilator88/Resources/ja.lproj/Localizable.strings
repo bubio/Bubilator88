@@ -199,6 +199,24 @@
 "Special Key Mapping" = "特殊キー割り当て";
 "PC-8801 keys not found on modern keyboards. Click to reassign." = "現代のキーボードにないPC-8801のキーです。クリックして再割り当てできます。";
 
+/* ===== Audio Recording ===== */
+"Start Audio Recording" = "録音を開始";
+"Start Audio Recording…" = "録音を開始…";
+"Stop Audio Recording" = "録音を停止";
+"Stop audio recording" = "録音を停止";
+"Recording" = "録音";
+"Channels" = "チャンネル";
+"Stereo only" = "ステレオのみ";
+"Separated (8ch)" = "分離 (8ch)";
+"Stereo (2ch)" = "ステレオ (2ch)";
+"Separated records FM, SSG, ADPCM, and Rhythm into 8 discrete channels for DAW import (Logic, Audacity). QuickTime Player and most media players will only play the first 2 channels." = "FM、SSG、ADPCM、Rhythmを8つの独立チャンネルに分離して記録します。DAW (Logic、Audacity等) への取り込み用です。QuickTime Playerなど大半のプレーヤーでは先頭の2chのみ再生されます。";
+"Stereo records the final 2-channel mix that plays in any media player." = "最終的な2chミックスを記録します。どのメディアプレーヤーでも再生できます。";
+"Recording to %@" = "「%@」に録音中";
+"Recording stopped" = "録音を停止しました";
+"Recording failed" = "録音に失敗しました";
+"Choose" = "選択";
+"Choose a folder to save the recording" = "録音ファイルの保存先フォルダを選択";
+
 /* ===== AppDelegate.swift — Shortcut confirmation dialogs ===== */
 "Quit Bubilator88?" = "Bubilator88 を終了しますか?";
 "Close the emulator window?" = "エミュレータウィンドウを閉じますか?";
