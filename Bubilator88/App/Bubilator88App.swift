@@ -162,6 +162,18 @@ struct DiskCommands: Commands {
             }
             .disabled(name == "Empty")
 
+            let wp = drive == 0 ? viewModel.drive0WriteProtected : viewModel.drive1WriteProtected
+            Button {
+                viewModel.toggleWriteProtect(drive: drive)
+            } label: {
+                if wp {
+                    Label("Write Protect ✓", systemImage: "lock.fill")
+                } else {
+                    Label("Write Protect", systemImage: "lock.open")
+                }
+            }
+            .disabled(name == "Empty")
+
             if name != "Empty", let fileName {
                 Divider()
                 Text(fileName).disabled(true)
