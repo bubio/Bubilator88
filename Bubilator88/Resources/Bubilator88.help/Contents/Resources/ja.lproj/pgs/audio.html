@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Audio">
-    <meta name="description" content="音量、オーディオバッファ、FDDサウンド、出力デバイス、疑似ステレオ、イマーシブオーディオ">
-    <meta name="keywords" content="オーディオ, サウンド, 音量, FM, SSG, ADPCM, Rhythm, YM2608, OPNA, イマーシブオーディオ, FDD, バッファ, 出力デバイス, スピーカー">
+    <meta name="description" content="音量、オーディオバッファ、FDDサウンド、出力デバイス、疑似ステレオ、イマーシブオーディオ、録音">
+    <meta name="keywords" content="オーディオ, サウンド, 音量, FM, SSG, ADPCM, Rhythm, YM2608, OPNA, イマーシブオーディオ, FDD, バッファ, 出力デバイス, スピーカー, 録音, WAV, ALAC, AAC, チップチューン, DAW">
     <meta name="robots" content="index">
     <title>サウンド</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -60,6 +60,35 @@
     <h2>イマーシブオーディオ</h2>
     <p><strong>設定 &gt; オーディオ &gt; イマーシブオーディオを有効にする</strong> を有効にすると、FM / SSG / ADPCM / Rhythm を立体的に配置して再生します。対応ヘッドフォンではヘッドトラッキングも使えます。</p>
     <p>位置調整パッドでは各音源の左右ペアをまとめて動かします。<strong>位置をリセット</strong> で既定値に戻せます。</p>
+
+    <h2>録音</h2>
+    <p><strong>コントロール &gt; 録音を開始</strong> (<kbd>&#8679;&#8984;R</kbd>) でエミュレータのサウンド出力をファイルに記録します。録音中はステータスバーに赤い <span style="color:red;">●</span> インジケータが表示され、クリックで停止できます。もう一度 <kbd>&#8679;&#8984;R</kbd> を押しても停止できます。停止後は Finder で保存先フォルダが開きます。</p>
+    <p>ファイル名はマウント中のディスク名とタイムスタンプから生成されます（例: <code>Ys-2026-04-24-123456.wav</code>）。</p>
+
+    <h3>フォーマット</h3>
+    <p><strong>設定 &gt; オーディオ &gt; 録音 &gt; フォーマット</strong> で選択できます。</p>
+    <table>
+        <tr><th>フォーマット</th><th>拡張子</th><th>特徴</th></tr>
+        <tr><td>WAV</td><td>.wav</td><td>非圧縮 16bit PCM。DAW への取り込みに最適</td></tr>
+        <tr><td>Apple Lossless</td><td>.caf</td><td>可逆圧縮。サイズは WAV の 50–70% 程度</td></tr>
+        <tr><td>AAC</td><td>.m4a</td><td>非可逆圧縮。常にステレオで記録（8ch 分離不可）</td></tr>
+    </table>
+
+    <h3>チャンネルモード</h3>
+    <p><strong>チャンネル</strong> では録音方式を切り替えられます（AAC は自動的にステレオ固定）。</p>
+    <ul>
+        <li><strong>分離 (8ch)</strong>：FM / SSG / ADPCM / Rhythm をそれぞれ左右ペアで独立したチャンネルに記録します（ch0/1 FM、ch2/3 SSG、ch4/5 ADPCM、ch6/7 Rhythm）。Logic / Audacity などの DAW に取り込んで、音源ごとに編集・ミックスしたい用途向け。QuickTime Player や大半のメディアプレーヤーは先頭の 2ch のみ再生します。</li>
+        <li><strong>ステレオ (2ch)</strong>：最終ミックスをそのまま記録します。どのプレーヤーでも再生できます。疑似ステレオを有効にしている場合はその効果も録音に含まれます。</li>
+    </ul>
+    <p>分離モードは録音中だけイマーシブ出力を内部的に有効化するため、疑似ステレオは録音に反映されません（素の分離音が欲しい DAW ユーザー向けの仕様）。</p>
+
+    <h3>保存先</h3>
+    <p><strong>保存場所を毎回たずねる</strong> を有効にすると、録音開始時に保存先フォルダを選択するダイアログが表示されます。無効時は <strong>選択...</strong> で指定したフォルダ（未指定なら <code>~/Music</code>）に自動保存されます。</p>
+
+    <h3>注意点</h3>
+    <ul>
+        <li>録音中にアプリを正常終了（<kbd>&#8984;Q</kbd> またはメニュー）すると自動的にファイルがフラッシュされます。強制終了・クラッシュ時は特に AAC（<code>.m4a</code>）で末尾インデックスが書かれず、ファイルが再生不能になることがあります。</li>
+    </ul>
 
     <p><a href="../index.html">Bubilator88 ヘルプに戻る</a></p>
     </div>

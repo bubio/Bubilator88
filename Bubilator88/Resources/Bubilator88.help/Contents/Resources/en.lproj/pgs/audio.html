@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Audio">
-    <meta name="description" content="Volume, Audio Buffer, FDD Sound, Output Device, Pseudo Stereo, and Immersive Audio">
-    <meta name="keywords" content="audio, sound, volume, FM, SSG, ADPCM, Rhythm, YM2608, OPNA, immersive, FDD, buffer, output device, speaker">
+    <meta name="description" content="Volume, Audio Buffer, FDD Sound, Output Device, Pseudo Stereo, Immersive Audio, and Recording">
+    <meta name="keywords" content="audio, sound, volume, FM, SSG, ADPCM, Rhythm, YM2608, OPNA, immersive, FDD, buffer, output device, speaker, recording, WAV, ALAC, AAC, chiptune, DAW">
     <meta name="robots" content="index">
     <title>Audio</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -60,6 +60,35 @@
     <h2>Immersive Audio</h2>
     <p>Enable <strong>Settings &gt; Audio &gt; Enable Immersive Audio</strong> to place FM, SSG, ADPCM, and Rhythm in 3D space. Compatible headphones can also use head tracking.</p>
     <p>The position pad moves each source's left/right pair together. Use <strong>Reset Positions</strong> to restore the defaults.</p>
+
+    <h2>Recording</h2>
+    <p>Use <strong>Control &gt; Start Audio Recording</strong> (<kbd>&#8679;&#8984;R</kbd>) to capture the emulator's audio output to a file. While recording, a red <span style="color:red;">●</span> indicator appears in the status bar — click it (or press <kbd>&#8679;&#8984;R</kbd> again) to stop. The output folder opens in Finder once recording stops.</p>
+    <p>File names combine the mounted disk title and a timestamp (e.g. <code>Ys-2026-04-24-123456.wav</code>).</p>
+
+    <h3>Formats</h3>
+    <p>Pick from <strong>Settings &gt; Audio &gt; Recording &gt; Format</strong>.</p>
+    <table>
+        <tr><th>Format</th><th>Extension</th><th>Notes</th></tr>
+        <tr><td>WAV</td><td>.wav</td><td>Uncompressed 16-bit PCM. Best for DAW import.</td></tr>
+        <tr><td>Apple Lossless</td><td>.caf</td><td>Lossless compression. Typically 50–70% of WAV size.</td></tr>
+        <tr><td>AAC</td><td>.m4a</td><td>Lossy compression. Always written as stereo (AAC cannot encode 8 discrete channels).</td></tr>
+    </table>
+
+    <h3>Channel Modes</h3>
+    <p>The <strong>Channels</strong> picker chooses the recording layout (AAC is locked to stereo):</p>
+    <ul>
+        <li><strong>Separated (8ch)</strong>: FM, SSG, ADPCM, and Rhythm each get their own stereo pair in one 8-channel file (ch0/1 FM, ch2/3 SSG, ch4/5 ADPCM, ch6/7 Rhythm). Intended for DAW workflows (Logic, Audacity) where you want to mix or edit each source independently. QuickTime Player and most media players will only play the first two channels.</li>
+        <li><strong>Stereo (2ch)</strong>: Records the final mix. Plays in any media player. If Pseudo Stereo is enabled, its effect is captured in the file.</li>
+    </ul>
+    <p>Separated mode internally forces immersive-style per-channel output for the duration of the session, so Pseudo Stereo is not applied to the recording (by design — DAW users want the raw per-source signal).</p>
+
+    <h3>Save Location</h3>
+    <p>With <strong>Ask save location every time</strong> enabled, a folder-picker appears when recording starts. Otherwise recordings are written into the folder chosen via <strong>Choose...</strong> (default: <code>~/Music</code>).</p>
+
+    <h3>Notes</h3>
+    <ul>
+        <li>Quitting normally (<kbd>&#8984;Q</kbd> or via the menu) during a recording flushes the file automatically. If the app is force-quit or crashes, AAC (<code>.m4a</code>) files may be left without their trailing index atom and cannot be played back.</li>
+    </ul>
 
     <p><a href="../index.html">Back to Bubilator88 Help</a></p>
     </div>

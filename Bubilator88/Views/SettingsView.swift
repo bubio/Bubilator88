@@ -231,6 +231,64 @@ private struct AudioSettingsTab: View {
                 }
                 .font(.caption)
             }
+
+            Section("Recording") {
+                Picker("Format", selection: $settings.recordingFormat) {
+                    Text("WAV").tag("wav")
+                    Text("Apple Lossless (.caf)").tag("alac")
+                    Text("AAC (.m4a)").tag("aac")
+                }
+                .pickerStyle(.menu)
+
+                let isAAC = (settings.recordingFormat == "aac")
+                if isAAC {
+                    HStack {
+                        Text("Channels")
+                        Spacer()
+                        Text("Stereo only")
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Picker("Channels", selection: $settings.recordingSeparation) {
+                        Text("Separated (8ch)").tag("separated")
+                        Text("Stereo (2ch)").tag("stereo")
+                    }
+                    .pickerStyle(.menu)
+                }
+
+                Toggle("Ask save location every time", isOn: Binding(
+                    get: { !settings.recordingAutoSave },
+                    set: { settings.recordingAutoSave = !$0 }
+                ))
+
+                HStack {
+                    Text(settings.recordingDirectory ?? "~/Music")
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.head)
+                    Spacer()
+                    Button("Choose...") {
+                        let panel = NSOpenPanel()
+                        panel.canChooseDirectories = true
+                        panel.canChooseFiles = false
+                        panel.canCreateDirectories = true
+                        panel.prompt = "Select"
+                        if panel.runModal() == .OK, let url = panel.url {
+                            settings.recordingDirectory = url.path
+                        }
+                    }
+                }
+
+                if !isAAC && settings.recordingSeparation == "separated" {
+                    Text("Separated records FM, SSG, ADPCM, and Rhythm into 8 discrete channels for DAW import (Logic, Audacity). QuickTime Player and most media players will only play the first 2 channels.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Stereo records the final 2-channel mix that plays in any media player.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .formStyle(.grouped)
     }

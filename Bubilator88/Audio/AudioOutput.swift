@@ -25,6 +25,10 @@ final class AudioOutput {
     /// Must be set before calling start().
     nonisolated(unsafe) weak var sound: YM2608?
 
+    /// Multichannel recorder tap. When set and actively recording, each
+    /// drainSamples() call forwards a copy of FM/SSG/ADPCM/Rhythm/Mix buffers.
+    nonisolated(unsafe) weak var recorder: AudioRecorder?
+
     /// Lock for thread-safe buffer access (audio thread pulls, emu thread pushes).
     private let bufferLock = NSLock()
 
@@ -319,6 +323,23 @@ final class AudioOutput {
     nonisolated func drainSamples() {
         guard let sound = sound else { return }
 
+        // Tap for recording BEFORE draining. For separated mode, per-channel
+        // buffers are only populated when immersiveOutputEnabled == true, which
+        // the view model turns on for the duration of a separated session.
+        if let recorder = recorder, recorder.isRecordingFlag {
+            switch recorder.mode {
+            case .separated:
+                recorder.appendChannels(
+                    fm:     sound.fmSpatialBuffer,
+                    ssg:    sound.ssgSpatialBuffer,
+                    adpcm:  sound.adpcmSpatialBuffer,
+                    rhythm: sound.rhythmSpatialBuffer
+                )
+            case .stereo:
+                recorder.appendStereo(sound.audioBuffer)
+            }
+        }
+
         if spatialEnabled {
             drainSpatialSamples(sound)
         } else {
@@ -329,6 +350,14 @@ final class AudioOutput {
     /// Drain standard stereo interleaved samples.
     private nonisolated func drainStereoSamples(_ sound: YM2608) {
         let samples = sound.audioBuffer
+        // Clear per-channel buffers if they were filled for recording; otherwise
+        // they would grow without bound while spatialEnabled == false.
+        if sound.immersiveOutputEnabled {
+            sound.fmSpatialBuffer.removeAll(keepingCapacity: true)
+            sound.ssgSpatialBuffer.removeAll(keepingCapacity: true)
+            sound.adpcmSpatialBuffer.removeAll(keepingCapacity: true)
+            sound.rhythmSpatialBuffer.removeAll(keepingCapacity: true)
+        }
         guard !samples.isEmpty else { return }
         sound.audioBuffer.removeAll(keepingCapacity: true)
 

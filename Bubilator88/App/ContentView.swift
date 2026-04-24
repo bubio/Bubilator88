@@ -228,6 +228,19 @@ struct ContentView: View {
 
             Spacer()
 
+            // Recording indicator (shown only while recording)
+            if viewModel.audioRecorder.isRecording {
+                Button {
+                    viewModel.stopRecording()
+                } label: {
+                    Image(systemName: "record.circle.fill")
+                        .foregroundStyle(.red)
+                }
+                .buttonStyle(.plain)
+                .help(NSLocalizedString("Stop audio recording",
+                                        comment: "Status bar record button tooltip"))
+            }
+
             // Volume slider (right-aligned, before translation icon)
             HStack(spacing: 4) {
                 Image(systemName: "speaker.fill")
@@ -243,7 +256,9 @@ struct ContentView: View {
                 Image(systemName: "speaker.wave.3.fill")
                     .foregroundStyle(.secondary)
             }
-            .help("Volume: \(viewModel.volumePercent)%")
+            .help(String(format: NSLocalizedString("Volume: %lld%%",
+                                                    comment: "Volume slider tooltip"),
+                         viewModel.volumePercent))
 
             Button {
                 viewModel.toggleTranslation(!viewModel.translationManager.isEnabled)

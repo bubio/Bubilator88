@@ -9,6 +9,7 @@ struct Bubilator88App: App {
     var body: some Scene {
         Window("Bubilator88", id: "main") {
             ContentView(viewModel: viewModel)
+                .onAppear { appDelegate.viewModel = viewModel }
                 .windowResizeBehavior(.disabled)
                 .windowFullScreenBehavior(.enabled)
                 .sheet(isPresented: $showAbout) {
@@ -427,6 +428,23 @@ struct ControlCommands: Commands {
                     systemImage: "camera"
                 )
             }
+
+            Button {
+                viewModel.toggleRecording()
+            } label: {
+                if viewModel.audioRecorder.isRecording {
+                    Label("Stop Audio Recording",
+                          systemImage: "stop.circle")
+                } else {
+                    Label(
+                        Settings.shared.recordingAutoSave
+                            ? "Start Audio Recording"
+                            : "Start Audio Recording…",
+                        systemImage: "record.circle"
+                    )
+                }
+            }
+            .keyboardShortcut("r", modifiers: [.command, .shift])
 
             Divider()
 

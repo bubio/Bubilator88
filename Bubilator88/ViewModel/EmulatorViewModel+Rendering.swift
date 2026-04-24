@@ -305,8 +305,7 @@ extension EmulatorViewModel {
         let format = Settings.shared.screenshotFormat
         let ext = format == "jpeg" ? "jpg" : format
 
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        let formatter = DateFormatter.stable(pattern: "yyyyMMdd-HHmmss")
         let defaultName = "Bubilator88-\(formatter.string(from: .now)).\(ext)"
 
         let url: URL

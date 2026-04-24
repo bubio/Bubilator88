@@ -93,6 +93,38 @@ final class Settings {
         }
     }
 
+    // MARK: - Audio Recording
+
+    /// Audio recording format: "wav" (default), "alac", or "aac".
+    var recordingFormat: String = "wav" {
+        didSet { UserDefaults.standard.set(recordingFormat, forKey: "recordingFormat") }
+    }
+
+    /// Audio recording channel mode: "separated" (8ch FM/SSG/ADPCM/Rhythm) or
+    /// "stereo" (standard 2ch mix). AAC is always written as stereo regardless
+    /// of this setting because AAC cannot encode 8-channel discrete layout.
+    var recordingSeparation: String = "separated" {
+        didSet { UserDefaults.standard.set(recordingSeparation, forKey: "recordingSeparation") }
+    }
+
+    /// Auto-save recordings to a preset directory instead of showing
+    /// NSSavePanel every time. Default is true (auto-save to ~/Music).
+    var recordingAutoSave: Bool = true {
+        didSet { UserDefaults.standard.set(recordingAutoSave, forKey: "recordingAutoSave") }
+    }
+
+    /// Directory for auto-saved recordings (absolute path). Nil means
+    /// use the default ~/Music.
+    var recordingDirectory: String? = nil {
+        didSet {
+            if let dir = recordingDirectory {
+                UserDefaults.standard.set(dir, forKey: "recordingDirectory")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "recordingDirectory")
+            }
+        }
+    }
+
     // MARK: - Audio
 
     /// Audio ring buffer size in milliseconds (20–500).
@@ -376,6 +408,18 @@ final class Settings {
             screenshotAutoSave = v
         }
         screenshotDirectory = UserDefaults.standard.string(forKey: "screenshotDirectory")
+        if let v = UserDefaults.standard.string(forKey: "recordingFormat"),
+           ["wav", "alac", "aac"].contains(v) {
+            recordingFormat = v
+        }
+        if let v = UserDefaults.standard.object(forKey: "recordingAutoSave") as? Bool {
+            recordingAutoSave = v
+        }
+        if let v = UserDefaults.standard.string(forKey: "recordingSeparation"),
+           ["separated", "stereo"].contains(v) {
+            recordingSeparation = v
+        }
+        recordingDirectory = UserDefaults.standard.string(forKey: "recordingDirectory")
         if let v = UserDefaults.standard.object(forKey: "fullscreenIntegerScaling") as? Bool {
             fullscreenIntegerScaling = v
         }
