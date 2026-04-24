@@ -360,6 +360,16 @@ final class EmulatorViewModel {
     var tapeName: String = "Empty"
     var tapeSourceURL: URL?
     var tapeFormat: CassetteDeck.Format?
+    var tapeProgress: Double = 0
+
+    /// True when a tape image is mounted.
+    var isTapeMounted: Bool { tapeSourceURL != nil }
+
+    /// Menu-friendly label: "name : NN%" when mounted, otherwise "Empty".
+    var tapeDisplayLabel: String {
+        guard isTapeMounted else { return tapeName }
+        return "\(tapeName) : \(Int((tapeProgress * 100).rounded()))%"
+    }
 
     /// Disk access LED indicators (true = active this frame)
     var drive0Access: Bool = false
