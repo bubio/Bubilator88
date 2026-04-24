@@ -462,6 +462,9 @@ final class EmulatorViewModel {
     /// Audio output for YM2608 SSG sound
     let audio = AudioOutput()
 
+    /// Multichannel audio recorder (FM/SSG/ADPCM/Rhythm/Mix).
+    let audioRecorder = AudioRecorder()
+
     /// FDD access sound effects
     let fddSound = FDDSound()
     let gameController = GameControllerManager()
@@ -529,6 +532,7 @@ final class EmulatorViewModel {
         machine.sound.immersiveOutputEnabled = Settings.shared.immersiveAudio
         machine.sound.pseudoStereoEnabled = pseudoStereo && !immersiveAudio
         audio.sound = machine.sound
+        audio.recorder = audioRecorder
 
         // FDD sound callbacks (wrap existing SubSystem callbacks)
         let originalOnSeekStep = machine.subSystem.fdc.onSeekStep
@@ -977,8 +981,7 @@ final class EmulatorViewModel {
         guard hasQuickSave,
               let attrs = try? FileManager.default.attributesOfItem(atPath: quickSavePath.path),
               let date = attrs[.modificationDate] as? Date else { return "" }
-        let fmt = DateFormatter()
-        fmt.dateFormat = "MM/dd HH:mm"
+        let fmt = DateFormatter.stable(pattern: "MM/dd HH:mm")
         var parts = [fmt.string(from: date)]
         if let metaData = try? Data(contentsOf: metaPath(for: quickSavePath)),
            let meta = try? JSONDecoder().decode(SaveMeta.self, from: metaData) {
@@ -998,8 +1001,7 @@ final class EmulatorViewModel {
               let date = attrs[.modificationDate] as? Date else {
             return "Quick Load"
         }
-        let fmt = DateFormatter()
-        fmt.dateFormat = "MM/dd HH:mm"
+        let fmt = DateFormatter.stable(pattern: "MM/dd HH:mm")
         var label = "Quick Load — \(fmt.string(from: date))"
         if let metaData = try? Data(contentsOf: metaPath(for: quickSavePath)),
            let meta = try? JSONDecoder().decode(SaveMeta.self, from: metaData) {
@@ -1034,8 +1036,7 @@ final class EmulatorViewModel {
               let date = attrs[.modificationDate] as? Date else {
             return "Slot \(slot) — Empty"
         }
-        let fmt = DateFormatter()
-        fmt.dateFormat = "MM/dd HH:mm"
+        let fmt = DateFormatter.stable(pattern: "MM/dd HH:mm")
         var label = "Slot \(slot) — \(fmt.string(from: date))"
         if let meta = loadSlotMeta(slot) {
             let disks = [meta.disk0, meta.disk1].compactMap { $0 }.filter { !$0.isEmpty }
