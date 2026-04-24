@@ -239,6 +239,7 @@ extension EmulatorViewModel {
             let d0 = machine.subSystem.diskAccess[0]
             let d1 = machine.subSystem.diskAccess[1]
             machine.subSystem.diskAccess = [false, false]
+            let tapeProgressSample = machine.cassette.progress
 
             // Capture OCR snapshot if translation enabled (piggyback on 4Hz UI update)
             let ocrPixelBuffer: [UInt8]?
@@ -252,6 +253,7 @@ extension EmulatorViewModel {
                 guard let self else { return }
                 self.drive0Access = d0
                 self.drive1Access = d1
+                self.tapeProgress = tapeProgressSample
 
                 // Trigger OCR translation
                 if let ocrPixelBuffer {

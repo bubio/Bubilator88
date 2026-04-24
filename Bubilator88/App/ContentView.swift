@@ -352,9 +352,9 @@ struct ContentView: View {
 
     @ViewBuilder
     private var tapeMenu: some View {
-        let loaded = viewModel.tapeName != "Empty"
+        let loaded = viewModel.isTapeMounted
         Menu {
-            Text(viewModel.tapeName).disabled(true)
+            Text(viewModel.tapeDisplayLabel).disabled(true)
 
             Divider()
 
@@ -384,7 +384,7 @@ struct ContentView: View {
                 .frame(width: 12, height: 12)
         }
         .menuStyle(.borderlessButton)
-        .help(loaded ? "Tape: \(viewModel.tapeName)" : "Tape: Empty")
+        .help("Tape: \(viewModel.tapeDisplayLabel)")
     }
 
     private func driveLED(access: Bool) -> some View {

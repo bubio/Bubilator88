@@ -60,6 +60,7 @@ extension EmulatorViewModel {
         emuQueue.sync {
             machine.rewindTape()
         }
+        tapeProgress = 0
     }
 
     /// Eject the currently-loaded tape.
@@ -70,5 +71,6 @@ extension EmulatorViewModel {
         tapeName = "Empty"
         tapeSourceURL = nil
         tapeFormat = nil
+        tapeProgress = 0
     }
 }

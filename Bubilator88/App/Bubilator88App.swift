@@ -267,7 +267,7 @@ struct DiskCommands: Commands {
         }
 
         CommandMenu("Tape") {
-            Text(viewModel.tapeName).disabled(true)
+            Text(viewModel.tapeDisplayLabel).disabled(true)
 
             Divider()
 
@@ -287,14 +287,14 @@ struct DiskCommands: Commands {
             } label: {
                 Label("Rewind", systemImage: "backward.end")
             }
-            .disabled(viewModel.tapeName == "Empty")
+            .disabled(!viewModel.isTapeMounted)
 
             Button {
                 viewModel.ejectTape()
             } label: {
                 Label("Eject", systemImage: "eject")
             }
-            .disabled(viewModel.tapeName == "Empty")
+            .disabled(!viewModel.isTapeMounted)
 
             Divider()
 
