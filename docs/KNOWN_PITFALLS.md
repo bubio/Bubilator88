@@ -187,3 +187,17 @@ var value: Float = 0.5 {
 **教訓**: 「起動しない → Z80 がおかしい」と飛びつかない。Z80 にバグが入り込む確率は現状**極めて低い**。まず FDC コマンドログ、PIO flow diff、ポート書き込みトレースを取って、**どの層で分岐しているか**を特定してから Z80 を疑うこと。もし Z80 精度を疑うなら、先に **BIT (HL) の F5/F3** 以外の具体的な症状・バイト列を示せる状態にしてから着手する。
 
 **参照**: `memory/project_ng_games_investigation.md` の TOKYOナンパストリート / F2 / T.D.F の調査履歴。これらは**すべて Z80 以外**の層 (ROM の JP 先計算差、PIO ハンドシェイク、V1H メモリ wait) が真因だった。
+
+---
+
+## 15. PCG-8800 は未実装
+
+**現状**: Bubilator88 は **PCG-8800 拡張カード**を実装していない。port 0x00-0x03 の PCG アドレス/データ/コマンド書き込み、PCG-RAM (2KB × 2bank)、テキスト VRAM とのキャラクタ合成、すべて存在しない。`Pc88Bus.swift` の I/O テーブルに PCG ハンドラが無く、port 0x00-0x03 は他用途 (PIO 8255 / printer 系) に使われている。
+
+**スコープ的判断**: PC-8801-FA 互換が本機の主軸で、PC-8801-MA 時代のゲームは内蔵 PCG (attribute graphic) で済むため、PCG-8800 必須タイトルは多くない。直近の対応優先度は低い。
+
+**実装する場合の参照**: **X88000M の `src/PC88Pcg.cpp` / `PC88Pcg.h` がほぼ完全な参照実装**になる。Manuke 氏オリジナル X88000 由来で、PCG-RAM 管理 / bank 切替 / sound port (port 0x00 bit 6 → 1bit PCM) / テキスト合成のすべてが揃っている。`CPC88Z80Main::SetPcgEnable()` で port 0x00-0x03 を PCG モードに切り替える分岐構造もそのまま流用できる。
+
+`reference_emulator_sources.md` の path: `~/dev/_Emu/X88000M/src/PC88Pcg.cpp`
+
+**教訓**: PCG-8800 を必要とするタイトルが NG リスト入りした場合、ゼロから作る前に X88000M を読むこと。CRTC / sound 周辺は分岐実装が要るので、`PC88Z80Main.cpp` の SetReadIOProc/SetWriteIOProc 切替も合わせて移植する必要がある。
