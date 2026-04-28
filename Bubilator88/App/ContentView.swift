@@ -234,7 +234,9 @@ struct ContentView: View {
                     viewModel.stopRecording()
                 } label: {
                     Image(systemName: "record.circle.fill")
+                        .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(.red)
+                        .font(.system(size: 20))
                 }
                 .buttonStyle(.plain)
                 .help(NSLocalizedString("Stop audio recording",

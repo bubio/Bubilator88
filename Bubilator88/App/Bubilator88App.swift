@@ -427,7 +427,8 @@ struct ControlCommands: Commands {
                 }
             }
             .pickerStyle(.inline)
-            .disabled(viewModel.videoRecorder.isRecording)
+            .disabled(viewModel.videoRecorder.isRecording
+                      || viewModel.audioRecorder.isRecording)
 
             Divider()
 
@@ -448,6 +449,11 @@ struct ControlCommands: Commands {
                 if viewModel.audioRecorder.isRecording {
                     Label("Stop Audio Recording",
                           systemImage: "stop.circle")
+                } else if viewModel.cpuSpeed != .x1 {
+                    // Audio is sampled at wall-clock; faster CPU speeds yield
+                    // pitch-shifted/desynced output. Force x1 first.
+                    Label("Start Audio Recording (set CPU Speed to x1)",
+                          systemImage: "record.circle")
                 } else {
                     Label(
                         Settings.shared.recordingAutoSave
@@ -458,7 +464,9 @@ struct ControlCommands: Commands {
                 }
             }
             .keyboardShortcut("r", modifiers: [.command, .shift])
-            .disabled(viewModel.videoRecorder.isRecording)
+            .disabled(viewModel.videoRecorder.isRecording
+                      || (!viewModel.audioRecorder.isRecording
+                          && viewModel.cpuSpeed != .x1))
 
             Button {
                 viewModel.toggleVideoRecording()
