@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import AVFoundation
 @testable import Bubilator88
 
 // MARK: - AudioRecorder.RecordingFormat invariants
@@ -29,6 +30,29 @@ struct RecordingFormatTests {
         // recorder forces stereo for AAC. .m4a is fine for 2ch AAC.
         #expect(AudioRecorder.RecordingFormat.aac.fileExtension == "m4a")
         #expect(AudioRecorder.RecordingFormat.aac.supportsSeparated == false)
+    }
+}
+
+// MARK: - VideoRecorder.RecordingFormat invariants
+
+struct VideoRecordingFormatTests {
+
+    @Test("proRes4444 is .mov / proRes4444 codec / intra-only (no compression settings)")
+    func proRes4444Invariants() {
+        // ProRes 4444 is required for pixel-art / wireframe content;
+        // H.264's 4:2:0 chroma subsampling desaturates 1px colored lines.
+        #expect(VideoRecorder.RecordingFormat.proRes4444.fileExtension == "mov")
+        #expect(VideoRecorder.RecordingFormat.proRes4444.avFileType == .mov)
+        #expect(VideoRecorder.RecordingFormat.proRes4444.videoCodec == .proRes4444)
+        #expect(VideoRecorder.RecordingFormat.proRes4444.usesCompressionSettings == false)
+    }
+
+    @Test("h264Mp4 is .mp4 / H.264 codec / accepts compression settings")
+    func h264Mp4Invariants() {
+        #expect(VideoRecorder.RecordingFormat.h264Mp4.fileExtension == "mp4")
+        #expect(VideoRecorder.RecordingFormat.h264Mp4.avFileType == .mp4)
+        #expect(VideoRecorder.RecordingFormat.h264Mp4.videoCodec == .h264)
+        #expect(VideoRecorder.RecordingFormat.h264Mp4.usesCompressionSettings == true)
     }
 }
 

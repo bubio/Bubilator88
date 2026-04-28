@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Display">
-    <meta name="description" content="Window scaling, Video Filter, translation overlay, and screenshots">
-    <meta name="keywords" content="display, window, scale, Video Filter, scanline, xBRZ, CRT, fullscreen, AI Upscale, translation, screenshot">
+    <meta name="description" content="Window scaling, Video Filter, translation overlay, screenshots, and video recording">
+    <meta name="keywords" content="display, window, scale, Video Filter, scanline, xBRZ, CRT, fullscreen, AI Upscale, translation, screenshot, video recording, ProRes, H.264, MP4, MOV">
     <meta name="robots" content="index">
     <title>Display</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -73,6 +73,29 @@
 
     <h2>Screenshots</h2>
     <p>Use <strong>Control &gt; Save Screenshot...</strong> to save the current frame. The file format is chosen in <strong>Settings &gt; General &gt; Format</strong> and can be <strong>PNG</strong>, <strong>JPEG</strong>, or <strong>HEIC</strong>.</p>
+
+    <h2>Video Recording</h2>
+    <p>Use <strong>Control &gt; Start Video Recording</strong> (<kbd>&#8679;&#8984;V</kbd>) to capture the emulator screen and audio into a single file. While recording, a red <span style="color:red;">●</span> indicator appears in the status bar; click it (or press <kbd>&#8679;&#8984;V</kbd> again) to stop. When the recording ends, the destination folder opens in Finder.</p>
+    <p>File names are derived from the mounted disk's name plus a timestamp (e.g. <code>Ys-2026-04-24-123456.mov</code>).</p>
+
+    <h3>Format</h3>
+    <p>Choose under <strong>Settings &gt; Display &gt; Video Recording &gt; Format</strong>.</p>
+    <table>
+        <tr><th>Format</th><th>Extension</th><th>Notes</th></tr>
+        <tr><td>Apple ProRes 4444</td><td>.mov</td><td>Faithful color reproduction; even single-pixel lines keep their color. Very large files (~600 MB per minute).</td></tr>
+        <tr><td>H.264</td><td>.mp4</td><td>Compact files that are easy to share (~45 MB per minute). Thin lines and single-pixel colors may look slightly washed out.</td></tr>
+    </table>
+    <p>Pixel-art and wireframe-heavy games look best with ProRes 4444. Pick H.264 when sharing or uploading matters more than perfect color fidelity.</p>
+
+    <h3>Save Location</h3>
+    <p>Enable <strong>Ask save location every time</strong> to be prompted for a folder when recording starts. Otherwise, recordings are saved to the folder picked via <strong>Choose...</strong> (or <code>~/Movies</code> if unset).</p>
+
+    <h3>Notes</h3>
+    <ul>
+        <li>Audio recording and video recording are mutually exclusive — while one is active, the other's menu item is disabled.</li>
+        <li>CPU speed is locked to <strong>1× (real-time)</strong> while recording. The CPU Speed picker and turbo (Tab / middle mouse button) are disabled during a session, and the start button is disabled until CPU speed is set to x1.</li>
+        <li>Quitting the app normally (<kbd>&#8984;Q</kbd> or the menu) flushes the file. Force-quits or crashes may leave the file's trailing index unwritten and the recording unplayable.</li>
+    </ul>
 
     <p><a href="../index.html">Back to Bubilator88 Help</a></p>
     </div>

@@ -219,6 +219,25 @@
 "Choose" = "選択";
 "Choose a folder to save the recording" = "録音ファイルの保存先フォルダを選択";
 
+/* ===== Video Recording ===== */
+"Video Recording" = "動画録画";
+"Start Video Recording" = "録画を開始";
+"Start Video Recording…" = "録画を開始…";
+"Stop Video Recording" = "録画を停止";
+"Start Video Recording (set CPU Speed to x1)" = "録画を開始 (CPU速度を x1 にしてください)";
+"Stop video recording (CPU locked at 1×)" = "録画を停止 (CPU 速度は 1× に固定中)";
+"Recording video to %@" = "「%@」に録画中";
+"Video recording stopped" = "録画を停止しました";
+"Video recording failed" = "録画に失敗しました";
+"Stop audio recording first" = "先に録音を停止してください";
+"Choose a folder to save the video" = "動画ファイルの保存先フォルダを選択";
+"Format" = "フォーマット";
+"Apple ProRes 4444 (.mov)" = "Apple ProRes 4444 (.mov)";
+"H.264 (.mp4)" = "H.264 (.mp4)";
+"Ask save location every time" = "毎回保存先を確認する";
+"Faithful color reproduction; even single-pixel lines keep their color. Very large files (~600 MB per minute)." = "色を忠実に再現します。1ドット幅の線も色が薄くなりません。ファイルサイズはとても大きくなります (1分あたり約 600MB)。";
+"Compact files that are easy to share (~45 MB per minute). Thin lines and single-pixel colors may look slightly washed out." = "ファイルサイズが小さく共有しやすいです (1分あたり約 45MB)。細い線や1ドットの色が少し薄く見えることがあります。";
+
 /* ===== AppDelegate.swift — Shortcut confirmation dialogs ===== */
 "Quit Bubilator88?" = "Bubilator88 を終了しますか?";
 "Close the emulator window?" = "エミュレータウィンドウを閉じますか?";

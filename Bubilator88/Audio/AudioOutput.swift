@@ -29,6 +29,10 @@ final class AudioOutput {
     /// drainSamples() call forwards a copy of FM/SSG/ADPCM/Rhythm/Mix buffers.
     nonisolated(unsafe) weak var recorder: AudioRecorder?
 
+    /// Video recorder tap (audio side). When set and actively recording,
+    /// drainSamples() forwards the stereo mix as the audio track of the video.
+    nonisolated(unsafe) weak var videoRecorder: VideoRecorder?
+
     /// Lock for thread-safe buffer access (audio thread pulls, emu thread pushes).
     private let bufferLock = NSLock()
 
@@ -338,6 +342,12 @@ final class AudioOutput {
             case .stereo:
                 recorder.appendStereo(sound.audioBuffer)
             }
+        }
+
+        // Video recorder audio tap (stereo only). Mutually exclusive with
+        // AudioRecorder by UI policy, so both branches won't run together.
+        if let video = videoRecorder, video.isRecordingFlag {
+            video.appendStereo(sound.audioBuffer)
         }
 
         if spatialEnabled {

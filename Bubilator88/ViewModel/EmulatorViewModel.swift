@@ -95,6 +95,12 @@ final class EmulatorViewModel {
     var turboMode: Bool = false {
         didSet {
             guard turboMode != oldValue else { return }
+            // Video recording locks the timeline to wall-clock — refuse turbo
+            // changes for the duration of the session.
+            if videoRecorder.isRecording {
+                turboMode = false
+                return
+            }
             if turboMode {
                 savedSpeed = cpuSpeed
                 cpuSpeed = .x8
@@ -479,6 +485,9 @@ final class EmulatorViewModel {
     /// Multichannel audio recorder (FM/SSG/ADPCM/Rhythm/Mix).
     let audioRecorder = AudioRecorder()
 
+    /// Screen + audio video recorder (mutually exclusive with audioRecorder).
+    let videoRecorder = VideoRecorder()
+
     /// FDD access sound effects
     let fddSound = FDDSound()
     let gameController = GameControllerManager()
@@ -547,6 +556,7 @@ final class EmulatorViewModel {
         machine.sound.pseudoStereoEnabled = pseudoStereo && !immersiveAudio
         audio.sound = machine.sound
         audio.recorder = audioRecorder
+        audio.videoRecorder = videoRecorder
 
         // FDD sound callbacks (wrap existing SubSystem callbacks)
         let originalOnSeekStep = machine.subSystem.fdc.onSeekStep

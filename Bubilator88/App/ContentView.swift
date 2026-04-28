@@ -241,6 +241,20 @@ struct ContentView: View {
                                         comment: "Status bar record button tooltip"))
             }
 
+            if viewModel.videoRecorder.isRecording {
+                Button {
+                    viewModel.stopVideoRecording()
+                } label: {
+                    Image(systemName: "video.circle.fill")
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.red)
+                        .font(.system(size: 20))
+                }
+                .buttonStyle(.plain)
+                .help(NSLocalizedString("Stop video recording (CPU locked at 1×)",
+                                        comment: "Status bar video record button tooltip"))
+            }
+
             // Volume slider (right-aligned, before translation icon)
             HStack(spacing: 4) {
                 Image(systemName: "speaker.fill")
