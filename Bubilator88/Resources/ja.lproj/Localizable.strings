@@ -218,6 +218,9 @@
 "Recording failed" = "録音に失敗しました";
 "Choose" = "選択";
 "Choose a folder to save the recording" = "録音ファイルの保存先フォルダを選択";
+"Start Audio Recording (set CPU Speed to x1)" = "録音を開始 (CPU速度を x1 にしてください)";
+"Stop video recording first" = "先に録画を停止してください";
+"Set CPU Speed to x1 before recording" = "録音を開始する前に CPU 速度を x1 にしてください";
 
 /* ===== Video Recording ===== */
 "Video Recording" = "動画録画";

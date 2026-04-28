@@ -95,9 +95,9 @@ final class EmulatorViewModel {
     var turboMode: Bool = false {
         didSet {
             guard turboMode != oldValue else { return }
-            // Video recording locks the timeline to wall-clock — refuse turbo
+            // Recording sessions lock the timeline to wall-clock — refuse turbo
             // changes for the duration of the session.
-            if videoRecorder.isRecording {
+            if videoRecorder.isRecording || audioRecorder.isRecording {
                 turboMode = false
                 return
             }

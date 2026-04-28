@@ -87,6 +87,8 @@
 
     <h3>Notes</h3>
     <ul>
+        <li>Audio and video recording are mutually exclusive — one disables the other in the menu while running.</li>
+        <li>While recording, the CPU speed is locked to <strong>x1 (real time)</strong>. Speed changes from the Control menu and turbo (Tab / middle mouse button) are disabled, and the Start Audio Recording menu item is itself disabled until you set the CPU speed back to x1. (Faster CPU speeds desynchronise the sampled output against wall-clock and shift its pitch.)</li>
         <li>Quitting normally (<kbd>&#8984;Q</kbd> or via the menu) during a recording flushes the file automatically. If the app is force-quit or crashes, AAC (<code>.m4a</code>) files may be left without their trailing index atom and cannot be played back.</li>
     </ul>
 

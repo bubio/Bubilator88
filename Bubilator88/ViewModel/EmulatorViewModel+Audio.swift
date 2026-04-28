@@ -78,6 +78,18 @@ extension EmulatorViewModel {
     /// false, shows an NSOpenPanel to let the user pick the parent folder.
     func startRecording() {
         guard !isRecording else { return }
+        // Mutually exclusive with video recording.
+        guard !videoRecorder.isRecording else {
+            showToast(NSLocalizedString("Stop video recording first",
+                                        comment: "Mutual exclusion toast"))
+            return
+        }
+        // Audio capture runs at wall-clock; non-x1 CPU speeds desync the result.
+        guard cpuSpeed == .x1 else {
+            showToast(NSLocalizedString("Set CPU Speed to x1 before recording",
+                                        comment: "x1 lock toast"))
+            return
+        }
         let fmtRaw = Settings.shared.recordingFormat
         let format = AudioRecorder.RecordingFormat(rawValue: fmtRaw) ?? .wav
         let sepRaw = Settings.shared.recordingSeparation
