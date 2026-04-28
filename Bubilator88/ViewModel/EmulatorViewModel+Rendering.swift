@@ -205,6 +205,12 @@ extension EmulatorViewModel {
         let blink = !(machine.debugger?.isPaused ?? false)
         renderCurrentFrame(into: &pixelBuffer, blinkCursor: blink, debugTextLayerEnabled: debugTextLayerEnabled)
 
+        // Video recorder frame tap. CPU speed is locked to x1 while recording,
+        // so frameCount is always 1 here — one wall-clock frame = one file frame.
+        if videoRecorder.isRecordingFlag {
+            videoRecorder.appendFrame(pixelBuffer, width: 640, height: 400)
+        }
+
 #if DEBUG
         dumpTextDMASnapshotIfRequested()
 

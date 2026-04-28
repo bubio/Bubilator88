@@ -137,6 +137,47 @@ private struct DisplaySettingsTab: View {
                 Toggle("Show Tape Icon", isOn: $settings.showTapeInStatusBar)
             }
 
+            Section("Video Recording") {
+                Picker("Format", selection: $settings.videoRecordingFormat) {
+                    Text("Apple ProRes 4444 (.mov)").tag("proRes4444")
+                    Text("H.264 (.mp4)").tag("h264Mp4")
+                }
+                .pickerStyle(.menu)
+
+                Toggle("Ask save location every time", isOn: Binding(
+                    get: { !settings.videoRecordingAutoSave },
+                    set: { settings.videoRecordingAutoSave = !$0 }
+                ))
+
+                HStack {
+                    Text(settings.videoRecordingDirectory ?? "~/Movies")
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.head)
+                    Spacer()
+                    Button("Choose...") {
+                        let panel = NSOpenPanel()
+                        panel.canChooseDirectories = true
+                        panel.canChooseFiles = false
+                        panel.canCreateDirectories = true
+                        panel.prompt = "Select"
+                        if panel.runModal() == .OK, let url = panel.url {
+                            settings.videoRecordingDirectory = url.path
+                        }
+                    }
+                }
+
+                if settings.videoRecordingFormat == "proRes4444" {
+                    Text("Faithful color reproduction; even single-pixel lines keep their color. Very large files (~600 MB per minute).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Compact files that are easy to share (~45 MB per minute). Thin lines and single-pixel colors may look slightly washed out.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             Section("Translation Overlay") {
                 Picker("Target Language", selection: $settings.translationTargetLanguage) {
                     ForEach(availableLanguages, id: \.identifier) { lang in
@@ -289,6 +330,7 @@ private struct AudioSettingsTab: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
         }
         .formStyle(.grouped)
     }
