@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Display">
-    <meta name="description" content="ウィンドウ倍率、ビデオフィルタ、翻訳オーバーレイ、スクリーンショット">
-    <meta name="keywords" content="表示, ウィンドウ, スケール, ビデオフィルタ, スキャンライン, xBRZ, CRT, フルスクリーン, AI超解像, 翻訳, スクリーンショット">
+    <meta name="description" content="ウィンドウ倍率、ビデオフィルタ、翻訳オーバーレイ、スクリーンショット、動画録画">
+    <meta name="keywords" content="表示, ウィンドウ, スケール, ビデオフィルタ, スキャンライン, xBRZ, CRT, フルスクリーン, AI超解像, 翻訳, スクリーンショット, 動画録画, ProRes, H.264, MP4, MOV">
     <meta name="robots" content="index">
     <title>表示設定</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -73,6 +73,29 @@
 
     <h2>スクリーンショット</h2>
     <p><strong>コントロール &gt; スクリーンショットを保存...</strong> で現在の画面を保存します。保存形式は <strong>設定 &gt; 一般 &gt; フォーマット</strong> で <strong>PNG</strong>、<strong>JPEG</strong>、<strong>HEIC</strong> から選べます。</p>
+
+    <h2>動画録画</h2>
+    <p><strong>コントロール &gt; 録画を開始</strong> (<kbd>&#8679;&#8984;V</kbd>) でエミュレータの画面と音声を 1 つのファイルに記録します。録画中はステータスバーに赤い <span style="color:red;">●</span> インジケータが表示され、クリックで停止できます。もう一度 <kbd>&#8679;&#8984;V</kbd> を押しても停止できます。停止後は Finder で保存先フォルダが開きます。</p>
+    <p>ファイル名はマウント中のディスク名とタイムスタンプから生成されます（例: <code>Ys-2026-04-24-123456.mov</code>）。</p>
+
+    <h3>フォーマット</h3>
+    <p><strong>設定 &gt; 表示 &gt; 動画録画 &gt; フォーマット</strong> で選択できます。</p>
+    <table>
+        <tr><th>フォーマット</th><th>拡張子</th><th>特徴</th></tr>
+        <tr><td>Apple ProRes 4444</td><td>.mov</td><td>色を忠実に再現。1ドット幅の線も色が薄くなりません。ファイルサイズは大きめ（1分あたり約 600MB）</td></tr>
+        <tr><td>H.264</td><td>.mp4</td><td>ファイルサイズが小さく共有しやすい（1分あたり約 45MB）。細い線や1ドットの色がやや薄く見えることがあります</td></tr>
+    </table>
+    <p>ピクセルアートやワイヤフレーム表示の多いゲームでは、色の再現性に優れる ProRes 4444 がおすすめです。SNS への投稿など共有を優先する場合は H.264 が便利です。</p>
+
+    <h3>保存先</h3>
+    <p><strong>保存場所を毎回確認する</strong> を有効にすると、録画開始時に保存先フォルダを選択するダイアログが表示されます。無効時は <strong>選択...</strong> で指定したフォルダ（未指定なら <code>~/Movies</code>）に自動保存されます。</p>
+
+    <h3>注意点</h3>
+    <ul>
+        <li>録画と録音は同時に行えません。一方を実行中はもう一方のメニューが選択できません。</li>
+        <li>録画中は CPU 速度が <strong>x1（等速）</strong> に固定され、コントロールメニューの CPU 速度の変更とターボ（Tab / マウス中ボタン）は無効になります。録画開始ボタンも CPU 速度が x1 でない間は無効化されます。</li>
+        <li>録画中にアプリを正常終了（<kbd>&#8984;Q</kbd> またはメニュー）すると自動的にファイルがフラッシュされます。強制終了・クラッシュ時はファイル末尾のインデックスが書かれず、再生できなくなることがあります。</li>
+    </ul>
 
     <p><a href="../index.html">Bubilator88 ヘルプに戻る</a></p>
     </div>

@@ -125,6 +125,31 @@ final class Settings {
         }
     }
 
+    // MARK: - Video Recording
+
+    /// Video recording format: "proRes4444" (default).
+    var videoRecordingFormat: String = "proRes4444" {
+        didSet { UserDefaults.standard.set(videoRecordingFormat, forKey: "videoRecordingFormat") }
+    }
+
+    /// Auto-save video recordings to a preset directory instead of showing
+    /// NSOpenPanel every time. Default is true (auto-save to ~/Movies).
+    var videoRecordingAutoSave: Bool = true {
+        didSet { UserDefaults.standard.set(videoRecordingAutoSave, forKey: "videoRecordingAutoSave") }
+    }
+
+    /// Directory for auto-saved video recordings (absolute path). Nil means
+    /// use the default ~/Movies.
+    var videoRecordingDirectory: String? = nil {
+        didSet {
+            if let dir = videoRecordingDirectory {
+                UserDefaults.standard.set(dir, forKey: "videoRecordingDirectory")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "videoRecordingDirectory")
+            }
+        }
+    }
+
     // MARK: - Audio
 
     /// Audio ring buffer size in milliseconds (20–500).
@@ -420,6 +445,14 @@ final class Settings {
             recordingSeparation = v
         }
         recordingDirectory = UserDefaults.standard.string(forKey: "recordingDirectory")
+        if let v = UserDefaults.standard.string(forKey: "videoRecordingFormat"),
+           ["proRes4444", "h264Mp4"].contains(v) {
+            videoRecordingFormat = v
+        }
+        if let v = UserDefaults.standard.object(forKey: "videoRecordingAutoSave") as? Bool {
+            videoRecordingAutoSave = v
+        }
+        videoRecordingDirectory = UserDefaults.standard.string(forKey: "videoRecordingDirectory")
         if let v = UserDefaults.standard.object(forKey: "fullscreenIntegerScaling") as? Bool {
             fullscreenIntegerScaling = v
         }

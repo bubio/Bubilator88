@@ -427,6 +427,7 @@ struct ControlCommands: Commands {
                 }
             }
             .pickerStyle(.inline)
+            .disabled(viewModel.videoRecorder.isRecording)
 
             Divider()
 
@@ -457,6 +458,32 @@ struct ControlCommands: Commands {
                 }
             }
             .keyboardShortcut("r", modifiers: [.command, .shift])
+            .disabled(viewModel.videoRecorder.isRecording)
+
+            Button {
+                viewModel.toggleVideoRecording()
+            } label: {
+                if viewModel.videoRecorder.isRecording {
+                    Label("Stop Video Recording",
+                          systemImage: "stop.circle")
+                } else if viewModel.cpuSpeed != .x1 {
+                    // Video timeline assumes wall-clock playback; faster CPU
+                    // speeds desync audio against video. Force x1 first.
+                    Label("Start Video Recording (set CPU Speed to x1)",
+                          systemImage: "video.circle")
+                } else {
+                    Label(
+                        Settings.shared.videoRecordingAutoSave
+                            ? "Start Video Recording"
+                            : "Start Video Recording…",
+                        systemImage: "video.circle"
+                    )
+                }
+            }
+            .keyboardShortcut("v", modifiers: [.command, .shift])
+            .disabled(viewModel.audioRecorder.isRecording
+                      || (!viewModel.videoRecorder.isRecording
+                          && viewModel.cpuSpeed != .x1))
 
             Divider()
 
