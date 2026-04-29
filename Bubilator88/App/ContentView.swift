@@ -184,7 +184,57 @@ struct ContentView: View {
 
     @ViewBuilder
     private var screenView: some View {
-        MetalScreenViewWrapper(viewModel: viewModel)
+        ZStack {
+            MetalScreenViewWrapper(viewModel: viewModel)
+            if let session = viewModel.dissolveSession {
+                GeometryReader { geo in
+                    // Match Metal view's aspect-fit (and integer scaling in
+                    // fullscreen) so the overlay aligns with the actual
+                    // displayed image and doesn't stretch into the letterbox.
+                    let displayW: CGFloat = 640
+                    let displayH: CGFloat = 400
+                    let scale: CGFloat = {
+                        if viewModel.isFullScreen,
+                           Settings.shared.fullscreenIntegerScaling {
+                            let s = max(1, min(Int(geo.size.width / displayW),
+                                               Int(geo.size.height / displayH)))
+                            return CGFloat(s)
+                        }
+                        return min(geo.size.width / displayW,
+                                   geo.size.height / displayH)
+                    }()
+                    let w = displayW * scale
+                    let h = displayH * scale
+                    let x = (geo.size.width - w) / 2
+                    let y = (geo.size.height - h) / 2
+
+                    TimelineView(.animation) { ctx in
+                        let p = session.progress(at: ctx.date)
+                        ZStack {
+                            // Solid black behind the dissolving image so
+                            // (a) the frozen Metal view doesn't peek through
+                            // dispersed regions, and (b) when the dissolve
+                            // completes the screen reads as "fully gone"
+                            // instead of flashing back to the original.
+                            Color.black
+                            Image(nsImage: session.snapshot)
+                                .resizable()
+                                .interpolation(.none)
+                                .layerEffect(
+                                    ShaderLibrary.thanosDissolve(
+                                        .float2(Float(w), Float(h)),
+                                        .float(Float(p))
+                                    ),
+                                    maxSampleOffset: CGSize(width: 200, height: 200)
+                                )
+                        }
+                        .frame(width: w, height: h)
+                        .offset(x: x, y: y)
+                    }
+                }
+                .allowsHitTesting(false)
+            }
+        }
     }
 
     private var statusBar: some View {

@@ -664,8 +664,174 @@ final class EmulatorViewModel {
         metalView?.draw()
     }
 
+    // MARK: - Reset / Quit Dissolve Animation
+
+    /// Self-contained record of an active dissolve animation. Bundling
+    /// these fields into one optional value (replacing the half-dozen
+    /// parallel `var`s the earlier draft used) lets the SwiftUI overlay
+    /// guard on a single optional and makes "no dissolve in flight"
+    /// representable as `nil` instead of by-convention.
+    struct DissolveSession {
+        enum Mode { case forward, reverse }
+        enum Trigger { case reset, quit }
+
+        var snapshot: NSImage
+        var start: Date
+        var mode: Mode
+        var duration: TimeInterval
+        var trigger: Trigger
+        /// Whether emulation was running at the moment the *original*
+        /// dissolve started (before any subsequent `stop()` calls).
+        /// Survives a takeover (reset → quit) so cancel can resume the
+        /// machine to the user's pre-reset state.
+        var preWasRunning: Bool
+
+        func progress(at now: Date) -> Double {
+            let raw = max(0.0, min(1.0, now.timeIntervalSince(start) / duration))
+            return mode == .forward ? raw : (1.0 - raw)
+        }
+    }
+
+    /// Currently-active dissolve, or nil if no animation is running.
+    /// Read by the SwiftUI overlay each frame via TimelineView; a
+    /// `.layerEffect` shader uniform isn't animated by `withAnimation`
+    /// so we instead derive progress from wall-clock + this session.
+    var dissolveSession: DissolveSession?
+
+    /// Pending `DispatchWorkItem`s scheduled by the active dissolve
+    /// (deferred reset, cleanup). We keep handles so a new dissolve
+    /// taking over can cancel them explicitly — clearer than the
+    /// generation-counter approach the earlier draft used.
+    private var pendingDissolveTasks: [DispatchWorkItem] = []
+
+    static let resetDissolveDuration: TimeInterval = 1.6
+    static let quitDissolveDuration: TimeInterval = 3.2
+
+    private func cancelPendingDissolveTasks() {
+        for item in pendingDissolveTasks { item.cancel() }
+        pendingDissolveTasks.removeAll()
+    }
+
+    private func scheduleDissolveTask(after delay: TimeInterval,
+                                      _ block: @escaping () -> Void) {
+        let item = DispatchWorkItem(block: block)
+        pendingDissolveTasks.append(item)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
+    }
+
+    /// Start a forward dissolve and freeze emulation. Used when the
+    /// user hits Cmd+Q or Cmd+W — the AppDelegate calls this just
+    /// before presenting the confirmation sheet so the screen visibly
+    /// disintegrates while the dialog is up.
+    ///
+    /// Stops emulation unconditionally, even if snapshot capture fails
+    /// or a prior dissolve is taking over — the user pressed Cmd+Q,
+    /// the machine must freeze regardless of overlay state.
+    func beginQuitDissolve() {
+        let wasRunning = isRunning
+        stop()
+        cancelPendingDissolveTasks()
+
+        let now = Date()
+        if var session = dissolveSession {
+            // Take over an existing animation: keep the on-screen image
+            // and current progress, but re-anchor the start so the new
+            // (slower) quit duration produces the same `pNow` at `now`.
+            // `preWasRunning` carries over so cancel resumes the user's
+            // original pre-reset state.
+            let pNow = session.progress(at: now)
+            session.mode = .forward
+            session.duration = Self.quitDissolveDuration
+            session.trigger = .quit
+            session.start = now.addingTimeInterval(-Self.quitDissolveDuration * pNow)
+            dissolveSession = session
+            return
+        }
+        guard let snapshot = makeDissolveSnapshot() else { return }
+        dissolveSession = DissolveSession(
+            snapshot: snapshot,
+            start: now,
+            mode: .forward,
+            duration: Self.quitDissolveDuration,
+            trigger: .quit,
+            preWasRunning: wasRunning
+        )
+    }
+
+    /// User dismissed the quit/close sheet — reverse the dissolve and,
+    /// once particles have reassembled, resume emulation if it was
+    /// running.
+    func cancelQuitDissolve() {
+        // Only valid for a forward quit dissolve. Ignore stray calls
+        // (e.g. a reset dissolve in flight, or a cancel arriving after
+        // cleanup already ran).
+        guard var session = dissolveSession,
+              session.trigger == .quit,
+              session.mode == .forward else { return }
+
+        let now = Date()
+        let pCancel = session.progress(at: now)
+        // Reverse plays at the standard (faster) reset cadence even though
+        // the forward quit pass is intentionally slow — the user already
+        // changed their mind, no reason to make them wait twice as long.
+        let reverseDuration = Self.resetDissolveDuration
+        // For reverse mode, progress(t) = 1 - clamp((t - start) / duration, 0, 1).
+        // Pick `start` so progress(now) == pCancel and progress reaches 0
+        // after `duration * pCancel` more seconds.
+        let elapsedNeeded = reverseDuration * (1.0 - pCancel)
+        session.mode = .reverse
+        session.duration = reverseDuration
+        session.start = now.addingTimeInterval(-elapsedNeeded)
+        dissolveSession = session
+
+        cancelPendingDissolveTasks()
+        let remaining = reverseDuration * pCancel
+        let restart = session.preWasRunning
+        scheduleDissolveTask(after: remaining + 0.05) { [weak self] in
+            guard let self else { return }
+            self.dissolveSession = nil
+            if restart { self.start() }
+        }
+    }
+
     func reset() {
-        performReset(resetTranslation: true)
+        if Settings.shared.resetAnimationEnabled,
+           dissolveSession == nil,
+           let snapshot = makeDissolveSnapshot() {
+            playResetDissolve(snapshot: snapshot)
+        } else {
+            performReset(resetTranslation: true)
+        }
+    }
+
+    private func makeDissolveSnapshot() -> NSImage? {
+        let buf = emuQueue.sync { Array(pixelBuffer) }
+        guard let cg = createCGImage(from: buf) else { return nil }
+        return NSImage(cgImage: cg, size: NSSize(width: 640, height: 400))
+    }
+
+    private func playResetDissolve(snapshot: NSImage) {
+        let wasRunning = isRunning
+        stop()
+        cancelPendingDissolveTasks()
+        dissolveSession = DissolveSession(
+            snapshot: snapshot,
+            start: Date(),
+            mode: .forward,
+            duration: Self.resetDissolveDuration,
+            trigger: .reset,
+            preWasRunning: wasRunning
+        )
+        // Run the actual reset partway through the animation so the
+        // Metal view underneath has already transitioned to the post-reset
+        // frame by the time the dissolve completes (otherwise the user
+        // briefly sees the pre-reset image after the overlay clears).
+        scheduleDissolveTask(after: Self.resetDissolveDuration * 0.4) { [weak self] in
+            self?.performReset(resetTranslation: true, forceRestart: wasRunning)
+        }
+        scheduleDissolveTask(after: Self.resetDissolveDuration + 0.05) { [weak self] in
+            self?.dissolveSession = nil
+        }
     }
 
     private func applyBootMode() {
@@ -677,8 +843,8 @@ final class EmulatorViewModel {
     /// values, so the UI label and the actual ROM-visible mode can never
     /// drift — even if Settings.dipSw1/dipSw2Base were left stale by a
     /// previous save-state load or another unusual path.
-    private func performReset(resetTranslation: Bool) {
-        let wasRunning = isRunning
+    private func performReset(resetTranslation: Bool, forceRestart: Bool = false) {
+        let wasRunning = isRunning || forceRestart
         stop()
         cancelPasteQueue()
         let mode = _bootModeStorage
