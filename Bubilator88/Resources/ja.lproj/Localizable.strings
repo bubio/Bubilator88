@@ -144,6 +144,7 @@
 "Format" = "フォーマット";
 "Development" = "開発";
 "Show DEBUG Menu" = "DEBUGメニューを表示";
+"Play dissolve animation on reset" = "リセット時にディゾルブアニメーションを再生";
 
 /* ===== SettingsView.swift — Display Tab ===== */
 "Fullscreen" = "フルスクリーン";

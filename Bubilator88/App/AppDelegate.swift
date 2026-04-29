@@ -81,8 +81,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         lastTerminateWasShortcut = false
         guard let host = mainEmulatorWindow() else {
             // Fallback: no host window → plain modal.
-            return confirmQuitShortcutModal() ? .terminateNow : .terminateCancel
+            MainActor.assumeIsolated { viewModel?.beginQuitDissolve() }
+            let confirmed = confirmQuitShortcutModal()
+            if !confirmed {
+                MainActor.assumeIsolated { viewModel?.cancelQuitDissolve() }
+            }
+            return confirmed ? .terminateNow : .terminateCancel
         }
+        MainActor.assumeIsolated { viewModel?.beginQuitDissolve() }
         presentQuitConfirmationSheet(on: host)
         // Defer the terminate decision until the sheet's completion handler
         // calls NSApp.reply(toApplicationShouldTerminate:).
@@ -111,6 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         guard lastCloseWasShortcut else { return true }
         lastCloseWasShortcut = false
+        MainActor.assumeIsolated { viewModel?.beginQuitDissolve() }
         presentCloseConfirmationSheet(on: sender)
         // Always refuse the close here; if the user confirms, the sheet's
         // completion handler calls `sender.close()` directly, which bypasses
@@ -141,17 +148,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private func presentQuitConfirmationSheet(on host: NSWindow) {
         let alert = makeQuitAlert()
-        alert.beginSheetModal(for: host) { response in
+        alert.beginSheetModal(for: host) { [weak self] response in
             let confirmed = (response == .alertFirstButtonReturn)
+            if !confirmed {
+                MainActor.assumeIsolated { self?.viewModel?.cancelQuitDissolve() }
+            }
             NSApp.reply(toApplicationShouldTerminate: confirmed)
         }
     }
 
     private func presentCloseConfirmationSheet(on host: NSWindow) {
         let alert = makeCloseAlert()
-        alert.beginSheetModal(for: host) { response in
+        alert.beginSheetModal(for: host) { [weak self] response in
             if response == .alertFirstButtonReturn {
                 host.close()
+            } else {
+                MainActor.assumeIsolated { self?.viewModel?.cancelQuitDissolve() }
             }
         }
     }

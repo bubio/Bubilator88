@@ -43,6 +43,11 @@ final class Settings {
         didSet { UserDefaults.standard.set(showDebugMenu, forKey: "showDebugMenu") }
     }
 
+    /// Play a Thanos-style dissolve animation when the user resets the machine.
+    var resetAnimationEnabled: Bool = true {
+        didSet { UserDefaults.standard.set(resetAnimationEnabled, forKey: "resetAnimationEnabled") }
+    }
+
     // MARK: - Video Filter
 
     /// Video filter mode (raw value of VideoFilter enum).
@@ -378,6 +383,9 @@ final class Settings {
         }
         if let v = UserDefaults.standard.object(forKey: "showDebugMenu") as? Bool {
             showDebugMenu = v
+        }
+        if let v = UserDefaults.standard.object(forKey: "resetAnimationEnabled") as? Bool {
+            resetAnimationEnabled = v
         }
         if let v = UserDefaults.standard.object(forKey: "audioBufferMs") as? Int {
             audioBufferMs = max(20, min(500, v))

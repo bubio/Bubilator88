@@ -64,6 +64,10 @@ private struct GeneralSettingsTab: View {
                 }
             }
 
+            Section("Reset") {
+                Toggle("Play dissolve animation on reset", isOn: $settings.resetAnimationEnabled)
+            }
+
             Section("Development") {
                 Toggle("Show DEBUG Menu", isOn: Binding(
                     get: { viewModel.showDebugMenu },
