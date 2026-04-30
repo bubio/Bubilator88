@@ -95,6 +95,12 @@
       "features.fdd.title": "FDD Sound FX",
       "features.fdd.body":
         "Authentic floppy drive seek and access sounds. Togglable in settings.",
+      "features.audiorec.title": "Audio Recording",
+      "features.audiorec.body":
+        "Capture emulator audio straight to AAC or WAV. Pick the output device, choose a per-channel mix, and save in one click.",
+      "features.videorec.title": "Video Recording",
+      "features.videorec.body":
+        "Record gameplay to ProRes 4444 or H.264 with synced audio.",
 
       "req.title": "Requirements",
       "req.os": "macOS 26.0 (Tahoe) or later",
@@ -234,6 +240,12 @@
       "features.fdd.title": "FDD アクセス音",
       "features.fdd.body":
         "フロッピーのシーク音・アクセス音までちゃんと再現。設定でオフにもできます。",
+      "features.audiorec.title": "録音",
+      "features.audiorec.body":
+        "エミュレータの音声をそのまま AAC / WAV に保存。出力デバイスやチャンネル別ミックスを選んでワンクリックで録音できます。",
+      "features.videorec.title": "録画",
+      "features.videorec.body":
+        "プレイ画面を ProRes 4444 / H.264 で音声同期付きで録画。",
 
       "req.title": "動作環境",
       "req.os": "macOS 26.0 (Tahoe) 以降",
