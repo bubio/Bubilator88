@@ -18,9 +18,19 @@ final class RewindSound {
     private var prepared = false
 
     /// Edge fade applied to both ends of the loaded loop in milliseconds.
-    /// Long enough to mask a click on a non-zero loop boundary, short
-    /// enough to be inaudible mid-loop.
-    private static let edgeFadeMs: Double = 12
+    /// Kept short — the auto-detected loop point already aligns sample
+    /// continuity, so we only need a few ms to mask sub-sample residuals.
+    private static let edgeFadeMs: Double = 3
+
+    /// Window size (frames) used by the loop-point search to compare
+    /// the start of the buffer with candidate end positions. Larger =
+    /// better continuity at the seam but more compute on prepare.
+    private static let loopMatchWindow: Int = 2048
+
+    /// Coarse-search stride (frames). 8 keeps the candidate count low
+    /// while still landing within ~0.2 ms of the optimum at 44.1 kHz;
+    /// a follow-up fine pass refines to single-sample accuracy.
+    private static let loopMatchStride: Int = 8
 
     /// Lazily build the engine graph + loop buffer the first time the
     /// user actually triggers a rewind. This keeps app launch unaffected
@@ -43,10 +53,79 @@ final class RewindSound {
             // The mixer handles sample-rate / channel-count conversion
             // to whatever the output device actually wants.
             engine.connect(player, to: engine.mainMixerNode, format: b.format)
+            // Search for the loop end position that minimises the
+            // amplitude/slope discontinuity at the seam, then trim the
+            // buffer there. Falls through gracefully if the file is
+            // too short for a meaningful search.
+            let bestEnd = findBestLoopEnd(b)
+            if bestEnd > 0 && bestEnd < Int(b.frameLength) {
+                b.frameLength = AVAudioFrameCount(bestEnd)
+            }
             applyEdgeFade(b, fadeMs: Self.edgeFadeMs)
         }
         loopBuffer = buffer
         prepared = true
+    }
+
+    /// Locate the loop end frame that minimises the squared difference
+    /// between the leading window `[0, K)` and the trailing window
+    /// `[end-K, end)`. Stationary noise/hum-style content (which the
+    /// rewind asset is) has many local minima; the lowest one represents
+    /// the cut where the wrap-around `samples[end-1] → samples[0]`
+    /// transition is least audible.
+    ///
+    /// Two-pass: coarse scan with `loopMatchStride`, then fine scan at
+    /// 1-sample resolution within ±stride of the coarse winner. Search
+    /// is restricted to the latter half of the file so we never trim
+    /// more than half the asset away.
+    private func findBestLoopEnd(_ buf: AVAudioPCMBuffer) -> Int {
+        let total = Int(buf.frameLength)
+        let K = Self.loopMatchWindow
+        guard total > K * 4, let data = buf.floatChannelData else { return total }
+        let channels = Int(buf.format.channelCount)
+
+        let searchLow = max(K * 2, total / 2)
+        let searchHigh = total
+        let stride = Self.loopMatchStride
+
+        // Inline SSE so we don't pay closure overhead in the hot loop.
+        func sse(at end: Int) -> Float {
+            var acc: Float = 0
+            for c in 0..<channels {
+                let ch = data[c]
+                let base = end - K
+                for i in 0..<K {
+                    let d = ch[i] - ch[base + i]
+                    acc += d * d
+                }
+            }
+            return acc
+        }
+
+        // Coarse pass.
+        var bestEnd = total
+        var bestSSE = Float.infinity
+        var end = searchLow
+        while end < searchHigh {
+            let s = sse(at: end)
+            if s < bestSSE {
+                bestSSE = s
+                bestEnd = end
+            }
+            end += stride
+        }
+
+        // Fine pass within ±stride of the coarse winner.
+        let lo = max(bestEnd - stride, K + 1)
+        let hi = min(bestEnd + stride, searchHigh)
+        for e in lo...hi {
+            let s = sse(at: e)
+            if s < bestSSE {
+                bestSSE = s
+                bestEnd = e
+            }
+        }
+        return bestEnd
     }
 
     /// Read `Rewind.wav` from the bundle into an in-memory PCM buffer.
