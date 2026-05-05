@@ -17,20 +17,15 @@ final class RewindSound {
     private var loopBuffer: AVAudioPCMBuffer?
     private var prepared = false
 
-    /// Edge fade applied to both ends of the loaded loop in milliseconds.
-    /// Kept short — the auto-detected loop point already aligns sample
-    /// continuity, so we only need a few ms to mask sub-sample residuals.
+    /// Edge fade applied to both ends of the trimmed loop in milliseconds.
+    /// Kept short — masks sub-sample residuals at the seam.
     private static let edgeFadeMs: Double = 3
 
-    /// Window size (frames) used by the loop-point search to compare
-    /// the start of the buffer with candidate end positions. Larger =
-    /// better continuity at the seam but more compute on prepare.
-    private static let loopMatchWindow: Int = 2048
-
-    /// Coarse-search stride (frames). 8 keeps the candidate count low
-    /// while still landing within ~0.2 ms of the optimum at 44.1 kHz;
-    /// a follow-up fine pass refines to single-sample accuracy.
-    private static let loopMatchStride: Int = 8
+    /// Loop region within the source asset. The user-tuned sweet spot is
+    /// `[0.5s, 1.5s)`: a 1-second window past the initial transient,
+    /// before the tail-out, where the waveform is most stationary.
+    private static let loopStartSeconds: Double = 0.5
+    private static let loopEndSeconds: Double = 1.5
 
     /// Lazily build the engine graph + loop buffer the first time the
     /// user actually triggers a rewind. This keeps app launch unaffected
@@ -48,87 +43,45 @@ final class RewindSound {
             let outFormat = engine.mainMixerNode.outputFormat(forBus: 0)
             buffer = makeSyntheticBuffer(format: outFormat)
         }
-        if let b = buffer {
-            // Connect the player using the loop buffer's own format.
-            // The mixer handles sample-rate / channel-count conversion
-            // to whatever the output device actually wants.
+        // Trim to the loop region [0.5s, 1.5s) so we get a stationary,
+        // 1-second cassette-rewind segment that wraps cleanly under the
+        // edge fade. Falls back to the original buffer if the source is
+        // shorter than the configured end point.
+        let trimmed = buffer.flatMap { trimToLoopRegion($0) } ?? buffer
+        if let b = trimmed {
             engine.connect(player, to: engine.mainMixerNode, format: b.format)
-            // Search for the loop end position that minimises the
-            // amplitude/slope discontinuity at the seam, then trim the
-            // buffer there. Falls through gracefully if the file is
-            // too short for a meaningful search.
-            let bestEnd = findBestLoopEnd(b)
-            if bestEnd > 0 && bestEnd < Int(b.frameLength) {
-                b.frameLength = AVAudioFrameCount(bestEnd)
-            }
             applyEdgeFade(b, fadeMs: Self.edgeFadeMs)
         }
-        loopBuffer = buffer
+        loopBuffer = trimmed
         prepared = true
     }
 
-    /// Locate the loop end frame that minimises the squared difference
-    /// between the leading window `[0, K)` and the trailing window
-    /// `[end-K, end)`. Stationary noise/hum-style content (which the
-    /// rewind asset is) has many local minima; the lowest one represents
-    /// the cut where the wrap-around `samples[end-1] → samples[0]`
-    /// transition is least audible.
-    ///
-    /// Two-pass: coarse scan with `loopMatchStride`, then fine scan at
-    /// 1-sample resolution within ±stride of the coarse winner. Search
-    /// is restricted to the latter half of the file so we never trim
-    /// more than half the asset away.
-    private func findBestLoopEnd(_ buf: AVAudioPCMBuffer) -> Int {
-        let total = Int(buf.frameLength)
-        let K = Self.loopMatchWindow
-        guard total > K * 4, let data = buf.floatChannelData else { return total }
-        let channels = Int(buf.format.channelCount)
-
-        let searchLow = max(K * 2, total / 2)
-        let searchHigh = total
-        let stride = Self.loopMatchStride
-
-        // Inline SSE so we don't pay closure overhead in the hot loop.
-        func sse(at end: Int) -> Float {
-            var acc: Float = 0
-            for c in 0..<channels {
-                let ch = data[c]
-                let base = end - K
-                for i in 0..<K {
-                    let d = ch[i] - ch[base + i]
-                    acc += d * d
-                }
-            }
-            return acc
+    /// Return a new buffer containing samples from `loopStartSeconds`
+    /// (inclusive) to `loopEndSeconds` (exclusive) of `src`. Returns
+    /// nil if the source is too short.
+    private func trimToLoopRegion(_ src: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+        let format = src.format
+        let sr = format.sampleRate
+        let startFrame = Int((Self.loopStartSeconds * sr).rounded())
+        let endFrame = Int((Self.loopEndSeconds * sr).rounded())
+        let total = Int(src.frameLength)
+        guard endFrame > startFrame, endFrame <= total,
+              let srcData = src.floatChannelData else { return nil }
+        let length = endFrame - startFrame
+        guard let dst = AVAudioPCMBuffer(pcmFormat: format,
+                                         frameCapacity: AVAudioFrameCount(length)),
+              let dstData = dst.floatChannelData else { return nil }
+        dst.frameLength = AVAudioFrameCount(length)
+        let channels = Int(format.channelCount)
+        for c in 0..<channels {
+            let src = srcData[c].advanced(by: startFrame)
+            let dst = dstData[c]
+            dst.update(from: src, count: length)
         }
-
-        // Coarse pass.
-        var bestEnd = total
-        var bestSSE = Float.infinity
-        var end = searchLow
-        while end < searchHigh {
-            let s = sse(at: end)
-            if s < bestSSE {
-                bestSSE = s
-                bestEnd = end
-            }
-            end += stride
-        }
-
-        // Fine pass within ±stride of the coarse winner.
-        let lo = max(bestEnd - stride, K + 1)
-        let hi = min(bestEnd + stride, searchHigh)
-        for e in lo...hi {
-            let s = sse(at: e)
-            if s < bestSSE {
-                bestSSE = s
-                bestEnd = e
-            }
-        }
-        return bestEnd
+        return dst
     }
 
-    /// Read `Rewind.wav` from the bundle into an in-memory PCM buffer.
+/// Read `Rewind.wav` from the bundle into an in-memory PCM buffer.
     /// Returns nil if the resource is missing or unreadable.
     private func loadLoopBufferFromBundle() -> AVAudioPCMBuffer? {
         guard let url = Bundle.main.url(forResource: "Rewind", withExtension: "wav"),
