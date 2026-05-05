@@ -1,89 +1,103 @@
 import AVFoundation
 
-/// Cassette-rewind loop played while the user holds the rewind hotkey.
-/// Loads `Rewind.wav` from the app bundle, applies a short edge fade
-/// to mask any non-zero amplitude at the loop boundary (the resource
-/// isn't guaranteed to be loop-tuned), and runs it through a dedicated
-/// AVAudioEngine. The system mixes this engine's output with the main
-/// YM2608 path so the two don't have to coordinate.
+/// Cassette-rewind sound played while the user holds the rewind hotkey.
+/// Loads `Rewind.wav` from the app bundle and splits it into two
+/// regions:
 ///
-/// If the bundled WAV is missing the constructor falls back to a
-/// synthesised noise+hum loop so the feature still produces *something*
-/// audible for development builds.
+/// - **Loop** `[0.5s, 1.5s)` — a 1-second stationary segment that
+///   plays repeatedly while the key is held.
+/// - **Tail** `[1.5s, end)` — the natural release portion of the asset
+///   that plays once after the user lets go, providing a non-abrupt
+///   stop.
+///
+/// On hold release the loop is replaced via `.interruptsAtLoop`, so the
+/// current loop iteration finishes naturally and then the tail plays
+/// through. Pressing the key again during the tail re-engages looping.
+///
+/// Runs on a dedicated AVAudioEngine; the system mixes its output with
+/// the main YM2608 path so the two don't have to coordinate.
+///
+/// If the bundled WAV is missing, falls back to a synthesised noise+hum
+/// loop (with no tail).
 final class RewindSound {
 
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
     private var loopBuffer: AVAudioPCMBuffer?
+    private var tailBuffer: AVAudioPCMBuffer?
     private var prepared = false
 
-    /// Edge fade applied to both ends of the trimmed loop in milliseconds.
-    /// Kept short — masks sub-sample residuals at the seam.
-    private static let edgeFadeMs: Double = 3
+    /// Bumped on every start/stop transition so a stale completion
+    /// handler from an interrupted buffer can recognise itself and
+    /// not stomp on a newer state.
+    private var generation: Int = 0
 
-    /// Loop region within the source asset. The user-tuned sweet spot is
-    /// `[0.5s, 1.5s)`: a 1-second window past the initial transient,
-    /// before the tail-out, where the waveform is most stationary.
+    /// Loop region within the source asset.
     private static let loopStartSeconds: Double = 0.5
     private static let loopEndSeconds: Double = 1.5
 
-    /// Lazily build the engine graph + loop buffer the first time the
-    /// user actually triggers a rewind. This keeps app launch unaffected
-    /// for users who never use the feature.
+    /// Length of the linear fade-in at the start of the loop in ms.
+    /// Masks the wrap-around discontinuity between the loop's last
+    /// sample and its first; the loop **end** is intentionally left
+    /// untouched so the seamless source-continuous handoff into the
+    /// tail (sample at 1.5s−1 → sample at 1.5s) survives intact.
+    private static let loopFadeInMs: Double = 3
+
+    /// Lazily build the engine graph + buffers the first time the user
+    /// actually triggers a rewind.
     private func prepareIfNeeded() {
         if prepared { return }
         engine.attach(player)
 
-        let buffer: AVAudioPCMBuffer?
-        if let loaded = loadLoopBufferFromBundle() {
-            buffer = loaded
+        let source: AVAudioPCMBuffer?
+        if let loaded = loadSourceBufferFromBundle() {
+            source = loaded
         } else {
-            // Resource missing → fall back to synthesised loop so the
-            // app still behaves predictably in non-bundle test builds.
             let outFormat = engine.mainMixerNode.outputFormat(forBus: 0)
-            buffer = makeSyntheticBuffer(format: outFormat)
+            source = makeSyntheticBuffer(format: outFormat)
         }
-        // Trim to the loop region [0.5s, 1.5s) so we get a stationary,
-        // 1-second cassette-rewind segment that wraps cleanly under the
-        // edge fade. Falls back to the original buffer if the source is
-        // shorter than the configured end point.
-        let trimmed = buffer.flatMap { trimToLoopRegion($0) } ?? buffer
-        if let b = trimmed {
-            engine.connect(player, to: engine.mainMixerNode, format: b.format)
-            applyEdgeFade(b, fadeMs: Self.edgeFadeMs)
+
+        if let src = source {
+            let sr = src.format.sampleRate
+            let loopStart = Int((Self.loopStartSeconds * sr).rounded())
+            let loopEnd = Int((Self.loopEndSeconds * sr).rounded())
+            let total = Int(src.frameLength)
+
+            loopBuffer = sliceBuffer(src, from: loopStart, to: min(loopEnd, total))
+            if loopEnd < total {
+                tailBuffer = sliceBuffer(src, from: loopEnd, to: total)
+            }
+            // Connect the player using the source format so subsequent
+            // scheduleBuffer() calls don't trip on a mismatch.
+            engine.connect(player, to: engine.mainMixerNode, format: src.format)
+            if let lb = loopBuffer {
+                applyFadeIn(lb, fadeMs: Self.loopFadeInMs)
+            }
         }
-        loopBuffer = trimmed
         prepared = true
     }
 
-    /// Return a new buffer containing samples from `loopStartSeconds`
-    /// (inclusive) to `loopEndSeconds` (exclusive) of `src`. Returns
-    /// nil if the source is too short.
-    private func trimToLoopRegion(_ src: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
-        let format = src.format
-        let sr = format.sampleRate
-        let startFrame = Int((Self.loopStartSeconds * sr).rounded())
-        let endFrame = Int((Self.loopEndSeconds * sr).rounded())
-        let total = Int(src.frameLength)
-        guard endFrame > startFrame, endFrame <= total,
+    /// Copy `src[from..<to)` into a new buffer.
+    private func sliceBuffer(_ src: AVAudioPCMBuffer,
+                             from start: Int, to end: Int) -> AVAudioPCMBuffer? {
+        guard end > start, start >= 0,
               let srcData = src.floatChannelData else { return nil }
-        let length = endFrame - startFrame
+        let length = end - start
+        let format = src.format
         guard let dst = AVAudioPCMBuffer(pcmFormat: format,
                                          frameCapacity: AVAudioFrameCount(length)),
               let dstData = dst.floatChannelData else { return nil }
         dst.frameLength = AVAudioFrameCount(length)
         let channels = Int(format.channelCount)
         for c in 0..<channels {
-            let src = srcData[c].advanced(by: startFrame)
-            let dst = dstData[c]
-            dst.update(from: src, count: length)
+            dstData[c].update(from: srcData[c].advanced(by: start), count: length)
         }
         return dst
     }
 
-/// Read `Rewind.wav` from the bundle into an in-memory PCM buffer.
+    /// Read `Rewind.wav` from the bundle into an in-memory PCM buffer.
     /// Returns nil if the resource is missing or unreadable.
-    private func loadLoopBufferFromBundle() -> AVAudioPCMBuffer? {
+    private func loadSourceBufferFromBundle() -> AVAudioPCMBuffer? {
         guard let url = Bundle.main.url(forResource: "Rewind", withExtension: "wav"),
               let file = try? AVAudioFile(forReading: url) else {
             return nil
@@ -124,49 +138,66 @@ final class RewindSound {
         return buf
     }
 
-    /// Apply linear fade-in at the start and fade-out at the end of the
-    /// buffer in-place. Symmetric ends → looping mixes the trailing
-    /// fade-out with the leading fade-in only at the boundary, producing
-    /// a click-free seam regardless of source amplitude.
-    private func applyEdgeFade(_ buf: AVAudioPCMBuffer, fadeMs: Double) {
+    /// Linear fade-in at the buffer start. Used on the loop only; the
+    /// loop end stays unfaded so handoff into the tail is sample-
+    /// continuous in the original asset.
+    private func applyFadeIn(_ buf: AVAudioPCMBuffer, fadeMs: Double) {
         guard let data = buf.floatChannelData else { return }
         let sr = buf.format.sampleRate
-        let total = Int(buf.frameLength)
-        let n = min(Int(fadeMs / 1000.0 * sr), total / 2)
+        let n = min(Int(fadeMs / 1000.0 * sr), Int(buf.frameLength) / 2)
         if n <= 0 { return }
         let channels = Int(buf.format.channelCount)
         for c in 0..<channels {
             let ch = data[c]
             for i in 0..<n {
-                let g = Float(i) / Float(n)
-                ch[i] *= g                      // fade-in
-                ch[total - 1 - i] *= g          // fade-out
+                ch[i] *= Float(i) / Float(n)
             }
         }
     }
 
-    /// Begin looping the rewind sound at `volume * 0.7` so it sits
-    /// slightly below the muted YM2608 level the user would normally
-    /// hear. Idempotent. The engine, once started, is kept running for
-    /// the lifetime of the app so subsequent presses don't pay the
-    /// engine-start latency (10-50 ms can swallow the head of a short
-    /// rewind).
+    /// Begin looping at `volume * 0.7`. Idempotent, and also valid as a
+    /// "re-engage" call during tail playback (the new loop interrupts
+    /// the tail). The engine, once started, is kept running so further
+    /// presses don't pay the start latency.
     func start(volume: Float) {
         prepareIfNeeded()
         player.volume = max(0, min(1, volume * 0.7))
         if !engine.isRunning {
             try? engine.start()
         }
-        if !player.isPlaying, let b = loopBuffer {
-            player.scheduleBuffer(b, at: nil, options: [.loops], completionHandler: nil)
-            player.play()
-        }
+        guard let lb = loopBuffer else { return }
+        generation += 1
+        // .interrupts replaces any pending playback (including a tail
+        // from a previous stop()). .loops keeps cycling.
+        player.scheduleBuffer(lb, at: nil,
+                              options: [.loops, .interrupts],
+                              completionHandler: nil)
+        if !player.isPlaying { player.play() }
     }
 
-    /// Pause playback. The engine stays running so the next start is
-    /// instantaneous; only the player is stopped (which also flushes
-    /// the scheduled loop, so the next start re-schedules a fresh one).
+    /// Stop looping but let the asset play through to the end. Schedules
+    /// the tail with `.interruptsAtLoop` so the current loop iteration
+    /// finishes naturally before the one-shot tail begins; once the tail
+    /// finishes, the player halts. If `start()` is called again before
+    /// the tail completes, the generation counter invalidates the
+    /// pending stop so the new loop survives.
     func stop() {
-        if player.isPlaying { player.stop() }
+        guard player.isPlaying else { return }
+        generation += 1
+        let myGen = generation
+        if let tail = tailBuffer {
+            player.scheduleBuffer(tail, at: nil,
+                                  options: .interruptsAtLoop) { [weak self] in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    if self.generation == myGen {
+                        self.player.stop()
+                    }
+                }
+            }
+        } else {
+            // No tail (synthetic fallback or short source): stop now.
+            player.stop()
+        }
     }
 }
