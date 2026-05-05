@@ -425,6 +425,11 @@ final class EmulatorViewModel {
     /// raw rate, so 30s of buffered history rewinds in ~4 wall seconds).
     @ObservationIgnored var rewindStepCounter: Int = 0
 
+    /// Snapshot count captured when the user pressed the rewind key.
+    /// Used to compute "how far back the user has rewound" for the
+    /// strip overlay's elapsed-seconds readout.
+    @ObservationIgnored var rewindStartSnapshotCount: Int = 0
+
     /// Master volume captured at the moment rewind starts so it can be
     /// restored on release.
     @ObservationIgnored var preRewindVolume: Float = 0

@@ -57,6 +57,13 @@ extension EmulatorViewModel {
         Double(rewindSnapshots.count * Self.rewindSnapshotInterval) / 60.0
     }
 
+    /// Approximate seconds the user has rewound since pressing the
+    /// rewind key. Drives the strip overlay's "now" label.
+    var rewindSecondsRewound: Double {
+        let popped = max(0, rewindStartSnapshotCount - rewindSnapshots.count)
+        return Double(popped * Self.rewindSnapshotInterval) / 60.0
+    }
+
     /// Wipe the buffer. Call when the timeline is invalidated by reset,
     /// save-state load, or disk mount/eject.
     func clearRewindBuffer() {
@@ -102,6 +109,7 @@ extension EmulatorViewModel {
         preRewindVolume = volume
         audio.setVolume(0)
         rewindStepCounter = 0  // step on the first draw, then count down
+        rewindStartSnapshotCount = rewindSnapshots.count  // baseline for elapsed readout
         rewindSound.start(volume: volume)
         isRewinding = true
     }
