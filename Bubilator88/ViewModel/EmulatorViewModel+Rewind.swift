@@ -70,6 +70,7 @@ extension EmulatorViewModel {
         rewindSnapshots.removeAll(keepingCapacity: true)
         rewindFrameCounter = 0
         rewindSnapshotCount = 0
+        rewindFrozenThumbnails.removeAll(keepingCapacity: true)
     }
 
     /// Called once per emulated frame from the Metal draw loop. Pushes a
@@ -110,6 +111,7 @@ extension EmulatorViewModel {
         audio.setVolume(0)
         rewindStepCounter = 0  // step on the first draw, then count down
         rewindStartSnapshotCount = rewindSnapshots.count  // baseline for elapsed readout
+        rewindFrozenThumbnails = rewindSnapshots.compactMap { $0.thumbnail }
         rewindSound.start(volume: volume)
         isRewinding = true
     }

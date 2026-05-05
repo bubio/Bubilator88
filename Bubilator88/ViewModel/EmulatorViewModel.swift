@@ -430,6 +430,11 @@ final class EmulatorViewModel {
     /// strip overlay's elapsed-seconds readout.
     @ObservationIgnored var rewindStartSnapshotCount: Int = 0
 
+    /// Thumbnails frozen at hold start so the strip overlay can
+    /// render a stable left-to-right timeline against which the
+    /// "you are here" marker visibly slides leftward.
+    var rewindFrozenThumbnails: [CGImage] = []
+
     /// Master volume captured at the moment rewind starts so it can be
     /// restored on release.
     @ObservationIgnored var preRewindVolume: Float = 0

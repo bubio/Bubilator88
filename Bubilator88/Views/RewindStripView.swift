@@ -1,25 +1,35 @@
 import SwiftUI
 
 /// Overlay shown along the bottom of the screen while the user is
-/// holding the rewind hotkey. Renders the buffered thumbnails as a
-/// timeline (oldest left → most-recent right). The right-most
-/// thumbnail represents the state currently on screen and is
-/// highlighted; as the user holds the key it shrinks toward the left
-/// while the highlight tracks the new right edge.
+/// holding the rewind hotkey. Renders a *fixed* timeline of thumbnails
+/// that were frozen at hold start (oldest left → most-recent right);
+/// the highlighted "you are here" marker slides leftward across this
+/// stable strip as snapshots are consumed.
+///
+/// Capping the visible window at `maxVisibleThumbs` means the strip
+/// shows the latest N snapshots regardless of buffer size; if the user
+/// rewinds past that point, the marker pins to the left edge while the
+/// elapsed-seconds label keeps counting up.
 struct RewindStripView: View {
 
     @Bindable var viewModel: EmulatorViewModel
 
-    /// Maximum thumbnails shown so the strip stays readable on large
-    /// windows. The most-recent N are displayed when the buffer is
-    /// fuller than this.
     private static let maxVisibleThumbs = 16
-
     private static let thumbWidth: CGFloat = 60
     private static let thumbHeight: CGFloat = 38
 
     var body: some View {
-        let thumbs = visibleThumbnails()
+        let frozen = viewModel.rewindFrozenThumbnails
+        let visible = Array(frozen.suffix(Self.maxVisibleThumbs))
+        let visibleStart = frozen.count - visible.count
+        // markerInFrozen = index of the snapshot now on screen within
+        // the *frozen* timeline. The current state is the last (newest)
+        // remaining snapshot, i.e. rewindSnapshots[count-1].
+        let markerInFrozen = max(0, viewModel.rewindSnapshotCount - 1)
+        // Position within the visible window. Clamps to 0 when the
+        // user has rewound past the visible portion.
+        let markerInVisible = max(0, markerInFrozen - visibleStart)
+
         VStack(spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "gobackward")
@@ -33,8 +43,8 @@ struct RewindStripView: View {
             .foregroundStyle(.white)
 
             HStack(alignment: .bottom, spacing: 4) {
-                ForEach(Array(thumbs.enumerated()), id: \.offset) { index, image in
-                    let isCurrent = (index == thumbs.count - 1)
+                ForEach(Array(visible.enumerated()), id: \.offset) { index, image in
+                    let isCurrent = (index == markerInVisible)
                     thumbCell(image: image, isCurrent: isCurrent)
                 }
             }
@@ -69,7 +79,6 @@ struct RewindStripView: View {
                 .scaleEffect(isCurrent ? 1.15 : 1.0)
                 .opacity(isCurrent ? 1.0 : 0.55)
 
-            // "Now" caret under the current thumb.
             if isCurrent {
                 Image(systemName: "arrowtriangle.up.fill")
                     .font(.caption2)
@@ -79,13 +88,5 @@ struct RewindStripView: View {
             }
         }
         .animation(.easeOut(duration: 0.12), value: isCurrent)
-    }
-
-    /// Return at most `maxVisibleThumbs` most-recent thumbnails. The
-    /// last element is the snapshot the user is currently looking at.
-    private func visibleThumbnails() -> [CGImage] {
-        let all = viewModel.rewindSnapshots.compactMap { $0.thumbnail }
-        if all.count <= Self.maxVisibleThumbs { return all }
-        return Array(all.suffix(Self.maxVisibleThumbs))
     }
 }
