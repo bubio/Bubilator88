@@ -270,6 +270,7 @@ extension EmulatorViewModel {
         emuQueue.sync {
             machine.mountDisk(drive: drive, disk: disk)
         }
+        clearRewindBuffer()
         let info = MountedDiskInfo(sourceURL: sourceURL, archiveEntryName: archiveEntryName,
                                     allImages: allImages, imageNames: imageNames,
                                     currentImageIndex: imageIndex, fileName: fileName,
@@ -321,6 +322,7 @@ extension EmulatorViewModel {
         emuQueue.sync {
             machine.mountDisk(drive: drive, disk: disk)
         }
+        clearRewindBuffer()
         let info = MountedDiskInfo(sourceURL: url, archiveEntryName: archiveEntryName,
                                     allImages: allImages, imageNames: imageNames,
                                     currentImageIndex: imageIndex, fileName: fileName,
@@ -343,6 +345,7 @@ extension EmulatorViewModel {
         emuQueue.sync {
             machine.mountDisk(drive: drive, disk: disk)
         }
+        clearRewindBuffer()
         var updated = info
         updated.currentImageIndex = index
         let displayName = info.imageNames[index]
@@ -376,6 +379,7 @@ extension EmulatorViewModel {
         emuQueue.sync {
             machine.ejectDisk(drive: drive)
         }
+        clearRewindBuffer()
         if drive == 0 {
             drive0Name = "Empty"
             drive0FileName = nil

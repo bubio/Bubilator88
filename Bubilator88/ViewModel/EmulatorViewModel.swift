@@ -411,9 +411,16 @@ final class EmulatorViewModel {
     /// playback in the Metal frame loop and gates audio/recording UI.
     var isRewinding: Bool = false
 
+    /// Ring buffer of save-state snapshots (oldest at index 0). All access
+    /// is on the main thread (Metal draw loop + UI events), so no lock is
+    /// required.
+    @ObservationIgnored var rewindSnapshots: [Data] = []
+
+    /// Frame counter feeding `rewindSnapshotInterval` cadence.
+    @ObservationIgnored var rewindFrameCounter: Int = 0
+
     /// Master volume captured at the moment rewind starts so it can be
-    /// restored on release without going through `applyVolume()` (which
-    /// would re-read Settings.shared and ignore in-flight changes).
+    /// restored on release.
     @ObservationIgnored var preRewindVolume: Float = 0
 
     /// Save state sheet

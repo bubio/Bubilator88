@@ -1,12 +1,18 @@
 import Foundation
 import EmulatorCore
 
-/// Rewind (巻き戻し) — Phase 1 MVP.
+/// Rewind (巻き戻し).
 ///
 /// Periodically pushes a full save-state snapshot to an in-memory ring
-/// buffer. A single user action (Cmd+Z) loads the oldest snapshot, jumping
-/// the emulator ~N seconds back in time. After a rewind the buffer is
-/// cleared so the next press doesn't trip on stale (now-future) snapshots.
+/// buffer (`rewindSnapshots`). Two activation paths:
+///
+/// - **Hold ⌘Z** (Phase 2): pop one snapshot per Metal draw and load it,
+///   producing reverse-playback. Released → resume from current frame.
+/// - **Menu click** (Phase 1 fallback): jump directly to the oldest
+///   snapshot in one shot.
+///
+/// All ring-buffer mutation happens on the main thread (Metal draw loop
+/// + AppDelegate event monitor + menu actions), so no lock is needed.
 extension EmulatorViewModel {
 
     // MARK: - Tunables
@@ -17,29 +23,6 @@ extension EmulatorViewModel {
     /// Maximum number of snapshots retained (60 × 0.5s = 30s window).
     static let rewindBufferCapacity: Int = 60
 
-    // MARK: - Storage (driven through helpers; not Observable)
-
-    /// Backing ring buffer. Held on the static side because @Observable
-    /// classes don't allow stored properties in extensions.
-    fileprivate final class RewindStore {
-        var snapshots: [Data] = []
-        var frameCounter: Int = 0
-    }
-
-    private static let storeKey = ObjectIdentifier(RewindStore.self)
-    private static var stores: [ObjectIdentifier: RewindStore] = [:]
-    private static let storesLock = NSLock()
-
-    private var rewindStore: RewindStore {
-        Self.storesLock.lock()
-        defer { Self.storesLock.unlock() }
-        let id = ObjectIdentifier(self)
-        if let existing = Self.stores[id] { return existing }
-        let s = RewindStore()
-        Self.stores[id] = s
-        return s
-    }
-
     // MARK: - Public API
 
     /// True when at least one snapshot is queued.
@@ -49,78 +32,60 @@ extension EmulatorViewModel {
 
     /// Approximate seconds of history currently buffered.
     var rewindSecondsAvailable: Double {
-        let frames = Double(rewindStore.snapshots.count * Self.rewindSnapshotInterval)
-        return frames / 60.0
+        Double(rewindSnapshots.count * Self.rewindSnapshotInterval) / 60.0
     }
 
     /// Wipe the buffer. Call when the timeline is invalidated by reset,
-    /// save-state load, or disk mount changes.
+    /// save-state load, or disk mount/eject.
     func clearRewindBuffer() {
-        let store = rewindStore
-        store.snapshots.removeAll(keepingCapacity: true)
-        store.frameCounter = 0
-        if Thread.isMainThread {
-            rewindSnapshotCount = 0
-        } else {
-            DispatchQueue.main.async { [weak self] in
-                self?.rewindSnapshotCount = 0
-            }
-        }
+        rewindSnapshots.removeAll(keepingCapacity: true)
+        rewindFrameCounter = 0
+        rewindSnapshotCount = 0
     }
 
     /// Called once per emulated frame from the Metal draw loop. Pushes a
-    /// snapshot to the ring buffer at `rewindSnapshotInterval` cadence.
-    /// Cheap when not on a snapshot frame (just an integer increment).
+    /// snapshot at `rewindSnapshotInterval` cadence; cheap when not on a
+    /// snapshot frame (just an integer increment).
     func recordRewindSnapshotIfNeeded() {
         // Don't capture during recording sessions — rewinding mid-recording
         // would desync the wall-clock timeline.
         if videoRecorder.isRecording || audioRecorder.isRecording { return }
 
-        let store = rewindStore
-        store.frameCounter += 1
-        if store.frameCounter < Self.rewindSnapshotInterval { return }
-        store.frameCounter = 0
+        rewindFrameCounter += 1
+        if rewindFrameCounter < Self.rewindSnapshotInterval { return }
+        rewindFrameCounter = 0
 
-        let bytes = machine.createSaveState()
-        let data = Data(bytes)
-        if store.snapshots.count >= Self.rewindBufferCapacity {
-            store.snapshots.removeFirst()
+        let data = Data(machine.createSaveState())
+        if rewindSnapshots.count >= Self.rewindBufferCapacity {
+            rewindSnapshots.removeFirst()
         }
-        store.snapshots.append(data)
-        let newCount = store.snapshots.count
-        if Thread.isMainThread {
-            rewindSnapshotCount = newCount
-        } else {
-            DispatchQueue.main.async { [weak self] in
-                self?.rewindSnapshotCount = newCount
-            }
-        }
+        rewindSnapshots.append(data)
+        rewindSnapshotCount = rewindSnapshots.count
     }
 
     // MARK: - Phase 2: hold-to-rewind
 
     /// Begin reverse playback. Called on rewind-key keyDown. Idempotent.
-    /// Mutes audio, marks `isRewinding = true`. The Metal frame loop
-    /// then calls `stepRewindBack()` once per draw, popping the most
-    /// recent snapshot.
+    /// Mutes audio (`isRewinding = true`) and lets the Metal frame loop
+    /// switch to `stepRewindBack()` on its next tick.
     func startRewindHold() {
         if isRewinding { return }
         if videoRecorder.isRecording || audioRecorder.isRecording { return }
-        if rewindStore.snapshots.isEmpty { return }
+        if rewindSnapshots.isEmpty { return }
         preRewindVolume = volume
         audio.setVolume(0)
         isRewinding = true
     }
 
-    /// End reverse playback. Called on keyUp or flag-release. Restores
-    /// audio, releases held PC-88 keys (matrix is stale after the load
-    /// chain), and clears any remaining snapshots since they predate
-    /// the new "current" state and would mislead a subsequent press.
+    /// End reverse playback. Restores audio, releases held PC-88 keys
+    /// (matrix is whatever the loaded snapshot had — probably stale
+    /// relative to what the user is physically holding), and clears
+    /// remaining snapshots since they predate the new "current" state.
     func stopRewindHold() {
         if !isRewinding { return }
         isRewinding = false
         audio.setVolume(preRewindVolume)
-        keyboard_releaseAllForRewind()
+        machine.keyboard.releaseAll()
         clearRewindBuffer()
     }
 
@@ -129,22 +94,14 @@ extension EmulatorViewModel {
     /// exhausted the emulator simply freezes on the oldest frame —
     /// the user can then release the key to resume from there.
     func stepRewindBack() {
-        let store = rewindStore
-        guard let last = store.snapshots.popLast() else { return }
-        let newCount = store.snapshots.count
-        // Loading on the emulation queue keeps us aligned with normal
-        // save-state restore semantics (no concurrent device access).
+        guard let last = rewindSnapshots.popLast() else { return }
         emuQueue.sync {
             try? machine.loadSaveState(Array(last))
         }
-        if Thread.isMainThread {
-            rewindSnapshotCount = newCount
-        } else {
-            DispatchQueue.main.async { [weak self] in
-                self?.rewindSnapshotCount = newCount
-            }
-        }
+        rewindSnapshotCount = rewindSnapshots.count
     }
+
+    // MARK: - Phase 1: one-shot rewind (menu click fallback)
 
     /// Jump the emulator back to the oldest queued snapshot. Buffer is
     /// cleared afterwards so subsequent rewinds don't replay stale states.
@@ -154,15 +111,14 @@ extension EmulatorViewModel {
                                         comment: ""))
             return
         }
-        let store = rewindStore
-        guard let oldest = store.snapshots.first else {
+        guard let oldest = rewindSnapshots.first else {
             showToast(NSLocalizedString("Nothing to rewind", comment: ""))
             return
         }
 
         let secondsBack = rewindSecondsAvailable
-        let wasRunning = isRunning
-        if wasRunning { stop() }
+        let savedVolume = volume
+        audio.setVolume(0)
         var loadError: Error?
         emuQueue.sync {
             do {
@@ -171,32 +127,16 @@ extension EmulatorViewModel {
                 loadError = error
             }
         }
+        audio.setVolume(savedVolume)
         if loadError != nil {
-            if wasRunning { start() }
             showToast(NSLocalizedString("Rewind failed", comment: ""))
             return
         }
         clearRewindBuffer()
-        // Released held PC-8801 keys: matrix state restored to the snapshot
-        // can leave host-side held keys "phantom" pressed. Safer to flush.
-        keyboard_releaseAllForRewind()
-        renderScreen()
-        if wasRunning { start() }
+        machine.keyboard.releaseAll()
+        if !isRunning { renderScreen() }
 
         let fmt = NSLocalizedString("Rewound %.1fs", comment: "")
         showToast(String(format: fmt, secondsBack))
-    }
-
-    /// Release every key currently latched in the PC-8801 matrix. Used
-    /// after rewind so a key the user is physically holding doesn't have
-    /// to be released-and-repressed before the emulator notices a new
-    /// down event (and so a key released during the rewound interval
-    /// doesn't stay stuck).
-    private func keyboard_releaseAllForRewind() {
-        for row in 0..<16 {
-            for bit in 0..<8 {
-                machine.keyboard.releaseKey(row: row, bit: bit)
-            }
-        }
     }
 }
