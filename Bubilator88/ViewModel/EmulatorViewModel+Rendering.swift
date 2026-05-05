@@ -181,11 +181,16 @@ extension EmulatorViewModel {
     /// Called directly from EmulatorMetalView.draw(in:) -- NOT on emuQueue.
     func runFrameForMetal(frameCount: Int = 1) {
         if isRewinding {
-            // Reverse playback: pop one snapshot per draw and render it.
-            // No paste queue, no audio drain, no snapshot recording.
-            stepRewindBack()
-            renderCurrentFrame(into: &pixelBuffer, blinkCursor: false,
-                               debugTextLayerEnabled: debugTextLayerEnabled)
+            // Reverse playback at 1/Nth the raw step rate so the buffer
+            // doesn't drain in a single wall-clock second.
+            if rewindStepCounter <= 0 {
+                rewindStepCounter = Self.rewindStepDivider - 1
+                stepRewindBack()
+                renderCurrentFrame(into: &pixelBuffer, blinkCursor: false,
+                                   debugTextLayerEnabled: debugTextLayerEnabled)
+            } else {
+                rewindStepCounter -= 1
+            }
             return
         }
         for _ in 0..<frameCount {

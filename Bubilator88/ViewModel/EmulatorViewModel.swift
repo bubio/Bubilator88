@@ -419,6 +419,12 @@ final class EmulatorViewModel {
     /// Frame counter feeding `rewindSnapshotInterval` cadence.
     @ObservationIgnored var rewindFrameCounter: Int = 0
 
+    /// Counts down draw-frames between snapshot pops during reverse
+    /// playback. Driven by `EmulatorViewModel.rewindStepDivider`; a
+    /// value of 4 means we pop one snapshot every 4 draws (≈ 1/4 the
+    /// raw rate, so 30s of buffered history rewinds in ~4 wall seconds).
+    @ObservationIgnored var rewindStepCounter: Int = 0
+
     /// Master volume captured at the moment rewind starts so it can be
     /// restored on release.
     @ObservationIgnored var preRewindVolume: Float = 0
@@ -511,6 +517,9 @@ final class EmulatorViewModel {
 
     /// FDD access sound effects
     let fddSound = FDDSound()
+
+    /// Synthesised cassette-rewind sound played while ⌘Z is held.
+    let rewindSound = RewindSound()
     let gameController = GameControllerManager()
 
     /// Translation overlay manager

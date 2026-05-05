@@ -39,6 +39,12 @@ extension EmulatorViewModel {
     static let rewindThumbnailWidth: Int = 160
     static let rewindThumbnailHeight: Int = 100
 
+    /// One stepRewindBack per N draw frames. Lower = faster rewind.
+    /// 4 ≈ 7.5 game-seconds per wall second at 60fps with 0.5s snapshot
+    /// interval — enough that the strip animates visibly instead of
+    /// blowing through the entire 30s window in a single second.
+    static let rewindStepDivider: Int = 4
+
     // MARK: - Public API
 
     /// True when at least one snapshot is queued.
@@ -94,6 +100,8 @@ extension EmulatorViewModel {
         if rewindSnapshots.isEmpty { return }
         preRewindVolume = volume
         audio.setVolume(0)
+        rewindStepCounter = 0  // step on the first draw, then count down
+        rewindSound.start(volume: volume)
         isRewinding = true
     }
 
@@ -104,6 +112,7 @@ extension EmulatorViewModel {
     func stopRewindHold() {
         if !isRewinding { return }
         isRewinding = false
+        rewindSound.stop()
         audio.setVolume(preRewindVolume)
         machine.keyboard.releaseAll()
         clearRewindBuffer()
