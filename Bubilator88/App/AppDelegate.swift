@@ -42,6 +42,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private static let rewindKeyCode: UInt16 = 6
     private var rewindHoldActive = false
 
+    /// Strong identity reference to the emulator window, captured the
+    /// first time we observe it become key. Used by the rewind hold
+    /// monitor to gate Cmd+Z so it doesn't engage while a Settings
+    /// sheet, About panel, or Debugger window is foremost.
+    private weak var emulatorWindow: NSWindow?
+
     /// True if the most recent terminate attempt was triggered by Cmd+Q.
     /// Cleared inside `applicationShouldTerminate(_:)` once consumed.
     private var lastTerminateWasShortcut = false
@@ -99,10 +105,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// Only the `Cmd+Z` chord is intercepted; everything else passes
     /// through unchanged.
     private func handleRewindEvent(_ event: NSEvent) -> NSEvent? {
-        // The PC-88 keyboard handler ignores events when the main
-        // emulator window isn't key, so we can mirror that here. Without
-        // this, Cmd+Z in a Settings sheet would silently engage rewind.
-        guard NSApp.keyWindow?.title == "Bubilator88" else { return event }
+        // Only intercept Cmd+Z when the emulator window itself is key —
+        // not a Settings sheet, About panel, or Debugger window where
+        // Cmd+Z legitimately means "undo" in a text field. Identity
+        // comparison rather than title matching so localization or any
+        // future title change doesn't silently disable rewind.
+        guard let emu = emulatorWindow, NSApp.keyWindow === emu else {
+            return event
+        }
 
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let cmdOnly = flags.contains(.command)
@@ -173,11 +183,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func mainWindowDidBecomeKey(_ note: Notification) {
         guard let window = note.object as? NSWindow,
-              window.title == "Bubilator88",
-              window.delegate !== self else {
+              window.title == "Bubilator88" else {
             return
         }
-        window.delegate = self
+        // Cache identity for Cmd+Z gating. Title-based comparison is
+        // brittle (localization, in-flight setTitle calls, etc.) so we
+        // do it once here and from then on rely on `===` identity.
+        if emulatorWindow == nil {
+            emulatorWindow = window
+        }
+        if window.delegate !== self {
+            window.delegate = self
+        }
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
@@ -258,7 +275,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         case "w":
             // Only gate Cmd+W for the main emulator window. Settings /
             // About / Help sheets should still close with a single keypress.
-            if NSApp.keyWindow?.title == "Bubilator88" {
+            if let emu = emulatorWindow, NSApp.keyWindow === emu {
                 lastCloseWasShortcut = true
             }
         default:

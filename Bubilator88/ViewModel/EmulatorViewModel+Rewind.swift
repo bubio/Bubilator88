@@ -65,11 +65,14 @@ extension EmulatorViewModel {
     }
 
     /// Wipe the buffer. Call when the timeline is invalidated by reset,
-    /// save-state load, or disk mount/eject.
+    /// save-state load, or disk mount/eject. Also resets all hold-mode
+    /// transient state so a subsequent rewind starts from a clean slate.
     func clearRewindBuffer() {
         rewindSnapshots.removeAll(keepingCapacity: true)
-        rewindFrameCounter = 0
         rewindSnapshotCount = 0
+        rewindFrameCounter = 0
+        rewindStepCounter = 0
+        rewindStartSnapshotCount = 0
         rewindFrozenThumbnails.removeAll(keepingCapacity: true)
     }
 
