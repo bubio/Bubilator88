@@ -97,6 +97,55 @@ extension EmulatorViewModel {
         }
     }
 
+    // MARK: - Phase 2: hold-to-rewind
+
+    /// Begin reverse playback. Called on rewind-key keyDown. Idempotent.
+    /// Mutes audio, marks `isRewinding = true`. The Metal frame loop
+    /// then calls `stepRewindBack()` once per draw, popping the most
+    /// recent snapshot.
+    func startRewindHold() {
+        if isRewinding { return }
+        if videoRecorder.isRecording || audioRecorder.isRecording { return }
+        if rewindStore.snapshots.isEmpty { return }
+        preRewindVolume = volume
+        audio.setVolume(0)
+        isRewinding = true
+    }
+
+    /// End reverse playback. Called on keyUp or flag-release. Restores
+    /// audio, releases held PC-88 keys (matrix is stale after the load
+    /// chain), and clears any remaining snapshots since they predate
+    /// the new "current" state and would mislead a subsequent press.
+    func stopRewindHold() {
+        if !isRewinding { return }
+        isRewinding = false
+        audio.setVolume(preRewindVolume)
+        keyboard_releaseAllForRewind()
+        clearRewindBuffer()
+    }
+
+    /// Pop the most-recent snapshot and load it. Called by the Metal
+    /// draw loop while `isRewinding` is true. When the buffer is
+    /// exhausted the emulator simply freezes on the oldest frame —
+    /// the user can then release the key to resume from there.
+    func stepRewindBack() {
+        let store = rewindStore
+        guard let last = store.snapshots.popLast() else { return }
+        let newCount = store.snapshots.count
+        // Loading on the emulation queue keeps us aligned with normal
+        // save-state restore semantics (no concurrent device access).
+        emuQueue.sync {
+            try? machine.loadSaveState(Array(last))
+        }
+        if Thread.isMainThread {
+            rewindSnapshotCount = newCount
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.rewindSnapshotCount = newCount
+            }
+        }
+    }
+
     /// Jump the emulator back to the oldest queued snapshot. Buffer is
     /// cleared afterwards so subsequent rewinds don't replay stale states.
     func rewind() {

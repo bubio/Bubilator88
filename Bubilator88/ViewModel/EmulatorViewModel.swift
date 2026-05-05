@@ -407,6 +407,15 @@ final class EmulatorViewModel {
     /// fills/clears.
     var rewindSnapshotCount: Int = 0
 
+    /// True while the user is holding the rewind key. Drives reverse
+    /// playback in the Metal frame loop and gates audio/recording UI.
+    var isRewinding: Bool = false
+
+    /// Master volume captured at the moment rewind starts so it can be
+    /// restored on release without going through `applyVolume()` (which
+    /// would re-read Settings.shared and ignore in-flight changes).
+    @ObservationIgnored var preRewindVolume: Float = 0
+
     /// Save state sheet
     var showingSaveStateSheet: Bool = false
     var saveStateSheetMode: SaveStateSheetMode = .save

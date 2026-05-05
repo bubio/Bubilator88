@@ -180,6 +180,14 @@ extension EmulatorViewModel {
     /// Run emulation frame(s) for Metal rendering path.
     /// Called directly from EmulatorMetalView.draw(in:) -- NOT on emuQueue.
     func runFrameForMetal(frameCount: Int = 1) {
+        if isRewinding {
+            // Reverse playback: pop one snapshot per draw and render it.
+            // No paste queue, no audio drain, no snapshot recording.
+            stepRewindBack()
+            renderCurrentFrame(into: &pixelBuffer, blinkCursor: false,
+                               debugTextLayerEnabled: debugTextLayerEnabled)
+            return
+        }
         for _ in 0..<frameCount {
             tickPasteQueue()
             machine.runFrame()

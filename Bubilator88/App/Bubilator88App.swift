@@ -498,9 +498,8 @@ struct ControlCommands: Commands {
             Button {
                 viewModel.rewind()
             } label: {
-                Label("Rewind", systemImage: "gobackward")
+                Label("Rewind (Hold ⌘Z)", systemImage: "gobackward")
             }
-            .keyboardShortcut("z", modifiers: .command)
             .disabled(!viewModel.canRewind
                       || viewModel.videoRecorder.isRecording
                       || viewModel.audioRecorder.isRecording)
