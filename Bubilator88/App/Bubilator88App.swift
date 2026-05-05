@@ -495,14 +495,23 @@ struct ControlCommands: Commands {
 
             Divider()
 
+            // ⌘Z is intercepted by AppDelegate's local NSEvent monitor
+            // for hold-mode reverse playback. Binding it here as a menu
+            // shortcut serves two purposes: (1) registers it with AppKit
+            // so the OS doesn't beep "no such shortcut" if the monitor
+            // ever lets an event through, and (2) gives mouse-click
+            // users a one-shot fallback that jumps to the oldest
+            // snapshot.
             Button {
                 viewModel.rewind()
             } label: {
                 Label("Rewind (Hold ⌘Z)", systemImage: "gobackward")
             }
+            .keyboardShortcut("z", modifiers: .command)
             .disabled(!viewModel.canRewind
                       || viewModel.videoRecorder.isRecording
-                      || viewModel.audioRecorder.isRecording)
+                      || viewModel.audioRecorder.isRecording
+                      || viewModel.isRewinding)
 
             Divider()
 
