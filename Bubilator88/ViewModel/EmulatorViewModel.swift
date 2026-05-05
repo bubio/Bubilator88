@@ -414,7 +414,7 @@ final class EmulatorViewModel {
     /// Ring buffer of save-state snapshots (oldest at index 0). All access
     /// is on the main thread (Metal draw loop + UI events), so no lock is
     /// required.
-    @ObservationIgnored var rewindSnapshots: [Data] = []
+    @ObservationIgnored var rewindSnapshots: [RewindSnapshot] = []
 
     /// Frame counter feeding `rewindSnapshotInterval` cadence.
     @ObservationIgnored var rewindFrameCounter: Int = 0

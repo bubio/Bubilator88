@@ -1,13 +1,25 @@
 import Foundation
+import CoreGraphics
 import EmulatorCore
+
+/// One queued snapshot. `state` is LZ4-compressed bytes (≈3-5x smaller
+/// than raw save-state output for typical PC-88 RAM contents — most of
+/// main RAM and GVRAM is zero or repeating patterns). `thumbnail` is a
+/// 160×100 RGBA preview captured from the pixel buffer at push time;
+/// stored as a CGImage so SwiftUI can render it without re-decoding.
+struct RewindSnapshot {
+    let state: Data
+    let thumbnail: CGImage?
+}
 
 /// Rewind (巻き戻し).
 ///
-/// Periodically pushes a full save-state snapshot to an in-memory ring
-/// buffer (`rewindSnapshots`). Two activation paths:
+/// Periodically pushes a save-state snapshot to an in-memory ring
+/// buffer. Three activation paths:
 ///
 /// - **Hold ⌘Z** (Phase 2): pop one snapshot per Metal draw and load it,
-///   producing reverse-playback. Released → resume from current frame.
+///   producing reverse-playback. A thumbnail strip overlay (Phase 3)
+///   shows the buffered timeline shrinking from the right.
 /// - **Menu click** (Phase 1 fallback): jump directly to the oldest
 ///   snapshot in one shot.
 ///
@@ -22,6 +34,10 @@ extension EmulatorViewModel {
 
     /// Maximum number of snapshots retained (60 × 0.5s = 30s window).
     static let rewindBufferCapacity: Int = 60
+
+    /// Thumbnail dimensions used by the strip overlay.
+    static let rewindThumbnailWidth: Int = 160
+    static let rewindThumbnailHeight: Int = 100
 
     // MARK: - Public API
 
@@ -55,11 +71,15 @@ extension EmulatorViewModel {
         if rewindFrameCounter < Self.rewindSnapshotInterval { return }
         rewindFrameCounter = 0
 
-        let data = Data(machine.createSaveState())
+        let raw = Data(machine.createSaveState())
+        let compressed = (try? (raw as NSData).compressed(using: .lz4) as Data) ?? raw
+        let thumb = captureRewindThumbnail()
+        let snapshot = RewindSnapshot(state: compressed, thumbnail: thumb)
+
         if rewindSnapshots.count >= Self.rewindBufferCapacity {
             rewindSnapshots.removeFirst()
         }
-        rewindSnapshots.append(data)
+        rewindSnapshots.append(snapshot)
         rewindSnapshotCount = rewindSnapshots.count
     }
 
@@ -95,8 +115,9 @@ extension EmulatorViewModel {
     /// the user can then release the key to resume from there.
     func stepRewindBack() {
         guard let last = rewindSnapshots.popLast() else { return }
+        let raw = decompressSnapshotState(last.state)
         emuQueue.sync {
-            try? machine.loadSaveState(Array(last))
+            try? machine.loadSaveState(Array(raw))
         }
         rewindSnapshotCount = rewindSnapshots.count
     }
@@ -119,10 +140,11 @@ extension EmulatorViewModel {
         let secondsBack = rewindSecondsAvailable
         let savedVolume = volume
         audio.setVolume(0)
+        let raw = decompressSnapshotState(oldest.state)
         var loadError: Error?
         emuQueue.sync {
             do {
-                try machine.loadSaveState(Array(oldest))
+                try machine.loadSaveState(Array(raw))
             } catch {
                 loadError = error
             }
@@ -138,5 +160,46 @@ extension EmulatorViewModel {
 
         let fmt = NSLocalizedString("Rewound %.1fs", comment: "")
         showToast(String(format: fmt, secondsBack))
+    }
+
+    // MARK: - Helpers
+
+    private func decompressSnapshotState(_ data: Data) -> Data {
+        // Snapshots before any compression-failure fallback are stored
+        // raw; NSData.decompressed throws on malformed input, so on
+        // failure we treat the bytes as already-decompressed.
+        (try? (data as NSData).decompressed(using: .lz4) as Data) ?? data
+    }
+
+    /// Capture a 160×100 RGBA thumbnail from the current pixel buffer.
+    /// The pixel buffer is RGBA premultiplied-last; we draw it scaled
+    /// into a fresh CGContext so the result is a standalone CGImage
+    /// (no shared backing with the live framebuffer).
+    private func captureRewindThumbnail() -> CGImage? {
+        let srcWidth = 640
+        let srcHeight = 400
+        let dataProvider = CGDataProvider(data: Data(pixelBuffer) as CFData)
+        guard let provider = dataProvider,
+              let fullImage = CGImage(
+                width: srcWidth, height: srcHeight,
+                bitsPerComponent: 8, bitsPerPixel: 32,
+                bytesPerRow: srcWidth * 4,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+                provider: provider, decode: nil,
+                shouldInterpolate: false, intent: .defaultIntent
+              ) else { return nil }
+
+        let w = Self.rewindThumbnailWidth
+        let h = Self.rewindThumbnailHeight
+        guard let ctx = CGContext(
+            data: nil, width: w, height: h,
+            bitsPerComponent: 8, bytesPerRow: w * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        ctx.interpolationQuality = .low
+        ctx.draw(fullImage, in: CGRect(x: 0, y: 0, width: w, height: h))
+        return ctx.makeImage()
     }
 }
