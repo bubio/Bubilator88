@@ -496,6 +496,18 @@ struct ControlCommands: Commands {
             Divider()
 
             Button {
+                viewModel.rewind()
+            } label: {
+                Label("Rewind", systemImage: "gobackward")
+            }
+            .keyboardShortcut("z", modifiers: .command)
+            .disabled(!viewModel.canRewind
+                      || viewModel.videoRecorder.isRecording
+                      || viewModel.audioRecorder.isRecording)
+
+            Divider()
+
+            Button {
                 viewModel.quickSave()
             } label: {
                 Label("Quick Save", systemImage: "square.and.arrow.down")

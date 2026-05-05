@@ -183,6 +183,7 @@ extension EmulatorViewModel {
         for _ in 0..<frameCount {
             tickPasteQueue()
             machine.runFrame()
+            recordRewindSnapshotIfNeeded()
         }
 
         // Breakpoint check: when the debugger halted the machine

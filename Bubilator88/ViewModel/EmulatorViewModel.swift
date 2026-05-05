@@ -402,6 +402,11 @@ final class EmulatorViewModel {
     var pendingArchiveURL: URL? = nil
     var showingArchiveFilePicker: Bool = false
 
+    /// Number of rewind snapshots currently buffered. Observable so the
+    /// Rewind menu item's `disabled` binding refreshes when the buffer
+    /// fills/clears.
+    var rewindSnapshotCount: Int = 0
+
     /// Save state sheet
     var showingSaveStateSheet: Bool = false
     var saveStateSheetMode: SaveStateSheetMode = .save
@@ -871,6 +876,7 @@ final class EmulatorViewModel {
         activeClock8MHz = use8MHz
         if romLoaded { loadROMs() }
         if resetTranslation { translationManager.hardReset() }
+        clearRewindBuffer()
         renderScreen()
         if wasRunning { start() }
     }
@@ -1048,6 +1054,7 @@ final class EmulatorViewModel {
         drive1WriteProtected = machine.isWriteProtected(drive: 1)
         activeClock8MHz = machine.clock8MHz
         renderScreen()
+        clearRewindBuffer()
         if wasRunning { start() }
         showToast(NSLocalizedString("State loaded", comment: ""))
     }
