@@ -1,40 +1,33 @@
 import SwiftUI
 
 /// Overlay shown along the bottom of the screen while the user is
-/// holding the rewind hotkey. Renders a *fixed* timeline of thumbnails
-/// that were frozen at hold start, ordered newest → oldest (left to
-/// right). The highlighted "you are here" marker starts at the left
-/// (the moment the user pressed the key) and slides rightward through
-/// older states as snapshots are consumed.
-///
-/// Capping the visible window at `maxVisibleThumbs` means the strip
-/// shows the latest N snapshots regardless of buffer size; if the user
-/// rewinds past that point, the marker pins to the right edge while
-/// the elapsed-seconds label keeps counting up.
+/// holding the rewind hotkey. Renders every thumbnail captured in the
+/// rewind buffer at hold start, ordered newest → oldest (left to
+/// right), inside a horizontal ScrollView. As snapshots are consumed
+/// the highlighted "you are here" marker slides rightward; the view
+/// auto-scrolls to keep the marker centred even when the strip is
+/// wider than the window.
 struct RewindStripView: View {
 
     @Bindable var viewModel: EmulatorViewModel
 
-    private static let maxVisibleThumbs = 16
     private static let thumbWidth: CGFloat = 64
     private static let thumbHeight: CGFloat = 40
     private static let thumbSpacing: CGFloat = 2
+    /// Caps the on-screen strip width so it doesn't span the entire
+    /// emulator window when the buffer is large; the ScrollView handles
+    /// horizontal panning beyond this.
+    private static let maxStripWidth: CGFloat = 600
 
     var body: some View {
         let frozen = viewModel.rewindFrozenThumbnails
-        // Take the latest N from the chronological array, then reverse
-        // so layout reads newest-on-left → oldest-on-right.
-        let chronological = Array(frozen.suffix(Self.maxVisibleThumbs))
-        let visible = Array(chronological.reversed())
-        let chronologicalStart = frozen.count - chronological.count
-        // Marker in chronological order: newest unconsumed snapshot.
-        let markerChronological = max(0, viewModel.rewindSnapshotCount - 1)
-        let markerInChronologicalWindow = max(0, markerChronological - chronologicalStart)
-        // Reversed-layout index: 0 = newest (leftmost), n-1 = oldest
-        // (rightmost). Clamps when the user has rewound past the
-        // visible window so the marker pins to the right edge.
-        let markerInVisible = min(visible.count - 1,
-                                  (chronological.count - 1) - markerInChronologicalWindow)
+        // newest-on-left, oldest-on-right.
+        let visible = Array(frozen.reversed())
+        // Marker position: newest unconsumed snapshot.
+        // chronological index of marker = rewindSnapshotCount - 1.
+        // After reversal: visible.count - rewindSnapshotCount.
+        let markerInVisible = min(max(visible.count - 1, 0),
+                                  max(0, visible.count - viewModel.rewindSnapshotCount))
 
         VStack(spacing: 8) {
             HStack(spacing: 8) {
@@ -48,10 +41,28 @@ struct RewindStripView: View {
             }
             .foregroundStyle(.white)
 
-            HStack(alignment: .bottom, spacing: Self.thumbSpacing) {
-                ForEach(Array(visible.enumerated()), id: \.offset) { index, image in
-                    let isCurrent = (index == markerInVisible)
-                    thumbCell(image: image, isCurrent: isCurrent)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .bottom, spacing: Self.thumbSpacing) {
+                        ForEach(Array(visible.enumerated()), id: \.offset) { index, image in
+                            thumbCell(image: image,
+                                      isCurrent: index == markerInVisible)
+                                .id(index)
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                }
+                .frame(maxWidth: Self.maxStripWidth)
+                .onAppear {
+                    // Jump (no animation) to the initial marker on
+                    // first appearance so the view comes up already
+                    // showing the relevant region.
+                    proxy.scrollTo(markerInVisible, anchor: .center)
+                }
+                .onChange(of: markerInVisible) { _, newIndex in
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        proxy.scrollTo(newIndex, anchor: .center)
+                    }
                 }
             }
         }
