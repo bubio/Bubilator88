@@ -196,7 +196,6 @@ extension EmulatorViewModel {
         for _ in 0..<frameCount {
             tickPasteQueue()
             machine.runFrame()
-            recordRewindSnapshotIfNeeded()
         }
 
         // Breakpoint check: when the debugger halted the machine
@@ -218,6 +217,10 @@ extension EmulatorViewModel {
         // toggling the cursor even as T-states stop advancing.
         let blink = !(machine.debugger?.isPaused ?? false)
         renderCurrentFrame(into: &pixelBuffer, blinkCursor: blink, debugTextLayerEnabled: debugTextLayerEnabled)
+
+        // Snapshot recording happens after render so the thumbnail
+        // captured from `pixelBuffer` matches the state we just saved.
+        recordRewindSnapshotIfNeeded()
 
         // Video recorder frame tap. CPU speed is locked to x1 while recording,
         // so frameCount is always 1 here — one wall-clock frame = one file frame.

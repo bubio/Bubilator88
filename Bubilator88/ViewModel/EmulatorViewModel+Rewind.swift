@@ -96,6 +96,7 @@ extension EmulatorViewModel {
     /// switch to `stepRewindBack()` on its next tick.
     func startRewindHold() {
         if isRewinding { return }
+        if !isRunning { return }  // no draw loop = nothing to rewind into
         if videoRecorder.isRecording || audioRecorder.isRecording { return }
         if rewindSnapshots.isEmpty { return }
         preRewindVolume = volume
@@ -136,6 +137,7 @@ extension EmulatorViewModel {
     /// Jump the emulator back to the oldest queued snapshot. Buffer is
     /// cleared afterwards so subsequent rewinds don't replay stale states.
     func rewind() {
+        if isRewinding { return }  // hold mode is already driving the timeline
         if videoRecorder.isRecording || audioRecorder.isRecording {
             showToast(NSLocalizedString("Rewind unavailable while recording",
                                         comment: ""))

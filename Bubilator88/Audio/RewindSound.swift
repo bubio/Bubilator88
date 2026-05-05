@@ -59,7 +59,10 @@ final class RewindSound {
 
     /// Begin looping the rewind sound at `volume * 0.7` so it sits
     /// slightly below the muted YM2608 level the user would normally
-    /// hear. Idempotent.
+    /// hear. Idempotent. The engine, once started, is kept running for
+    /// the lifetime of the app so subsequent presses don't pay the
+    /// engine-start latency (10-50 ms can swallow the head of a short
+    /// rewind).
     func start(volume: Float) {
         prepareIfNeeded()
         player.volume = max(0, min(1, volume * 0.7))
@@ -72,8 +75,10 @@ final class RewindSound {
         }
     }
 
+    /// Pause playback. The engine stays running so the next start is
+    /// instantaneous; only the player is stopped (which also flushes
+    /// the scheduled loop, so the next start re-schedules a fresh one).
     func stop() {
         if player.isPlaying { player.stop() }
-        if engine.isRunning { engine.stop() }
     }
 }
