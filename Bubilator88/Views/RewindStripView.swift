@@ -95,10 +95,10 @@ struct RewindStripView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 4))
                 .overlay(
                     RoundedRectangle(cornerRadius: 4)
-                        .stroke(isCurrent ? Color.yellow : Color.white.opacity(0.35),
+                        .stroke(isCurrent ? Color.accentColor : Color.white.opacity(0.35),
                                 lineWidth: isCurrent ? 2 : 0.5)
                 )
-                .shadow(color: isCurrent ? .yellow.opacity(0.6) : .clear,
+                .shadow(color: isCurrent ? Color.accentColor.opacity(0.6) : .clear,
                         radius: isCurrent ? 6 : 0)
                 .scaleEffect(isCurrent ? 1.15 : 1.0)
                 .opacity(isCurrent ? 1.0 : 0.55)
@@ -106,7 +106,7 @@ struct RewindStripView: View {
             if isCurrent {
                 Image(systemName: "arrowtriangle.up.fill")
                     .font(.caption2)
-                    .foregroundStyle(.yellow)
+                    .foregroundStyle(Color.accentColor)
             } else {
                 Color.clear.frame(height: 10)
             }
