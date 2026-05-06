@@ -499,19 +499,21 @@ struct ControlCommands: Commands {
             // for hold-mode reverse playback. Binding it here as a menu
             // shortcut serves two purposes: (1) registers it with AppKit
             // so the OS doesn't beep "no such shortcut" if the monitor
-            // ever lets an event through, and (2) gives mouse-click
-            // users a one-shot fallback that jumps to the oldest
-            // snapshot.
+            // ever lets an event through (e.g., before the emulator
+            // window has finished becoming key on launch), and (2)
+            // gives mouse-click users a one-shot fallback that jumps to
+            // the oldest snapshot.
+            //
+            // The button is intentionally NOT .disabled() — AppKit beeps
+            // when a key equivalent fires on a disabled menu item.
+            // Instead `viewModel.rewind()` handles the empty / recording
+            // / already-rewinding cases with a toast.
             Button {
                 viewModel.rewind()
             } label: {
                 Label("Rewind (Hold ⌘Z)", systemImage: "gobackward")
             }
             .keyboardShortcut("z", modifiers: .command)
-            .disabled(!viewModel.canRewind
-                      || viewModel.videoRecorder.isRecording
-                      || viewModel.audioRecorder.isRecording
-                      || viewModel.isRewinding)
 
             Divider()
 
