@@ -50,11 +50,14 @@ struct RewindStripView: View {
                                 .id(index)
                         }
                     }
-                    // Vertical breathing room so the highlighted cell's
-                    // 1.15× scale + outline + shadow aren't clipped by
-                    // the ScrollView's content bounds.
+                    // Breathing room on all four sides so the highlighted
+                    // cell's 1.15× scale + outline + shadow aren't
+                    // clipped by the ScrollView's content bounds. The
+                    // first and last cells need horizontal slack just
+                    // like the top/bottom of the highlighted cell needs
+                    // vertical slack.
                     .padding(.vertical, 8)
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, 8)
                 }
                 .frame(maxWidth: Self.maxStripWidth)
                 .onAppear {
