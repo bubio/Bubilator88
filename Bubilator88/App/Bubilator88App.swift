@@ -496,24 +496,28 @@ struct ControlCommands: Commands {
             Divider()
 
             // ⌘Z is intercepted by AppDelegate's local NSEvent monitor
-            // for hold-mode reverse playback. Binding it here as a menu
-            // shortcut serves two purposes: (1) registers it with AppKit
-            // so the OS doesn't beep "no such shortcut" if the monitor
-            // ever lets an event through (e.g., before the emulator
-            // window has finished becoming key on launch), and (2)
-            // gives mouse-click users a one-shot fallback that jumps to
-            // the oldest snapshot.
+            // for hold-mode reverse playback. The menu shortcut binding
+            // serves as a fallback when the monitor lets an event
+            // through (e.g., briefly at launch before the emulator
+            // window has become key, or in another keyWindow), and
+            // gives mouse-click users a one-shot rewind to the oldest
+            // snapshot.
             //
-            // The button is intentionally NOT .disabled() — AppKit beeps
-            // when a key equivalent fires on a disabled menu item.
-            // Instead `viewModel.rewind()` handles the empty / recording
-            // / already-rewinding cases with a toast.
+            // While in hold mode we *must* disable the menu — leaving
+            // it enabled lets AppKit fire menu shortcuts on Cmd+Z key
+            // events that race ahead of the local monitor, which in
+            // turn re-enters the rewind path and breaks the hold's
+            // step rate. The other usual conditions (canRewind /
+            // recording) are intentionally NOT included so launch-time
+            // ⌘Z still routes through the menu (toasting "Nothing to
+            // rewind") rather than beeping as an unbound shortcut.
             Button {
                 viewModel.rewind()
             } label: {
                 Label("Rewind (Hold ⌘Z)", systemImage: "gobackward")
             }
             .keyboardShortcut("z", modifiers: .command)
+            .disabled(viewModel.isRewinding)
 
             Divider()
 

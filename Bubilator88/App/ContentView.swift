@@ -57,6 +57,8 @@ struct ContentView: View {
                         Spacer()
                         RewindStripView(viewModel: viewModel)
                     }
+                    .animation(.easeInOut(duration: 0.15),
+                               value: viewModel.rewindSnapshotCount)
                 }
             }
             .frame(
