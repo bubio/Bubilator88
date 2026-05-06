@@ -495,29 +495,20 @@ struct ControlCommands: Commands {
 
             Divider()
 
-            // ⌘Z is intercepted by AppDelegate's local NSEvent monitor
-            // for hold-mode reverse playback. The menu shortcut binding
-            // serves as a fallback when the monitor lets an event
-            // through (e.g., briefly at launch before the emulator
-            // window has become key, or in another keyWindow), and
-            // gives mouse-click users a one-shot rewind to the oldest
-            // snapshot.
-            //
-            // While in hold mode we *must* disable the menu — leaving
-            // it enabled lets AppKit fire menu shortcuts on Cmd+Z key
-            // events that race ahead of the local monitor, which in
-            // turn re-enters the rewind path and breaks the hold's
-            // step rate. The other usual conditions (canRewind /
-            // recording) are intentionally NOT included so launch-time
-            // ⌘Z still routes through the menu (toasting "Nothing to
-            // rewind") rather than beeping as an unbound shortcut.
+            // ⌘Z is handled exclusively by AppDelegate's local NSEvent
+            // monitor (hold mode) with EmulatorMetalView.performKeyEquivalent
+            // as a backstop that consumes any event the monitor missed.
+            // Deliberately *no* keyboardShortcut binding here: we don't
+            // want AppKit dispatching menu actions on Cmd+Z autorepeats
+            // (which throttled the hold step rate when the menu was
+            // enabled) nor beeping (when it was disabled).
+            // The menu entry is mouse-click-only and gives a one-shot
+            // jump to the oldest snapshot via `viewModel.rewind()`.
             Button {
                 viewModel.rewind()
             } label: {
                 Label("Rewind (Hold ⌘Z)", systemImage: "gobackward")
             }
-            .keyboardShortcut("z", modifiers: .command)
-            .disabled(viewModel.isRewinding)
 
             Divider()
 
