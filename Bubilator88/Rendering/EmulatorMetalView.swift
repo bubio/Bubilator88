@@ -808,7 +808,17 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
 
     // Prevent system beep on key press
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        // Let modifier-key combos (Cmd+Q, etc.) pass through
+        // Cmd+Z: rewind hold is handled by AppDelegate's local NSEvent
+        // monitor. If a key event somehow slips past the monitor (e.g.,
+        // briefly at launch before the emulator window has become key),
+        // consume it here so AppKit doesn't dispatch it through the
+        // menu — both the beep on a disabled menu item AND the no-op
+        // call to viewModel.rewind() on an enabled one are unwanted.
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if event.keyCode == 6 /* z */ && flags == [.command] {
+            return true
+        }
+        // Let other modifier-key combos (Cmd+Q, etc.) pass through
         if event.modifierFlags.contains(.command) { return false }
         return true
     }

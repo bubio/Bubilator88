@@ -52,6 +52,14 @@ struct ContentView: View {
                         viewModel.translationManager.setSession(session)
                     }
                 }
+                if viewModel.isRewinding {
+                    VStack {
+                        Spacer()
+                        RewindStripView(viewModel: viewModel)
+                    }
+                    .animation(.easeInOut(duration: 0.15),
+                               value: viewModel.rewindSnapshotCount)
+                }
             }
             .frame(
                 minWidth: viewModel.isFullScreen ? nil : CGFloat(640 * viewModel.windowScale),

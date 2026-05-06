@@ -34,6 +34,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     weak var viewModel: EmulatorViewModel?
 
     private var shortcutMonitor: Any?
+    private var rewindMonitor: Any?
+
+    /// US-keyboard "z" virtual key code. Used to detect Cmd+Z hold for
+    /// rewind regardless of localized character (Z is the same physical
+    /// position on JIS as well, where keyCode 6 maps to "z").
+    private static let rewindKeyCode: UInt16 = 6
+    private var rewindHoldActive = false
+
+    /// Strong identity reference to the emulator window, captured the
+    /// first time we observe it become key. Used by the rewind hold
+    /// monitor to gate Cmd+Z so it doesn't engage while a Settings
+    /// sheet, About panel, or Debugger window is foremost.
+    private weak var emulatorWindow: NSWindow?
 
     /// True if the most recent terminate attempt was triggered by Cmd+Q.
     /// Cleared inside `applicationShouldTerminate(_:)` once consumed.
@@ -49,6 +62,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             self?.recordShortcut(event)
             return event
+        }
+        rewindMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.keyDown, .keyUp, .flagsChanged]
+        ) { [weak self] event in
+            self?.handleRewindEvent(event) ?? event
         }
         // The SwiftUI `Window` scene has created the NSWindow by this
         // point, but it may not be available on the first runloop tick.
@@ -74,6 +92,64 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             NSEvent.removeMonitor(monitor)
             shortcutMonitor = nil
         }
+        if let monitor = rewindMonitor {
+            NSEvent.removeMonitor(monitor)
+            rewindMonitor = nil
+        }
+    }
+
+    // MARK: - Rewind hold detection
+
+    /// Returns nil to swallow the event (so SwiftUI's menu shortcut
+    /// doesn't double-fire), or `event` to let it propagate normally.
+    /// Only the `Cmd+Z` chord is intercepted; everything else passes
+    /// through unchanged.
+    private func handleRewindEvent(_ event: NSEvent) -> NSEvent? {
+        // Only intercept Cmd+Z when the emulator window itself is key —
+        // not a Settings sheet, About panel, or Debugger window where
+        // Cmd+Z legitimately means "undo" in a text field. Identity
+        // comparison rather than title matching so localization or any
+        // future title change doesn't silently disable rewind.
+        guard let emu = emulatorWindow, NSApp.keyWindow === emu else {
+            return event
+        }
+
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let cmdOnly = flags.contains(.command)
+            && flags.isDisjoint(with: [.shift, .option, .control])
+
+        switch event.type {
+        case .keyDown:
+            if event.keyCode == Self.rewindKeyCode && cmdOnly {
+                if !rewindHoldActive {
+                    rewindHoldActive = true
+                    MainActor.assumeIsolated {
+                        viewModel?.startRewindHold()
+                    }
+                }
+                return nil  // swallow (also suppresses menu shortcut + autorepeat)
+            }
+        case .keyUp:
+            if event.keyCode == Self.rewindKeyCode && rewindHoldActive {
+                rewindHoldActive = false
+                MainActor.assumeIsolated {
+                    viewModel?.stopRewindHold()
+                }
+                return nil
+            }
+        case .flagsChanged:
+            // User released Command before Z: end the hold immediately
+            // so the emulator resumes from the current rewound frame.
+            if rewindHoldActive && !flags.contains(.command) {
+                rewindHoldActive = false
+                MainActor.assumeIsolated {
+                    viewModel?.stopRewindHold()
+                }
+            }
+        default:
+            break
+        }
+        return event
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -107,11 +183,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func mainWindowDidBecomeKey(_ note: Notification) {
         guard let window = note.object as? NSWindow,
-              window.title == "Bubilator88",
-              window.delegate !== self else {
+              window.title == "Bubilator88" else {
             return
         }
-        window.delegate = self
+        // Cache identity for Cmd+Z gating. Title-based comparison is
+        // brittle (localization, in-flight setTitle calls, etc.) so we
+        // do it once here and from then on rely on `===` identity.
+        if emulatorWindow == nil {
+            emulatorWindow = window
+        }
+        if window.delegate !== self {
+            window.delegate = self
+        }
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
@@ -192,7 +275,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         case "w":
             // Only gate Cmd+W for the main emulator window. Settings /
             // About / Help sheets should still close with a single keypress.
-            if NSApp.keyWindow?.title == "Bubilator88" {
+            if let emu = emulatorWindow, NSApp.keyWindow === emu {
                 lastCloseWasShortcut = true
             }
         default:
