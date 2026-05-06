@@ -147,9 +147,11 @@ extension EmulatorViewModel {
 
         let cursorVisible: Bool
         if blinkCursor {
-            let blinkHz = 30.0 / Double(max(machine.crtc.blinkRate, 1))
+            // Tie blink to the CRTC blink counter (advanced on emulated VRTC),
+            // so turbo speeds up the blink the same way BubiC does.
+            let rate = max(machine.crtc.blinkRate, 1)
             cursorVisible = machine.crtc.cursorEnabled &&
-                (Int(Date.now.timeIntervalSinceReferenceDate * blinkHz * 2) % 2 == 0)
+                (machine.crtc.blinkCounter < rate / 2)
         } else {
             cursorVisible = machine.crtc.cursorEnabled
         }
