@@ -99,6 +99,14 @@
 "Save State..." = "ステートセーブ...";
 "Load State..." = "ステートロード...";
 
+/* ===== Rewind feature ===== */
+"Rewind (Hold ⌘Z)" = "巻き戻し (⌘Z 長押し)";
+"Rewind unavailable while recording" = "録音中は巻き戻しできません";
+"Nothing to rewind" = "巻き戻せる履歴がありません";
+"Rewound %.1fs" = "%.1f 秒巻き戻しました";
+"Rewind failed" = "巻き戻しに失敗しました";
+"−%.1fs" = "−%.1f 秒";
+
 /* ===== Bubilator88App.swift — Debug Menu ===== */
 "Dump Text DMA Snapshot" = "テキストDMAスナップショット出力";
 "Dump Memory…" = "メモリをダンプ…";

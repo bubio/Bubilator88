@@ -402,6 +402,43 @@ final class EmulatorViewModel {
     var pendingArchiveURL: URL? = nil
     var showingArchiveFilePicker: Bool = false
 
+    /// Number of rewind snapshots currently buffered. Observable so the
+    /// Rewind menu item's `disabled` binding refreshes when the buffer
+    /// fills/clears.
+    var rewindSnapshotCount: Int = 0
+
+    /// True while the user is holding the rewind key. Drives reverse
+    /// playback in the Metal frame loop and gates audio/recording UI.
+    var isRewinding: Bool = false
+
+    /// Ring buffer of save-state snapshots (oldest at index 0). All access
+    /// is on the main thread (Metal draw loop + UI events), so no lock is
+    /// required.
+    @ObservationIgnored var rewindSnapshots: [RewindSnapshot] = []
+
+    /// Frame counter feeding `rewindSnapshotInterval` cadence.
+    @ObservationIgnored var rewindFrameCounter: Int = 0
+
+    /// Counts down draw-frames between snapshot pops during reverse
+    /// playback. Driven by `EmulatorViewModel.rewindStepDivider`; a
+    /// value of 4 means we pop one snapshot every 4 draws (≈ 1/4 the
+    /// raw rate, so 30s of buffered history rewinds in ~4 wall seconds).
+    @ObservationIgnored var rewindStepCounter: Int = 0
+
+    /// Snapshot count captured when the user pressed the rewind key.
+    /// Used to compute "how far back the user has rewound" for the
+    /// strip overlay's elapsed-seconds readout.
+    @ObservationIgnored var rewindStartSnapshotCount: Int = 0
+
+    /// Thumbnails frozen at hold start so the strip overlay can
+    /// render a stable left-to-right timeline against which the
+    /// "you are here" marker visibly slides leftward.
+    var rewindFrozenThumbnails: [CGImage] = []
+
+    /// Master volume captured at the moment rewind starts so it can be
+    /// restored on release.
+    @ObservationIgnored var preRewindVolume: Float = 0
+
     /// Save state sheet
     var showingSaveStateSheet: Bool = false
     var saveStateSheetMode: SaveStateSheetMode = .save
@@ -490,6 +527,9 @@ final class EmulatorViewModel {
 
     /// FDD access sound effects
     let fddSound = FDDSound()
+
+    /// Synthesised cassette-rewind sound played while ⌘Z is held.
+    let rewindSound = RewindSound()
     let gameController = GameControllerManager()
 
     /// Translation overlay manager
@@ -871,6 +911,7 @@ final class EmulatorViewModel {
         activeClock8MHz = use8MHz
         if romLoaded { loadROMs() }
         if resetTranslation { translationManager.hardReset() }
+        clearRewindBuffer()
         renderScreen()
         if wasRunning { start() }
     }
@@ -1048,6 +1089,7 @@ final class EmulatorViewModel {
         drive1WriteProtected = machine.isWriteProtected(drive: 1)
         activeClock8MHz = machine.clock8MHz
         renderScreen()
+        clearRewindBuffer()
         if wasRunning { start() }
         showToast(NSLocalizedString("State loaded", comment: ""))
     }

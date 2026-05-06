@@ -495,6 +495,23 @@ struct ControlCommands: Commands {
 
             Divider()
 
+            // ⌘Z is handled exclusively by AppDelegate's local NSEvent
+            // monitor (hold mode) with EmulatorMetalView.performKeyEquivalent
+            // as a backstop that consumes any event the monitor missed.
+            // Deliberately *no* keyboardShortcut binding here: we don't
+            // want AppKit dispatching menu actions on Cmd+Z autorepeats
+            // (which throttled the hold step rate when the menu was
+            // enabled) nor beeping (when it was disabled).
+            // The menu entry is mouse-click-only and gives a one-shot
+            // jump to the oldest snapshot via `viewModel.rewind()`.
+            Button {
+                viewModel.rewind()
+            } label: {
+                Label("Rewind (Hold ⌘Z)", systemImage: "gobackward")
+            }
+
+            Divider()
+
             Button {
                 viewModel.quickSave()
             } label: {
