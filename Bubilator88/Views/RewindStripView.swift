@@ -61,15 +61,15 @@ struct RewindStripView: View {
                 }
                 .frame(maxWidth: Self.maxStripWidth)
                 .onAppear {
-                    // Jump (no animation) to the initial marker on
-                    // first appearance so the view comes up already
-                    // showing the relevant region.
                     proxy.scrollTo(markerInVisible, anchor: .center)
                 }
                 .onChange(of: markerInVisible) { _, newIndex in
-                    withAnimation(.easeOut(duration: 0.15)) {
-                        proxy.scrollTo(newIndex, anchor: .center)
-                    }
+                    // No withAnimation: at the rewind step rate
+                    // (~15 Hz) the queued 0.15 s animations pile up
+                    // and tie up the main thread enough to slow
+                    // rewind itself. A direct snap is visually fine
+                    // because the marker scale/glow already animates.
+                    proxy.scrollTo(newIndex, anchor: .center)
                 }
             }
         }
@@ -111,6 +111,5 @@ struct RewindStripView: View {
                 Color.clear.frame(height: 10)
             }
         }
-        .animation(.easeOut(duration: 0.12), value: isCurrent)
     }
 }
