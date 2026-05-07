@@ -68,6 +68,9 @@ struct ContentView: View {
                 maxHeight: viewModel.isFullScreen ? .infinity : CGFloat(400 * viewModel.windowScale)
             )
             .background(Color.black)
+            .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+                handleDiskDrop(providers: providers)
+            }
 
             if !viewModel.isFullScreen {
                 statusBar
@@ -188,6 +191,21 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: viewModel.currentToast != nil)
+    }
+
+    private func handleDiskDrop(providers: [NSItemProvider]) -> Bool {
+        guard providers.count == 1, let provider = providers.first else { return false }
+        let acceptedExts: Set<String> = [
+            "d88", "d77", "2d", "2hd",
+            "zip", "lzh", "lha", "cab", "rar"
+        ]
+        _ = provider.loadObject(ofClass: URL.self) { url, _ in
+            guard let url, acceptedExts.contains(url.pathExtension.lowercased()) else { return }
+            DispatchQueue.main.async {
+                viewModel.mountDisk(url: url, drive: -1)
+            }
+        }
+        return true
     }
 
     @ViewBuilder
