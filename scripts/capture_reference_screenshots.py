@@ -77,7 +77,7 @@ SCENARIOS = [
      [("SB2MusicDiskv4.ppm", 30, [])]),
 
     ("Hydlide3", "ハイドライド３.d88", False, DIPSW2_V2, 8,
-     [("Hydlide3.ppm", 27, [])]),
+     [("Hydlide3.ppm", 37, [])]),
 
     ("MistyBlue", "ミスティブルー.d88", True, DIPSW2_V2, 8,
      [("MistyBlue.ppm", 31, [(25, "RETURN")])]),
