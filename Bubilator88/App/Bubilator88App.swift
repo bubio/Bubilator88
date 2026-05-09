@@ -611,6 +611,17 @@ struct DebugCommands: Commands {
                 set: { viewModel.forceOPNMode = $0 }
             ))
 
+            Divider()
+
+            Picker("CPU Overclock", selection: Binding(
+                get: { viewModel.cpuOverclock },
+                set: { viewModel.cpuOverclock = $0 }
+            )) {
+                Text("1× (Real)").tag(1)
+                Text("2×").tag(2)
+                Text("4×").tag(4)
+            }
+
         }
     }
 }

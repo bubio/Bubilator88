@@ -282,6 +282,16 @@ final class EmulatorViewModel {
         }
     }
 
+    /// CPU overclock multiplier (1/2/4) — DEBUG-only, not persisted.
+    /// Applies live without reset.
+    var cpuOverclock: Int = 1 {
+        didSet {
+            let clamped = [1, 2, 4].contains(cpuOverclock) ? cpuOverclock : 1
+            if clamped != cpuOverclock { cpuOverclock = clamped; return }
+            emuQueue.sync { machine.cpuOverclock = clamped }
+        }
+    }
+
     /// Master volume (0.0–1.0) — persisted via Settings.
     var volume: Float {
         get { Settings.shared.volume }
@@ -907,6 +917,7 @@ final class EmulatorViewModel {
             machine.bus.dipSw2 = sw2
             machine.reset()
             machine.clock8MHz = use8MHz
+            machine.cpuOverclock = cpuOverclock
         }
         activeClock8MHz = use8MHz
         if romLoaded { loadROMs() }
