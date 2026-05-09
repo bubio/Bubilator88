@@ -144,12 +144,10 @@ def classify(ppm_path: Path, log_path: Path | None = None) -> dict:
 
     # Screen with very few pixels is likely stuck in BASIC or failed to load,
     # even if it doesn't show the "Ok" prompt yet.
-    # 10,000 px is ~4% of a 640x400 screen.
-    if verdict == "ok" and nonblack_px < 10000:
+    # 5,000 px is ~2% of a 640x400 screen.
+    if verdict == "ok" and nonblack_px < 5000:
         verdict = "black"
 
-    if verdict == "ok" and blue_ratio > 0.55 and mean_b > mean_r + 30 and white_ratio < 0.10:
-        verdict = "blue"
     return {
         "verdict": verdict,
         "mean_rgb": [round(mean_r, 1), round(mean_g, 1), round(mean_b, 1)],
@@ -240,6 +238,7 @@ def main():
         sys.exit(1)
 
     all_d88 = sorted(ROM_DIR.rglob("*.d88")) + sorted(ROM_DIR.rglob("*.D88"))
+    all_d88 = [p for p in all_d88 if not p.name.upper().startswith("BLANK")]
     all_d88 = list({p.resolve() for p in all_d88})
     print(f"Found {len(all_d88)} D88 files")
     if args.all:

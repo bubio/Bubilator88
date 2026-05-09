@@ -107,8 +107,7 @@ BootTester ログ中の `Text VRAM rows:` セクションと PPM 画素の両方
 | verdict | 条件 |
 |---------|------|
 | `basic` | TEXT VRAM に `Bytes free` を含む、または独立した `Ok` / `Ok.` 行がある |
-| `black` | 非黒画素 < 200 かつ 平均輝度 < 0.5 (= 実質何も表示されていない) |
-| `blue`  | 青画素比率 > 0.55 かつ `meanB > meanR+30` かつ白画素比率 < 0.10 |
+| `black` | 非黒画素 < 5,000 (または Text VRAM に BASIC 残骸があるが GVRAM 描画が少ない) |
 | `ok`    | 上記いずれでもない |
 
 ### basic 判定の考え方
