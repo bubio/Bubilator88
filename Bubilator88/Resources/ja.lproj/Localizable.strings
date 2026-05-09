@@ -211,6 +211,8 @@
 "For keyboards without a numpad. Maps arrow keys to numpad 2/4/6/8 for game character movement." = "テンキーのないキーボード用。矢印キーをテンキー 2/4/6/8 に割り当て、ゲームキャラクターの移動に使用します。";
 "Number Row as Numpad" = "数字キーをテンキーとして使用";
 "For games that only accept numpad digits (e.g. adventure game menu selections). Maps number row 0-9 to numpad 0-9." = "テンキー数字のみ受け付けるゲーム用（アドベンチャーゲームのメニュー選択など）。数字キー 0-9 をテンキー 0-9 に割り当てます。";
+"WASD as Numpad" = "WASDをテンキーとして使用";
+"Maps WASD keys to numpad 8/4/2/6 for game character movement using the left hand." = "WASDキーをテンキー 8/4/2/6 に割り当て、左手でゲームキャラクターを移動させます。";
 "Special Key Mapping" = "特殊キー割り当て";
 "PC-8801 keys not found on modern keyboards. Click to reassign." = "現代のキーボードにないPC-8801のキーです。クリックして再割り当てできます。";
 

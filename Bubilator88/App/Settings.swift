@@ -230,6 +230,11 @@ final class Settings {
         didSet { UserDefaults.standard.set(numberRowAsNumpad, forKey: "numberRowAsNumpad") }
     }
 
+    /// Map WASD keys to numpad (W→8, A→4, S→2, D→6).
+    var wasdAsNumpad: Bool = false {
+        didSet { UserDefaults.standard.set(wasdAsNumpad, forKey: "wasdAsNumpad") }
+    }
+
     /// Custom key assignments for PC-8801 special keys (STOP, COPY, etc.).
     /// Keys: PC88SpecialKey.rawValue, Values: macOS keyCode as Int.
     var specialKeyMapping: [String: Int] = [:] {
@@ -431,6 +436,9 @@ final class Settings {
         }
         if let v = UserDefaults.standard.object(forKey: "numberRowAsNumpad") as? Bool {
             numberRowAsNumpad = v
+        }
+        if let v = UserDefaults.standard.object(forKey: "wasdAsNumpad") as? Bool {
+            wasdAsNumpad = v
         }
         if let data = UserDefaults.standard.data(forKey: "specialKeyMapping"),
            let m = try? JSONDecoder().decode([String: Int].self, from: data) {

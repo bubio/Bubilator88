@@ -20,6 +20,11 @@ enum KeyMapping {
             return key
         }
 
+        // WASD → numpad override
+        if settings.wasdAsNumpad, let key = wasdToNumpad[macKeyCode] {
+            return key
+        }
+
         // Layout-specific symbol overrides
         let layout = KeyboardLayoutDetector.effectiveLayout()
         if layout == .jis, let key = jisSymbolOverrides[macKeyCode] {
@@ -74,6 +79,15 @@ enum KeyMapping {
         0x1A: Keyboard.kp7,    // 7 → kp7
         0x1C: Keyboard.kp8,    // 8 → kp8
         0x19: Keyboard.kp9,    // 9 → kp9
+    ]
+
+    // MARK: - WASD → Numpad
+
+    private static let wasdToNumpad: [UInt16: Keyboard.Key] = [
+        0x0D: Keyboard.kp8,    // W → kp8
+        0x00: Keyboard.kp4,    // A → kp4
+        0x01: Keyboard.kp2,    // S → kp2
+        0x02: Keyboard.kp6,    // D → kp6
     ]
 
     // MARK: - JIS Symbol Overrides
