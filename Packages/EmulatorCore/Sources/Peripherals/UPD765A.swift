@@ -140,11 +140,6 @@ public final class UPD765A {
     /// Per-drive state
     public var pcn: [UInt8] = [0, 0, 0, 0]  // Present cylinder number
 
-    /// DriveControl TD bit state. False = 96TPI/2DD-style direct stepping;
-    /// true = 48TPI/2D media in a 96TPI drive, so logical cylinders map to
-    /// every other physical track.
-    package var doubleStep: [Bool] = [false, false, false, false]
-
     /// Seek state per drive
     package enum SeekState {
         case stopped
@@ -308,7 +303,6 @@ public final class UPD765A {
         writeByteWaitClocks = 0
         st0 = 0; st1 = 0; st2 = 0; st3 = 0
         pcn = [0, 0, 0, 0]
-        doubleStep = [false, false, false, false]
         seekState = [.stopped, .stopped, .stopped, .stopped]
         seekMoving = [false, false, false, false]
         seekTarget = [0, 0, 0, 0]
@@ -519,17 +513,6 @@ public final class UPD765A {
             }
             interruptPending = true
             onInterrupt?()
-        }
-    }
-
-    /// Update drive density/track-step mode from the PC-8801 FDC drive-control port.
-    ///
-    /// Port 0xF4 bits:
-    /// - bit 2 + drive: TDx, 0=48TPI (double-step), 1=96TPI (direct)
-    /// - bit 0 + drive: RVx, 2HD hint (currently only retained by callers)
-    public func setDriveControl(_ value: UInt8) {
-        for drive in 0..<2 {
-            doubleStep[drive] = (value & UInt8(0x04 << drive)) == 0
         }
     }
 
@@ -802,8 +785,7 @@ public final class UPD765A {
     }
 
     private func d88Track(cylinder: UInt8, drive: Int, head: Int) -> Int {
-        let physicalCylinder = Int(cylinder) << (doubleStep.indices.contains(drive) && doubleStep[drive] ? 1 : 0)
-        return physicalCylinder * 2 + head
+        Int(cylinder) * 2 + head
     }
 
     private func d88TrackForCurrentPosition(drive: Int, head: Int) -> Int {

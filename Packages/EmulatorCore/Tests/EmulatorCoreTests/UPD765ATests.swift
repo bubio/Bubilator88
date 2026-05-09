@@ -629,27 +629,6 @@ struct UPD765ATests {
         #expect(disks[0]?.tracks[2].isEmpty == true)
     }
 
-    @Test("DriveControl TD=0 maps logical cylinders to every other physical track")
-    func driveControlDoubleStepRead() {
-        var disk = D88Disk()
-        var sector = D88Disk.Sector()
-        sector.c = 1
-        sector.h = 0
-        sector.r = 1
-        sector.n = 1
-        sector.sectorCount = 1
-        sector.data = Array(repeating: 0x42, count: 256)
-        disk.tracks[4].append(sector) // logical C=1 double-stepped -> physical C=2, track 4
-
-        let (fdc, _) = makeFDCWithDisk(disk)
-        fdc.setDriveControl(0x00) // TD0=0: 48TPI/double-step
-        fdc.pcn[0] = 1
-        writeReadDataCmd(fdc, c: 1, h: 0, r: 1, n: 1, eot: 1)
-
-        let bytes = readExecutionBytes(fdc, count: 256)
-        #expect(bytes == Array(repeating: UInt8(0x42), count: 256))
-    }
-
     @Test func writeDataProtected() {
         var disk = makeDisk(sectors: [(r: 1, data: Array(repeating: 0, count: 256))])
         disk.writeProtected = true
