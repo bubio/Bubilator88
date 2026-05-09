@@ -68,6 +68,20 @@ private struct GeneralSettingsTab: View {
                 Toggle("Play dissolve animation on reset", isOn: $settings.resetAnimationEnabled)
             }
 
+            Section {
+                Picker("Capacity", selection: $settings.extramCards) {
+                    Text("None").tag(0)
+                    Text("128 KB").tag(1)
+                    Text("1 MB").tag(8)
+                }
+                .pickerStyle(.menu)
+                Text("Applied on next reset.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("Extended RAM")
+            }
+
             Section("Development") {
                 Toggle("Show DEBUG Menu", isOn: Binding(
                     get: { viewModel.showDebugMenu },

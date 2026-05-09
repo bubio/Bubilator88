@@ -36,6 +36,12 @@ final class Settings {
         didSet { UserDefaults.standard.set(Int(dipSw2Base), forKey: "dipSw2Base") }
     }
 
+    /// Extended RAM card count. Applied on reset (disk reload).
+    /// 0 = none, 1 = 128KB, 8 = 1MB. Encoding follows QUASI88 `use_extram`.
+    var extramCards: Int = 1 {
+        didSet { UserDefaults.standard.set(extramCards, forKey: "extramCards") }
+    }
+
     // MARK: - UI
 
     /// Show the DEBUG menu in the menu bar.
@@ -380,6 +386,10 @@ final class Settings {
         }
         if let v = UserDefaults.standard.object(forKey: "dipSw2Base") as? Int {
             dipSw2Base = UInt8(v & 0xFF)
+        }
+        if let v = UserDefaults.standard.object(forKey: "extramCards") as? Int,
+           [0, 1, 8].contains(v) {
+            extramCards = v
         }
         if let v = UserDefaults.standard.object(forKey: "showDebugMenu") as? Bool {
             showDebugMenu = v

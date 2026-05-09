@@ -153,6 +153,10 @@
 "Development" = "開発";
 "Show DEBUG Menu" = "DEBUGメニューを表示";
 "Play dissolve animation on reset" = "リセット時にディゾルブアニメーションを再生";
+"Extended RAM" = "拡張RAM";
+"Capacity" = "容量";
+"None" = "なし";
+"Applied on next reset." = "次回リセット時に反映されます。";
 
 /* ===== SettingsView.swift — Display Tab ===== */
 "Fullscreen" = "フルスクリーン";
