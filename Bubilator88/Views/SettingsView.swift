@@ -600,6 +600,10 @@ private struct KeyboardSettingsTab: View {
                 Text("For games that only accept numpad digits (e.g. adventure game menu selections). Maps number row 0-9 to numpad 0-9.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Toggle("WASD as Numpad", isOn: $settings.wasdAsNumpad)
+                Text("Maps WASD keys to numpad 8/4/2/6 for game character movement using the left hand.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Special Key Mapping") {
