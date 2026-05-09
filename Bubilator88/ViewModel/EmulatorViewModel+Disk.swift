@@ -69,8 +69,8 @@ extension EmulatorViewModel {
             }
         }
 
-        // Install 128KB extended RAM (1 card × 4 banks × 32KB)
-        machine.installExtRAM()
+        // Install extended RAM (capacity from Settings; default 128KB).
+        machine.installExtRAM(cards: Settings.shared.extramCards, banksPerCard: 4)
 
         // YM2608 rhythm WAV samples (fmgen format: signed 16-bit PCM)
         let rhythmFiles = ["2608_BD.WAV", "2608_SD.WAV", "2608_TOP.WAV",
