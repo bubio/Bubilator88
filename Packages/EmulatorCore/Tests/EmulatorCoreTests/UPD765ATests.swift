@@ -46,6 +46,9 @@ struct UPD765ATests {
         fdc.writeSector = { drive, track, c, h, r, data in
             disks[drive]?.writeSector(track: track, c: c, h: h, r: r, data: data) ?? false
         }
+        fdc.formatTrack = { drive, track, sectorIDs, fillByte in
+            disks[drive]?.formatTrack(track: track, sectorIDs: sectorIDs, fillByte: fillByte) ?? false
+        }
         return (fdc, disks)
     }
 
@@ -900,9 +903,12 @@ struct UPD765ATests {
     @Test("Format track command accepts sector IDs")
     func formatTrackAcceptsSectorIDs() {
         let fdc = UPD765A()
-        let disk = makeDisk(sectors: [(r: 1, data: Array(repeating: 0, count: 256))])
-        let diskCopy = disk
-        fdc.drives = { [diskCopy, nil] }
+        var disk = makeDisk(sectors: [(r: 1, data: Array(repeating: 0, count: 256))])
+        fdc.drives = { [disk] in [disk, nil] }
+        fdc.formatTrack = { drive, track, sectorIDs, fillByte in
+            guard drive == 0 else { return false }
+            return disk.formatTrack(track: track, sectorIDs: sectorIDs, fillByte: fillByte)
+        }
 
         // Write ID (Format Track) command: 0x4D (MFM)
         fdc.writeData(0x4D)  // Format Track (MFM)
@@ -928,7 +934,31 @@ struct UPD765ATests {
         // Read 7 result bytes
         let results = readResults(fdc)
         #expect(results[0] & 0xC0 == 0x00)  // Normal termination
+        #expect(disk.tracks[0].count == 2)
+        #expect(disk.tracks[0][0].r == 1)
+        #expect(disk.tracks[0][1].r == 2)
+        #expect(disk.tracks[0][0].data == Array(repeating: UInt8(0xE5), count: 256))
         #expect(fdc.phase == .idle)
+    }
+
+    @Test("Format track rejects write-protected disk")
+    func formatTrackWriteProtected() {
+        var disk = makeDisk(sectors: [(r: 1, data: Array(repeating: 0, count: 256))])
+        disk.writeProtected = true
+        let (fdc, disks) = makeFDCWithDisk(disk)
+
+        fdc.writeData(0x4D)
+        fdc.writeData(0x00)
+        fdc.writeData(0x01)
+        fdc.writeData(0x02)
+        fdc.writeData(0x1B)
+        fdc.writeData(0xE5)
+
+        #expect(fdc.phase == .result)
+        let results = readResults(fdc)
+        #expect(results[0] & 0xC0 == 0x40)
+        #expect(results[1] & UPD765A.ST1_NW == UPD765A.ST1_NW)
+        #expect(disks[0]?.tracks[0].count == 1)
     }
 
     @Test("ReadData with N=2 (512-byte sectors)")

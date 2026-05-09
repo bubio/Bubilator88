@@ -185,6 +185,9 @@ public final class UPD765A {
     /// Write sector back to disk (via closure)
     public var writeSector: ((_ drive: Int, _ track: Int, _ c: UInt8, _ h: UInt8, _ r: UInt8, _ data: [UInt8]) -> Bool)?
 
+    /// Format a track on disk (via closure)
+    public var formatTrack: ((_ drive: Int, _ track: Int, _ sectorIDs: [(c: UInt8, h: UInt8, r: UInt8, n: UInt8)], _ fillByte: UInt8) -> Bool)?
+
     /// Disk access indicator callback (drive number)
     public var onDiskAccess: ((_ drive: Int) -> Void)?
 
@@ -1224,6 +1227,30 @@ public final class UPD765A {
     }
 
     private func executeFormatTrack() {
+        guard let disks = drives?() else {
+            abortNoReady()
+            return
+        }
+
+        guard us < disks.count, let disk = disks[us] else {
+            abortNoReady()
+            return
+        }
+
+        onDiskAccess?(us)
+
+        if disk.writeProtected {
+            st0 = UInt8(us) | UInt8(hd << 2) | Self.ST0_IC_AT
+            st1 = Self.ST1_NW
+            st2 = 0
+            setResult7()
+            phase = .result
+            interruptPending = true
+            onInterrupt?()
+            logCommand("FormatTrack:WP", dataSize: 0)
+            return
+        }
+
         // Receive 4 bytes per sector (C, H, R, N) × sc sectors
         formatIDs = []
         formatIDIndex = 0
@@ -1238,26 +1265,17 @@ public final class UPD765A {
     }
 
     private func handleFormatByte(_ value: UInt8) {
-        // Accumulate 4 bytes per sector ID
-        if dataIndex % 4 == 0 && dataIndex > 0 {
-            let base = dataIndex - 4
-            formatIDs.append((
-                c: dataBuffer[base],
-                h: dataBuffer[base + 1],
-                r: dataBuffer[base + 2],
-                n: dataBuffer[base + 3]
-            ))
-        }
         if dataIndex >= dataBufferExpectedSize {
-            // Parse last ID
-            if dataIndex >= 4 {
-                let base = dataIndex - 4
+            formatIDs = []
+            var base = 0
+            while base + 3 < dataBufferExpectedSize {
                 formatIDs.append((
                     c: dataBuffer[base],
                     h: dataBuffer[base + 1],
                     r: dataBuffer[base + 2],
                     n: dataBuffer[base + 3]
                 ))
+                base += 4
             }
             finishFormatExecution()
         }
@@ -1270,8 +1288,13 @@ public final class UPD765A {
         st1 = 0; st2 = 0
         chrn = formatIDs.last.map { (c: $0.c, h: $0.h, r: $0.r, n: $0.n) }
             ?? (c: 0, h: 0, r: 0, n: 0)
-        // Format is not actually written to disk image (stub)
+        let track = Int(pcn[us]) * 2 + hd
+        if formatTrack?(us, track, formatIDs, fillByte) != true {
+            st0 |= Self.ST0_IC_AT
+            st1 = Self.ST1_NW
+        }
         setResult7()
+        logCommand("FormatTrack", dataSize: dataBufferExpectedSize)
         phase = .result
         interruptPending = true
         onInterrupt?()
