@@ -150,7 +150,8 @@ struct UPD765ATests {
 
         #expect(fdc.phase == .result)
         let st3 = fdc.readData()
-        #expect(st3 & 0x20 == 0)  // Not ready
+        #expect(st3 & 0x20 != 0)  // Drive mechanism ready (M88M-compatible)
+        #expect(st3 & 0x08 == 0)  // No two-sided media bit when empty
         #expect(fdc.phase == .idle)
     }
 
@@ -588,6 +589,65 @@ struct UPD765ATests {
         let written = disks[0]?.findSector(track: 0, c: 0, h: 0, r: 1)
         #expect(written?.data[0] == 0x00)
         #expect(written?.data[255] == 0xFF)
+    }
+
+    @Test("WriteData targets current PCN track, not command cylinder track")
+    func writeDataUsesCurrentTrack() {
+        var disk = D88Disk()
+        var sector = D88Disk.Sector()
+        sector.c = 1
+        sector.h = 0
+        sector.r = 1
+        sector.n = 1
+        sector.sectorCount = 1
+        sector.data = Array(repeating: 0, count: 256)
+        disk.tracks[4].append(sector) // PCN 2, head 0
+
+        var disks: [D88Disk?] = [disk, nil]
+        let fdc = UPD765A()
+        fdc.drives = { disks }
+        fdc.writeSector = { drive, track, c, h, r, data in
+            disks[drive]?.writeSector(track: track, c: c, h: h, r: r, data: data) ?? false
+        }
+        fdc.pcn[0] = 2
+
+        fdc.writeData(0x45)
+        fdc.writeData(0x00)
+        fdc.writeData(1)     // C in sector ID differs from current PCN.
+        fdc.writeData(0)
+        fdc.writeData(1)
+        fdc.writeData(1)
+        fdc.writeData(1)
+        fdc.writeData(0x1B)
+        fdc.writeData(0xFF)
+
+        let newData = Array(repeating: UInt8(0x56), count: 256)
+        writeExecutionBytes(fdc, bytes: newData)
+        _ = readResults(fdc)
+
+        #expect(disks[0]?.readSector(track: 4, c: 1, h: 0, r: 1) == newData)
+        #expect(disks[0]?.tracks[2].isEmpty == true)
+    }
+
+    @Test("DriveControl TD=0 maps logical cylinders to every other physical track")
+    func driveControlDoubleStepRead() {
+        var disk = D88Disk()
+        var sector = D88Disk.Sector()
+        sector.c = 1
+        sector.h = 0
+        sector.r = 1
+        sector.n = 1
+        sector.sectorCount = 1
+        sector.data = Array(repeating: 0x42, count: 256)
+        disk.tracks[4].append(sector) // logical C=1 double-stepped -> physical C=2, track 4
+
+        let (fdc, _) = makeFDCWithDisk(disk)
+        fdc.setDriveControl(0x00) // TD0=0: 48TPI/double-step
+        fdc.pcn[0] = 1
+        writeReadDataCmd(fdc, c: 1, h: 0, r: 1, n: 1, eot: 1)
+
+        let bytes = readExecutionBytes(fdc, count: 256)
+        #expect(bytes == Array(repeating: UInt8(0x42), count: 256))
     }
 
     @Test func writeDataProtected() {
