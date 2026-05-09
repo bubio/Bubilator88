@@ -238,8 +238,19 @@ def main():
         sys.exit(1)
 
     all_d88 = sorted(ROM_DIR.rglob("*.d88")) + sorted(ROM_DIR.rglob("*.D88"))
-    all_d88 = [p for p in all_d88 if not p.name.upper().startswith("BLANK")]
-    all_d88 = list({p.resolve() for p in all_d88})
+    
+    # Exclusion filters
+    exclude_prefixes = ["BLANK", "N88-日本語BASIC", "N80-BASIC", "N88-BASIC", "PC-8001"]
+    filtered = []
+    for p in all_d88:
+        name_upper = p.name.upper()
+        if any(name_upper.startswith(pre.upper()) for pre in exclude_prefixes):
+            continue
+        if "付属DEMO" in p.parts:
+            continue
+        filtered.append(p)
+    
+    all_d88 = list({p.resolve() for p in filtered})
     print(f"Found {len(all_d88)} D88 files")
     if args.all:
         targets = all_d88
