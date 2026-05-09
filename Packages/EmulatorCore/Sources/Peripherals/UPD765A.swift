@@ -139,6 +139,8 @@ public final class UPD765A {
 
     /// Per-drive state
     public var pcn: [UInt8] = [0, 0, 0, 0]  // Present cylinder number
+    package var physicalCylinder: [UInt8] = [0, 0, 0, 0]
+    package var doubleStep: [Bool] = [false, false, false, false]
 
     /// Seek state per drive
     package enum SeekState {
@@ -303,6 +305,8 @@ public final class UPD765A {
         writeByteWaitClocks = 0
         st0 = 0; st1 = 0; st2 = 0; st3 = 0
         pcn = [0, 0, 0, 0]
+        physicalCylinder = [0, 0, 0, 0]
+        doubleStep = [false, false, false, false]
         seekState = [.stopped, .stopped, .stopped, .stopped]
         seekMoving = [false, false, false, false]
         seekTarget = [0, 0, 0, 0]
@@ -516,6 +520,18 @@ public final class UPD765A {
         }
     }
 
+    /// Update drive density/track-step mode from the PC-8801 FDC drive-control port.
+    ///
+    /// Port 0xF4 TD bits match M88M:
+    /// - TDx=0: 48TPI logical cylinders double-step on a 96TPI mechanism.
+    /// - TDx=1: 96TPI direct stepping.
+    public func setDriveControl(_ value: UInt8) {
+        for drive in 0..<2 {
+            doubleStep[drive] = (value & UInt8(0x04 << drive)) == 0
+            physicalCylinder[drive] = physicalCylinderForLogical(pcn[drive], drive: drive)
+        }
+    }
+
     // MARK: - Timing
 
     /// Advance FDC by T-states. Handles seek timing.
@@ -584,9 +600,11 @@ public final class UPD765A {
             while seekWait[i] <= 0 {
                 if pcn[i] < seekTarget[i] {
                     pcn[i] += 1
+                    physicalCylinder[i] = physicalCylinderForLogical(pcn[i], drive: i)
                     onSeekStep?(i, pcn[i])
                 } else if pcn[i] > seekTarget[i] {
                     pcn[i] -= 1
+                    physicalCylinder[i] = physicalCylinderForLogical(pcn[i], drive: i)
                     onSeekStep?(i, pcn[i])
                 }
 
@@ -789,8 +807,18 @@ public final class UPD765A {
     }
 
     private func d88TrackForCurrentPosition(drive: Int, head: Int) -> Int {
-        let cylinder = pcn.indices.contains(drive) ? pcn[drive] : 0
+        let cylinder: UInt8
+        if doubleStep.indices.contains(drive), doubleStep[drive] {
+            cylinder = physicalCylinder.indices.contains(drive) ? physicalCylinder[drive] : 0
+        } else {
+            cylinder = pcn.indices.contains(drive) ? pcn[drive] : 0
+        }
         return d88Track(cylinder: cylinder, drive: drive, head: head)
+    }
+
+    private func physicalCylinderForLogical(_ cylinder: UInt8, drive: Int) -> UInt8 {
+        guard doubleStep.indices.contains(drive), doubleStep[drive] else { return cylinder }
+        return cylinder <= 0x7F ? cylinder << 1 : cylinder
     }
 
     // MARK: - Command Execution
