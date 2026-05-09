@@ -136,11 +136,19 @@ def classify(ppm_path: Path, log_path: Path | None = None) -> dict:
     text_verdict = classify_text_vram(vram_rows)
     verdict = "ok"
     if text_verdict == "basic":
-        # Dropped to N88-BASIC "Ok" prompt — NG for games.
-        verdict = "basic"
-    elif nonblack_px < 200 and mean_lum < 0.5:
+        # Dropped to N88-BASIC "Ok" prompt — NG for games,
+        # BUT only if there is no significant graphical content.
+        # Some games leave BASIC text in VRAM but display graphics on top.
+        if nonblack_px < 15000:
+            verdict = "basic"
+
+    # Screen with very few pixels is likely stuck in BASIC or failed to load,
+    # even if it doesn't show the "Ok" prompt yet.
+    # 10,000 px is ~4% of a 640x400 screen.
+    if verdict == "ok" and nonblack_px < 10000:
         verdict = "black"
-    elif blue_ratio > 0.55 and mean_b > mean_r + 30 and white_ratio < 0.10:
+
+    if verdict == "ok" and blue_ratio > 0.55 and mean_b > mean_r + 30 and white_ratio < 0.10:
         verdict = "blue"
     return {
         "verdict": verdict,
@@ -161,20 +169,42 @@ class Shot:
 
 
 def run_one(d88: Path, out_dir: Path) -> dict:
+    configs = [
+        {"name": "V2-4MHz", "env": {"CLOCK_4MHZ": "1"}},
+        {"name": "V1H-4MHz", "env": {"CLOCK_4MHZ": "1", "BOOTTEST_DIPSW2": "0xF1"}},
+        {"name": "V2-8MHz", "env": {}},  # 8MHz is default when CLOCK_4MHZ is unset
+    ]
+
+    last_res = None
+    for cfg in configs:
+        res = run_one_config(d88, out_dir, cfg)
+        res["config"] = cfg["name"]
+        last_res = res
+        if not res["ng"]:
+            break
+    return last_res
+
+
+def run_one_config(d88: Path, out_dir: Path, config: dict) -> dict:
     safe = d88.stem.replace("/", "_").replace(" ", "_")
+    cfg_name = config["name"]
     game_dir = out_dir / safe
     game_dir.mkdir(parents=True, exist_ok=True)
+    
     results = {"path": str(d88), "name": d88.name, "shots": {}}
     for label, frames in SAMPLE_POINTS:
-        ppm = game_dir / f"{label}.ppm"
-        log = game_dir / f"{label}.log"
+        ppm = game_dir / f"{label}_{cfg_name}.ppm"
+        log = game_dir / f"{label}_{cfg_name}.log"
         env = os.environ.copy()
         env["BOOTTEST_USE_RUNFRAME"] = "1"
         env["BOOTTEST_TURBO"] = str(TURBO)
         env["BOOTTEST_FRAMES"] = str(frames)
         env["BOOTTEST_SCREENSHOT_PATH"] = str(ppm)
         env["BOOTTEST_IGNORE_CRASH"] = "1"
-        env["CLOCK_4MHZ"] = "1"
+        # Apply config env
+        for k, v in config["env"].items():
+            env[k] = v
+        
         t0 = time.time()
         try:
             with open(log, "wb") as lf:
@@ -230,7 +260,7 @@ def main():
             r = fut.result()
             results.append(r)
             tag = "NG" if r["ng"] else "ok"
-            print(f"[{i}/{len(targets)}] {tag} {r['verdicts']} {r['name']}")
+            print(f"[{i}/{len(targets)}] {tag} {r['verdicts']} ({r['config']}) {r['name']}")
 
     results.sort(key=lambda r: r["name"])
     (out_dir / "report.json").write_text(json.dumps(results, indent=2, ensure_ascii=False))
