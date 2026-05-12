@@ -915,7 +915,7 @@ final class EmulatorViewModel {
             let sw2 = hasDisk ? (sw2Base & ~UInt8(0x08)) : (sw2Base | 0x08)
             machine.bus.dipSw1 = sw1
             machine.bus.dipSw2 = sw2
-            machine.reset()
+            machine.reset(preserveRAM: true)
             machine.clock8MHz = use8MHz
             machine.cpuOverclock = cpuOverclock
         }
