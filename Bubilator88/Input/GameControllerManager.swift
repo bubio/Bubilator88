@@ -1,5 +1,6 @@
 import GameController
 import EmulatorCore
+import AppKit
 
 // MARK: - Button Mapping
 
@@ -13,6 +14,91 @@ struct MappedKey: Codable, Equatable, Hashable {
     /// Sentinel for "no key assigned".
     static let none = MappedKey(Keyboard.Key(-1, -1))
     var isNone: Bool { row < 0 }
+}
+
+/// A host-side (macOS) keyboard shortcut to be synthesized when a controller button is pressed.
+///
+/// On press, a `.keyDown` NSEvent is posted; on release, a `.keyUp` is posted. This drives
+/// the responder chain just like the user pressing the combo, so menu shortcuts and event
+/// monitors (e.g. AppDelegate's Cmd+Z rewind hold) fire naturally.
+struct HostShortcut: Codable, Equatable, Hashable {
+    /// macOS virtual keyCode (kVK_*).
+    let keyCode: UInt16
+    /// `NSEvent.ModifierFlags` raw value (device-independent bits).
+    let modifierFlagsRaw: UInt
+    /// Display string for the main key (e.g. "S", "Z", "Tab", "↑").
+    let displayKey: String
+
+    var modifierFlags: NSEvent.ModifierFlags {
+        NSEvent.ModifierFlags(rawValue: modifierFlagsRaw)
+    }
+
+    /// Human-readable label like "⌘S" or "⇧⌥Z".
+    var displayLabel: String {
+        var s = ""
+        let f = modifierFlags
+        if f.contains(.control) { s += "⌃" }
+        if f.contains(.option)  { s += "⌥" }
+        if f.contains(.shift)   { s += "⇧" }
+        if f.contains(.command) { s += "⌘" }
+        s += displayKey
+        return s
+    }
+}
+
+/// What a controller button does when pressed.
+enum ButtonAction: Equatable, Hashable {
+    case none
+    case pc88Key(MappedKey)
+    case hostShortcut(HostShortcut)
+
+    var isNone: Bool {
+        if case .none = self { return true }
+        if case .pc88Key(let k) = self, k.isNone { return true }
+        return false
+    }
+}
+
+// Codable with migration: old JSON for a button entry is a bare `{"row":N,"bit":M}`
+// (MappedKey). New JSON is a tagged dictionary `{"type":"...", ...}`.
+extension ButtonAction: Codable {
+    private enum CodingKeys: String, CodingKey { case type, key, shortcut }
+    private enum Kind: String, Codable { case none, pc88Key, hostShortcut }
+
+    init(from decoder: Decoder) throws {
+        // Try new tagged form first.
+        if let c = try? decoder.container(keyedBy: CodingKeys.self),
+           let kind = try? c.decode(Kind.self, forKey: .type) {
+            switch kind {
+            case .none:
+                self = .none
+            case .pc88Key:
+                let key = try c.decode(MappedKey.self, forKey: .key)
+                self = key.isNone ? .none : .pc88Key(key)
+            case .hostShortcut:
+                let s = try c.decode(HostShortcut.self, forKey: .shortcut)
+                self = .hostShortcut(s)
+            }
+            return
+        }
+        // Migration: legacy bare MappedKey.
+        let legacy = try MappedKey(from: decoder)
+        self = legacy.isNone ? .none : .pc88Key(legacy)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .none:
+            try c.encode(Kind.none, forKey: .type)
+        case .pc88Key(let k):
+            try c.encode(Kind.pc88Key, forKey: .type)
+            try c.encode(k, forKey: .key)
+        case .hostShortcut(let s):
+            try c.encode(Kind.hostShortcut, forKey: .type)
+            try c.encode(s, forKey: .shortcut)
+        }
+    }
 }
 
 /// Identifies a controller button that can be mapped.
@@ -148,37 +234,38 @@ enum ControllerButton: String, Codable, CaseIterable, Identifiable {
 
 /// Per-controller-type button mapping. Keys are ControllerButton rawValues.
 struct ControllerButtonMapping: Codable, Equatable {
-    var buttons: [String: MappedKey]
+    var buttons: [String: ButtonAction]
 
     // PC-8801 games typically use: KP 2/4/6/8 for movement, Space for action/start,
     // Return for confirm, ESC for cancel, Z for jump, X for shoot/select.
-    static let defaults: [String: MappedKey] = [
-        ControllerButton.dpadUp.rawValue: MappedKey(Keyboard.kp8),
-        ControllerButton.dpadDown.rawValue: MappedKey(Keyboard.kp2),
-        ControllerButton.dpadLeft.rawValue: MappedKey(Keyboard.kp4),
-        ControllerButton.dpadRight.rawValue: MappedKey(Keyboard.kp6),
-        ControllerButton.buttonA.rawValue: MappedKey(Keyboard.space),       // action / start
-        ControllerButton.buttonB.rawValue: MappedKey(Keyboard.Key(1, 7)),   // Return (confirm)
-        ControllerButton.buttonX.rawValue: MappedKey(Keyboard.esc),         // cancel
-        ControllerButton.buttonY.rawValue: MappedKey(Keyboard.z),           // jump (some games)
-        ControllerButton.leftShoulder.rawValue: MappedKey(Keyboard.x),      // shoot (some games)
-        ControllerButton.rightShoulder.rawValue: MappedKey.none,
-        ControllerButton.leftTrigger.rawValue: MappedKey.none,
-        ControllerButton.rightTrigger.rawValue: MappedKey.none,
-        ControllerButton.buttonStart.rawValue: MappedKey(Keyboard.stop),    // STOP (pause)
-        ControllerButton.buttonSelect.rawValue: MappedKey.none,
-        ControllerButton.leftStickButton.rawValue: MappedKey.none,
-        ControllerButton.rightStickButton.rawValue: MappedKey.none,
+    // Stored as host shortcuts (macOS virtual keyCodes) so the same Mac→PC-88 routing
+    // that handles physical keyboard input applies uniformly.
+    static let defaults: [String: ButtonAction] = [
+        ControllerButton.dpadUp.rawValue: .hostShortcut(HostShortcut(keyCode: 0x5B, modifierFlagsRaw: 0, displayKey: "Num 8")),    // kVK_ANSI_Keypad8
+        ControllerButton.dpadDown.rawValue: .hostShortcut(HostShortcut(keyCode: 0x54, modifierFlagsRaw: 0, displayKey: "Num 2")),  // kVK_ANSI_Keypad2
+        ControllerButton.dpadLeft.rawValue: .hostShortcut(HostShortcut(keyCode: 0x56, modifierFlagsRaw: 0, displayKey: "Num 4")),  // kVK_ANSI_Keypad4
+        ControllerButton.dpadRight.rawValue: .hostShortcut(HostShortcut(keyCode: 0x58, modifierFlagsRaw: 0, displayKey: "Num 6")), // kVK_ANSI_Keypad6
+        ControllerButton.buttonA.rawValue: .hostShortcut(HostShortcut(keyCode: 0x31, modifierFlagsRaw: 0, displayKey: "Space")), // kVK_Space
+        ControllerButton.buttonB.rawValue: .hostShortcut(HostShortcut(keyCode: 0x24, modifierFlagsRaw: 0, displayKey: "↩")),     // kVK_Return
+        ControllerButton.buttonX.rawValue: .hostShortcut(HostShortcut(keyCode: 0x35, modifierFlagsRaw: 0, displayKey: "⎋")),     // kVK_Escape
+        ControllerButton.buttonY.rawValue: .hostShortcut(HostShortcut(keyCode: 0x06, modifierFlagsRaw: 0, displayKey: "Z")),     // kVK_ANSI_Z
+        ControllerButton.leftShoulder.rawValue: .hostShortcut(HostShortcut(keyCode: 0x07, modifierFlagsRaw: 0, displayKey: "X")),// kVK_ANSI_X
+        ControllerButton.rightShoulder.rawValue: .none,
+        ControllerButton.leftTrigger.rawValue: .none,
+        ControllerButton.rightTrigger.rawValue: .none,
+        ControllerButton.buttonStart.rawValue: .hostShortcut(HostShortcut(keyCode: 0x77, modifierFlagsRaw: 0, displayKey: "End")), // kVK_End (default STOP)
+        ControllerButton.buttonSelect.rawValue: .none,
+        ControllerButton.leftStickButton.rawValue: .none,
+        ControllerButton.rightStickButton.rawValue: .none,
     ]
 
-    init(buttons: [String: MappedKey] = ControllerButtonMapping.defaults) {
+    init(buttons: [String: ButtonAction] = ControllerButtonMapping.defaults) {
         self.buttons = buttons
     }
 
-    /// Returns nil if the button is unassigned.
-    func key(for button: ControllerButton) -> Keyboard.Key? {
-        guard let mapped = buttons[button.rawValue] ?? Self.defaults[button.rawValue] else { return nil }
-        return mapped.row < 0 ? nil : mapped.key
+    /// Resolve the action assigned to a button (falling back to defaults).
+    func action(for button: ControllerButton) -> ButtonAction {
+        buttons[button.rawValue] ?? Self.defaults[button.rawValue] ?? .none
     }
 }
 
@@ -559,64 +646,68 @@ final class GameControllerManager {
         guard let controller = activeController,
               let gamepad = controller.extendedGamepad else { return }
 
+        // Release any keys/shortcuts held under the previous mapping so they don't get stuck —
+        // GCController will not re-emit pressed=false for currently-held buttons after rebind.
+        releaseAllKeys()
+
         let m = mapping(for: controller.productCategory)
 
         // D-pad
         gamepad.dpad.up.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .dpadUp), pressed: pressed)
+            self?.handleButton(m.action(for: .dpadUp), pressed: pressed)
         }
         gamepad.dpad.down.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .dpadDown), pressed: pressed)
+            self?.handleButton(m.action(for: .dpadDown), pressed: pressed)
         }
         gamepad.dpad.left.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .dpadLeft), pressed: pressed)
+            self?.handleButton(m.action(for: .dpadLeft), pressed: pressed)
         }
         gamepad.dpad.right.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .dpadRight), pressed: pressed)
+            self?.handleButton(m.action(for: .dpadRight), pressed: pressed)
         }
 
         // Face buttons
         gamepad.buttonA.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .buttonA), pressed: pressed)
+            self?.handleButton(m.action(for: .buttonA), pressed: pressed)
         }
         gamepad.buttonB.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .buttonB), pressed: pressed)
+            self?.handleButton(m.action(for: .buttonB), pressed: pressed)
         }
         gamepad.buttonX.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .buttonX), pressed: pressed)
+            self?.handleButton(m.action(for: .buttonX), pressed: pressed)
         }
         gamepad.buttonY.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .buttonY), pressed: pressed)
+            self?.handleButton(m.action(for: .buttonY), pressed: pressed)
         }
 
         // Shoulders and triggers
         gamepad.leftShoulder.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .leftShoulder), pressed: pressed)
+            self?.handleButton(m.action(for: .leftShoulder), pressed: pressed)
         }
         gamepad.rightShoulder.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .rightShoulder), pressed: pressed)
+            self?.handleButton(m.action(for: .rightShoulder), pressed: pressed)
         }
         gamepad.leftTrigger.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .leftTrigger), pressed: pressed)
+            self?.handleButton(m.action(for: .leftTrigger), pressed: pressed)
         }
         gamepad.rightTrigger.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .rightTrigger), pressed: pressed)
+            self?.handleButton(m.action(for: .rightTrigger), pressed: pressed)
         }
 
         // Menu buttons
         gamepad.buttonMenu.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .buttonStart), pressed: pressed)
+            self?.handleButton(m.action(for: .buttonStart), pressed: pressed)
         }
         gamepad.buttonOptions?.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .buttonSelect), pressed: pressed)
+            self?.handleButton(m.action(for: .buttonSelect), pressed: pressed)
         }
 
         // Stick buttons
         gamepad.leftThumbstickButton?.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .leftStickButton), pressed: pressed)
+            self?.handleButton(m.action(for: .leftStickButton), pressed: pressed)
         }
         gamepad.rightThumbstickButton?.pressedChangedHandler = { [weak self] _, _, pressed in
-            self?.handleButton(m.key(for: .rightStickButton), pressed: pressed)
+            self?.handleButton(m.action(for: .rightStickButton), pressed: pressed)
         }
 
         // Left stick (analog → digital with hysteresis)
@@ -627,8 +718,29 @@ final class GameControllerManager {
 
     // MARK: - Input Handling
 
-    private func handleButton(_ key: Keyboard.Key?, pressed: Bool) {
-        guard let vm = viewModel, let key else { return }
+    /// Host shortcuts currently held by a controller button (to emit matching keyUp on release).
+    private var pressedShortcuts: [HostShortcut] = []
+
+    private func handleButton(_ action: ButtonAction, pressed: Bool) {
+        switch action {
+        case .none:
+            return
+        case .pc88Key(let mapped):
+            guard !mapped.isNone else { return }
+            handlePC88Key(mapped.key, pressed: pressed)
+        case .hostShortcut(let s):
+            postHostShortcut(s, isDown: pressed)
+            if pressed {
+                pressedShortcuts.append(s)
+            } else if let idx = pressedShortcuts.lastIndex(of: s) {
+                pressedShortcuts.remove(at: idx)
+            }
+        }
+    }
+
+    /// Pass-through for PC-88 key events from a controller button.
+    private func handlePC88Key(_ key: Keyboard.Key, pressed: Bool) {
+        guard let vm = viewModel else { return }
         if pressed {
             pressedKeys.insert(key)
             vm.pressKey(key)
@@ -638,31 +750,124 @@ final class GameControllerManager {
         }
     }
 
-    private func handleAnalogStick(x: Float, y: Float, mapping m: ControllerButtonMapping) {
-        let upKey = m.key(for: .dpadUp)
-        let downKey = m.key(for: .dpadDown)
-        let leftKey = m.key(for: .dpadLeft)
-        let rightKey = m.key(for: .dpadRight)
+    /// Synthesize a macOS keyDown/keyUp event so existing menu shortcuts and key monitors fire.
+    private func postHostShortcut(_ s: HostShortcut, isDown: Bool) {
+        let work = { [s] in
+            guard let window = NSApp.keyWindow ?? NSApp.mainWindow else { return }
+            let chars = Self.cocoaCharacters(forKeyCode: s.keyCode)
+            let event = NSEvent.keyEvent(
+                with: isDown ? .keyDown : .keyUp,
+                location: .zero,
+                modifierFlags: s.modifierFlags,
+                timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window.windowNumber,
+                context: nil,
+                characters: chars,
+                charactersIgnoringModifiers: chars,
+                isARepeat: false,
+                keyCode: s.keyCode
+            )
+            if let event { NSApp.postEvent(event, atStart: false) }
+        }
+        if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
+    }
 
+    /// Map a macOS virtual keyCode to the `characters` string that AppKit produces for it.
+    /// Required for SwiftUI `.keyboardShortcut` matching of special keys (arrows, function
+    /// keys, Return, Esc, Tab) — those match against specific unicode points (NS*FunctionKey
+    /// for arrows/F-keys, "\r" for Return, etc.), not the visual label.
+    private static func cocoaCharacters(forKeyCode keyCode: UInt16) -> String {
+        switch Int(keyCode) {
+        // Arrows
+        case 0x7E: return "\u{F700}"       // NSUpArrowFunctionKey
+        case 0x7D: return "\u{F701}"       // NSDownArrowFunctionKey
+        case 0x7B: return "\u{F702}"       // NSLeftArrowFunctionKey
+        case 0x7C: return "\u{F703}"       // NSRightArrowFunctionKey
+        // Function keys F1-F12
+        case 0x7A: return "\u{F704}"
+        case 0x78: return "\u{F705}"
+        case 0x63: return "\u{F706}"
+        case 0x76: return "\u{F707}"
+        case 0x60: return "\u{F708}"
+        case 0x61: return "\u{F709}"
+        case 0x62: return "\u{F70A}"
+        case 0x64: return "\u{F70B}"
+        case 0x65: return "\u{F70C}"
+        case 0x6D: return "\u{F70D}"
+        case 0x67: return "\u{F70E}"
+        case 0x6F: return "\u{F70F}"
+        // Whitespace & control
+        case 0x24: return "\r"             // Return
+        case 0x4C: return "\u{0003}"       // Numpad Enter (ETX)
+        case 0x30: return "\t"             // Tab
+        case 0x31: return " "              // Space
+        case 0x33: return "\u{007F}"       // Delete (backspace)
+        case 0x75: return "\u{F728}"       // NSDeleteFunctionKey (forward delete)
+        case 0x35: return "\u{001B}"       // Escape
+        // Navigation block
+        case 0x73: return "\u{F729}"       // Home
+        case 0x77: return "\u{F72B}"       // End
+        case 0x74: return "\u{F72C}"       // PageUp
+        case 0x79: return "\u{F72D}"       // PageDown
+        case 0x72: return "\u{F746}"       // Help / Insert
+        // Letters (A–Z)
+        case 0x00: return "a"; case 0x0B: return "b"; case 0x08: return "c"
+        case 0x02: return "d"; case 0x0E: return "e"; case 0x03: return "f"
+        case 0x05: return "g"; case 0x04: return "h"; case 0x22: return "i"
+        case 0x26: return "j"; case 0x28: return "k"; case 0x25: return "l"
+        case 0x2E: return "m"; case 0x2D: return "n"; case 0x1F: return "o"
+        case 0x23: return "p"; case 0x0C: return "q"; case 0x0F: return "r"
+        case 0x01: return "s"; case 0x11: return "t"; case 0x20: return "u"
+        case 0x09: return "v"; case 0x0D: return "w"; case 0x07: return "x"
+        case 0x10: return "y"; case 0x06: return "z"
+        // Number row
+        case 0x1D: return "0"; case 0x12: return "1"; case 0x13: return "2"
+        case 0x14: return "3"; case 0x15: return "4"; case 0x17: return "5"
+        case 0x16: return "6"; case 0x1A: return "7"; case 0x1C: return "8"
+        case 0x19: return "9"
+        // Numpad digits & ops (use same digit chars; .numericPad flag distinguishes physically)
+        case 0x52: return "0"; case 0x53: return "1"; case 0x54: return "2"
+        case 0x55: return "3"; case 0x56: return "4"; case 0x57: return "5"
+        case 0x58: return "6"; case 0x59: return "7"; case 0x5B: return "8"
+        case 0x5C: return "9"
+        case 0x41: return "."; case 0x43: return "*"; case 0x45: return "+"
+        case 0x4B: return "/"; case 0x4E: return "-"; case 0x51: return "="
+        // Symbols
+        case 0x1B: return "-"; case 0x18: return "="
+        case 0x21: return "["; case 0x1E: return "]"
+        case 0x29: return ";"; case 0x27: return "'"
+        case 0x2B: return ","; case 0x2F: return "."
+        case 0x2C: return "/"; case 0x2A: return "\\"; case 0x32: return "`"
+        default: return ""
+        }
+    }
+
+    private func handleAnalogStick(x: Float, y: Float, mapping m: ControllerButtonMapping) {
         let newUp    = stickState.up    ? (y > releaseThreshold)  : (y > deadzone)
         let newDown  = stickState.down  ? (y < -releaseThreshold) : (y < -deadzone)
         let newLeft  = stickState.left  ? (x < -releaseThreshold) : (x < -deadzone)
         let newRight = stickState.right ? (x > releaseThreshold)  : (x > deadzone)
 
-        if newUp != stickState.up { handleButton(upKey, pressed: newUp) }
-        if newDown != stickState.down { handleButton(downKey, pressed: newDown) }
-        if newLeft != stickState.left { handleButton(leftKey, pressed: newLeft) }
-        if newRight != stickState.right { handleButton(rightKey, pressed: newRight) }
+        if newUp    != stickState.up    { handleButton(m.action(for: .dpadUp),    pressed: newUp) }
+        if newDown  != stickState.down  { handleButton(m.action(for: .dpadDown),  pressed: newDown) }
+        if newLeft  != stickState.left  { handleButton(m.action(for: .dpadLeft),  pressed: newLeft) }
+        if newRight != stickState.right { handleButton(m.action(for: .dpadRight), pressed: newRight) }
 
         stickState = (newUp, newDown, newLeft, newRight)
     }
 
     private func releaseAllKeys() {
-        guard let vm = viewModel else { return }
-        for key in pressedKeys {
-            vm.releaseKey(key)
+        if let vm = viewModel {
+            for key in pressedKeys {
+                vm.releaseKey(key)
+            }
         }
         pressedKeys.removeAll()
         stickState = (false, false, false, false)
+        // Release any held host shortcuts to avoid stuck modifier flags.
+        for s in pressedShortcuts {
+            postHostShortcut(s, isDown: false)
+        }
+        pressedShortcuts.removeAll()
     }
 }
