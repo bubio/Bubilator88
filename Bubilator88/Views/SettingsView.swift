@@ -482,7 +482,7 @@ private struct ControllerSettingsTab: View {
                             onAssign: { startListening(for: button, category: category) },
                             onClear: {
                                 var m = currentMapping
-                                m.buttons[button.rawValue] = MappedKey.none
+                                m.buttons[button.rawValue] = ButtonAction.none
                                 gc.setMapping(m, for: category)
                             }
                         )
@@ -504,15 +504,71 @@ private struct ControllerSettingsTab: View {
         cancelListening()
         listeningButton = button
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            if event.modifierFlags.contains(.command) { return event }
-            if let pc88Key = KeyMapping.pc88Key(for: event.keyCode) {
-                var m = settings.controllerMappings[category] ?? ControllerButtonMapping()
-                m.buttons[button.rawValue] = MappedKey(pc88Key)
-                viewModel.gameController.setMapping(m, for: category)
-            }
+            let display = displayKeyName(for: event)
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                .subtracting([.capsLock, .numericPad, .function, .help])
+            let shortcut = HostShortcut(
+                keyCode: event.keyCode,
+                modifierFlagsRaw: flags.rawValue,
+                displayKey: display
+            )
+            var m = settings.controllerMappings[category] ?? ControllerButtonMapping()
+            m.buttons[button.rawValue] = .hostShortcut(shortcut)
+            viewModel.gameController.setMapping(m, for: category)
             cancelListening()
             return nil
         }
+    }
+
+    /// Pick a short human-readable label for a key event (e.g. "S", "Tab", "↑", "Num 8").
+    private func displayKeyName(for event: NSEvent) -> String {
+        // Named keys by virtual keyCode (kVK_*).
+        switch Int(event.keyCode) {
+        case 0x24: return "↩"        // Return
+        case 0x30: return "Tab"
+        case 0x31: return "Space"
+        case 0x33: return "⌫"        // Delete
+        case 0x35: return "⎋"        // Escape
+        case 0x7B: return "←"
+        case 0x7C: return "→"
+        case 0x7D: return "↓"
+        case 0x7E: return "↑"
+        case 0x7A: return "F1"
+        case 0x78: return "F2"
+        case 0x63: return "F3"
+        case 0x76: return "F4"
+        case 0x60: return "F5"
+        case 0x61: return "F6"
+        case 0x62: return "F7"
+        case 0x64: return "F8"
+        case 0x65: return "F9"
+        case 0x6D: return "F10"
+        case 0x67: return "F11"
+        case 0x6F: return "F12"
+        // Numpad (distinguish from main row)
+        case 0x52: return "Num 0"
+        case 0x53: return "Num 1"
+        case 0x54: return "Num 2"
+        case 0x55: return "Num 3"
+        case 0x56: return "Num 4"
+        case 0x57: return "Num 5"
+        case 0x58: return "Num 6"
+        case 0x59: return "Num 7"
+        case 0x5B: return "Num 8"
+        case 0x5C: return "Num 9"
+        case 0x41: return "Num ."
+        case 0x43: return "Num *"
+        case 0x45: return "Num +"
+        case 0x4B: return "Num /"
+        case 0x4C: return "Num ↩"
+        case 0x4E: return "Num -"
+        case 0x51: return "Num ="
+        default: break
+        }
+        if let raw = event.charactersIgnoringModifiers, !raw.isEmpty {
+            return raw.uppercased()
+        }
+        return "key\(event.keyCode)"
     }
 
     private func cancelListening() {
@@ -534,10 +590,8 @@ private struct ButtonMappingRow: View {
     let onClear: () -> Void
 
     var body: some View {
-        let mapped = mapping.buttons[button.rawValue]
-            ?? ControllerButtonMapping.defaults[button.rawValue]!
-        let isNone = mapped.isNone
-        let keyName = isNone ? "None" : (PC88KeyChoice.name(for: mapped))
+        let action = mapping.action(for: button)
+        let labelText = isListening ? "Press a key..." : label(for: action)
 
         HStack {
             if let symbol = button.sfSymbolName(for: brand) {
@@ -546,13 +600,11 @@ private struct ButtonMappingRow: View {
             }
             Text(button.displayName(for: brand))
             Spacer()
-            Button(isListening ? "Press a key..." : keyName) {
-                onAssign()
-            }
-            .buttonStyle(.bordered)
-            .foregroundStyle(isListening ? .orange : isNone ? .secondary : .primary)
-            .font(.caption)
-            if !isNone {
+            Button(labelText) { onAssign() }
+                .buttonStyle(.bordered)
+                .foregroundStyle(isListening ? .orange : action.isNone ? .secondary : .primary)
+                .font(.caption)
+            if !action.isNone {
                 Button(role: .destructive) {
                     onClear()
                 } label: {
@@ -563,6 +615,16 @@ private struct ButtonMappingRow: View {
                 .buttonStyle(.borderless)
                 .help("Clear assignment")
             }
+        }
+    }
+
+    private func label(for action: ButtonAction) -> String {
+        switch action {
+        case .none: return "None"
+        case .pc88Key(let k):
+            return k.isNone ? "None" : PC88KeyChoice.name(for: k)
+        case .hostShortcut(let s):
+            return s.displayLabel
         }
     }
 }
