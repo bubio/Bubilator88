@@ -30,7 +30,8 @@ extension EmulatorViewModel {
 
     /// Apply a per-channel mute mask to the YM2608 on the emu queue.
     ///
-    /// Intentionally NOT persisted; the mask resets to `.all` on emulator reset.
+    /// Not persisted across app launches, but survives emulator reset so the
+    /// user's selection in the debug pane is not lost.
     func applyDebugChannelMask(_ mask: YM2608.DebugChannelMask) {
         emuQueue.async { [weak self] in
             self?.machine.sound.debugChannelMask = mask
