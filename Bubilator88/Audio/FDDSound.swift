@@ -48,6 +48,8 @@ final class FDDSound {
     }
 
     private var stereoFormat: AVAudioFormat?
+    /// 直近に適用した出力デバイス UID。再起動時に再適用するため保持。
+    private var currentOutputDeviceUID: String = ""
 
     init() {
         let fmt = AVAudioFormat(
@@ -130,8 +132,14 @@ final class FDDSound {
         guard !isEnabled, let format = stereoFormat else { return }
 
         let engine = AVAudioEngine()
-        var nodes: [AVAudioPlayerNode] = []
+        currentOutputDeviceUID = outputDeviceUID
 
+        // 重要: mainMixerNode へ connect すると内部で outputNode の AU が
+        // デフォルトデバイスでネゴシエートされ、format が固定されてしまう。
+        // デバイスを先に確定させてから mixer をアタッチする。
+        setOutputDevice(uid: outputDeviceUID, on: engine)
+
+        var nodes: [AVAudioPlayerNode] = []
         for _ in 0..<2 {
             let player = AVAudioPlayerNode()
             player.volume = volume
@@ -146,15 +154,23 @@ final class FDDSound {
             self.engine = engine
             self.playerNodes = nodes
             isEnabled = true
-            applyOutputDeviceUID(outputDeviceUID)
         } catch {
             // FDD sound init failed — emulator runs without disk sounds
         }
     }
 
-    /// 出力先デバイスを切り替える。空文字列 = システムデフォルト。エンジン起動済みのときのみ有効。
+    /// 出力先デバイスを切り替える。空文字列 = システムデフォルト。
+    /// 動作中の AVAudioEngine の出力デバイスは安全に差し替えられないため、
+    /// エンジンを停止→再構築して切り替える。
     func applyOutputDeviceUID(_ uid: String) {
-        guard isEnabled, let engine else { return }
+        currentOutputDeviceUID = uid
+        guard isEnabled else { return }
+        stop()
+        start(outputDeviceUID: uid)
+    }
+
+    /// 指定エンジンの outputNode に CoreAudio デバイスを割り当てる。エンジン起動前に呼ぶこと。
+    private func setOutputDevice(uid: String, on engine: AVAudioEngine) {
         guard let au = engine.outputNode.audioUnit else { return }
 
         let targetID: AudioDeviceID
