@@ -267,6 +267,7 @@ extension EmulatorViewModel {
                                        allImages: [D88Disk], imageNames: [String], imageIndex: Int,
                                        sourceURL: URL?, archiveEntryName: String? = nil,
                                        fileName: String, imageGroups: [DiskImageGroup]) {
+        diskWriteBackScheduler.flushNow(drive: drive)
         emuQueue.sync {
             machine.mountDisk(drive: drive, disk: disk)
         }
@@ -319,6 +320,7 @@ extension EmulatorViewModel {
         }
         let groups = [DiskImageGroup(d88FileName: fileName, startIndex: 0, count: allImages.count)]
         let displayName = imageNames[imageIndex]
+        diskWriteBackScheduler.flushNow(drive: drive)
         emuQueue.sync {
             machine.mountDisk(drive: drive, disk: disk)
         }
@@ -341,6 +343,7 @@ extension EmulatorViewModel {
     func switchDiskImage(drive: Int, index: Int) {
         guard let info = (drive == 0 ? drive0Info : drive1Info),
               index >= 0, index < info.allImages.count else { return }
+        diskWriteBackScheduler.flushNow(drive: drive)
         let disk = info.allImages[index]
         emuQueue.sync {
             machine.mountDisk(drive: drive, disk: disk)
@@ -376,6 +379,7 @@ extension EmulatorViewModel {
     }
 
     func ejectDisk(drive: Int) {
+        diskWriteBackScheduler.flushNow(drive: drive)
         emuQueue.sync {
             machine.ejectDisk(drive: drive)
         }
@@ -518,5 +522,140 @@ extension EmulatorViewModel {
             )
         }
         showAlert(title: title, message: String(format: bodyFormat, fileName))
+    }
+}
+
+// MARK: - Disk Write-Back (Phase 1: 単独 .d88 のライトスルー)
+
+extension EmulatorViewModel {
+
+    /// `SubSystem.onDiskWritten` から呼ばれるエントリポイント。
+    /// emulation thread から呼ばれるためメインスレッドへホップしてから
+    /// scheduler を叩く。
+    func diskDirtyNotification(drive: Int) {
+        if Thread.isMainThread {
+            diskWriteBackScheduler.schedule(drive: drive)
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.diskWriteBackScheduler.schedule(drive: drive)
+            }
+        }
+    }
+
+    /// scheduler から呼ばれる実書込関数。メインスレッド前提。
+    func performDiskWriteBack(drive: Int) {
+        // 現在の D88 バイト列を emu thread でスナップショット
+        let snapshot: [UInt8]? = emuQueue.sync {
+            machine.subSystem.drives[drive]?.serialize()
+        }
+        guard let bankBytes = snapshot else { return }
+
+        // dirty が true でも writeProtected な場合は no-op
+        let dirty = emuQueue.sync { machine.subSystem.drives[drive]?.dirty ?? false }
+        guard dirty else { return }
+
+        let info = (drive == 0 ? drive0Info : drive1Info)
+        let sourceURL = info?.sourceURL
+        let imageIndex = info?.currentImageIndex ?? 0
+
+        // 書き戻し先 URL の決定。
+        // - sourceURL があればそこ (アーカイブ由来は Phase 1 範囲外なのでスキップ)
+        // - 無ければリカバリディレクトリへフォールバック
+        guard let writeURL = sourceURL, info?.archiveEntryName == nil else {
+            writeBackToRecovery(drive: drive, bankBytes: bankBytes,
+                                 fileName: info?.fileName ?? "disk\(drive)")
+            return
+        }
+
+        do {
+            try writeBankToFile(bankBytes: bankBytes, imageIndex: imageIndex, url: writeURL)
+            // 成功時 dirty クリア (emu thread 経由)
+            emuQueue.sync {
+                machine.subSystem.drives[drive]?.dirty = false
+            }
+        } catch {
+            // 書込失敗 → リカバリディレクトリへフォールバック
+            writeBackToRecovery(drive: drive, bankBytes: bankBytes,
+                                 fileName: info?.fileName ?? "disk\(drive)")
+            showAlert(
+                title: NSLocalizedString("Disk Write Failed", comment: ""),
+                message: error.localizedDescription
+            )
+        }
+    }
+
+    /// 指定 imageIndex のバンクを `url` の D88 ファイル内に splice 書込する。
+    /// 単一バンク (file の総バイトが bank0 と一致) なら丸ごと上書き。
+    /// マルチバンクなら前後のバンクバイト列を保持して中央のみ差し替え。
+    private func writeBankToFile(bankBytes: [UInt8], imageIndex: Int, url: URL) throws {
+        let originalData: Data
+        do {
+            originalData = try Data(contentsOf: url)
+        } catch {
+            // 元ファイルが読めない → 単一バンク扱いで上書き
+            try Data(bankBytes).write(to: url, options: .atomic)
+            return
+        }
+
+        // 元ファイル内のバンク offset を header (offset 0x1C のバンクサイズ)
+        // を辿って算出する。
+        var bankStart = 0
+        for _ in 0..<imageIndex {
+            guard bankStart + 0x20 <= originalData.count else {
+                throw NSError(domain: "DiskWriteBack", code: 1,
+                              userInfo: [NSLocalizedDescriptionKey: "Bank header out of range"])
+            }
+            let size = Int(readUInt32LE(originalData, offset: bankStart + 0x1C))
+            guard size > 0 else {
+                throw NSError(domain: "DiskWriteBack", code: 2,
+                              userInfo: [NSLocalizedDescriptionKey: "Invalid bank size"])
+            }
+            bankStart += size
+        }
+        guard bankStart + 0x20 <= originalData.count else {
+            throw NSError(domain: "DiskWriteBack", code: 3,
+                          userInfo: [NSLocalizedDescriptionKey: "Bank offset beyond file"])
+        }
+        let originalBankSize = Int(readUInt32LE(originalData, offset: bankStart + 0x1C))
+        let bankEnd = bankStart + originalBankSize
+        guard bankEnd <= originalData.count else {
+            throw NSError(domain: "DiskWriteBack", code: 4,
+                          userInfo: [NSLocalizedDescriptionKey: "Bank end beyond file"])
+        }
+
+        var merged = Data(capacity: originalData.count - originalBankSize + bankBytes.count)
+        merged.append(originalData.prefix(bankStart))
+        merged.append(contentsOf: bankBytes)
+        merged.append(originalData.suffix(from: bankEnd))
+        try merged.write(to: url, options: .atomic)
+    }
+
+    /// 通常の書込先が無い / 書込失敗時のフォールバック保存先。
+    private func writeBackToRecovery(drive: Int, bankBytes: [UInt8], fileName: String) {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory,
+                                                   in: .userDomainMask).first!
+        let dir = appSupport.appendingPathComponent("Bubilator88/ModifiedDisks", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        let sanitized = fileName
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: ":", with: "_")
+        let stamp = ISO8601DateFormatter().string(from: Date())
+            .replacingOccurrences(of: ":", with: "")
+        let url = dir.appendingPathComponent("\(sanitized)-drive\(drive)-\(stamp).d88")
+        do {
+            try Data(bankBytes).write(to: url, options: .atomic)
+            // 成功時 dirty クリア
+            emuQueue.sync { machine.subSystem.drives[drive]?.dirty = false }
+        } catch {
+            // ここは諦める。次回 dirty 検出時に再試行される。
+        }
+    }
+
+    private func readUInt32LE(_ data: Data, offset: Int) -> UInt32 {
+        return UInt32(data[offset])
+             | (UInt32(data[offset + 1]) << 8)
+             | (UInt32(data[offset + 2]) << 16)
+             | (UInt32(data[offset + 3]) << 24)
     }
 }

@@ -538,6 +538,10 @@ final class EmulatorViewModel {
     /// FDD access sound effects
     let fddSound = FDDSound()
 
+    /// ライトスルー方式の D88 ディスク書き戻しスケジューラ。
+    /// onDirty 通知を debounce してファイル I/O 頻度を抑える。
+    let diskWriteBackScheduler = DiskWriteBackScheduler()
+
     /// Synthesised cassette-rewind sound played while ⌘Z is held.
     let rewindSound = RewindSound()
     let gameController = GameControllerManager()
@@ -618,6 +622,16 @@ final class EmulatorViewModel {
         machine.subSystem.fdc.onDiskAccess = { [weak self] drive in
             originalOnDiskAccess?(drive)
             self?.fddSound.playReadAccess(drive: drive)
+        }
+
+        // ディスク書き戻しスケジューラの writeBack クロージャを接続
+        diskWriteBackScheduler.writeBack = { [weak self] drive in
+            self?.performDiskWriteBack(drive: drive)
+        }
+
+        // SubSystem からの書込通知を受けて debounce スケジュールする
+        machine.subSystem.onDiskWritten = { [weak self] drive in
+            self?.diskDirtyNotification(drive: drive)
         }
     }
 
@@ -1043,6 +1057,9 @@ final class EmulatorViewModel {
             showToast(NSLocalizedString("Save state not found", comment: ""))
             return
         }
+        // セーブステートロードで現在のディスク状態は破棄されるため、
+        // 未保存のディスク書込を先にフラッシュしておく。
+        diskWriteBackScheduler.flushAll()
         let wasRunning = isRunning
         if wasRunning { stop() }
         var loadError: Error?

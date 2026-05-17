@@ -87,6 +87,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // process exits.
         MainActor.assumeIsolated {
             viewModel?.stopRecording()
+            // 未書込のディスク変更をファイルに反映させる
+            viewModel?.diskWriteBackScheduler.flushAll()
         }
         if let monitor = shortcutMonitor {
             NSEvent.removeMonitor(monitor)
