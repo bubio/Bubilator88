@@ -2,10 +2,14 @@ import Foundation
 
 /// ディスクのライトスルー書き戻しを debounce 付きでスケジュールする。
 ///
-/// `D88Disk.onDirty` から `schedule(drive:)` を呼ぶと、デフォルト 100ms 後に
-/// writeBack 実体 (ViewModel 注入) が呼ばれる。100ms 経過前に再度 `schedule`
-/// された場合はタイマがリセットされて連続書込をまとめる。ただし最初の dirty
-/// 時刻から `maxDelay` (デフォルト 500ms) 経過していた場合は即発火する。
+/// `SubSystem.onDiskWritten` から `schedule(drive:)` が呼ばれると、デフォルト
+/// 100ms 後に writeBack 実体 (ViewModel 注入) が呼ばれる。100ms 経過前に再度
+/// `schedule` された場合はタイマがリセットされ、連続書込をまとめる。
+///
+/// **ハードリミットは設けない。** N88-BASIC の SAVE などは連続セクタ書込が
+/// 数十〜数百 ms 続くため、途中で flush すると不完全な FAT を永続化してしまう。
+/// 完全な状態が書き込まれるのは「書込が止まって 100ms 経過した時点」だけ。
+/// アプリ正常終了は `flushAll()` で別途保証する。
 ///
 /// eject / アプリ終了 / save state load 直前は `flushNow(drive:)` /
 /// `flushAll()` で同期書き戻しを強制する。
@@ -19,49 +23,27 @@ final class DiskWriteBackScheduler {
     var writeBack: ((Int) -> Void)?
 
     private let debounceInterval: TimeInterval
-    private let maxDelay: TimeInterval
 
-    private struct PendingState {
-        var timer: Timer
-        let firstDirtyAt: Date
-    }
-    private var pending: [Int: PendingState] = [:]
+    private var pending: [Int: Timer] = [:]
 
-    init(debounceInterval: TimeInterval = 0.1, maxDelay: TimeInterval = 0.5) {
+    init(debounceInterval: TimeInterval = 0.1) {
         self.debounceInterval = debounceInterval
-        self.maxDelay = maxDelay
     }
 
     /// ディスク書込発生をスケジュールする。既に予約済みなら debounce タイマを
-    /// 再起動。ただし最初の dirty から `maxDelay` 経過していたら即発火。
+    /// 再起動 (連続書込中は永遠に延長される)。
     func schedule(drive: Int) {
-        if let existing = pending[drive] {
-            let elapsed = Date().timeIntervalSince(existing.firstDirtyAt)
-            if elapsed >= maxDelay {
-                existing.timer.invalidate()
-                pending.removeValue(forKey: drive)
-                fire(drive: drive)
-                return
-            }
-            existing.timer.invalidate()
-            let timer = Timer.scheduledTimer(withTimeInterval: debounceInterval, repeats: false) { [weak self] _ in
-                self?.fire(drive: drive)
-            }
-            pending[drive] = PendingState(timer: timer, firstDirtyAt: existing.firstDirtyAt)
-            return
-        }
-
-        let now = Date()
+        pending[drive]?.invalidate()
         let timer = Timer.scheduledTimer(withTimeInterval: debounceInterval, repeats: false) { [weak self] _ in
             self?.fire(drive: drive)
         }
-        pending[drive] = PendingState(timer: timer, firstDirtyAt: now)
+        pending[drive] = timer
     }
 
     /// 指定ドライブの予約中タイマを即発火する。タイマ未予約なら no-op。
     func flushNow(drive: Int) {
-        guard let existing = pending.removeValue(forKey: drive) else { return }
-        existing.timer.invalidate()
+        guard let timer = pending.removeValue(forKey: drive) else { return }
+        timer.invalidate()
         writeBack?(drive)
     }
 
