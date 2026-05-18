@@ -1157,23 +1157,16 @@ final class EmulatorViewModel {
 
             // Check if source is an archive
             if let archiveEntries = ArchiveExtractor.extractDiskImages(data) {
-                // アーカイブをキャッシュ展開して書き戻し先を確保
-                let cacheDir = DiskCacheManager.ensureCached(archiveURL: url,
-                                                              archiveData: data,
-                                                              entries: archiveEntries)
-                // 書き戻し済み内容を反映するため、cache 内ファイルから読み直す
-                let entryBytes: (ArchiveEntry) -> Data = { entry in
-                    if let dir = cacheDir,
-                       let entryURL = DiskCacheManager.cachedEntryURL(in: dir, entryName: entry.filename),
-                       let cached = try? Data(contentsOf: entryURL) {
-                        return cached
-                    }
-                    return entry.data
-                }
+                // アーカイブをキャッシュ展開して書き戻し先を確保。失敗時は nil で
+                // フォールバック (in-memory データから mount)。
+                let cache = DiskCacheManager.shared
+                let cacheDir = try? cache.ensureCached(archiveURL: url,
+                                                       archiveData: data,
+                                                       entries: archiveEntries)
                 if let entryName = archiveEntry {
                     // Specific entry within archive
                     if let entry = archiveEntries.first(where: { $0.filename == entryName }) {
-                        let allImages = D88Disk.parseAll(data: Array(entryBytes(entry)))
+                        let allImages = D88Disk.parseAll(data: Array(cache.resolvedData(for: entry, in: cacheDir)))
                         if !allImages.isEmpty {
                             let d88Name = (entryName as NSString).deletingPathExtension
                             let imageNames = allImages.enumerated().map { i, d in
@@ -1183,7 +1176,7 @@ final class EmulatorViewModel {
                                                          startIndex: 0, count: allImages.count)]
                             let index = min(savedImageIndex ?? 0, allImages.count - 1)
                             let cacheEntryURL = cacheDir.flatMap {
-                                DiskCacheManager.cachedEntryURL(in: $0, entryName: entryName)
+                                cache.cachedEntryURL(in: $0, entryName: entryName)
                             }
                             return MountedDiskInfo(sourceURL: cacheEntryURL,
                                                    archiveEntryName: entryName,
@@ -1198,7 +1191,7 @@ final class EmulatorViewModel {
                     var allDisks: [(disk: D88Disk, name: String)] = []
                     var groups: [DiskImageGroup] = []
                     for entry in archiveEntries {
-                        let disks = D88Disk.parseAll(data: Array(entryBytes(entry)))
+                        let disks = D88Disk.parseAll(data: Array(cache.resolvedData(for: entry, in: cacheDir)))
                         let baseName = (entry.filename as NSString).deletingPathExtension
                         groups.append(DiskImageGroup(d88FileName: baseName,
                                                      startIndex: allDisks.count, count: disks.count))
@@ -1386,7 +1379,10 @@ struct DiskImageGroup {
 }
 
 /// Metadata about a mounted disk source for menu-based disk switching.
-struct MountedDiskInfo {
+struct MountedDiskInfo: Identifiable, Equatable {
+    /// マウントセッションごとに発行される ID。SwiftUI 側で `.id()` /
+    /// `.onChange(of:)` の差分検出に使う。
+    let id: UUID
     /// 書き戻し先 URL。アーカイブ由来時は DiskCacheManager のキャッシュ内
     /// .d88 ファイル URL を指す。直接 .d88 マウント時は元ファイル URL。
     let sourceURL: URL?
@@ -1394,11 +1390,35 @@ struct MountedDiskInfo {
     /// アーカイブ非由来 (直接 .d88) なら nil。
     let archiveEntryName: String?
     /// 元アーカイブの URL (アーカイブ由来時のみ)。
-    /// 「最近使ったファイル」やセーブステート復元の起点に使う。
+    /// 現状は `fileName` 決定でのみ使用。エクスポートやステート復元の
+    /// 起点としては Phase 3 以降で利用予定。
     let originArchiveURL: URL?
     let allImages: [D88Disk]
     let imageNames: [String]
     var currentImageIndex: Int
     let fileName: String
     let imageGroups: [DiskImageGroup]
+
+    init(sourceURL: URL?, archiveEntryName: String?, originArchiveURL: URL?,
+         allImages: [D88Disk], imageNames: [String], currentImageIndex: Int,
+         fileName: String, imageGroups: [DiskImageGroup]) {
+        self.id = UUID()
+        self.sourceURL = sourceURL
+        self.archiveEntryName = archiveEntryName
+        self.originArchiveURL = originArchiveURL
+        self.allImages = allImages
+        self.imageNames = imageNames
+        self.currentImageIndex = currentImageIndex
+        self.fileName = fileName
+        self.imageGroups = imageGroups
+    }
+
+    /// `D88Disk` が Equatable でないため、マウントセッション ID と
+    /// 表示用フィールドのみで比較する。
+    /// SwiftUI の差分検出 (=同一マウントかどうか) には十分。
+    static func == (lhs: MountedDiskInfo, rhs: MountedDiskInfo) -> Bool {
+        lhs.id == rhs.id
+            && lhs.currentImageIndex == rhs.currentImageIndex
+            && lhs.sourceURL == rhs.sourceURL
+    }
 }

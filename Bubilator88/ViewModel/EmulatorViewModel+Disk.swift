@@ -159,27 +159,27 @@ extension EmulatorViewModel {
             }
             // アーカイブを展開キャッシュへ書き出す (初回のみ実体書込)。
             // 書き戻し先 sourceURL はキャッシュ内ファイル URL に切り替える。
-            let cacheDir = DiskCacheManager.ensureCached(archiveURL: url,
-                                                          archiveData: data,
-                                                          entries: entries)
-            // マウントする disk バイト列はキャッシュ内ファイルから読む。
-            // これにより前回の書き戻しがそのまま反映される。
-            // キャッシュが無い (作成失敗) 場合のみ in-memory の entry.data に
-            // フォールバック。
-            let entryData: (ArchiveEntry) -> Data = { entry in
-                if let dir = cacheDir,
-                   let entryURL = DiskCacheManager.cachedEntryURL(in: dir, entryName: entry.filename),
-                   let cached = try? Data(contentsOf: entryURL) {
-                    return cached
-                }
-                return entry.data
+            // キャッシュ作成失敗時は in-memory フォールバックで進めるが、
+            // 書き戻しは ModifiedDisks フォールバックに流れる。
+            let cache = DiskCacheManager.shared
+            let cacheDir: URL?
+            do {
+                cacheDir = try cache.ensureCached(archiveURL: url,
+                                                   archiveData: data,
+                                                   entries: entries)
+            } catch {
+                cacheDir = nil
+                showAlert(
+                    title: NSLocalizedString("Disk Cache Unavailable", comment: ""),
+                    message: error.localizedDescription
+                )
             }
             if drive == -1 {
                 // Mount 0&1: collect all D88 images across archive entries
                 var allDisks: [(disk: D88Disk, name: String, entryName: String)] = []
                 var groups: [DiskImageGroup] = []
                 for entry in entries {
-                    let disks = D88Disk.parseAll(data: Array(entryData(entry)))
+                    let disks = D88Disk.parseAll(data: Array(cache.resolvedData(for: entry, in: cacheDir)))
                     let baseName = (entry.filename as NSString).deletingPathExtension
                     groups.append(DiskImageGroup(d88FileName: baseName,
                                                  startIndex: allDisks.count, count: disks.count))
@@ -194,7 +194,7 @@ extension EmulatorViewModel {
                 let fileName = url.deletingPathExtension().lastPathComponent
                 if let first = allDisks.first {
                     let entryURL = cacheDir.flatMap {
-                        DiskCacheManager.cachedEntryURL(in: $0, entryName: first.entryName)
+                        cache.cachedEntryURL(in: $0, entryName: first.entryName)
                     }
                     mountDiskImageDirect(first.disk, name: first.name, drive: 0,
                                          allImages: allImages, imageNames: allNames, imageIndex: 0,
@@ -207,7 +207,7 @@ extension EmulatorViewModel {
                 if allDisks.count >= 2 {
                     let second = allDisks[1]
                     let entryURL = cacheDir.flatMap {
-                        DiskCacheManager.cachedEntryURL(in: $0, entryName: second.entryName)
+                        cache.cachedEntryURL(in: $0, entryName: second.entryName)
                     }
                     mountDiskImageDirect(second.disk, name: second.name, drive: 1,
                                          allImages: allImages, imageNames: allNames, imageIndex: 1,
@@ -223,9 +223,10 @@ extension EmulatorViewModel {
             }
             if entries.count == 1 {
                 let entryURL = cacheDir.flatMap {
-                    DiskCacheManager.cachedEntryURL(in: $0, entryName: entries[0].filename)
+                    cache.cachedEntryURL(in: $0, entryName: entries[0].filename)
                 }
-                mountDiskData(Array(entryData(entries[0])), name: entries[0].filename, drive: drive,
+                mountDiskData(Array(cache.resolvedData(for: entries[0], in: cacheDir)),
+                              name: entries[0].filename, drive: drive,
                               sourceURL: entryURL, archiveEntryName: entries[0].filename,
                               originArchiveURL: url)
                 return
@@ -332,16 +333,11 @@ extension EmulatorViewModel {
     func mountSelectedArchiveEntry(index: Int) {
         guard index >= 0, index < pendingArchiveEntries.count else { return }
         let entry = pendingArchiveEntries[index]
+        let cache = DiskCacheManager.shared
         let entryURL = pendingArchiveCacheDir.flatMap {
-            DiskCacheManager.cachedEntryURL(in: $0, entryName: entry.filename)
+            cache.cachedEntryURL(in: $0, entryName: entry.filename)
         }
-        // 前回の書き戻しを反映するため、cache 内ファイルから読み直す。
-        let bytes: [UInt8] = {
-            if let entryURL, let cached = try? Data(contentsOf: entryURL) {
-                return Array(cached)
-            }
-            return Array(entry.data)
-        }()
+        let bytes = Array(cache.resolvedData(for: entry, in: pendingArchiveCacheDir))
         mountDiskData(bytes, name: entry.filename, drive: diskPickerDrive,
                       sourceURL: entryURL, archiveEntryName: entry.filename,
                       originArchiveURL: pendingArchiveURL)
@@ -611,15 +607,20 @@ extension EmulatorViewModel {
 
     /// scheduler から呼ばれる実書込関数。メインスレッド前提。
     func performDiskWriteBack(drive: Int) {
-        // 現在の D88 バイト列を emu thread でスナップショット
-        let snapshot: [UInt8]? = emuQueue.sync {
-            machine.subSystem.drives[drive]?.serialize()
+        // snapshot 取得と dirty 判定+クリアを **一つの emuQueue.sync** で行う。
+        // 別々に sync すると、その間に新たな書込で dirty=true になっても、
+        // 後段の `dirty = false` で握り潰してしまう (Phase 2 既知の race)。
+        //
+        // ここで dirty を先にクリアしておけば、書込中に新たな dirty が立っても
+        // 次回 scheduler 発火で確実にもう一度書き戻される。
+        // 書込が失敗した場合のみ dirty を復元する。
+        let snapshot: [UInt8]? = emuQueue.sync { () -> [UInt8]? in
+            guard let disk = machine.subSystem.drives[drive], disk.dirty,
+                  let bytes = disk.serialize() else { return nil }
+            machine.subSystem.drives[drive]?.dirty = false
+            return bytes
         }
         guard let bankBytes = snapshot else { return }
-
-        // dirty が true でも writeProtected な場合は no-op
-        let dirty = emuQueue.sync { machine.subSystem.drives[drive]?.dirty ?? false }
-        guard dirty else { return }
 
         let info = (drive == 0 ? drive0Info : drive1Info)
         let sourceURL = info?.sourceURL
@@ -638,12 +639,11 @@ extension EmulatorViewModel {
 
         do {
             try writeBankToFile(bankBytes: bankBytes, imageIndex: imageIndex, url: writeURL)
-            // 成功時 dirty クリア (emu thread 経由)
-            emuQueue.sync {
-                machine.subSystem.drives[drive]?.dirty = false
-            }
         } catch {
-            // 書込失敗 → リカバリディレクトリへフォールバック
+            // 書込失敗 → dirty を復元 (リトライ可能にする) + リカバリへ
+            emuQueue.sync {
+                machine.subSystem.drives[drive]?.dirty = true
+            }
             writeBackToRecovery(drive: drive, bankBytes: bankBytes,
                                  fileName: info?.fileName ?? "disk\(drive)")
             showAlert(
@@ -657,14 +657,15 @@ extension EmulatorViewModel {
     /// 単一バンク (file の総バイトが bank0 と一致) なら丸ごと上書き。
     /// マルチバンクなら前後のバンクバイト列を保持して中央のみ差し替え。
     private func writeBankToFile(bankBytes: [UInt8], imageIndex: Int, url: URL) throws {
-        let originalData: Data
-        do {
-            originalData = try Data(contentsOf: url)
-        } catch {
-            // 元ファイルが読めない → 単一バンク扱いで上書き
+        // ファイルが存在しない場合のみ単一バンクの新規作成として扱う。
+        // 「読込失敗一般 → 単一バンク上書き」にすると、Spotlight / Time Machine /
+        // iCloud の一時ロックや I/O エラーで multibank ディスクの他バンクを
+        // 失う事故が起きる。
+        if !FileManager.default.fileExists(atPath: url.path) {
             try Data(bankBytes).write(to: url, options: .atomic)
             return
         }
+        let originalData = try Data(contentsOf: url)
 
         // 元ファイル内のバンク offset を header (offset 0x1C のバンクサイズ)
         // を辿って算出する。
@@ -700,9 +701,10 @@ extension EmulatorViewModel {
     }
 
     /// 通常の書込先が無い / 書込失敗時のフォールバック保存先。
+    /// 呼出元はすでに `performDiskWriteBack` で dirty フラグの扱いを済ませて
+    /// いるので、ここでは保存だけ行い dirty には触らない。
     private func writeBackToRecovery(drive: Int, bankBytes: [UInt8], fileName: String) {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory,
-                                                   in: .userDomainMask).first!
+        let appSupport = URL.applicationSupportDirectory
         let dir = appSupport.appendingPathComponent("Bubilator88/ModifiedDisks", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
 
@@ -712,13 +714,7 @@ extension EmulatorViewModel {
         let stamp = ISO8601DateFormatter().string(from: Date())
             .replacingOccurrences(of: ":", with: "")
         let url = dir.appendingPathComponent("\(sanitized)-drive\(drive)-\(stamp).d88")
-        do {
-            try Data(bankBytes).write(to: url, options: .atomic)
-            // 成功時 dirty クリア
-            emuQueue.sync { machine.subSystem.drives[drive]?.dirty = false }
-        } catch {
-            // ここは諦める。次回 dirty 検出時に再試行される。
-        }
+        try? Data(bankBytes).write(to: url, options: .atomic)
     }
 
     private func readUInt32LE(_ data: Data, offset: Int) -> UInt32 {
