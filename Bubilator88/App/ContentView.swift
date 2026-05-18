@@ -135,36 +135,27 @@ struct ContentView: View {
                 }
             }
         )
-        .sheet(isPresented: Binding(
-            get: { viewModel.showingImagePicker },
-            set: { viewModel.showingImagePicker = $0 }
-        )) {
-            DiskImagePickerView(
-                images: viewModel.pendingDiskImages,
-                onSelect: { index in
-                    viewModel.mountSelectedImage(index: index)
-                },
-                onCancel: {
-                    viewModel.pendingDiskImages = []
-                    viewModel.pendingDiskURL = nil
-                    viewModel.showingImagePicker = false
-                }
-            )
-        }
-        .sheet(isPresented: Binding(
-            get: { viewModel.showingArchiveFilePicker },
-            set: { viewModel.showingArchiveFilePicker = $0 }
-        )) {
-            ArchiveFilePickerView(
-                entries: viewModel.pendingArchiveEntries,
-                onSelect: { index in
-                    viewModel.mountSelectedArchiveEntry(index: index)
-                },
-                onCancel: {
-                    viewModel.pendingArchiveEntries = []
-                    viewModel.showingArchiveFilePicker = false
-                }
-            )
+        // sum type pickerContext を直接 bind することで、
+        // 「どのピッカーが立っているか」と「内容」が常に整合する。
+        // .sheet(item:) は item の id 変化でシートを再構築する。
+        .sheet(item: Binding(
+            get: { viewModel.pickerContext },
+            set: { viewModel.pickerContext = $0 }
+        )) { context in
+            switch context {
+            case .multiImageD88(let disks, _, _, _, _):
+                DiskImagePickerView(
+                    images: disks,
+                    onSelect: { viewModel.mountSelectedImage(index: $0) },
+                    onCancel: { viewModel.pickerContext = nil }
+                )
+            case .archiveEntries(let entries, _, _, _):
+                ArchiveFilePickerView(
+                    entries: entries,
+                    onSelect: { viewModel.mountSelectedArchiveEntry(index: $0) },
+                    onCancel: { viewModel.pickerContext = nil }
+                )
+            }
         }
         .sheet(isPresented: Binding(
             get: { viewModel.showingSaveStateSheet },
