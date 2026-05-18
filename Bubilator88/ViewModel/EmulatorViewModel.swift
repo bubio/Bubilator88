@@ -401,20 +401,52 @@ final class EmulatorViewModel {
     /// Cassette-tape file picker state.
     var showingTapePicker: Bool = false
 
-    /// Multi-image D88 selection state
-    var pendingDiskImages: [D88Disk] = []
-    var pendingDiskURL: URL? = nil
-    var pendingArchiveEntryName: String? = nil
-    /// 多画像 D88 ピッカーで、アーカイブ由来時の元アーカイブ URL を保持。
-    var pendingOriginArchiveURL: URL? = nil
-    var showingImagePicker: Bool = false
+    /// マウント後に提示する選択シートのコンテキスト。
+    /// nil = シート非表示。`.sheet(item:)` に bind 可能 (Identifiable)。
+    /// 旧 `pending*` × 7 + `showing*Picker` × 2 はこの 1 つに集約。
+    var pickerContext: DiskPickerContext? = nil
 
-    /// Archive file selection state
-    var pendingArchiveEntries: [ArchiveEntry] = []
-    var pendingArchiveURL: URL? = nil
-    /// アーカイブピッカー表示中、すでに展開済みのキャッシュディレクトリを保持。
-    var pendingArchiveCacheDir: URL? = nil
-    var showingArchiveFilePicker: Bool = false
+    // MARK: - 旧 pending*/showing* プロパティの互換 shim
+    //
+    // 既存の View / App コードが broken にならないよう、
+    // `pickerContext` を背後とする read-only / Bool 同期プロパティを提供する。
+
+    var pendingDiskImages: [D88Disk] {
+        if case .multiImageD88(let disks, _, _, _, _) = pickerContext { return disks }
+        return []
+    }
+    var pendingDiskURL: URL? {
+        if case .multiImageD88(_, let url, _, _, _) = pickerContext { return url }
+        return nil
+    }
+    var pendingArchiveEntryName: String? {
+        if case .multiImageD88(_, _, let name, _, _) = pickerContext { return name }
+        return nil
+    }
+    var pendingOriginArchiveURL: URL? {
+        if case .multiImageD88(_, _, _, let url, _) = pickerContext { return url }
+        return nil
+    }
+    var pendingArchiveEntries: [ArchiveEntry] {
+        if case .archiveEntries(let entries, _, _, _) = pickerContext { return entries }
+        return []
+    }
+    var pendingArchiveURL: URL? {
+        if case .archiveEntries(_, let url, _, _) = pickerContext { return url }
+        return nil
+    }
+    var pendingArchiveCacheDir: URL? {
+        if case .archiveEntries(_, _, let dir, _) = pickerContext { return dir }
+        return nil
+    }
+    var showingImagePicker: Bool {
+        get { if case .multiImageD88 = pickerContext { return true } else { return false } }
+        set { if !newValue, case .multiImageD88 = pickerContext { pickerContext = nil } }
+    }
+    var showingArchiveFilePicker: Bool {
+        get { if case .archiveEntries = pickerContext { return true } else { return false } }
+        set { if !newValue, case .archiveEntries = pickerContext { pickerContext = nil } }
+    }
 
     /// Number of rewind snapshots currently buffered. Observable so the
     /// Rewind menu item's `disabled` binding refreshes when the buffer
@@ -1379,6 +1411,30 @@ struct DiskImageGroup {
 }
 
 /// Metadata about a mounted disk source for menu-based disk switching.
+/// マウント直後に提示する選択シートの種別 + 必要 payload。
+/// 旧 8 個の `pending*` プロパティを 1 つの sum type に集約。
+/// `Identifiable` 適合により SwiftUI の `.sheet(item:)` に直接渡せる。
+enum DiskPickerContext: Identifiable {
+    /// アーカイブ内に複数 .d88 エントリがあって、どれをマウントするか選ぶ。
+    case archiveEntries(entries: [ArchiveEntry],
+                        archiveURL: URL,
+                        cacheDir: URL?,
+                        drive: Int)
+    /// 1 つの .d88 ファイル内に複数バンク (image) があって、どれをマウントするか選ぶ。
+    case multiImageD88(disks: [D88Disk],
+                       sourceURL: URL?,
+                       archiveEntryName: String?,
+                       originArchiveURL: URL?,
+                       drive: Int)
+
+    var id: String {
+        switch self {
+        case .archiveEntries: return "archiveEntries"
+        case .multiImageD88: return "multiImageD88"
+        }
+    }
+}
+
 struct MountedDiskInfo: Identifiable, Equatable {
     /// マウントセッションごとに発行される ID。SwiftUI 側で `.id()` /
     /// `.onChange(of:)` の差分検出に使う。

@@ -121,6 +121,18 @@ struct DiskCacheManager {
         return dir
     }
 
+    /// `ensureCached` のバックグラウンド実行版。
+    /// SHA256 計算と数 MB のファイル書込でメインスレッドを止めたくない場合に使う。
+    func ensureCachedDetached(archiveURL: URL,
+                              archiveData: Data,
+                              entries: [ArchiveEntry]) async throws -> URL {
+        try await Task.detached(priority: .userInitiated) { [self] in
+            try self.ensureCached(archiveURL: archiveURL,
+                                  archiveData: archiveData,
+                                  entries: entries)
+        }.value
+    }
+
     /// 既存キャッシュディレクトリ内の指定エントリ URL を返す。
     func cachedEntryURL(in cacheDir: URL, entryName: String) -> URL? {
         let normalized = Self.sanitizedFileName(entryName)

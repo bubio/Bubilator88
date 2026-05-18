@@ -14,9 +14,10 @@ import Foundation
 /// eject / アプリ終了 / save state load 直前は `flushNow(drive:)` /
 /// `flushAll()` で同期書き戻しを強制する。
 ///
-/// メインスレッドの `Timer` を使用する。`writeBack` クロージャもメインスレッド
-/// で呼ばれる前提。`schedule` / `flushNow` / `flushAll` はすべてメインスレッド
-/// から呼ぶこと (emulation thread からは `DispatchQueue.main.async` 経由)。
+/// メインスレッドの `Timer` を使用する。`@MainActor` 強制により、誤って
+/// 他スレッドから呼ぶとコンパイル時に検出される。emulation thread からは
+/// `Task { @MainActor in ... }` 経由で呼び出すこと。
+@MainActor
 final class DiskWriteBackScheduler {
 
     /// drive 番号 → 実書込クロージャ。ViewModel から注入する。
@@ -34,8 +35,13 @@ final class DiskWriteBackScheduler {
     /// 再起動 (連続書込中は永遠に延長される)。
     func schedule(drive: Int) {
         pending[drive]?.invalidate()
+        // Timer のクロージャは Swift Concurrency 的には nonisolated だが、
+        // メインスレッド RunLoop で実行されるので MainActor.assumeIsolated で
+        // ランタイム保証する。
         let timer = Timer.scheduledTimer(withTimeInterval: debounceInterval, repeats: false) { [weak self] _ in
-            self?.fire(drive: drive)
+            MainActor.assumeIsolated {
+                self?.fire(drive: drive)
+            }
         }
         pending[drive] = timer
     }

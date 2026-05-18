@@ -128,119 +128,165 @@ extension EmulatorViewModel {
         return (samples, sampleRate)
     }
 
+    // MARK: - Drive state types
+
+    /// マウント先ドライブ指定。`mountDisk(url:drive:)` の `Int` (legacy) を
+    /// 内部で型化したもの。`-1` magic value を撤廃。
+    enum MountTarget {
+        case drive(Int)
+        case both       // Mount 0&1 mode (旧 drive == -1)
+
+        static func from(legacy drive: Int) -> MountTarget {
+            drive == -1 ? .both : .drive(drive)
+        }
+    }
+
+    /// 1 ドライブ分の表示・状態スナップショット。
+    /// マウント / スイッチ / 排出時、複数プロパティを 1 アクションでまとめて
+    /// 書き換えるための一時的な値オブジェクト。
+    struct DriveState {
+        let name: String
+        let fileName: String?
+        let info: MountedDiskInfo?
+        let writeProtected: Bool
+
+        static let empty = DriveState(name: "Empty", fileName: nil, info: nil, writeProtected: false)
+    }
+
+    /// 1 ドライブの全表示プロパティ (name/fileName/info/writeProtected) を
+    /// 1 つの関数で更新する。`if drive == 0 { drive0X = ... } else ...` の
+    /// 散在を集約し、SwiftUI の Observable 再描画の意図を明示する。
+    func applyDriveState(_ state: DriveState, drive: Int) {
+        if drive == 0 {
+            drive0Name = state.name
+            drive0FileName = state.fileName
+            drive0Info = state.info
+            drive0WriteProtected = state.writeProtected
+        } else {
+            drive1Name = state.name
+            drive1FileName = state.fileName
+            drive1Info = state.info
+            drive1WriteProtected = state.writeProtected
+        }
+    }
+
     // MARK: - Disk Operations
 
     /// Open a D88 disk image file (or archive containing D88 files) and mount it.
     /// Multi-image D88 files trigger an image selection sheet.
     /// Archives with multiple D88 files trigger an archive file picker.
-    /// drive == -1 triggers "Mount 0&1" mode.
+    /// `drive == -1` (legacy) triggers "Mount 0&1" mode — 内部では
+    /// `MountTarget.both` に変換される。
     func mountDisk(url: URL, drive: Int) {
+        mountDisk(url: url, target: MountTarget.from(legacy: drive))
+    }
+
+    /// 型安全版エントリポイント。
+    /// 役割はファイル読込と「archive / direct」ディスパッチのみ。
+    /// 具体的なマウント処理は `mountArchive` / `mountDirectD88` に委譲する。
+    func mountDisk(url: URL, target: MountTarget) {
         let accessing = url.startAccessingSecurityScopedResource()
         defer { if accessing { url.stopAccessingSecurityScopedResource() } }
         guard let data = try? Data(contentsOf: url) else {
-            presentDiskLoadErrorAlert(
-                fileName: url.lastPathComponent,
-                reason: .unreadable
-            )
+            presentDiskLoadErrorAlert(fileName: url.lastPathComponent, reason: .unreadable)
             return
         }
-
-        // Record in recent files
         Settings.shared.addRecentFile(url: url)
 
-        // Check for archive formats (ZIP, LZH, CAB, RAR)
         if let entries = ArchiveExtractor.extractDiskImages(data) {
-            if entries.isEmpty {
-                presentDiskLoadErrorAlert(
-                    fileName: url.lastPathComponent,
-                    reason: .emptyArchive
-                )
-                return
-            }
-            // アーカイブを展開キャッシュへ書き出す (初回のみ実体書込)。
-            // 書き戻し先 sourceURL はキャッシュ内ファイル URL に切り替える。
-            // キャッシュ作成失敗時は in-memory フォールバックで進めるが、
-            // 書き戻しは ModifiedDisks フォールバックに流れる。
-            let cache = DiskCacheManager.shared
-            let cacheDir: URL?
-            do {
-                cacheDir = try cache.ensureCached(archiveURL: url,
-                                                   archiveData: data,
-                                                   entries: entries)
-            } catch {
-                cacheDir = nil
-                showAlert(
-                    title: NSLocalizedString("Disk Cache Unavailable", comment: ""),
-                    message: error.localizedDescription
-                )
-            }
-            if drive == -1 {
-                // Mount 0&1: collect all D88 images across archive entries
-                var allDisks: [(disk: D88Disk, name: String, entryName: String)] = []
-                var groups: [DiskImageGroup] = []
-                for entry in entries {
-                    let disks = D88Disk.parseAll(data: Array(cache.resolvedData(for: entry, in: cacheDir)))
-                    let baseName = (entry.filename as NSString).deletingPathExtension
-                    groups.append(DiskImageGroup(d88FileName: baseName,
-                                                 startIndex: allDisks.count, count: disks.count))
-                    for disk in disks {
-                        allDisks.append((disk,
-                                         disk.name.isEmpty ? baseName : disk.name,
-                                         entry.filename))
-                    }
-                }
-                let allImages = allDisks.map(\.disk)
-                let allNames = allDisks.map(\.name)
-                let fileName = url.deletingPathExtension().lastPathComponent
-                if let first = allDisks.first {
-                    let entryURL = cacheDir.flatMap {
-                        cache.cachedEntryURL(in: $0, entryName: first.entryName)
-                    }
-                    mountDiskImageDirect(first.disk, name: first.name, drive: 0,
-                                         allImages: allImages, imageNames: allNames, imageIndex: 0,
-                                         sourceURL: entryURL,
-                                         archiveEntryName: first.entryName,
-                                         originArchiveURL: url,
-                                         fileName: fileName,
-                                         imageGroups: groups)
-                }
-                if allDisks.count >= 2 {
-                    let second = allDisks[1]
-                    let entryURL = cacheDir.flatMap {
-                        cache.cachedEntryURL(in: $0, entryName: second.entryName)
-                    }
-                    mountDiskImageDirect(second.disk, name: second.name, drive: 1,
-                                         allImages: allImages, imageNames: allNames, imageIndex: 1,
-                                         sourceURL: entryURL,
-                                         archiveEntryName: second.entryName,
-                                         originArchiveURL: url,
-                                         fileName: fileName,
-                                         imageGroups: groups)
-                } else {
-                    ejectDisk(drive: 1)
-                }
-                return
-            }
-            if entries.count == 1 {
-                let entryURL = cacheDir.flatMap {
-                    cache.cachedEntryURL(in: $0, entryName: entries[0].filename)
-                }
-                mountDiskData(Array(cache.resolvedData(for: entries[0], in: cacheDir)),
-                              name: entries[0].filename, drive: drive,
-                              sourceURL: entryURL, archiveEntryName: entries[0].filename,
-                              originArchiveURL: url)
-                return
-            }
-            // Multiple D88 files in archive → show archive file picker
-            pendingArchiveEntries = entries
-            pendingArchiveURL = url
-            pendingArchiveCacheDir = cacheDir
-            diskPickerDrive = drive
-            showingArchiveFilePicker = true
+            mountArchive(url: url, data: data, entries: entries, target: target)
+        } else {
+            mountDirectD88(url: url, data: data, target: target)
+        }
+    }
+
+    // MARK: - Archive mount path
+
+    private func mountArchive(url: URL, data: Data,
+                              entries: [ArchiveEntry], target: MountTarget) {
+        guard !entries.isEmpty else {
+            presentDiskLoadErrorAlert(fileName: url.lastPathComponent, reason: .emptyArchive)
             return
         }
+        // キャッシュ作成失敗時は in-memory フォールバックで進めるが、
+        // 書き戻しは ModifiedDisks フォールバックに流れる。
+        let cache = DiskCacheManager.shared
+        let cacheDir: URL?
+        do {
+            cacheDir = try cache.ensureCached(archiveURL: url, archiveData: data, entries: entries)
+        } catch {
+            cacheDir = nil
+            showAlert(
+                title: NSLocalizedString("Disk Cache Unavailable", comment: ""),
+                message: error.localizedDescription
+            )
+        }
+        switch target {
+        case .both:
+            mountArchiveBoth(url: url, entries: entries, cacheDir: cacheDir, cache: cache)
+        case .drive(let drive):
+            if entries.count == 1 {
+                let entry = entries[0]
+                let entryURL = cacheDir.flatMap {
+                    cache.cachedEntryURL(in: $0, entryName: entry.filename)
+                }
+                mountDiskData(Array(cache.resolvedData(for: entry, in: cacheDir)),
+                              name: entry.filename, drive: drive,
+                              sourceURL: entryURL, archiveEntryName: entry.filename,
+                              originArchiveURL: url)
+            } else {
+                // Multiple D88 files in archive → show archive file picker
+                pickerContext = .archiveEntries(entries: entries, archiveURL: url,
+                                                 cacheDir: cacheDir, drive: drive)
+                diskPickerDrive = drive
+            }
+        }
+    }
 
-        // Direct D88 file
+    /// Mount 0&1: flatten all D88 images across archive entries, place
+    /// images[0] on drive 0 and images[1] on drive 1.
+    private func mountArchiveBoth(url: URL, entries: [ArchiveEntry],
+                                   cacheDir: URL?, cache: DiskCacheManager) {
+        var allDisks: [(disk: D88Disk, name: String, entryName: String)] = []
+        var groups: [DiskImageGroup] = []
+        for entry in entries {
+            let disks = D88Disk.parseAll(data: Array(cache.resolvedData(for: entry, in: cacheDir)))
+            let baseName = (entry.filename as NSString).deletingPathExtension
+            groups.append(DiskImageGroup(d88FileName: baseName,
+                                         startIndex: allDisks.count, count: disks.count))
+            for disk in disks {
+                allDisks.append((disk, disk.name.isEmpty ? baseName : disk.name, entry.filename))
+            }
+        }
+        let allImages = allDisks.map(\.disk)
+        let allNames = allDisks.map(\.name)
+        let fileName = url.deletingPathExtension().lastPathComponent
+
+        func mountSlot(_ slot: (disk: D88Disk, name: String, entryName: String),
+                       drive: Int, imageIndex: Int) {
+            let entryURL = cacheDir.flatMap {
+                cache.cachedEntryURL(in: $0, entryName: slot.entryName)
+            }
+            mountDiskImageDirect(DirectMountRequest(
+                disk: slot.disk, name: slot.name, drive: drive,
+                allImages: allImages, imageNames: allNames, imageIndex: imageIndex,
+                sourceURL: entryURL, archiveEntryName: slot.entryName,
+                originArchiveURL: url, fileName: fileName, imageGroups: groups
+            ))
+        }
+        if let first = allDisks.first {
+            mountSlot(first, drive: 0, imageIndex: 0)
+        }
+        if allDisks.count >= 2 {
+            mountSlot(allDisks[1], drive: 1, imageIndex: 1)
+        } else {
+            ejectDisk(drive: 1)
+        }
+    }
+
+    // MARK: - Direct .d88 mount path
+
+    private func mountDirectD88(url: URL, data: Data, target: MountTarget) {
         let disks = D88Disk.parseAll(data: Array(data))
         guard !disks.isEmpty else {
             presentDiskLoadErrorAlert(
@@ -250,22 +296,23 @@ extension EmulatorViewModel {
             return
         }
 
-        if drive == -1 {
+        switch target {
+        case .both:
             mountDiskImage(disks[0], allImages: disks, imageIndex: 0, url: url, drive: 0)
             if disks.count >= 2 {
                 mountDiskImage(disks[1], allImages: disks, imageIndex: 1, url: url, drive: 1)
             } else {
                 ejectDisk(drive: 1)
             }
-            return
-        }
-
-        if disks.count == 1 {
-            mountDiskImage(disks[0], allImages: disks, imageIndex: 0, url: url, drive: drive)
-        } else {
-            pendingDiskImages = disks
-            pendingDiskURL = url
-            showingImagePicker = true
+        case .drive(let drive):
+            if disks.count == 1 {
+                mountDiskImage(disks[0], allImages: disks, imageIndex: 0, url: url, drive: drive)
+            } else {
+                pickerContext = .multiImageD88(disks: disks, sourceURL: url,
+                                                archiveEntryName: nil,
+                                                originArchiveURL: nil, drive: drive)
+                diskPickerDrive = drive
+            }
         }
     }
 
@@ -287,46 +334,59 @@ extension EmulatorViewModel {
             let fileName = (name as NSString).deletingPathExtension
             let imageNames = disks.map { $0.name.isEmpty ? fileName : $0.name }
             let groups = [DiskImageGroup(d88FileName: fileName, startIndex: 0, count: disks.count)]
-            mountDiskImageDirect(disk, name: imageNames[0], drive: drive,
-                                 allImages: disks, imageNames: imageNames, imageIndex: 0,
-                                 sourceURL: sourceURL, archiveEntryName: archiveEntryName,
-                                 originArchiveURL: originArchiveURL,
-                                 fileName: fileName, imageGroups: groups)
+            mountDiskImageDirect(DirectMountRequest(
+                disk: disk, name: imageNames[0], drive: drive,
+                allImages: disks, imageNames: imageNames, imageIndex: 0,
+                sourceURL: sourceURL, archiveEntryName: archiveEntryName,
+                originArchiveURL: originArchiveURL,
+                fileName: fileName, imageGroups: groups
+            ))
         } else {
             // Multi-image D88 inside archive → show image picker
-            pendingDiskImages = disks
-            pendingDiskURL = sourceURL
-            pendingArchiveEntryName = archiveEntryName
-            pendingOriginArchiveURL = originArchiveURL
+            pickerContext = .multiImageD88(disks: disks,
+                                            sourceURL: sourceURL,
+                                            archiveEntryName: archiveEntryName,
+                                            originArchiveURL: originArchiveURL,
+                                            drive: drive)
             diskPickerDrive = drive
-            showingImagePicker = true
         }
     }
 
+    /// `mountDiskImageDirect` のパラメータ群。
+    /// 9 引数を struct に集約することで「引数の渡し漏れ」「位置間違い」を防ぎ、
+    /// 呼出側の可読性を確保する。
+    struct DirectMountRequest {
+        let disk: D88Disk
+        let name: String
+        let drive: Int
+        let allImages: [D88Disk]
+        let imageNames: [String]
+        let imageIndex: Int
+        let sourceURL: URL?
+        let archiveEntryName: String?
+        let originArchiveURL: URL?
+        let fileName: String
+        let imageGroups: [DiskImageGroup]
+    }
+
     /// Mount a parsed D88Disk directly to a specific drive with full metadata.
-    private func mountDiskImageDirect(_ disk: D88Disk, name: String, drive: Int,
-                                       allImages: [D88Disk], imageNames: [String], imageIndex: Int,
-                                       sourceURL: URL?, archiveEntryName: String? = nil,
-                                       originArchiveURL: URL? = nil,
-                                       fileName: String, imageGroups: [DiskImageGroup]) {
-        diskWriteBackScheduler.flushNow(drive: drive)
+    private func mountDiskImageDirect(_ req: DirectMountRequest) {
+        diskWriteBackScheduler.flushNow(drive: req.drive)
         emuQueue.sync {
-            machine.mountDisk(drive: drive, disk: disk)
+            machine.mountDisk(drive: req.drive, disk: req.disk)
         }
         clearRewindBuffer()
-        let info = MountedDiskInfo(sourceURL: sourceURL, archiveEntryName: archiveEntryName,
-                                    originArchiveURL: originArchiveURL,
-                                    allImages: allImages, imageNames: imageNames,
-                                    currentImageIndex: imageIndex, fileName: fileName,
-                                    imageGroups: imageGroups)
-        if drive == 0 {
-            drive0Name = name; drive0FileName = fileName; drive0Info = info
-            drive0WriteProtected = disk.writeProtected
-        } else {
-            drive1Name = name; drive1FileName = fileName; drive1Info = info
-            drive1WriteProtected = disk.writeProtected
-        }
-        // (mount confirmation not shown — no user-facing toast needed)
+        let info = MountedDiskInfo(sourceURL: req.sourceURL,
+                                    archiveEntryName: req.archiveEntryName,
+                                    originArchiveURL: req.originArchiveURL,
+                                    allImages: req.allImages, imageNames: req.imageNames,
+                                    currentImageIndex: req.imageIndex,
+                                    fileName: req.fileName, imageGroups: req.imageGroups)
+        applyDriveState(
+            DriveState(name: req.name, fileName: req.fileName, info: info,
+                       writeProtected: req.disk.writeProtected),
+            drive: req.drive
+        )
     }
 
     /// Mount the selected file from an archive.
@@ -338,31 +398,26 @@ extension EmulatorViewModel {
             cache.cachedEntryURL(in: $0, entryName: entry.filename)
         }
         let bytes = Array(cache.resolvedData(for: entry, in: pendingArchiveCacheDir))
+        let archiveURL = pendingArchiveURL
+        // archive ピッカーは閉じる。
+        // 中の D88 が multi-image なら mountDiskData が改めて
+        // `.multiImageD88` を立てる (= ピッカーが入れ替わる)。
+        pickerContext = nil
         mountDiskData(bytes, name: entry.filename, drive: diskPickerDrive,
                       sourceURL: entryURL, archiveEntryName: entry.filename,
-                      originArchiveURL: pendingArchiveURL)
-        pendingArchiveEntries = []
-        pendingArchiveURL = nil
-        pendingArchiveCacheDir = nil
-        showingArchiveFilePicker = false
+                      originArchiveURL: archiveURL)
     }
 
     /// Mount the selected image from a multi-image D88 file.
     func mountSelectedImage(index: Int) {
-        guard index >= 0 && index < pendingDiskImages.count else { return }
-        let disk = pendingDiskImages[index]
-        let url = pendingDiskURL
-        let allImages = pendingDiskImages
-        let entryName = pendingArchiveEntryName
-        let originArchive = pendingOriginArchiveURL
-        mountDiskImage(disk, allImages: allImages, imageIndex: index, url: url,
+        guard case .multiImageD88(let disks, let url, let entryName, let originArchive, _)
+                = pickerContext,
+              index >= 0, index < disks.count else { return }
+        let disk = disks[index]
+        pickerContext = nil
+        mountDiskImage(disk, allImages: disks, imageIndex: index, url: url,
                        drive: diskPickerDrive, archiveEntryName: entryName,
                        originArchiveURL: originArchive)
-        pendingDiskImages = []
-        pendingDiskURL = nil
-        pendingArchiveEntryName = nil
-        pendingOriginArchiveURL = nil
-        showingImagePicker = false
     }
 
     private func mountDiskImage(_ disk: D88Disk, allImages: [D88Disk], imageIndex: Int,
@@ -392,14 +447,11 @@ extension EmulatorViewModel {
                                     allImages: allImages, imageNames: imageNames,
                                     currentImageIndex: imageIndex, fileName: fileName,
                                     imageGroups: groups)
-        if drive == 0 {
-            drive0Name = displayName; drive0FileName = fileName; drive0Info = info
-            drive0WriteProtected = disk.writeProtected
-        } else {
-            drive1Name = displayName; drive1FileName = fileName; drive1Info = info
-            drive1WriteProtected = disk.writeProtected
-        }
-        // (mount confirmation not shown)
+        applyDriveState(
+            DriveState(name: displayName, fileName: fileName, info: info,
+                       writeProtected: disk.writeProtected),
+            drive: drive
+        )
     }
 
     /// Switch to a different disk image within the same source file.
@@ -415,14 +467,11 @@ extension EmulatorViewModel {
         var updated = info
         updated.currentImageIndex = index
         let displayName = info.imageNames[index]
-        if drive == 0 {
-            drive0Info = updated; drive0Name = displayName
-            drive0WriteProtected = disk.writeProtected
-        } else {
-            drive1Info = updated; drive1Name = displayName
-            drive1WriteProtected = disk.writeProtected
-        }
-        // (switch confirmation not shown)
+        applyDriveState(
+            DriveState(name: displayName, fileName: info.fileName, info: updated,
+                       writeProtected: disk.writeProtected),
+            drive: drive
+        )
     }
 
     /// Toggle the write-protect flag on the disk mounted in the specified drive.
@@ -447,17 +496,7 @@ extension EmulatorViewModel {
             machine.ejectDisk(drive: drive)
         }
         clearRewindBuffer()
-        if drive == 0 {
-            drive0Name = "Empty"
-            drive0FileName = nil
-            drive0Info = nil
-            drive0WriteProtected = false
-        } else {
-            drive1Name = "Empty"
-            drive1FileName = nil
-            drive1Info = nil
-            drive1WriteProtected = false
-        }
+        applyDriveState(.empty, drive: drive)
         // FDD boot is always the default; no need to revert to ROM boot
         // (eject confirmation not shown)
     }
@@ -593,15 +632,11 @@ extension EmulatorViewModel {
 extension EmulatorViewModel {
 
     /// `SubSystem.onDiskWritten` から呼ばれるエントリポイント。
-    /// emulation thread から呼ばれるためメインスレッドへホップしてから
-    /// scheduler を叩く。
-    func diskDirtyNotification(drive: Int) {
-        if Thread.isMainThread {
-            diskWriteBackScheduler.schedule(drive: drive)
-        } else {
-            DispatchQueue.main.async { [weak self] in
-                self?.diskWriteBackScheduler.schedule(drive: drive)
-            }
+    /// emulation thread から呼ばれる前提なので、必ず MainActor に hop してから
+    /// scheduler を叩く (scheduler は `@MainActor` 必須)。
+    nonisolated func diskDirtyNotification(drive: Int) {
+        Task { @MainActor [weak self] in
+            self?.diskWriteBackScheduler.schedule(drive: drive)
         }
     }
 
