@@ -162,4 +162,131 @@ struct DiskCacheManagerTests {
         let resolved = cache.resolvedData(for: entry, in: nil)
         #expect(resolved == Data([0x42]))
     }
+
+    // MARK: - enumerateCachedDisks / export
+
+    @Test("enumerate: returns all cached .d88 with origin metadata")
+    func enumerateLists() throws {
+        let (cache, root) = makeTempCache()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        // 存在するアーカイブ
+        let existingArchive = root.appendingPathComponent("present.zip")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try Data([0x50, 0x4B]).write(to: existingArchive)
+        _ = try cache.ensureCached(archiveURL: existingArchive,
+                                    archiveData: Data(repeating: 1, count: 64),
+                                    entries: [makeEntry("a.d88"), makeEntry("b.d88")])
+
+        // 存在しないアーカイブ (path だけ記録、ファイルは作らない)
+        let missingArchive = URL(fileURLWithPath: "/tmp/nonexistent-\(UUID().uuidString).zip")
+        _ = try cache.ensureCached(archiveURL: missingArchive,
+                                    archiveData: Data(repeating: 2, count: 64),
+                                    entries: [makeEntry("c.d88")])
+
+        let cached = cache.enumerateCachedDisks()
+        #expect(cached.count == 3)
+        let present = cached.filter { $0.originalExists }
+        let orphan = cached.filter { !$0.originalExists }
+        #expect(present.count == 2)
+        #expect(orphan.count == 1)
+        #expect(orphan.first?.diskURL.lastPathComponent == "c.d88")
+    }
+
+    @Test("export: copies all disks when orphansOnly = false")
+    func exportAll() throws {
+        let (cache, root) = makeTempCache()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let dest = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("export-dest-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dest) }
+
+        let archive = URL(fileURLWithPath: "/tmp/nonexistent-\(UUID().uuidString).zip")
+        _ = try cache.ensureCached(archiveURL: archive,
+                                    archiveData: Data(repeating: 3, count: 32),
+                                    entries: [makeEntry("x.d88", bytes: [0x11]),
+                                              makeEntry("y.d88", bytes: [0x22])])
+
+        let result = try cache.exportCachedDisks(to: dest, orphansOnly: false)
+        #expect(result.exported == 2)
+        #expect(result.skipped == 0)
+        #expect(FileManager.default.fileExists(atPath: dest.appendingPathComponent("x.d88").path))
+        #expect(FileManager.default.fileExists(atPath: dest.appendingPathComponent("y.d88").path))
+    }
+
+    @Test("export: orphansOnly skips disks whose archive still exists")
+    func exportOrphansOnly() throws {
+        let (cache, root) = makeTempCache()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let dest = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("export-dest-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dest) }
+
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let present = root.appendingPathComponent("p.zip")
+        try Data([0]).write(to: present)
+        _ = try cache.ensureCached(archiveURL: present,
+                                    archiveData: Data(repeating: 4, count: 16),
+                                    entries: [makeEntry("present.d88")])
+
+        let missing = URL(fileURLWithPath: "/tmp/missing-\(UUID().uuidString).zip")
+        _ = try cache.ensureCached(archiveURL: missing,
+                                    archiveData: Data(repeating: 5, count: 16),
+                                    entries: [makeEntry("orphan.d88")])
+
+        let result = try cache.exportCachedDisks(to: dest, orphansOnly: true)
+        #expect(result.exported == 1)
+        #expect(result.skipped == 1)
+        #expect(FileManager.default.fileExists(atPath: dest.appendingPathComponent("orphan.d88").path))
+        #expect(!FileManager.default.fileExists(atPath: dest.appendingPathComponent("present.d88").path))
+    }
+
+    @Test("export: name collisions get -2, -3 suffix")
+    func exportNameCollision() throws {
+        let (cache, root) = makeTempCache()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let dest = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("export-dest-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dest) }
+        // 先に同名ファイルを置いておく
+        try Data([0xAA]).write(to: dest.appendingPathComponent("dup.d88"))
+
+        // 別アーカイブから dup.d88 を 2 つ展開
+        let a = URL(fileURLWithPath: "/tmp/a-\(UUID().uuidString).zip")
+        _ = try cache.ensureCached(archiveURL: a,
+                                    archiveData: Data(repeating: 6, count: 8),
+                                    entries: [makeEntry("dup.d88", bytes: [0x01])])
+        let b = URL(fileURLWithPath: "/tmp/b-\(UUID().uuidString).zip")
+        _ = try cache.ensureCached(archiveURL: b,
+                                    archiveData: Data(repeating: 7, count: 8),
+                                    entries: [makeEntry("dup.d88", bytes: [0x02])])
+
+        let result = try cache.exportCachedDisks(to: dest, orphansOnly: false)
+        #expect(result.exported == 2)
+        let fm = FileManager.default
+        #expect(fm.fileExists(atPath: dest.appendingPathComponent("dup.d88").path))   // 既存
+        #expect(fm.fileExists(atPath: dest.appendingPathComponent("dup-2.d88").path)) // 1 件目
+        #expect(fm.fileExists(atPath: dest.appendingPathComponent("dup-3.d88").path)) // 2 件目
+    }
+
+    @Test("uniqueDestinationURL: handles files without extension")
+    func uniqueNoExtension() throws {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("UDU-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let first = DiskCacheManager.uniqueDestinationURL(in: dir, baseName: "noext")
+        #expect(first.lastPathComponent == "noext")
+
+        try Data().write(to: first)
+        let second = DiskCacheManager.uniqueDestinationURL(in: dir, baseName: "noext")
+        #expect(second.lastPathComponent == "noext-2")
+    }
 }
