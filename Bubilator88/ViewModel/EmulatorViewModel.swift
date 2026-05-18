@@ -405,11 +405,15 @@ final class EmulatorViewModel {
     var pendingDiskImages: [D88Disk] = []
     var pendingDiskURL: URL? = nil
     var pendingArchiveEntryName: String? = nil
+    /// 多画像 D88 ピッカーで、アーカイブ由来時の元アーカイブ URL を保持。
+    var pendingOriginArchiveURL: URL? = nil
     var showingImagePicker: Bool = false
 
     /// Archive file selection state
     var pendingArchiveEntries: [ArchiveEntry] = []
     var pendingArchiveURL: URL? = nil
+    /// アーカイブピッカー表示中、すでに展開済みのキャッシュディレクトリを保持。
+    var pendingArchiveCacheDir: URL? = nil
     var showingArchiveFilePicker: Bool = false
 
     /// Number of rewind snapshots currently buffered. Observable so the
@@ -1153,6 +1157,10 @@ final class EmulatorViewModel {
 
             // Check if source is an archive
             if let archiveEntries = ArchiveExtractor.extractDiskImages(data) {
+                // アーカイブをキャッシュ展開して書き戻し先を確保
+                let cacheDir = DiskCacheManager.ensureCached(archiveURL: url,
+                                                              archiveData: data,
+                                                              entries: archiveEntries)
                 if let entryName = archiveEntry {
                     // Specific entry within archive
                     if let entry = archiveEntries.first(where: { $0.filename == entryName }) {
@@ -1165,7 +1173,12 @@ final class EmulatorViewModel {
                             let groups = [DiskImageGroup(d88FileName: d88Name,
                                                          startIndex: 0, count: allImages.count)]
                             let index = min(savedImageIndex ?? 0, allImages.count - 1)
-                            return MountedDiskInfo(sourceURL: url, archiveEntryName: entryName,
+                            let cacheEntryURL = cacheDir.flatMap {
+                                DiskCacheManager.cachedEntryURL(in: $0, entryName: entryName)
+                            }
+                            return MountedDiskInfo(sourceURL: cacheEntryURL,
+                                                   archiveEntryName: entryName,
+                                                   originArchiveURL: url,
                                                    allImages: allImages, imageNames: imageNames,
                                                    currentImageIndex: index, fileName: fileName,
                                                    imageGroups: groups)
@@ -1186,7 +1199,9 @@ final class EmulatorViewModel {
                     }
                     if !allDisks.isEmpty {
                         let index = min(savedImageIndex ?? 0, allDisks.count - 1)
-                        return MountedDiskInfo(sourceURL: url, archiveEntryName: nil,
+                        return MountedDiskInfo(sourceURL: url,
+                                               archiveEntryName: nil,
+                                               originArchiveURL: url,
                                                allImages: allDisks.map(\.disk),
                                                imageNames: allDisks.map(\.name),
                                                currentImageIndex: index, fileName: fileName,
@@ -1203,7 +1218,9 @@ final class EmulatorViewModel {
                     let groups = [DiskImageGroup(d88FileName: fileName,
                                                  startIndex: 0, count: allImages.count)]
                     let index = min(savedImageIndex ?? 0, allImages.count - 1)
-                    return MountedDiskInfo(sourceURL: url, archiveEntryName: nil,
+                    return MountedDiskInfo(sourceURL: url,
+                                           archiveEntryName: nil,
+                                           originArchiveURL: nil,
                                            allImages: allImages, imageNames: imageNames,
                                            currentImageIndex: index, fileName: fileName,
                                            imageGroups: groups)
@@ -1213,7 +1230,9 @@ final class EmulatorViewModel {
 
         // Fallback: single disk from restored state
         let name = disk.name.isEmpty ? fileName : disk.name
-        return MountedDiskInfo(sourceURL: nil, archiveEntryName: nil,
+        return MountedDiskInfo(sourceURL: nil,
+                               archiveEntryName: nil,
+                               originArchiveURL: nil,
                                allImages: [disk], imageNames: [name],
                                currentImageIndex: 0, fileName: fileName,
                                imageGroups: [DiskImageGroup(d88FileName: fileName,
@@ -1359,8 +1378,15 @@ struct DiskImageGroup {
 
 /// Metadata about a mounted disk source for menu-based disk switching.
 struct MountedDiskInfo {
+    /// 書き戻し先 URL。アーカイブ由来時は DiskCacheManager のキャッシュ内
+    /// .d88 ファイル URL を指す。直接 .d88 マウント時は元ファイル URL。
     let sourceURL: URL?
+    /// 元アーカイブ内でのエントリ名 (NFC 正規化前)。
+    /// アーカイブ非由来 (直接 .d88) なら nil。
     let archiveEntryName: String?
+    /// 元アーカイブの URL (アーカイブ由来時のみ)。
+    /// 「最近使ったファイル」やセーブステート復元の起点に使う。
+    let originArchiveURL: URL?
     let allImages: [D88Disk]
     let imageNames: [String]
     var currentImageIndex: Int

@@ -157,9 +157,14 @@ extension EmulatorViewModel {
                 )
                 return
             }
+            // アーカイブを展開キャッシュへ書き出す (初回のみ実体書込)。
+            // 書き戻し先 sourceURL はキャッシュ内ファイル URL に切り替える。
+            let cacheDir = DiskCacheManager.ensureCached(archiveURL: url,
+                                                          archiveData: data,
+                                                          entries: entries)
             if drive == -1 {
                 // Mount 0&1: collect all D88 images across archive entries
-                var allDisks: [(disk: D88Disk, name: String)] = []
+                var allDisks: [(disk: D88Disk, name: String, entryName: String)] = []
                 var groups: [DiskImageGroup] = []
                 for entry in entries {
                     let disks = D88Disk.parseAll(data: Array(entry.data))
@@ -167,22 +172,37 @@ extension EmulatorViewModel {
                     groups.append(DiskImageGroup(d88FileName: baseName,
                                                  startIndex: allDisks.count, count: disks.count))
                     for disk in disks {
-                        allDisks.append((disk, disk.name.isEmpty ? baseName : disk.name))
+                        allDisks.append((disk,
+                                         disk.name.isEmpty ? baseName : disk.name,
+                                         entry.filename))
                     }
                 }
                 let allImages = allDisks.map(\.disk)
                 let allNames = allDisks.map(\.name)
                 let fileName = url.deletingPathExtension().lastPathComponent
                 if let first = allDisks.first {
+                    let entryURL = cacheDir.flatMap {
+                        DiskCacheManager.cachedEntryURL(in: $0, entryName: first.entryName)
+                    }
                     mountDiskImageDirect(first.disk, name: first.name, drive: 0,
                                          allImages: allImages, imageNames: allNames, imageIndex: 0,
-                                         sourceURL: url, fileName: fileName,
+                                         sourceURL: entryURL,
+                                         archiveEntryName: first.entryName,
+                                         originArchiveURL: url,
+                                         fileName: fileName,
                                          imageGroups: groups)
                 }
                 if allDisks.count >= 2 {
-                    mountDiskImageDirect(allDisks[1].disk, name: allDisks[1].name, drive: 1,
+                    let second = allDisks[1]
+                    let entryURL = cacheDir.flatMap {
+                        DiskCacheManager.cachedEntryURL(in: $0, entryName: second.entryName)
+                    }
+                    mountDiskImageDirect(second.disk, name: second.name, drive: 1,
                                          allImages: allImages, imageNames: allNames, imageIndex: 1,
-                                         sourceURL: url, fileName: fileName,
+                                         sourceURL: entryURL,
+                                         archiveEntryName: second.entryName,
+                                         originArchiveURL: url,
+                                         fileName: fileName,
                                          imageGroups: groups)
                 } else {
                     ejectDisk(drive: 1)
@@ -190,13 +210,18 @@ extension EmulatorViewModel {
                 return
             }
             if entries.count == 1 {
+                let entryURL = cacheDir.flatMap {
+                    DiskCacheManager.cachedEntryURL(in: $0, entryName: entries[0].filename)
+                }
                 mountDiskData(Array(entries[0].data), name: entries[0].filename, drive: drive,
-                              sourceURL: url, archiveEntryName: entries[0].filename)
+                              sourceURL: entryURL, archiveEntryName: entries[0].filename,
+                              originArchiveURL: url)
                 return
             }
             // Multiple D88 files in archive → show archive file picker
             pendingArchiveEntries = entries
             pendingArchiveURL = url
+            pendingArchiveCacheDir = cacheDir
             diskPickerDrive = drive
             showingArchiveFilePicker = true
             return
@@ -234,7 +259,8 @@ extension EmulatorViewModel {
     /// Mount a D88 from raw bytes (extracted from archive).
     /// `drive` must be 0 or 1 (not -1; Mount 0&1 is handled by the caller).
     private func mountDiskData(_ data: [UInt8], name: String, drive: Int,
-                               sourceURL: URL?, archiveEntryName: String? = nil) {
+                               sourceURL: URL?, archiveEntryName: String? = nil,
+                               originArchiveURL: URL? = nil) {
         let disks = D88Disk.parseAll(data: data)
         guard !disks.isEmpty else {
             presentDiskLoadErrorAlert(
@@ -251,12 +277,14 @@ extension EmulatorViewModel {
             mountDiskImageDirect(disk, name: imageNames[0], drive: drive,
                                  allImages: disks, imageNames: imageNames, imageIndex: 0,
                                  sourceURL: sourceURL, archiveEntryName: archiveEntryName,
+                                 originArchiveURL: originArchiveURL,
                                  fileName: fileName, imageGroups: groups)
         } else {
             // Multi-image D88 inside archive → show image picker
             pendingDiskImages = disks
             pendingDiskURL = sourceURL
             pendingArchiveEntryName = archiveEntryName
+            pendingOriginArchiveURL = originArchiveURL
             diskPickerDrive = drive
             showingImagePicker = true
         }
@@ -266,6 +294,7 @@ extension EmulatorViewModel {
     private func mountDiskImageDirect(_ disk: D88Disk, name: String, drive: Int,
                                        allImages: [D88Disk], imageNames: [String], imageIndex: Int,
                                        sourceURL: URL?, archiveEntryName: String? = nil,
+                                       originArchiveURL: URL? = nil,
                                        fileName: String, imageGroups: [DiskImageGroup]) {
         diskWriteBackScheduler.flushNow(drive: drive)
         emuQueue.sync {
@@ -273,6 +302,7 @@ extension EmulatorViewModel {
         }
         clearRewindBuffer()
         let info = MountedDiskInfo(sourceURL: sourceURL, archiveEntryName: archiveEntryName,
+                                    originArchiveURL: originArchiveURL,
                                     allImages: allImages, imageNames: imageNames,
                                     currentImageIndex: imageIndex, fileName: fileName,
                                     imageGroups: imageGroups)
@@ -290,10 +320,15 @@ extension EmulatorViewModel {
     func mountSelectedArchiveEntry(index: Int) {
         guard index >= 0, index < pendingArchiveEntries.count else { return }
         let entry = pendingArchiveEntries[index]
+        let entryURL = pendingArchiveCacheDir.flatMap {
+            DiskCacheManager.cachedEntryURL(in: $0, entryName: entry.filename)
+        }
         mountDiskData(Array(entry.data), name: entry.filename, drive: diskPickerDrive,
-                      sourceURL: pendingArchiveURL, archiveEntryName: entry.filename)
+                      sourceURL: entryURL, archiveEntryName: entry.filename,
+                      originArchiveURL: pendingArchiveURL)
         pendingArchiveEntries = []
         pendingArchiveURL = nil
+        pendingArchiveCacheDir = nil
         showingArchiveFilePicker = false
     }
 
@@ -304,17 +339,29 @@ extension EmulatorViewModel {
         let url = pendingDiskURL
         let allImages = pendingDiskImages
         let entryName = pendingArchiveEntryName
+        let originArchive = pendingOriginArchiveURL
         mountDiskImage(disk, allImages: allImages, imageIndex: index, url: url,
-                       drive: diskPickerDrive, archiveEntryName: entryName)
+                       drive: diskPickerDrive, archiveEntryName: entryName,
+                       originArchiveURL: originArchive)
         pendingDiskImages = []
         pendingDiskURL = nil
         pendingArchiveEntryName = nil
+        pendingOriginArchiveURL = nil
         showingImagePicker = false
     }
 
     private func mountDiskImage(_ disk: D88Disk, allImages: [D88Disk], imageIndex: Int,
-                                 url: URL?, drive: Int, archiveEntryName: String? = nil) {
-        let fileName = url?.deletingPathExtension().lastPathComponent ?? "Disk"
+                                 url: URL?, drive: Int, archiveEntryName: String? = nil,
+                                 originArchiveURL: URL? = nil) {
+        // For non-archive paths, use the source URL as the display name.
+        // For archive-derived paths, prefer the original archive name (cache dir
+        // names like "abc123-456" are not user-friendly).
+        let fileName: String = {
+            if let archiveURL = originArchiveURL {
+                return archiveURL.deletingPathExtension().lastPathComponent
+            }
+            return url?.deletingPathExtension().lastPathComponent ?? "Disk"
+        }()
         let imageNames = allImages.enumerated().map { i, d in
             d.name.isEmpty ? (allImages.count > 1 ? "\(fileName) #\(i)" : fileName) : d.name
         }
@@ -326,6 +373,7 @@ extension EmulatorViewModel {
         }
         clearRewindBuffer()
         let info = MountedDiskInfo(sourceURL: url, archiveEntryName: archiveEntryName,
+                                    originArchiveURL: originArchiveURL,
                                     allImages: allImages, imageNames: imageNames,
                                     currentImageIndex: imageIndex, fileName: fileName,
                                     imageGroups: groups)
@@ -559,9 +607,11 @@ extension EmulatorViewModel {
         let imageIndex = info?.currentImageIndex ?? 0
 
         // 書き戻し先 URL の決定。
-        // - sourceURL があればそこ (アーカイブ由来は Phase 1 範囲外なのでスキップ)
+        // Phase 2 以降、アーカイブ由来でも sourceURL はキャッシュ内 .d88 を
+        // 指すので分け隔てなくそのまま書ける。
+        // - sourceURL があればそこへ
         // - 無ければリカバリディレクトリへフォールバック
-        guard let writeURL = sourceURL, info?.archiveEntryName == nil else {
+        guard let writeURL = sourceURL else {
             writeBackToRecovery(drive: drive, bankBytes: bankBytes,
                                  fileName: info?.fileName ?? "disk\(drive)")
             return
