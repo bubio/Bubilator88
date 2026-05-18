@@ -64,6 +64,12 @@ struct DiskCacheManager {
 
     private static let log = Logger(subsystem: "com.bubilator88", category: "DiskCache")
 
+    private static let decoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601
+        return d
+    }()
+
     static var defaultRoot: URL {
         URL.applicationSupportDirectory
             .appendingPathComponent("Bubilator88", isDirectory: true)
@@ -155,6 +161,108 @@ struct DiskCacheManager {
     /// キャッシュディレクトリ URL を算出 (作成はしない)。
     func cacheDirectoryURL(for archiveData: Data) -> URL {
         root.appendingPathComponent(Self.computeHash(archiveData), isDirectory: true)
+    }
+
+    /// キャッシュ内に保持されている個別ディスクファイル 1 件分の情報。
+    struct CachedDisk {
+        /// キャッシュ内の `.d88` の URL。
+        let diskURL: URL
+        /// `source.json` に記録された元アーカイブのパス (記録なしなら nil)。
+        let originalArchivePath: String?
+        /// 元アーカイブが現在も存在するか (`originalArchivePath` が nil なら false)。
+        let originalExists: Bool
+    }
+
+    /// `root` 直下の全キャッシュディレクトリを走査し、含まれる全 `.d88` を返す。
+    /// `source.json` が読めないディレクトリは skip。エクスポート機能から使う。
+    func enumerateCachedDisks() -> [CachedDisk] {
+        let fm = FileManager.default
+        guard let entries = try? fm.contentsOfDirectory(at: root,
+                                                        includingPropertiesForKeys: nil,
+                                                        options: [.skipsHiddenFiles])
+        else { return [] }
+
+        var result: [CachedDisk] = []
+        for cacheDir in entries {
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: cacheDir.path, isDirectory: &isDir), isDir.boolValue
+            else { continue }
+            // 厳密化: `<16hex>-<digits>` 形式のディレクトリのみ cache 扱い。
+            // ユーザがうっかり root 直下に置いた他のフォルダを誤検出しない。
+            guard Self.isCacheDirectoryName(cacheDir.lastPathComponent) else { continue }
+
+            let originalPath: String? = {
+                let metaURL = cacheDir.appendingPathComponent("source.json")
+                guard let data = try? Data(contentsOf: metaURL),
+                      let meta = try? Self.decoder.decode(SourceMeta.self, from: data)
+                else { return nil }
+                return meta.originalPath
+            }()
+            let originalExists = originalPath.map { fm.fileExists(atPath: $0) } ?? false
+
+            let files = (try? fm.contentsOfDirectory(at: cacheDir,
+                                                     includingPropertiesForKeys: nil,
+                                                     options: [.skipsHiddenFiles])) ?? []
+            for file in files where file.lastPathComponent != "source.json" {
+                result.append(CachedDisk(diskURL: file,
+                                         originalArchivePath: originalPath,
+                                         originalExists: originalExists))
+            }
+        }
+        return result
+    }
+
+    /// 列挙したキャッシュディスクを指定フォルダにコピーする。
+    /// - Parameters:
+    ///   - destination: 出力先フォルダ (存在前提)
+    ///   - orphansOnly: true なら元アーカイブが存在しないものだけコピー
+    /// - Returns: (実際に書き出した件数, フィルタで除外された件数)
+    /// - Throws: コピー失敗時。途中まで成功した分はそのまま残る
+    func exportCachedDisks(to destination: URL, orphansOnly: Bool) throws -> (exported: Int, skipped: Int) {
+        let fm = FileManager.default
+        var exported = 0
+        var skipped = 0
+
+        for cached in enumerateCachedDisks() {
+            if orphansOnly && cached.originalExists {
+                skipped += 1
+                continue
+            }
+            let destURL = Self.uniqueDestinationURL(in: destination,
+                                                    baseName: cached.diskURL.lastPathComponent)
+            try fm.copyItem(at: cached.diskURL, to: destURL)
+            exported += 1
+        }
+        return (exported, skipped)
+    }
+
+    /// `computeHash` が生成する形式 (`<16hex>-<size>`) に一致するか判定。
+    static func isCacheDirectoryName(_ name: String) -> Bool {
+        let parts = name.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: false)
+        guard parts.count == 2 else { return false }
+        let hex = parts[0]
+        let size = parts[1]
+        guard hex.count == 16, hex.allSatisfy({ $0.isHexDigit }) else { return false }
+        return !size.isEmpty && size.allSatisfy({ $0.isASCII && $0.isNumber })
+    }
+
+    /// 既存ファイルと衝突しない出力先 URL を返す。
+    /// `foo.d88` が衝突したら `foo-2.d88`, `foo-3.d88` ... と試す。
+    static func uniqueDestinationURL(in directory: URL, baseName: String) -> URL {
+        let fm = FileManager.default
+        let url = directory.appendingPathComponent(baseName)
+        if !fm.fileExists(atPath: url.path) { return url }
+
+        let ext = (baseName as NSString).pathExtension
+        let stem = (baseName as NSString).deletingPathExtension
+        var n = 2
+        while true {
+            let candidate = ext.isEmpty
+                ? directory.appendingPathComponent("\(stem)-\(n)")
+                : directory.appendingPathComponent("\(stem)-\(n).\(ext)")
+            if !fm.fileExists(atPath: candidate.path) { return candidate }
+            n += 1
+        }
     }
 
     // MARK: - Internal helpers (static, pure functions)

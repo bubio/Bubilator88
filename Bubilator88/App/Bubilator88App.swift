@@ -244,6 +244,12 @@ struct DiskCommands: Commands {
             }
             .keyboardShortcut("n", modifiers: [.command, .shift])
 
+            Button {
+                viewModel.exportCachedDisks()
+            } label: {
+                Label("Export Cached Disks...", systemImage: "square.and.arrow.up")
+            }
+
             Divider()
 
             // Recent Files submenu

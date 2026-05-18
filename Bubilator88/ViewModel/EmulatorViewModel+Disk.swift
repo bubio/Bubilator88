@@ -507,11 +507,53 @@ extension EmulatorViewModel {
             Settings.shared.removeRecentFile(entry)
             showAlert(
                 title: NSLocalizedString("File Error", comment: ""),
-                message: NSLocalizedString("File no longer accessible", comment: "")
+                message: NSLocalizedString(
+                    "File no longer accessible. If this disk had written-back save data, you can recover it via Disk > Export Cached Disks...",
+                    comment: ""
+                )
             )
             return
         }
         mountDisk(url: url, drive: drive)
+    }
+
+    // MARK: - Cache Export
+
+    /// 「展開済みキャッシュをエクスポート…」メニュー本体。フォルダ選択
+    /// ダイアログを開き、accessoryView のチェックボックスに応じて
+    /// 孤児フィルタ ON/OFF でコピーする。
+    func exportCachedDisks() {
+        guard let result = CacheExportPanel.run() else { return }
+
+        do {
+            let (exported, skipped) = try DiskCacheManager.shared.exportCachedDisks(
+                to: result.destination,
+                orphansOnly: result.orphansOnly
+            )
+            let title: String
+            let message: String
+            if exported == 0 {
+                title = NSLocalizedString("No Disks Exported", comment: "")
+                if result.orphansOnly && skipped > 0 {
+                    message = NSLocalizedString(
+                        "No orphan disks were found (all cached disks still have their original archive).",
+                        comment: ""
+                    )
+                } else {
+                    message = NSLocalizedString("There are no cached disks to export.", comment: "")
+                }
+            } else {
+                title = NSLocalizedString("Export Complete", comment: "")
+                let fmt = NSLocalizedString("Exported %d disk(s).", comment: "")
+                message = String(format: fmt, exported)
+            }
+            showAlert(title: title, message: message)
+        } catch {
+            showAlert(
+                title: NSLocalizedString("Export Failed", comment: ""),
+                message: error.localizedDescription
+            )
+        }
     }
 
     // MARK: - Blank Disk Creation
