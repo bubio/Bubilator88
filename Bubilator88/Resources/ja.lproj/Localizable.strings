@@ -34,6 +34,17 @@
 "Create Blank Disk..." = "空ディスク作成...";
 "Create Blank Disk" = "空ディスク作成";
 "Disk Type:" = "ディスクタイプ:";
+"Export Cached Disks..." = "キャッシュをエクスポート...";
+"Export" = "エクスポート";
+"Choose a folder to export cached disk images into." = "展開済みキャッシュの D88 をどのフォルダに書き出すか選択してください。";
+"Only disks whose original archive is missing" = "元のアーカイブファイルが存在しないものだけ";
+"Export Complete" = "エクスポート完了";
+"Exported %d disk(s)." = "%d 件のディスクを書き出しました。";
+"No Disks Exported" = "書き出すディスクなし";
+"No orphan disks were found (all cached disks still have their original archive)." = "孤児のキャッシュは見つかりませんでした (すべて元アーカイブが存在しています)。";
+"There are no cached disks to export." = "書き出せるキャッシュがありません。";
+"Export Failed" = "エクスポート失敗";
+"File no longer accessible. If this disk had written-back save data, you can recover it via Disk > Export Cached Disks..." = "ファイルにアクセスできません。書き戻されたセーブデータがある場合は、Disk メニューの「キャッシュをエクスポート…」から取り出せます。";
 "Recent Files" = "最近使ったファイル";
 "No Recent Files" = "履歴なし";
 "Clear Recent Files" = "履歴をクリア";
