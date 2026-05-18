@@ -162,12 +162,24 @@ extension EmulatorViewModel {
             let cacheDir = DiskCacheManager.ensureCached(archiveURL: url,
                                                           archiveData: data,
                                                           entries: entries)
+            // マウントする disk バイト列はキャッシュ内ファイルから読む。
+            // これにより前回の書き戻しがそのまま反映される。
+            // キャッシュが無い (作成失敗) 場合のみ in-memory の entry.data に
+            // フォールバック。
+            let entryData: (ArchiveEntry) -> Data = { entry in
+                if let dir = cacheDir,
+                   let entryURL = DiskCacheManager.cachedEntryURL(in: dir, entryName: entry.filename),
+                   let cached = try? Data(contentsOf: entryURL) {
+                    return cached
+                }
+                return entry.data
+            }
             if drive == -1 {
                 // Mount 0&1: collect all D88 images across archive entries
                 var allDisks: [(disk: D88Disk, name: String, entryName: String)] = []
                 var groups: [DiskImageGroup] = []
                 for entry in entries {
-                    let disks = D88Disk.parseAll(data: Array(entry.data))
+                    let disks = D88Disk.parseAll(data: Array(entryData(entry)))
                     let baseName = (entry.filename as NSString).deletingPathExtension
                     groups.append(DiskImageGroup(d88FileName: baseName,
                                                  startIndex: allDisks.count, count: disks.count))
@@ -213,7 +225,7 @@ extension EmulatorViewModel {
                 let entryURL = cacheDir.flatMap {
                     DiskCacheManager.cachedEntryURL(in: $0, entryName: entries[0].filename)
                 }
-                mountDiskData(Array(entries[0].data), name: entries[0].filename, drive: drive,
+                mountDiskData(Array(entryData(entries[0])), name: entries[0].filename, drive: drive,
                               sourceURL: entryURL, archiveEntryName: entries[0].filename,
                               originArchiveURL: url)
                 return
@@ -323,7 +335,14 @@ extension EmulatorViewModel {
         let entryURL = pendingArchiveCacheDir.flatMap {
             DiskCacheManager.cachedEntryURL(in: $0, entryName: entry.filename)
         }
-        mountDiskData(Array(entry.data), name: entry.filename, drive: diskPickerDrive,
+        // 前回の書き戻しを反映するため、cache 内ファイルから読み直す。
+        let bytes: [UInt8] = {
+            if let entryURL, let cached = try? Data(contentsOf: entryURL) {
+                return Array(cached)
+            }
+            return Array(entry.data)
+        }()
+        mountDiskData(bytes, name: entry.filename, drive: diskPickerDrive,
                       sourceURL: entryURL, archiveEntryName: entry.filename,
                       originArchiveURL: pendingArchiveURL)
         pendingArchiveEntries = []

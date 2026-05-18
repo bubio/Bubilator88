@@ -1161,10 +1161,19 @@ final class EmulatorViewModel {
                 let cacheDir = DiskCacheManager.ensureCached(archiveURL: url,
                                                               archiveData: data,
                                                               entries: archiveEntries)
+                // 書き戻し済み内容を反映するため、cache 内ファイルから読み直す
+                let entryBytes: (ArchiveEntry) -> Data = { entry in
+                    if let dir = cacheDir,
+                       let entryURL = DiskCacheManager.cachedEntryURL(in: dir, entryName: entry.filename),
+                       let cached = try? Data(contentsOf: entryURL) {
+                        return cached
+                    }
+                    return entry.data
+                }
                 if let entryName = archiveEntry {
                     // Specific entry within archive
                     if let entry = archiveEntries.first(where: { $0.filename == entryName }) {
-                        let allImages = D88Disk.parseAll(data: Array(entry.data))
+                        let allImages = D88Disk.parseAll(data: Array(entryBytes(entry)))
                         if !allImages.isEmpty {
                             let d88Name = (entryName as NSString).deletingPathExtension
                             let imageNames = allImages.enumerated().map { i, d in
@@ -1189,7 +1198,7 @@ final class EmulatorViewModel {
                     var allDisks: [(disk: D88Disk, name: String)] = []
                     var groups: [DiskImageGroup] = []
                     for entry in archiveEntries {
-                        let disks = D88Disk.parseAll(data: Array(entry.data))
+                        let disks = D88Disk.parseAll(data: Array(entryBytes(entry)))
                         let baseName = (entry.filename as NSString).deletingPathExtension
                         groups.append(DiskImageGroup(d88FileName: baseName,
                                                      startIndex: allDisks.count, count: disks.count))
