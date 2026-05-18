@@ -401,16 +401,52 @@ final class EmulatorViewModel {
     /// Cassette-tape file picker state.
     var showingTapePicker: Bool = false
 
-    /// Multi-image D88 selection state
-    var pendingDiskImages: [D88Disk] = []
-    var pendingDiskURL: URL? = nil
-    var pendingArchiveEntryName: String? = nil
-    var showingImagePicker: Bool = false
+    /// マウント後に提示する選択シートのコンテキスト。
+    /// nil = シート非表示。`.sheet(item:)` に bind 可能 (Identifiable)。
+    /// 旧 `pending*` × 7 + `showing*Picker` × 2 はこの 1 つに集約。
+    var pickerContext: DiskPickerContext? = nil
 
-    /// Archive file selection state
-    var pendingArchiveEntries: [ArchiveEntry] = []
-    var pendingArchiveURL: URL? = nil
-    var showingArchiveFilePicker: Bool = false
+    // MARK: - 旧 pending*/showing* プロパティの互換 shim
+    //
+    // 既存の View / App コードが broken にならないよう、
+    // `pickerContext` を背後とする read-only / Bool 同期プロパティを提供する。
+
+    var pendingDiskImages: [D88Disk] {
+        if case .multiImageD88(let disks, _, _, _, _) = pickerContext { return disks }
+        return []
+    }
+    var pendingDiskURL: URL? {
+        if case .multiImageD88(_, let url, _, _, _) = pickerContext { return url }
+        return nil
+    }
+    var pendingArchiveEntryName: String? {
+        if case .multiImageD88(_, _, let name, _, _) = pickerContext { return name }
+        return nil
+    }
+    var pendingOriginArchiveURL: URL? {
+        if case .multiImageD88(_, _, _, let url, _) = pickerContext { return url }
+        return nil
+    }
+    var pendingArchiveEntries: [ArchiveEntry] {
+        if case .archiveEntries(let entries, _, _, _) = pickerContext { return entries }
+        return []
+    }
+    var pendingArchiveURL: URL? {
+        if case .archiveEntries(_, let url, _, _) = pickerContext { return url }
+        return nil
+    }
+    var pendingArchiveCacheDir: URL? {
+        if case .archiveEntries(_, _, let dir, _) = pickerContext { return dir }
+        return nil
+    }
+    var showingImagePicker: Bool {
+        get { if case .multiImageD88 = pickerContext { return true } else { return false } }
+        set { if !newValue, case .multiImageD88 = pickerContext { pickerContext = nil } }
+    }
+    var showingArchiveFilePicker: Bool {
+        get { if case .archiveEntries = pickerContext { return true } else { return false } }
+        set { if !newValue, case .archiveEntries = pickerContext { pickerContext = nil } }
+    }
 
     /// Number of rewind snapshots currently buffered. Observable so the
     /// Rewind menu item's `disabled` binding refreshes when the buffer
@@ -538,6 +574,10 @@ final class EmulatorViewModel {
     /// FDD access sound effects
     let fddSound = FDDSound()
 
+    /// ライトスルー方式の D88 ディスク書き戻しスケジューラ。
+    /// onDirty 通知を debounce してファイル I/O 頻度を抑える。
+    let diskWriteBackScheduler = DiskWriteBackScheduler()
+
     /// Synthesised cassette-rewind sound played while ⌘Z is held.
     let rewindSound = RewindSound()
     let gameController = GameControllerManager()
@@ -618,6 +658,16 @@ final class EmulatorViewModel {
         machine.subSystem.fdc.onDiskAccess = { [weak self] drive in
             originalOnDiskAccess?(drive)
             self?.fddSound.playReadAccess(drive: drive)
+        }
+
+        // ディスク書き戻しスケジューラの writeBack クロージャを接続
+        diskWriteBackScheduler.writeBack = { [weak self] drive in
+            self?.performDiskWriteBack(drive: drive)
+        }
+
+        // SubSystem からの書込通知を受けて debounce スケジュールする
+        machine.subSystem.onDiskWritten = { [weak self] drive in
+            self?.diskDirtyNotification(drive: drive)
         }
     }
 
@@ -1043,6 +1093,9 @@ final class EmulatorViewModel {
             showToast(NSLocalizedString("Save state not found", comment: ""))
             return
         }
+        // セーブステートロードで現在のディスク状態は破棄されるため、
+        // 未保存のディスク書込を先にフラッシュしておく。
+        diskWriteBackScheduler.flushAll()
         let wasRunning = isRunning
         if wasRunning { stop() }
         var loadError: Error?
@@ -1136,10 +1189,16 @@ final class EmulatorViewModel {
 
             // Check if source is an archive
             if let archiveEntries = ArchiveExtractor.extractDiskImages(data) {
+                // アーカイブをキャッシュ展開して書き戻し先を確保。失敗時は nil で
+                // フォールバック (in-memory データから mount)。
+                let cache = DiskCacheManager.shared
+                let cacheDir = try? cache.ensureCached(archiveURL: url,
+                                                       archiveData: data,
+                                                       entries: archiveEntries)
                 if let entryName = archiveEntry {
                     // Specific entry within archive
                     if let entry = archiveEntries.first(where: { $0.filename == entryName }) {
-                        let allImages = D88Disk.parseAll(data: Array(entry.data))
+                        let allImages = D88Disk.parseAll(data: Array(cache.resolvedData(for: entry, in: cacheDir)))
                         if !allImages.isEmpty {
                             let d88Name = (entryName as NSString).deletingPathExtension
                             let imageNames = allImages.enumerated().map { i, d in
@@ -1148,7 +1207,12 @@ final class EmulatorViewModel {
                             let groups = [DiskImageGroup(d88FileName: d88Name,
                                                          startIndex: 0, count: allImages.count)]
                             let index = min(savedImageIndex ?? 0, allImages.count - 1)
-                            return MountedDiskInfo(sourceURL: url, archiveEntryName: entryName,
+                            let cacheEntryURL = cacheDir.flatMap {
+                                cache.cachedEntryURL(in: $0, entryName: entryName)
+                            }
+                            return MountedDiskInfo(sourceURL: cacheEntryURL,
+                                                   archiveEntryName: entryName,
+                                                   originArchiveURL: url,
                                                    allImages: allImages, imageNames: imageNames,
                                                    currentImageIndex: index, fileName: fileName,
                                                    imageGroups: groups)
@@ -1159,7 +1223,7 @@ final class EmulatorViewModel {
                     var allDisks: [(disk: D88Disk, name: String)] = []
                     var groups: [DiskImageGroup] = []
                     for entry in archiveEntries {
-                        let disks = D88Disk.parseAll(data: Array(entry.data))
+                        let disks = D88Disk.parseAll(data: Array(cache.resolvedData(for: entry, in: cacheDir)))
                         let baseName = (entry.filename as NSString).deletingPathExtension
                         groups.append(DiskImageGroup(d88FileName: baseName,
                                                      startIndex: allDisks.count, count: disks.count))
@@ -1169,7 +1233,9 @@ final class EmulatorViewModel {
                     }
                     if !allDisks.isEmpty {
                         let index = min(savedImageIndex ?? 0, allDisks.count - 1)
-                        return MountedDiskInfo(sourceURL: url, archiveEntryName: nil,
+                        return MountedDiskInfo(sourceURL: url,
+                                               archiveEntryName: nil,
+                                               originArchiveURL: url,
                                                allImages: allDisks.map(\.disk),
                                                imageNames: allDisks.map(\.name),
                                                currentImageIndex: index, fileName: fileName,
@@ -1186,7 +1252,9 @@ final class EmulatorViewModel {
                     let groups = [DiskImageGroup(d88FileName: fileName,
                                                  startIndex: 0, count: allImages.count)]
                     let index = min(savedImageIndex ?? 0, allImages.count - 1)
-                    return MountedDiskInfo(sourceURL: url, archiveEntryName: nil,
+                    return MountedDiskInfo(sourceURL: url,
+                                           archiveEntryName: nil,
+                                           originArchiveURL: nil,
                                            allImages: allImages, imageNames: imageNames,
                                            currentImageIndex: index, fileName: fileName,
                                            imageGroups: groups)
@@ -1196,7 +1264,9 @@ final class EmulatorViewModel {
 
         // Fallback: single disk from restored state
         let name = disk.name.isEmpty ? fileName : disk.name
-        return MountedDiskInfo(sourceURL: nil, archiveEntryName: nil,
+        return MountedDiskInfo(sourceURL: nil,
+                               archiveEntryName: nil,
+                               originArchiveURL: nil,
                                allImages: [disk], imageNames: [name],
                                currentImageIndex: 0, fileName: fileName,
                                imageGroups: [DiskImageGroup(d88FileName: fileName,
@@ -1341,12 +1411,70 @@ struct DiskImageGroup {
 }
 
 /// Metadata about a mounted disk source for menu-based disk switching.
-struct MountedDiskInfo {
+/// マウント直後に提示する選択シートの種別 + 必要 payload。
+/// 旧 8 個の `pending*` プロパティを 1 つの sum type に集約。
+/// `Identifiable` 適合により SwiftUI の `.sheet(item:)` に直接渡せる。
+enum DiskPickerContext: Identifiable {
+    /// アーカイブ内に複数 .d88 エントリがあって、どれをマウントするか選ぶ。
+    case archiveEntries(entries: [ArchiveEntry],
+                        archiveURL: URL,
+                        cacheDir: URL?,
+                        drive: Int)
+    /// 1 つの .d88 ファイル内に複数バンク (image) があって、どれをマウントするか選ぶ。
+    case multiImageD88(disks: [D88Disk],
+                       sourceURL: URL?,
+                       archiveEntryName: String?,
+                       originArchiveURL: URL?,
+                       drive: Int)
+
+    var id: String {
+        switch self {
+        case .archiveEntries: return "archiveEntries"
+        case .multiImageD88: return "multiImageD88"
+        }
+    }
+}
+
+struct MountedDiskInfo: Identifiable, Equatable {
+    /// マウントセッションごとに発行される ID。SwiftUI 側で `.id()` /
+    /// `.onChange(of:)` の差分検出に使う。
+    let id: UUID
+    /// 書き戻し先 URL。アーカイブ由来時は DiskCacheManager のキャッシュ内
+    /// .d88 ファイル URL を指す。直接 .d88 マウント時は元ファイル URL。
     let sourceURL: URL?
+    /// 元アーカイブ内でのエントリ名 (NFC 正規化前)。
+    /// アーカイブ非由来 (直接 .d88) なら nil。
     let archiveEntryName: String?
+    /// 元アーカイブの URL (アーカイブ由来時のみ)。
+    /// 現状は `fileName` 決定でのみ使用。エクスポートやステート復元の
+    /// 起点としては Phase 3 以降で利用予定。
+    let originArchiveURL: URL?
     let allImages: [D88Disk]
     let imageNames: [String]
     var currentImageIndex: Int
     let fileName: String
     let imageGroups: [DiskImageGroup]
+
+    init(sourceURL: URL?, archiveEntryName: String?, originArchiveURL: URL?,
+         allImages: [D88Disk], imageNames: [String], currentImageIndex: Int,
+         fileName: String, imageGroups: [DiskImageGroup]) {
+        self.id = UUID()
+        self.sourceURL = sourceURL
+        self.archiveEntryName = archiveEntryName
+        self.originArchiveURL = originArchiveURL
+        self.allImages = allImages
+        self.imageNames = imageNames
+        self.currentImageIndex = currentImageIndex
+        self.fileName = fileName
+        self.imageGroups = imageGroups
+    }
+
+    /// `D88Disk` が Equatable でないため、マウントセッション ID と
+    /// 表示用フィールドのみで比較する。
+    /// SwiftUI の差分検出 (=同一マウントかどうか) には十分。
+    static func == (lhs: MountedDiskInfo, rhs: MountedDiskInfo) -> Bool {
+        lhs.id == rhs.id
+            && lhs.currentImageIndex == rhs.currentImageIndex
+            && lhs.sourceURL == rhs.sourceURL
+    }
 }
