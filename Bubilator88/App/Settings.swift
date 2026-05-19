@@ -591,13 +591,20 @@ struct RecentDiskEntry: Codable, Identifiable, Hashable {
     static func == (lhs: Self, rhs: Self) -> Bool { lhs.filePath == rhs.filePath }
 
     /// Resolve the bookmark back to a URL, granting sandbox access.
+    ///
+    /// stale=true でも URL 自体は使えるので破棄しない (writeback の atomic
+    /// 書込で inode が変わると常に stale 化するため、捨てると履歴から開けな
+    /// くなる)。bookmark 解決が完全失敗した場合は filePath で直接アクセス
+    /// を試みる。
     func resolveBookmark() -> URL? {
         var stale = false
-        guard let url = try? URL(resolvingBookmarkData: bookmark,
-                                  options: .withSecurityScope,
-                                  relativeTo: nil,
-                                  bookmarkDataIsStale: &stale) else { return nil }
-        if stale { return nil }
-        return url
+        if let url = try? URL(resolvingBookmarkData: bookmark,
+                              options: .withSecurityScope,
+                              relativeTo: nil,
+                              bookmarkDataIsStale: &stale) {
+            return url
+        }
+        let fallback = URL(fileURLWithPath: filePath)
+        return FileManager.default.fileExists(atPath: fallback.path) ? fallback : nil
     }
 }
