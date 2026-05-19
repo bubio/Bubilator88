@@ -275,6 +275,44 @@ struct DiskCacheManagerTests {
         #expect(fm.fileExists(atPath: dest.appendingPathComponent("dup-3.d88").path)) // 2 件目
     }
 
+    // MARK: - アーカイブ更新 (項目 6)
+
+    @Test("ensureCached: アーカイブ内容が変わると別キャッシュディレクトリ + 旧キャッシュ保持")
+    func ensureCachedHashChangePreservesOldCache() throws {
+        let (cache, root) = makeTempCache()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let url = URL(fileURLWithPath: "/tmp/game.zip")
+        let v1Data = Data(repeating: 0x01, count: 1024)
+        let v2Data = Data(repeating: 0x02, count: 1024)
+
+        // v1 を展開し、ユーザがゲーム内セーブ相当の書き戻しを差し込む
+        let dirV1 = try cache.ensureCached(archiveURL: url, archiveData: v1Data,
+                                            entries: [makeEntry("save.d88", bytes: [0x11])])
+        let entryV1 = dirV1.appendingPathComponent("save.d88")
+        try Data([0xAA, 0xBB]).write(to: entryV1, options: .atomic)
+
+        // アーカイブ更新 (内容が違うので hash が変わる) → 新キャッシュが作られる
+        let dirV2 = try cache.ensureCached(archiveURL: url, archiveData: v2Data,
+                                            entries: [makeEntry("save.d88", bytes: [0x22])])
+        #expect(dirV1 != dirV2)
+
+        // 旧キャッシュは消えていない (ユーザのセーブが守られる)
+        #expect(FileManager.default.fileExists(atPath: dirV1.path))
+        let preservedV1 = try Data(contentsOf: entryV1)
+        #expect(preservedV1 == Data([0xAA, 0xBB]))
+
+        // 新キャッシュは新内容で展開されている
+        let entryV2 = try Data(contentsOf: dirV2.appendingPathComponent("save.d88"))
+        #expect(entryV2 == Data([0x22]))
+
+        // どちらの cache directory もハッシュ命名規約を満たす
+        #expect(DiskCacheManager.isCacheDirectoryName(dirV1.lastPathComponent))
+        #expect(DiskCacheManager.isCacheDirectoryName(dirV2.lastPathComponent))
+    }
+
+    // MARK: - uniqueDestinationURL
+
     @Test("uniqueDestinationURL: handles files without extension")
     func uniqueNoExtension() throws {
         let dir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)

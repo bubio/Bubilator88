@@ -733,95 +733,34 @@ extension EmulatorViewModel {
         // - sourceURL があればそこへ
         // - 無ければリカバリディレクトリへフォールバック
         guard let writeURL = sourceURL else {
-            writeBackToRecovery(drive: drive, bankBytes: bankBytes,
-                                 fileName: info?.fileName ?? "disk\(drive)")
+            DiskWriteBackIO.writeBankToRecovery(
+                bankBytes: bankBytes,
+                fileName: info?.fileName ?? "disk\(drive)",
+                drive: drive,
+                recoveryDir: DiskWriteBackIO.defaultRecoveryDirectory
+            )
             return
         }
 
         do {
-            try writeBankToFile(bankBytes: bankBytes, imageIndex: imageIndex, url: writeURL)
+            try DiskWriteBackIO.writeBank(bankBytes: bankBytes,
+                                           imageIndex: imageIndex,
+                                           url: writeURL)
         } catch {
             // 書込失敗 → dirty を復元 (リトライ可能にする) + リカバリへ
             emuQueue.sync {
                 machine.subSystem.drives[drive]?.dirty = true
             }
-            writeBackToRecovery(drive: drive, bankBytes: bankBytes,
-                                 fileName: info?.fileName ?? "disk\(drive)")
+            DiskWriteBackIO.writeBankToRecovery(
+                bankBytes: bankBytes,
+                fileName: info?.fileName ?? "disk\(drive)",
+                drive: drive,
+                recoveryDir: DiskWriteBackIO.defaultRecoveryDirectory
+            )
             showAlert(
                 title: NSLocalizedString("Disk Write Failed", comment: ""),
                 message: error.localizedDescription
             )
         }
-    }
-
-    /// 指定 imageIndex のバンクを `url` の D88 ファイル内に splice 書込する。
-    /// 単一バンク (file の総バイトが bank0 と一致) なら丸ごと上書き。
-    /// マルチバンクなら前後のバンクバイト列を保持して中央のみ差し替え。
-    private func writeBankToFile(bankBytes: [UInt8], imageIndex: Int, url: URL) throws {
-        // ファイルが存在しない場合のみ単一バンクの新規作成として扱う。
-        // 「読込失敗一般 → 単一バンク上書き」にすると、Spotlight / Time Machine /
-        // iCloud の一時ロックや I/O エラーで multibank ディスクの他バンクを
-        // 失う事故が起きる。
-        if !FileManager.default.fileExists(atPath: url.path) {
-            try Data(bankBytes).write(to: url, options: .atomic)
-            return
-        }
-        let originalData = try Data(contentsOf: url)
-
-        // 元ファイル内のバンク offset を header (offset 0x1C のバンクサイズ)
-        // を辿って算出する。
-        var bankStart = 0
-        for _ in 0..<imageIndex {
-            guard bankStart + 0x20 <= originalData.count else {
-                throw NSError(domain: "DiskWriteBack", code: 1,
-                              userInfo: [NSLocalizedDescriptionKey: "Bank header out of range"])
-            }
-            let size = Int(readUInt32LE(originalData, offset: bankStart + 0x1C))
-            guard size > 0 else {
-                throw NSError(domain: "DiskWriteBack", code: 2,
-                              userInfo: [NSLocalizedDescriptionKey: "Invalid bank size"])
-            }
-            bankStart += size
-        }
-        guard bankStart + 0x20 <= originalData.count else {
-            throw NSError(domain: "DiskWriteBack", code: 3,
-                          userInfo: [NSLocalizedDescriptionKey: "Bank offset beyond file"])
-        }
-        let originalBankSize = Int(readUInt32LE(originalData, offset: bankStart + 0x1C))
-        let bankEnd = bankStart + originalBankSize
-        guard bankEnd <= originalData.count else {
-            throw NSError(domain: "DiskWriteBack", code: 4,
-                          userInfo: [NSLocalizedDescriptionKey: "Bank end beyond file"])
-        }
-
-        var merged = Data(capacity: originalData.count - originalBankSize + bankBytes.count)
-        merged.append(originalData.prefix(bankStart))
-        merged.append(contentsOf: bankBytes)
-        merged.append(originalData.suffix(from: bankEnd))
-        try merged.write(to: url, options: .atomic)
-    }
-
-    /// 通常の書込先が無い / 書込失敗時のフォールバック保存先。
-    /// 呼出元はすでに `performDiskWriteBack` で dirty フラグの扱いを済ませて
-    /// いるので、ここでは保存だけ行い dirty には触らない。
-    private func writeBackToRecovery(drive: Int, bankBytes: [UInt8], fileName: String) {
-        let appSupport = URL.applicationSupportDirectory
-        let dir = appSupport.appendingPathComponent("Bubilator88/ModifiedDisks", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-
-        let sanitized = fileName
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: ":", with: "_")
-        let stamp = ISO8601DateFormatter().string(from: Date())
-            .replacingOccurrences(of: ":", with: "")
-        let url = dir.appendingPathComponent("\(sanitized)-drive\(drive)-\(stamp).d88")
-        try? Data(bankBytes).write(to: url, options: .atomic)
-    }
-
-    private func readUInt32LE(_ data: Data, offset: Int) -> UInt32 {
-        return UInt32(data[offset])
-             | (UInt32(data[offset + 1]) << 8)
-             | (UInt32(data[offset + 2]) << 16)
-             | (UInt32(data[offset + 3]) << 24)
     }
 }
