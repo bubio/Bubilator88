@@ -565,19 +565,35 @@ extension EmulatorViewModel {
         panel.nameFieldStringValue = "Blank.d88"
         panel.allowedContentTypes = [.init(filenameExtension: "d88")!]
 
-        // Disk type picker as accessory view
+        // Disk type picker + BASIC FAT init checkbox as accessory view
         let typePopup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 200, height: 26), pullsDown: false)
         typePopup.addItems(withTitles: ["2D (320KB)", "2DD (640KB)", "2HD (1.2MB)"])
         typePopup.selectItem(at: 1)  // default: 2DD
 
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 310, height: 36))
         let label = NSTextField(labelWithString: NSLocalizedString("Disk Type:", comment: "Blank disk type label"))
         label.sizeToFit()
         let labelWidth = max(70, label.frame.width)
-        label.frame = NSRect(x: 4, y: 6, width: labelWidth, height: 20)
-        typePopup.frame = NSRect(x: labelWidth + 8, y: 4, width: 200, height: 26)
+
+        let fatCheckbox = NSButton(
+            checkboxWithTitle: NSLocalizedString(
+                "Initialize as N88-BASIC disk",
+                comment: "Blank disk FAT init checkbox"
+            ),
+            target: nil,
+            action: nil
+        )
+        fatCheckbox.state = .on
+        fatCheckbox.sizeToFit()
+        let checkboxWidth = max(fatCheckbox.frame.width, CGFloat(labelWidth) + 208)
+
+        let containerWidth = max(checkboxWidth + 8, CGFloat(labelWidth) + 216)
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: containerWidth, height: 64))
+        label.frame = NSRect(x: 4, y: 34, width: labelWidth, height: 20)
+        typePopup.frame = NSRect(x: labelWidth + 8, y: 32, width: 200, height: 26)
+        fatCheckbox.frame = NSRect(x: 4, y: 6, width: checkboxWidth, height: 20)
         container.addSubview(label)
         container.addSubview(typePopup)
+        container.addSubview(fatCheckbox)
         panel.accessoryView = container
 
         panel.begin { [weak self] response in
@@ -588,8 +604,9 @@ extension EmulatorViewModel {
             case 2:  diskType = .twoHD
             default: diskType = .twoDD
             }
+            let initFAT = fatCheckbox.state == .on
             let diskName = url.deletingPathExtension().lastPathComponent
-            let disk = D88Disk.createFormatted(type: diskType, name: diskName)
+            let disk = D88Disk.createFormatted(type: diskType, name: diskName, initBasicFAT: initFAT)
             guard let data = disk.serialize() else {
                 self?.showAlert(
                     title: NSLocalizedString("Disk Error", comment: ""),
@@ -599,8 +616,15 @@ extension EmulatorViewModel {
             }
             do {
                 try Data(data).write(to: url)
-                // (blank disk creation confirmation not shown)
-                self?.mountDisk(url: url, drive: 0)
+                // Mount into the first empty drive so creating a blank disk
+                // doesn't clobber whatever the user already has loaded.
+                // Fall back to drive 0 only when both drives are occupied.
+                let targetDrive: Int = {
+                    if self?.drive0Info == nil { return 0 }
+                    if self?.drive1Info == nil { return 1 }
+                    return 0
+                }()
+                self?.mountDisk(url: url, drive: targetDrive)
             } catch {
                 self?.showAlert(
                     title: NSLocalizedString("Disk Error", comment: ""),

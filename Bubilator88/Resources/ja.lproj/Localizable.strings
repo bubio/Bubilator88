@@ -31,9 +31,10 @@
 "Eject" = "取り出し";
 "Write Protect" = "書き込み禁止";
 "Write Protect ✓" = "書き込み禁止 ✓";
-"Create Blank Disk..." = "空ディスク作成...";
-"Create Blank Disk" = "空ディスク作成";
+"Create Blank Disk..." = "ブランクディスク作成...";
+"Create Blank Disk" = "ブランクディスク作成";
 "Disk Type:" = "ディスクタイプ:";
+"Initialize as N88-BASIC disk" = "N88-BASIC ディスクとして論理初期化";
 "Export Cached Disks..." = "キャッシュをエクスポート...";
 "Export" = "エクスポート";
 "Choose a folder to export cached disk images into." = "展開済みキャッシュの D88 をどのフォルダに書き出すか選択してください。";
