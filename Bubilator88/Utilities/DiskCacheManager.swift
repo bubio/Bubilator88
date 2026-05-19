@@ -21,7 +21,7 @@ import os.log
 ///
 /// `root` を切り替えられる struct として実装することで、ユニットテストでは
 /// tmp ディレクトリを指す instance を差し込める。
-struct DiskCacheManager {
+nonisolated struct DiskCacheManager {
 
     /// `source.json` の構造体。
     struct SourceMeta: Codable {
