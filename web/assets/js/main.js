@@ -39,6 +39,7 @@
       "media.controller": "Controller + Haptics",
       "media.clip": "Copy & Paste",
       "media.debugger": "Debug Window",
+      "media.rewind": "Rewind",
 
       "audio.mono": "Mono",
       "audio.pseudo": "Pseudo Stereo",
@@ -49,6 +50,7 @@
       "credit.translation": "Murder Club © 1986 Riverhill Soft",
       "credit.controller": "Silpheed © 1986 GAME ARTS",
       "credit.stereo": "Sorcerian © 1987 Falcom",
+      "credit.rewind": "Relics © 1986 Bothtec",
 
       "f.upscaler.title": "AI Upscaler",
       "f.upscaler.body":
@@ -74,6 +76,9 @@
       "f.debug.title": "Full-Featured Debugger",
       "f.debug.body":
         "Disassembler, dual-CPU registers, six breakpoint types, instruction and PIO ring-buffer tracing with JSONL export, GVRAM and Text VRAM inspectors, and a live spectrum analyzer with per-channel mute.",
+      "f.rewind.title": "Rewind",
+      "f.rewind.body":
+        "Made a mistake? Hold ⌘Z and the game runs backwards. Bubilator88 keeps a rolling 30-second history of the whole machine in memory — release the key to resume from any moment, with a live thumbnail strip showing exactly where you'll land.",
 
       "features.title": "Other Features",
       "features.lead": "The essentials that make the emulator tick.",
@@ -184,6 +189,7 @@
       "media.controller": "コントローラー & ハプティクス",
       "media.clip": "コピー & ペースト",
       "media.debugger": "デバッグウィンドウ",
+      "media.rewind": "巻き戻し",
 
       "audio.mono": "モノラル",
       "audio.pseudo": "擬似ステレオ",
@@ -194,6 +200,7 @@
       "credit.translation": "殺人倶楽部(マーダークラブ) © 1986 Riverhill Soft",
       "credit.controller": "シルフィード © 1986 GAME ARTS",
       "credit.stereo": "ソーサリアン © 1987 Falcom",
+      "credit.rewind": "レリクス © 1986 ボーステック",
 
       "f.upscaler.title": "AI アップスケーラー",
       "f.upscaler.body":
@@ -219,6 +226,9 @@
       "f.debug.title": "ガチのデバッガ",
       "f.debug.body":
         "逆アセンブラ、メイン/サブ両 CPU のレジスタ、6 種類のブレークポイント、命令 / PIO リングバッファトレース (JSONL で書き出し可)、GVRAM / Text VRAM ビューア、チャンネル別ミュート付きスペアナ。作る人にも優しい。",
+      "f.rewind.title": "巻き戻し",
+      "f.rewind.body":
+        "ミスっても大丈夫。⌘Z を押しっぱなしにすると、ゲームがどんどん巻き戻っていきます。直近 30 秒ぶんのマシン状態をまるごとメモリに記録しているので、キーを離せばその瞬間からプレイ再開。巻き戻し中はサムネイルのストリップで、どこまで戻ったかがひと目で分かります。",
 
       "features.title": "その他の機能",
       "features.lead": "エミュレータの土台になっている基本機能たち。",
