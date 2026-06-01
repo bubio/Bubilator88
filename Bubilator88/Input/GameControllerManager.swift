@@ -236,24 +236,32 @@ enum ControllerButton: String, Codable, CaseIterable, Identifiable {
 struct ControllerButtonMapping: Codable, Equatable {
     var buttons: [String: ButtonAction]
 
-    // PC-8801 games typically use: KP 2/4/6/8 for movement, Space for action/start,
-    // Return for confirm, ESC for cancel, Z for jump, X for shoot/select.
-    // Stored as host shortcuts (macOS virtual keyCodes) so the same Mac→PC-88 routing
-    // that handles physical keyboard input applies uniformly.
+    // ADV/RPG-first defaults, matching console-style 決定/キャンセル conventions
+    // (the dominant PC-8801 genre): KP 2/4/6/8 for movement, A=Space (advance/confirm),
+    // B=ESC (cancel/menu), X=Return, Y=Z, LB=X — Z/X kept as a bonus for action games.
+    //
+    // Safety: the potentially destructive STOP key is deliberately left UNassigned by
+    // default (it can break a running BASIC program); users who want pause must assign
+    // it explicitly. Only recoverable keys sit on the easily-bumped face buttons.
+    //
+    // Normal keys are stored as host shortcuts (macOS virtual keyCodes) so the same
+    // Mac→PC-88 routing that handles physical keyboard input applies uniformly. SHIFT is
+    // the exception: modifiers arrive via flagsChanged (not keyDown), so synthesizing one
+    // as a host shortcut would not register — it is routed through pc88Key (vm.pressKey).
     static let defaults: [String: ButtonAction] = [
         ControllerButton.dpadUp.rawValue: .hostShortcut(HostShortcut(keyCode: 0x5B, modifierFlagsRaw: 0, displayKey: "Num 8")),    // kVK_ANSI_Keypad8
         ControllerButton.dpadDown.rawValue: .hostShortcut(HostShortcut(keyCode: 0x54, modifierFlagsRaw: 0, displayKey: "Num 2")),  // kVK_ANSI_Keypad2
         ControllerButton.dpadLeft.rawValue: .hostShortcut(HostShortcut(keyCode: 0x56, modifierFlagsRaw: 0, displayKey: "Num 4")),  // kVK_ANSI_Keypad4
         ControllerButton.dpadRight.rawValue: .hostShortcut(HostShortcut(keyCode: 0x58, modifierFlagsRaw: 0, displayKey: "Num 6")), // kVK_ANSI_Keypad6
-        ControllerButton.buttonA.rawValue: .hostShortcut(HostShortcut(keyCode: 0x31, modifierFlagsRaw: 0, displayKey: "Space")), // kVK_Space
-        ControllerButton.buttonB.rawValue: .hostShortcut(HostShortcut(keyCode: 0x24, modifierFlagsRaw: 0, displayKey: "↩")),     // kVK_Return
-        ControllerButton.buttonX.rawValue: .hostShortcut(HostShortcut(keyCode: 0x35, modifierFlagsRaw: 0, displayKey: "⎋")),     // kVK_Escape
-        ControllerButton.buttonY.rawValue: .hostShortcut(HostShortcut(keyCode: 0x06, modifierFlagsRaw: 0, displayKey: "Z")),     // kVK_ANSI_Z
-        ControllerButton.leftShoulder.rawValue: .hostShortcut(HostShortcut(keyCode: 0x07, modifierFlagsRaw: 0, displayKey: "X")),// kVK_ANSI_X
-        ControllerButton.rightShoulder.rawValue: .none,
-        ControllerButton.leftTrigger.rawValue: .none,
-        ControllerButton.rightTrigger.rawValue: .none,
-        ControllerButton.buttonStart.rawValue: .hostShortcut(HostShortcut(keyCode: 0x77, modifierFlagsRaw: 0, displayKey: "End")), // kVK_End (default STOP)
+        ControllerButton.buttonA.rawValue: .hostShortcut(HostShortcut(keyCode: 0x31, modifierFlagsRaw: 0, displayKey: "Space")), // kVK_Space (決定/送り)
+        ControllerButton.buttonB.rawValue: .hostShortcut(HostShortcut(keyCode: 0x35, modifierFlagsRaw: 0, displayKey: "⎋")),     // kVK_Escape (キャンセル/メニュー)
+        ControllerButton.buttonX.rawValue: .hostShortcut(HostShortcut(keyCode: 0x24, modifierFlagsRaw: 0, displayKey: "↩")),     // kVK_Return (改行/別決定)
+        ControllerButton.buttonY.rawValue: .hostShortcut(HostShortcut(keyCode: 0x06, modifierFlagsRaw: 0, displayKey: "Z")),     // kVK_ANSI_Z (アクション/ジャンプ)
+        ControllerButton.leftShoulder.rawValue: .hostShortcut(HostShortcut(keyCode: 0x07, modifierFlagsRaw: 0, displayKey: "X")),// kVK_ANSI_X (2nd アクション)
+        ControllerButton.rightShoulder.rawValue: .pc88Key(MappedKey(Keyboard.shift)),                                            // SHIFT (ダッシュ/補助)
+        ControllerButton.leftTrigger.rawValue: .hostShortcut(HostShortcut(keyCode: 0x06, modifierFlagsRaw: 1048576, displayKey: "Z")),  // ⌘Z (巻き戻しホールド)
+        ControllerButton.rightTrigger.rawValue: .hostShortcut(HostShortcut(keyCode: 0x30, modifierFlagsRaw: 131072, displayKey: "Tab")), // ⇧Tab
+        ControllerButton.buttonStart.rawValue: .none,   // STOP は意図的に未割当 (誤爆で BASIC 中断を防ぐ)
         ControllerButton.buttonSelect.rawValue: .none,
         ControllerButton.leftStickButton.rawValue: .none,
         ControllerButton.rightStickButton.rawValue: .none,
