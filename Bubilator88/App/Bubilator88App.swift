@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 @main
 struct Bubilator88App: App {
@@ -583,6 +584,16 @@ struct DebugCommands: Commands {
 
             Divider()
 
+            Button("BIOS ROM フォルダを開く") {
+                Self.openBIOSROMFolder()
+            }
+
+            Button("設定をリセット") {
+                Self.resetSettings()
+            }
+
+            Divider()
+
             Toggle("Show Text Layer", isOn: Binding(
                 get: { viewModel.debugTextLayerEnabled },
                 set: { viewModel.debugTextLayerEnabled = $0 }
@@ -629,5 +640,32 @@ struct DebugCommands: Commands {
             }
 
         }
+    }
+
+    /// BIOS ROM などを配置する Application Support ディレクトリを Finder で開く。
+    /// 未作成の場合は作成してから開く。
+    private static func openBIOSROMFolder() {
+        let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory, in: .userDomainMask
+        ).first!.appendingPathComponent("Bubilator88", isDirectory: true)
+        try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        NSWorkspace.shared.open(appSupport)
+    }
+
+    /// UserDefaults に保存された全ユーザ設定を削除する (確認アラートあり)。
+    /// 反映には再起動が必要な項目があるため、その旨も案内する。
+    private static func resetSettings() {
+        let alert = NSAlert()
+        alert.messageText = "設定をリセットしますか？"
+        alert.informativeText = "すべてのユーザ設定が初期値に戻ります。この操作は取り消せません。変更を完全に反映するにはアプリの再起動が必要です。"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "リセット")
+        alert.addButton(withTitle: "キャンセル")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        if let bundleID = Bundle.main.bundleIdentifier {
+            UserDefaults.standard.removePersistentDomain(forName: bundleID)
+        }
+        UserDefaults.standard.synchronize()
     }
 }
