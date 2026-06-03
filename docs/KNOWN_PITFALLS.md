@@ -201,3 +201,17 @@ var value: Float = 0.5 {
 `reference_emulator_sources.md` の path: `~/dev/_Emu/X88000M/src/PC88Pcg.cpp`
 
 **教訓**: PCG-8800 を必要とするタイトルが NG リスト入りした場合、ゼロから作る前に X88000M を読むこと。CRTC / sound 周辺は分岐実装が要るので、`PC88Z80Main.cpp` の SetReadIOProc/SetWriteIOProc 切替も合わせて移植する必要がある。
+
+---
+
+## 16. 存在しないドライブ (drive 2,3) の Seek/Recalibrate は異常終了
+
+**問題**: PC-8801mkIIFR の `DISK.ROM` (2KB) を使うとドライブが 1 基しか認識されず、スタークルーザー等で「2 ﾄﾞﾗｲﾌﾞ ﾋﾂﾖｳ ﾃﾞｽ」が出る。FA の `DISK.ROM` (8KB) では 2 基認識して正常起動する。
+
+**原因**: FR ROM は起動時に drive 0→1→2→3 を順に Recalibrate+Seek してドライブ台数を検出する。`UPD765A` が存在しない drive 2,3 にも **normal 応答 (ST0=US|SE)** を返していたため、FR の検出ループが台数判定を誤った。FA ROM (8KB) は drive 0,1 しかプローブしないので影響を受けず、これが「FA=2台 / FR=1台」の差の正体。
+
+**修正** (QUASI88 `fdc_check_unit` / `r_phase` 準拠):
+- `connectedDrives = 2` を定義し (`NR_DRIVE` 相当)、`us >= 2` の Seek/Recalibrate は即座に異常終了割り込みを発生させる。
+- 対応する SenseInterruptStatus は `ST0 = ST0_IC_AT(0x40) | ST0_SE(0x20) | ST0_NR(0x08) | us` を返す。
+
+**教訓**: **`ST0_SE` (Seek End) を立てたまま**にすること。異常終了 (AT|NR) でも SE を落とすと、FR DISK.ROM は「これは seek 完了割り込みではない」と解釈して `ei; halt` から復帰できずハングする (QUASI88 も両ケースで SE を立てている)。「ドライブが存在しない」と「ディスク未挿入」は別概念 — drive 0,1 はディスク無しでもドライブは存在する (SenseDriveStatus は別経路)。本修正は drive 2,3 のみを対象とし、FA / 既存 15 シナリオ regression には無影響 (FA は drive 2,3 をプローブしないため不活性)。
