@@ -10,13 +10,22 @@ let appSupport = FileManager.default.urls(
 ).first!.appendingPathComponent("Bubilator88")
 
 let bootArgs = Array(CommandLine.arguments.dropFirst())
+
+/// `--script <file.txt>` でタイムラインスクリプトを再生するモード。
+let scriptPath: String? = {
+    guard let i = bootArgs.firstIndex(of: "--script"), i + 1 < bootArgs.count else { return nil }
+    return bootArgs[i + 1]
+}()
+
 let requestedDiskPath: String? = {
-    guard !bootArgs.isEmpty else { return nil }
-    if bootArgs[0] == "--help" || bootArgs[0] == "-h" {
+    guard let first = bootArgs.first else { return nil }
+    if first == "--help" || first == "-h" {
         print("Usage: swift run BootTester [disk.d88]")
+        print("       swift run BootTester --script <file.txt>   # タイムラインスクリプト再生")
         exit(0)
     }
-    return bootArgs[0]
+    if first.hasPrefix("--") { return nil }   // フラグはディスクパスではない
+    return first
 }()
 
 let diskBootFrames: Int = {
@@ -632,6 +641,69 @@ func setupMachine(dipSw1: UInt8 = 0xC3, dipSw2: UInt8 = 0x79) -> Machine {
     }
     maybeInstallVirtualRTC(machine: machine)
     return machine
+}
+
+// ============================================================
+// Script mode: --script <file.txt> でタイムラインを再生して終了
+// ============================================================
+func runScriptMode(scriptPath: String) -> Never {
+    let scriptURL = URL(fileURLWithPath: scriptPath)
+    guard let text = try? String(contentsOf: scriptURL, encoding: .utf8) else {
+        print("script 読み込み失敗: \(scriptPath)")
+        exit(1)
+    }
+    let steps: [ScriptStep]
+    do {
+        steps = try ScriptParser.parse(text)
+    } catch let e as ScriptError {
+        print("script parse error (line \(e.line)): \(e.message)")
+        exit(1)
+    } catch {
+        print("script parse error: \(error)")
+        exit(1)
+    }
+
+    let machine = setupMachine()
+    machine.bus.directBasicBoot = ProcessInfo.processInfo.environment["BOOTTEST_DIRECT_BASIC"] == "1"
+
+    // 相対パスはスクリプトのあるフォルダ基準、絶対パスはそのまま。
+    let baseDir = scriptURL.deletingLastPathComponent()
+    let loader: ScriptPlayer.FileLoader = { path in
+        let url = (path as NSString).isAbsolutePath
+            ? URL(fileURLWithPath: path)
+            : baseDir.appendingPathComponent(path)
+        guard let data = try? Data(contentsOf: url) else {
+            throw ScriptPlayer.RuntimeError("ディスク読み込み失敗: \(url.path)")
+        }
+        return [UInt8](data)
+    }
+
+    print("=== Script mode: \(scriptURL.lastPathComponent) (\(steps.count) steps) ===")
+    let player = ScriptPlayer(machine: machine, loader: loader)
+    do {
+        try player.run(steps)
+    } catch {
+        print("script runtime error: \(error)")
+        exit(1)
+    }
+
+    print(String(format: "  Final PC=%04X SP=%04X totalTStates=%llu",
+                 machine.cpu.pc, machine.cpu.sp, machine.totalTStates))
+    print(String(format: "  DIPSW1=%02X DIPSW2=%02X clock=%dMHz drive0=%@ drive1=%@",
+                 machine.bus.dipSw1, machine.bus.dipSw2, machine.clock8MHz ? 8 : 4,
+                 machine.subSystem.drives[0] != nil ? "yes" : "no",
+                 machine.subSystem.drives[1] != nil ? "yes" : "no"))
+
+    if let shot = ProcessInfo.processInfo.environment["BOOTTEST_SCREENSHOT_PATH"], !shot.isEmpty {
+        let pixels = renderCurrentFrame(machine: machine)
+        try? writePPMScreenshot(path: shot, pixels: pixels)
+        print("  Screenshot: \(shot)")
+    }
+    exit(0)
+}
+
+if let sp = scriptPath {
+    runScriptMode(scriptPath: sp)
 }
 
 // ============================================================

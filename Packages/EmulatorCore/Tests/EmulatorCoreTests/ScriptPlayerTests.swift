@@ -1,0 +1,219 @@
+import Testing
+import Foundation
+@testable import EmulatorCore
+
+@Suite("Script Player Tests")
+struct ScriptPlayerTests {
+
+    // MARK: - Helpers
+
+    /// ヘッダのみの最小 D88 を `names.count` 面ぶん連結して生成する。
+    private func makeD88(names: [String]) -> [UInt8] {
+        var out: [UInt8] = []
+        for name in names {
+            var block = [UInt8](repeating: 0, count: 688)
+            for (i, b) in Array(name.utf8).prefix(16).enumerated() { block[i] = b }
+            block[0x1A] = 0x00          // write protect off
+            block[0x1B] = 0x00          // 2D
+            // disk size = 688 (LE) — parseAll が複数面を歩けるよう非ゼロにする
+            block[0x1C] = 0xB0; block[0x1D] = 0x02; block[0x1E] = 0x00; block[0x1F] = 0x00
+            out.append(contentsOf: block)
+        }
+        return out
+    }
+
+    private func makePlayer(_ files: [String: [UInt8]] = [:]) -> (ScriptPlayer, Machine) {
+        let m = Machine()
+        let player = ScriptPlayer(machine: m) { path in
+            guard let data = files[path] else {
+                throw ScriptPlayer.RuntimeError("not found: \(path)")
+            }
+            return data
+        }
+        return (player, m)
+    }
+
+    private func pressed(_ m: Machine, _ key: Keyboard.Key) -> Bool {
+        (m.keyboard.matrix[key.row] & UInt8(1 << key.bit)) == 0
+    }
+
+    // MARK: - Setup directives
+
+    @Test func bootSetsDipSw() throws {
+        let (p, m) = makePlayer()
+        try p.run([.boot(.n88v1h)])
+        #expect(m.bus.dipSw1 == 0xC3)
+        #expect(m.bus.dipSw2 == 0xF1)
+    }
+
+    @Test func clockSetsRate() throws {
+        let (p, m) = makePlayer()
+        try p.run([.clock(mhz: 4)])
+        #expect(m.clock8MHz == false)
+        try p.run([.clock(mhz: 8)])
+        #expect(m.clock8MHz == true)
+    }
+
+    @Test func dipswRawOverrides() throws {
+        let (p, m) = makePlayer()
+        try p.run([.dipsw1(0xAA), .dipsw2(0x55)])
+        #expect(m.bus.dipSw1 == 0xAA)
+        #expect(m.bus.dipSw2 == 0x55)
+    }
+
+    // MARK: - 自動 ROM/ディスク起動 (DIPSW2 bit3)
+
+    @Test func autoDiskBootClearsBit3WhenDiskPresent() throws {
+        let d88 = makeD88(names: ["IMG0"])
+        let (p, m) = makePlayer(["A.d88": d88])
+        try p.run([.boot(.n88v2), .diskMount(drive: 0, path: "A.d88", image: 0), .wait(frames: 1)])
+        // ドライブ0にディスク → disk boot (bit3=0)
+        #expect((m.bus.dipSw2 & 0x08) == 0)
+    }
+
+    @Test func autoRomBootSetsBit3WhenNoDisk() throws {
+        let (p, m) = makePlayer()
+        try p.run([.boot(.n88v2), .wait(frames: 1)])
+        // ディスク無し → ROM boot (bit3=1)
+        #expect((m.bus.dipSw2 & 0x08) == 0x08)
+    }
+
+    @Test func rawDipsw2DisablesAutoResolve() throws {
+        let (p, m) = makePlayer()
+        // 生値で bit3=0 を指定 → ディスク無しでも自動で立てない
+        try p.run([.dipsw2(0x71), .wait(frames: 1)])
+        #expect((m.bus.dipSw2 & 0x08) == 0)
+    }
+
+    // MARK: - キー入力
+
+    @Test func keyDownPersistsAcrossWaits() throws {
+        let (p, m) = makePlayer()
+        let a = Keyboard.Key(2, 1)
+        try p.run([.key(a, .down), .wait(frames: 10)])
+        // down は自動リリースされない → 終了後も押下のまま
+        #expect(pressed(m, a))
+    }
+
+    @Test func keyUpReleases() throws {
+        let (p, m) = makePlayer()
+        let a = Keyboard.Key(2, 1)
+        try p.run([.key(a, .down), .key(a, .up), .wait(frames: 5)])
+        #expect(!pressed(m, a))
+    }
+
+    @Test func tapHoldTiming() {
+        let (p, m) = makePlayer()
+        let ret = Keyboard.Key(1, 7)
+        p.applyKey(ret, .tap(hold: 3))
+        #expect(pressed(m, ret))     // 押下直後
+        p.advance(2)
+        #expect(pressed(m, ret))     // 2 フレーム経過 (< 3) → まだ押下
+        p.advance(1)
+        #expect(!pressed(m, ret))    // 3 フレーム目で自動リリース
+    }
+
+    @Test func tapHoldZeroReleasesImmediately() {
+        let (p, m) = makePlayer()
+        let ret = Keyboard.Key(1, 7)
+        p.applyKey(ret, .tap(hold: 0))
+        #expect(!pressed(m, ret))
+    }
+
+    @Test func tapReleasedByFinish() throws {
+        let (p, m) = makePlayer()
+        let sp = Keyboard.Key(9, 6)
+        // hold 100 だが wait 1 のみ → run 終了時に finish が解放する
+        try p.run([.key(sp, .tap(hold: 100)), .wait(frames: 1)])
+        #expect(!pressed(m, sp))
+    }
+
+    @Test func explicitDownAfterTapStaysHeld() throws {
+        let (p, m) = makePlayer()
+        let a = Keyboard.Key(2, 1)
+        try p.run([.key(a, .tap(hold: 2)), .key(a, .down), .wait(frames: 10)])
+        // down が tap 予約を解除 → finish でも解放されず押下のまま
+        #expect(pressed(m, a))
+    }
+
+    // MARK: - ディスク
+
+    @Test func mountSelectsCorrectImage() throws {
+        // multi-image D88 から image 番号で正しい面を選ぶ (空ドライブ → 即時)。
+        let d88 = makeD88(names: ["IMG0", "IMG1"])
+        let (p, m) = makePlayer(["Ys.d88": d88])
+        try p.run([.diskMount(drive: 0, path: "Ys.d88", image: 1)])
+        #expect(m.subSystem.drives[0]?.name == "IMG1")
+    }
+
+    @Test func selectTriggersRemount() throws {
+        // 占有ドライブの image 切替は差し替え扱い → ドアが開く (drives 一時 nil)。
+        // commit は DISK.ROM ありの非 legacy 動作なので、ここでは remount 開始のみ確認。
+        let d88 = makeD88(names: ["IMG0", "IMG1"])
+        let (p, m) = makePlayer(["Ys.d88": d88])
+        try p.run([.diskMount(drive: 0, path: "Ys.d88", image: 0)])
+        #expect(m.subSystem.drives[0]?.name == "IMG0")
+        try p.run([.diskSelect(drive: 0, image: 1)])
+        #expect(m.subSystem.drives[0] == nil)   // ドア開放中 (pendingMount)
+    }
+
+    @Test func selectImageOutOfRangeThrows() {
+        let d88 = makeD88(names: ["IMG0"])
+        let (p, _) = makePlayer(["A.d88": d88])
+        #expect(throws: ScriptPlayer.RuntimeError.self) {
+            try p.run([.diskMount(drive: 0, path: "A.d88", image: 0), .diskSelect(drive: 0, image: 9)])
+        }
+    }
+
+    @Test func diskEjectClears() throws {
+        let d88 = makeD88(names: ["IMG0"])
+        let (p, m) = makePlayer(["A.d88": d88])
+        try p.run([.diskMount(drive: 1, path: "A.d88", image: 0)])
+        #expect(m.subSystem.drives[1] != nil)
+        try p.run([.diskEject(drive: 1)])
+        #expect(m.subSystem.drives[1] == nil)
+    }
+
+    @Test func diskSwapMountsFile() throws {
+        // 空ドライブへの swap は即時マウント (占有ドライブの差し替え遅延は SubSystem 側の責務)。
+        let b = makeD88(names: ["BBBB"])
+        let (p, m) = makePlayer(["B.d88": b])
+        try p.run([.diskSwap(drive: 0, path: "B.d88", image: 0)])
+        #expect(m.subSystem.drives[0]?.name == "BBBB")
+    }
+
+    @Test func mountImageOutOfRangeThrows() {
+        let d88 = makeD88(names: ["IMG0"])
+        let (p, _) = makePlayer(["A.d88": d88])
+        #expect(throws: ScriptPlayer.RuntimeError.self) {
+            try p.run([.diskMount(drive: 0, path: "A.d88", image: 5)])
+        }
+    }
+
+    @Test func selectWithoutMountThrows() {
+        let (p, _) = makePlayer()
+        #expect(throws: ScriptPlayer.RuntimeError.self) {
+            try p.run([.diskSelect(drive: 0, image: 0)])
+        }
+    }
+
+    @Test func missingFileThrows() {
+        let (p, _) = makePlayer()
+        #expect(throws: ScriptPlayer.RuntimeError.self) {
+            try p.run([.diskMount(drive: 0, path: "nope.d88", image: 0)])
+        }
+    }
+
+    // MARK: - reset
+
+    @Test func resetReFinalizesDiskBoot() throws {
+        let d88 = makeD88(names: ["IMG0"])
+        let (p, m) = makePlayer(["A.d88": d88])
+        // ディスク有りで起動 → bit3=0
+        try p.run([.boot(.n88v2), .diskMount(drive: 0, path: "A.d88", image: 0), .wait(frames: 1)])
+        #expect((m.bus.dipSw2 & 0x08) == 0)
+        // eject して reset → 次の wait で ROM boot に再確定 (bit3=1)
+        try p.run([.diskEject(drive: 0), .reset(preserveRAM: false), .wait(frames: 1)])
+        #expect((m.bus.dipSw2 & 0x08) == 0x08)
+    }
+}
