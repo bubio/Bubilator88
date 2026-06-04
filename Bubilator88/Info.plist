@@ -8,5 +8,45 @@
 	<string>Bubilator88.help</string>
 	<key>CFBundleHelpBookName</key>
 	<string>Bubilator88 Help</string>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.bubio.bubilator88.timeline-script</string>
+			<key>UTTypeDescription</key>
+			<string>Bubilator88 Timeline Script</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.plain-text</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>b88script</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>text/plain</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Bubilator88 Timeline Script</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.bubio.bubilator88.timeline-script</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -16,7 +16,9 @@ extension EmulatorViewModel {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
-        panel.allowedContentTypes = [.plainText, .text, .data]
+        // 独自 UTI (.b88script) を優先。互換のため素のテキストも選べるようにする。
+        let scriptType = UTType("com.bubio.bubilator88.timeline-script")
+        panel.allowedContentTypes = [scriptType, .plainText, .text].compactMap { $0 }
         panel.message = NSLocalizedString("再生するタイムラインスクリプトを選択",
                                           comment: "Script open panel prompt")
         guard panel.runModal() == .OK, let url = panel.url else { return }
@@ -25,6 +27,10 @@ extension EmulatorViewModel {
 
     /// スクリプトを解析し、機種を cold reset で構成してから live 再生を開始する。
     func playScript(url: URL) {
+        // Finder からのダブルクリック起動では onAppear の loadROMs より先に
+        // 来ることがある。ROM 未ロードのまま再生すると起動できないため保険。
+        if !romLoaded { loadROMs() }
+
         let text: String
         do {
             text = try String(contentsOf: url, encoding: .utf8)

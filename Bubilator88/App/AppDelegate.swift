@@ -30,8 +30,18 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// Set by the root SwiftUI scene so terminate hooks can reach the
     /// recorder. Weak to avoid a retain cycle; the view model outlives
-    /// the delegate in practice.
-    weak var viewModel: EmulatorViewModel?
+    /// the delegate in practice. When a `.b88script` was double-clicked
+    /// before the scene finished wiring this up, the queued URL is
+    /// flushed the moment the view model arrives.
+    weak var viewModel: EmulatorViewModel? {
+        didSet { flushPendingScriptOpens() }
+    }
+
+    /// `.b88script` files handed to us by Finder before the view model is
+    /// ready (cold launch via double-click fires `application(_:open:)`
+    /// ahead of `ContentView.onAppear`). Only the last one is meaningful —
+    /// a single emulator instance can play one script at a time.
+    private var pendingScriptURLs: [URL] = []
 
     private var shortcutMonitor: Any?
     private var rewindMonitor: Any?
@@ -78,6 +88,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             name: NSWindow.didBecomeKeyNotification,
             object: nil
         )
+    }
+
+    // MARK: - Document open (double-click / "Open With")
+
+    /// Finder hands `.b88script` files here (one call may carry several).
+    /// We only ever play the last; queue it and flush once the view model
+    /// exists and its window is on screen.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        let scripts = urls.filter { $0.pathExtension.lowercased() == "b88script" }
+        guard !scripts.isEmpty else { return }
+        pendingScriptURLs.append(contentsOf: scripts)
+        flushPendingScriptOpens()
+    }
+
+    /// Play the most recently queued script if the view model is ready.
+    /// Deferred to the next main-loop tick so a cold-launch open lands
+    /// after `ContentView.onAppear` has loaded ROMs and started the run
+    /// loop. No-op while the view model is still nil (re-fired by its
+    /// `didSet`).
+    private func flushPendingScriptOpens() {
+        guard viewModel != nil, let url = pendingScriptURLs.last else { return }
+        pendingScriptURLs.removeAll()
+        DispatchQueue.main.async { [weak self] in
+            self?.viewModel?.playScript(url: url)
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

@@ -261,11 +261,20 @@ swift run BootTester --script demo.txt
    - ✅ 読込/再生 (live モード)。DEBUG メニュー「スクリプトを再生…」→ NSOpenPanel →
      `ScriptParser.parse` → cold reset → `ScriptPlayer.beginLive` → 毎フレーム `tickScriptPlayer`。
      `EmulatorViewModel+Script.swift`。bit3 自動確定は手順4の前準備で `Machine` に共通化済。
+   - ✅ 独自拡張子 `.b88script` を Exported UTI (`com.bubio.bubilator88.timeline-script`,
+     `public.plain-text` 準拠) + `CFBundleDocumentTypes` (Owner/Editor) で登録。Finder
+     ダブルクリック → `AppDelegate.application(_:open:)` → `playScript`。中身はプレーン
+     テキストなのでテキストエディタでも編集可。再生中はステータスバーに `play.diamond`。
    - ⬜ 操作の録画 (再生の逆: 実プレイ → スクリプト出力)。
 
 ### 実装メモ
 - `ScriptPlayer` は `Machine` の public API のみを叩く。ディスクパス→バイト列の解決は
   `FileLoader` クロージャに委譲 (純粋・サンドボックス対応)。
+- 初期 `disk`(`.diskMount`)はコールドマウントなので `ejectDisk` してから mount し、
+  交換ディレイ窓を踏まない。`Machine` 再利用 (live 再生の 2 回目) で reset 後もドライブに
+  前回ディスクが残ると、ディレイ窓中に drive0 が一時 nil となり `applyBootStrap` が ROM
+  起動へ誤判定するため。`disk select` / `disk swap` はタイムライン中の入れ替えなので
+  ディレイ窓を維持する。
 - `disk select` / `disk swap` で占有ドライブを差し替えると、`SubSystem` のドア開閉窓
   (~100ms) を経てコミットされる。これは DISK.ROM ありの非 legacy 動作でのみ完了する
   (ROM 無しの裸 Machine では sub-CPU が駆動されないため未コミットのまま)。
