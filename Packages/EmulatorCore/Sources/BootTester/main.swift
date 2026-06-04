@@ -882,7 +882,8 @@ if let loadStatePath {
     if resetAfterLoadState {
         let use8MHz = sm.clock8MHz
         let sw1 = sm.bus.dipSw1
-        let sw2 = sm.subSystem.drives[0] == nil ? (sm.bus.dipSw2 | 0x08) : (sm.bus.dipSw2 & ~UInt8(0x08))
+        let sw2 = Machine.resolvedBootStrap(base: sm.bus.dipSw2,
+                                            hasDiskInDrive0: sm.subSystem.drives[0] != nil)
         let adpcmNonZeroBeforeReset = sm.sound.adpcmRAM.contains { $0 != 0 }
         sm.bus.dipSw1 = sw1
         sm.bus.dipSw2 = sw2

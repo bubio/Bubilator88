@@ -134,12 +134,8 @@ public final class ScriptPlayer {
         guard !setupFinalized else { return }
         setupFinalized = true
         if resolveDiskBoot {
-            // ドライブ 0 にディスクがあれば disk boot (bit3=0)、無ければ ROM boot (bit3=1)。
-            if machine.subSystem.drives[0] != nil {
-                machine.bus.dipSw2 &= ~UInt8(0x08)
-            } else {
-                machine.bus.dipSw2 |= UInt8(0x08)
-            }
+            // ドライブ 0 の占有状態から起動ストラップ (bit3) を確定 (Machine 共有ヘルパ)。
+            machine.applyBootStrap()
         }
     }
 

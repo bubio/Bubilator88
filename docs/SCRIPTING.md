@@ -265,12 +265,13 @@ swift run BootTester --script demo.txt
   時間が進むフレーム** で行う。`wait 0` では確定しないので、`wait` の後に `disk` を
   マウントしても起動モードが固定されない。
 
-### 既知の設計負債 (手順4: アプリ統合時に解消)
-- **DIPSW2 bit3 自動確定が三重実装**: ドライブ0の有無から起動ストラップを決める同一
-  ロジックが `EmulatorViewModel`(アプリ reset)・`BootTester`(セーブステート reset 経路)・
-  `ScriptPlayer.finalizeSetupIfNeeded` の 3 箇所にある。アプリが `ScriptPlayer` を
-  統合する際、reset 直後にアプリ側と Player 側で二重確定する恐れがある。`Machine` 等に
-  共有ヘルパを 1 本作って 3 箇所から呼ぶ形に寄せること。
+### DIPSW2 bit3 自動確定の共通化 (解消済み)
+- ドライブ0の有無から起動ストラップ (DIPSW2 bit3) を決めるロジックは
+  `Machine.resolvedBootStrap(base:hasDiskInDrive0:)` (純粋関数) と
+  `Machine.applyBootStrap(base:)` (バス反映) に一本化した。
+  `EmulatorViewModel`(アプリ reset)・`BootTester`(セーブステート reset 経路)・
+  `ScriptPlayer.finalizeSetupIfNeeded` の 3 箇所はすべてこの共有 API を呼ぶ。
+  ディスクあり → disk boot (bit3=0)、なし → ROM boot (bit3=1)。bit3 以外は保持。
 
 ---
 

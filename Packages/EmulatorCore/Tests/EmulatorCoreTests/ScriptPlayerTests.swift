@@ -63,6 +63,23 @@ struct ScriptPlayerTests {
 
     // MARK: - 自動 ROM/ディスク起動 (DIPSW2 bit3)
 
+    @Test func resolvedBootStrapPureFunction() {
+        // ディスクあり → bit3 を落とす / なし → bit3 を立てる。他ビットは保持。
+        #expect(Machine.resolvedBootStrap(base: 0x79, hasDiskInDrive0: true) == 0x71)
+        #expect(Machine.resolvedBootStrap(base: 0x71, hasDiskInDrive0: false) == 0x79)
+        // 既に正しい側なら冪等。
+        #expect(Machine.resolvedBootStrap(base: 0x71, hasDiskInDrive0: true) == 0x71)
+        #expect(Machine.resolvedBootStrap(base: 0x79, hasDiskInDrive0: false) == 0x79)
+    }
+
+    @Test func applyBootStrapUsesCurrentDipSw2WhenBaseOmitted() throws {
+        let d88 = makeD88(names: ["IMG0"])
+        let (_, m) = makePlayer(["A.d88": d88])
+        m.bus.dipSw2 = 0xF9            // V1H + bit3=1
+        m.applyBootStrap()            // ディスク無し → bit3 維持、他ビット保持
+        #expect(m.bus.dipSw2 == 0xF9)
+    }
+
     @Test func autoDiskBootClearsBit3WhenDiskPresent() throws {
         let d88 = makeD88(names: ["IMG0"])
         let (p, m) = makePlayer(["A.d88": d88])

@@ -961,10 +961,10 @@ final class EmulatorViewModel {
             // Auto-select ROM/DISK boot: if drive 0 is empty, set DIP SW2
             // bit 3 to skip the ~30s disk-boot timeout and go straight to
             // BASIC. When a disk is mounted, clear bit 3 for normal IPL boot.
-            let hasDisk = machine.subSystem.drives[0] != nil
-            let sw2 = hasDisk ? (sw2Base & ~UInt8(0x08)) : (sw2Base | 0x08)
+            // (Machine.applyBootStrap is the single source of truth shared with
+            // ScriptPlayer / BootTester.)
             machine.bus.dipSw1 = sw1
-            machine.bus.dipSw2 = sw2
+            machine.applyBootStrap(base: sw2Base)
             machine.reset(preserveRAM: true)
             machine.clock8MHz = use8MHz
             machine.cpuOverclock = cpuOverclock
