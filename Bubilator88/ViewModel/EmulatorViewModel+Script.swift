@@ -25,6 +25,28 @@ extension EmulatorViewModel {
         playScript(url: url)
     }
 
+    /// AppDelegate (`.b88script` のダブルクリック/「このアプリで開く」) からの入口。
+    /// エミュレータの描画ループが立ち上がってから再生しないと、`playScript` の
+    /// `start()` が `metalView == nil` のまま `isRunning` を立て、後続の
+    /// `ContentView.onAppear` の `start()` が `guard !isRunning` で no-op になり
+    /// 描画ループが永久に始まらない (= ディスクは載るが起動しない)。
+    /// 準備済み (描画ループ稼働中) なら即再生、まだなら保留して onAppear に委ねる。
+    func requestScriptPlayback(url: URL) {
+        if isRunning && metalView != nil {
+            playScript(url: url)
+        } else {
+            pendingScriptURL = url
+        }
+    }
+
+    /// `ContentView.onAppear` が `start()` の直後に呼ぶ。コールド起動オープンで
+    /// 保留されたスクリプトを、UI が完全に準備できた状態で再生する。
+    func consumePendingScript() {
+        guard let url = pendingScriptURL else { return }
+        pendingScriptURL = nil
+        playScript(url: url)
+    }
+
     /// スクリプトを解析し、機種を cold reset で構成してから live 再生を開始する。
     func playScript(url: URL) {
         // Finder からのダブルクリック起動では onAppear の loadROMs より先に

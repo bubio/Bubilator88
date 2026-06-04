@@ -96,6 +96,9 @@ struct ContentView: View {
             viewModel.loadROMs()
             viewModel.renderScreen()
             viewModel.start()
+            // A `.b88script` double-clicked to launch the app is held until
+            // here, so it plays only after ROMs + run loop are live.
+            viewModel.consumePendingScript()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.willEnterFullScreenNotification)) { _ in
             viewModel.isFullScreen = true

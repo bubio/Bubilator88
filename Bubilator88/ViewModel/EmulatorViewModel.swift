@@ -570,6 +570,11 @@ final class EmulatorViewModel {
     /// frame from `runFrameForMetal()`, same thread as `tickPasteQueue`.
     @ObservationIgnored var scriptPlayer: ScriptPlayer?
 
+    /// A `.b88script` opened (double-click) before the emulator was ready
+    /// to play it. Consumed by `consumePendingScript()` from
+    /// `ContentView.onAppear`, right after the run loop is started.
+    @ObservationIgnored var pendingScriptURL: URL?
+
     /// Audio output for YM2608 SSG sound
     let audio = AudioOutput()
 

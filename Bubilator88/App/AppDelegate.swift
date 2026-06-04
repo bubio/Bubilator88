@@ -102,17 +102,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         flushPendingScriptOpens()
     }
 
-    /// Play the most recently queued script if the view model is ready.
-    /// Deferred to the next main-loop tick so a cold-launch open lands
-    /// after `ContentView.onAppear` has loaded ROMs and started the run
-    /// loop. No-op while the view model is still nil (re-fired by its
-    /// `didSet`).
+    /// Hand the most recently queued script to the view model once it
+    /// exists. `requestScriptPlayback` decides whether to play now (run
+    /// loop already up) or defer to `ContentView.onAppear` — so we never
+    /// race the emulator's startup. No-op while the view model is still
+    /// nil (re-fired by its `didSet`).
     private func flushPendingScriptOpens() {
-        guard viewModel != nil, let url = pendingScriptURLs.last else { return }
+        guard let vm = viewModel, let url = pendingScriptURLs.last else { return }
         pendingScriptURLs.removeAll()
-        DispatchQueue.main.async { [weak self] in
-            self?.viewModel?.playScript(url: url)
-        }
+        DispatchQueue.main.async { vm.requestScriptPlayback(url: url) }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
