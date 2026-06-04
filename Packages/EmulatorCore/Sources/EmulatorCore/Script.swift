@@ -168,8 +168,8 @@ public enum ScriptParser {
             if args.count == 2 {
                 hold = 2
             } else if args.count == 3 {
-                guard let h = Int(args[2]), h >= 0 else {
-                    throw ScriptError(line: line, message: "tap の hold が不正: \(args[2])")
+                guard let h = Int(args[2]), h >= 1 else {
+                    throw ScriptError(line: line, message: "tap の hold は 1 以上: \(args[2])")
                 }
                 hold = h
             } else {
@@ -311,11 +311,16 @@ public enum ScriptParser {
     // MARK: Key name resolution
 
     /// キー名 (大小無視) または `row-bit` 表記を Keyboard.Key へ解決する。
-    static func resolveKey(_ token: String, line: Int) throws -> Keyboard.Key {
+    /// 解決できなければ nil。BootTester など外部からも使える共通エントリ。
+    public static func key(named token: String) -> Keyboard.Key? {
         let name = token.lowercased()
         if let key = keyNameTable[name] { return key }
-        // row-bit 表記 (例: "2-1", "0x0a-3")
-        if let key = parseRowBit(name) { return key }
+        return parseRowBit(name)            // row-bit 表記 (例: "2-1", "0x0a-3")
+    }
+
+    /// パーサ内部用: 解決失敗を行番号つきエラーにする。
+    static func resolveKey(_ token: String, line: Int) throws -> Keyboard.Key {
+        if let key = key(named: token) { return key }
         throw ScriptError(line: line, message: "未知のキー名: \(token)")
     }
 
@@ -336,92 +341,58 @@ public enum ScriptParser {
 // MARK: - Key name table
 
 extension ScriptParser {
-    /// 文字列 → Keyboard.Key。BootTester の BOOTTEST_KEY_EVENTS と共通の名前。
-    static let keyNameTable: [String: Keyboard.Key] = {
-        var t: [String: Keyboard.Key] = [:]
-
+    /// 文字列 → Keyboard.Key。タイムラインスクリプトと BootTester の
+    /// BOOTTEST_KEY_EVENTS が共有する唯一のキー名テーブル (Keyboard 定数が原典)。
+    static let keyNameTable: [String: Keyboard.Key] = [
         // リターン / 制御
-        t["return"] = Keyboard.Key(1, 7); t["enter"] = Keyboard.Key(1, 7)
-        t["space"] = Keyboard.Key(9, 6)
-        t["esc"] = Keyboard.Key(9, 7);    t["escape"] = Keyboard.Key(9, 7)
-        t["stop"] = Keyboard.Key(9, 0)
-        t["tab"] = Keyboard.Key(10, 0)
-        t["help"] = Keyboard.Key(10, 3)
-        t["copy"] = Keyboard.Key(10, 4)
-
+        "return": Keyboard.kpReturn, "enter": Keyboard.kpReturn,
+        "space": Keyboard.space,
+        "esc": Keyboard.esc, "escape": Keyboard.esc,
+        "stop": Keyboard.stop, "tab": Keyboard.tab,
+        "help": Keyboard.help, "copy": Keyboard.copy,
         // 修飾
-        t["shift"] = Keyboard.Key(8, 6); t["ctrl"] = Keyboard.Key(8, 7)
-        t["grph"] = Keyboard.Key(8, 4);  t["kana"] = Keyboard.Key(8, 5)
-
+        "shift": Keyboard.shift, "ctrl": Keyboard.ctrl,
+        "grph": Keyboard.grph, "kana": Keyboard.kana,
         // 矢印
-        t["up"] = Keyboard.Key(8, 1);    t["down"] = Keyboard.Key(10, 1)
-        t["left"] = Keyboard.Key(10, 2); t["right"] = Keyboard.Key(8, 2)
-
+        "up": Keyboard.up, "down": Keyboard.down,
+        "left": Keyboard.left, "right": Keyboard.right,
         // ファンクション
-        let f15: [Int] = [1, 2, 3, 4, 5]
-        for (i, bit) in f15.enumerated() { t["f\(i + 1)"] = Keyboard.Key(9, bit) }
-        for (i, bit) in (0...4).enumerated() { t["f\(i + 6)"] = Keyboard.Key(12, bit) }
-
-        // 数字 0-9
-        for d in 0...7 { t["\(d)"] = Keyboard.Key(6, d) }
-        t["8"] = Keyboard.Key(7, 0); t["9"] = Keyboard.Key(7, 1)
-
-        // 英字 a-z
-        let letters: [(Character, Int, Int)] = {
-            var arr: [(Character, Int, Int)] = []
-            let seq: [(Int, ClosedRange<Int>)] = [(2, 1...7), (3, 0...7), (4, 0...7), (5, 0...2)]
-            var chars = Array("abcdefghijklmnopqrstuvwxyz")
-            var ci = 0
-            for (row, bits) in seq {
-                for bit in bits where ci < chars.count {
-                    arr.append((chars[ci], row, bit)); ci += 1
-                }
-            }
-            _ = chars
-            return arr
-        }()
-        for (c, row, bit) in letters { t[String(c)] = Keyboard.Key(row, bit) }
-
+        "f1": Keyboard.f1, "f2": Keyboard.f2, "f3": Keyboard.f3, "f4": Keyboard.f4,
+        "f5": Keyboard.f5, "f6": Keyboard.f6, "f7": Keyboard.f7, "f8": Keyboard.f8,
+        "f9": Keyboard.f9, "f10": Keyboard.f10,
+        // 数字
+        "0": Keyboard.key0, "1": Keyboard.key1, "2": Keyboard.key2, "3": Keyboard.key3,
+        "4": Keyboard.key4, "5": Keyboard.key5, "6": Keyboard.key6, "7": Keyboard.key7,
+        "8": Keyboard.key8, "9": Keyboard.key9,
+        // 英字
+        "a": Keyboard.a, "b": Keyboard.b, "c": Keyboard.c, "d": Keyboard.d,
+        "e": Keyboard.e, "f": Keyboard.f, "g": Keyboard.g, "h": Keyboard.h,
+        "i": Keyboard.i, "j": Keyboard.j, "k": Keyboard.k, "l": Keyboard.l,
+        "m": Keyboard.m, "n": Keyboard.n, "o": Keyboard.o, "p": Keyboard.p,
+        "q": Keyboard.q, "r": Keyboard.r, "s": Keyboard.s, "t": Keyboard.t,
+        "u": Keyboard.u, "v": Keyboard.v, "w": Keyboard.w, "x": Keyboard.x,
+        "y": Keyboard.y, "z": Keyboard.z,
         // 記号
-        t["at"] = Keyboard.Key(2, 0)
-        t["leftbracket"] = Keyboard.Key(5, 3)
-        t["yen"] = Keyboard.Key(5, 4)
-        t["rightbracket"] = Keyboard.Key(5, 5)
-        t["caret"] = Keyboard.Key(5, 6)
-        t["minus"] = Keyboard.Key(5, 7)
-        t["colon"] = Keyboard.Key(7, 2)
-        t["semicolon"] = Keyboard.Key(7, 3)
-        t["comma"] = Keyboard.Key(7, 4)
-        t["period"] = Keyboard.Key(7, 5)
-        t["slash"] = Keyboard.Key(7, 6)
-        t["underscore"] = Keyboard.Key(7, 7)
-
+        "at": Keyboard.at,
+        "leftbracket": Keyboard.leftBracket, "rightbracket": Keyboard.rightBracket,
+        "yen": Keyboard.yen, "caret": Keyboard.caret, "minus": Keyboard.minus,
+        "colon": Keyboard.colon, "semicolon": Keyboard.semicolon,
+        "comma": Keyboard.comma, "period": Keyboard.period,
+        "slash": Keyboard.slash, "underscore": Keyboard.underscore,
         // テンキー
-        for d in 0...7 { t["kp\(d)"] = Keyboard.Key(0, d) }
-        t["kp8"] = Keyboard.Key(1, 0); t["kp9"] = Keyboard.Key(1, 1)
-        t["kpmultiply"] = Keyboard.Key(1, 2)
-        t["kpplus"] = Keyboard.Key(1, 3)
-        t["kpequal"] = Keyboard.Key(1, 4)
-        t["kpcomma"] = Keyboard.Key(1, 5)
-        t["kpperiod"] = Keyboard.Key(1, 6)
-        t["kpreturn"] = Keyboard.Key(1, 7); t["kpenter"] = Keyboard.Key(1, 7)
-        t["kpminus"] = Keyboard.Key(10, 5)
-        t["kpdivide"] = Keyboard.Key(10, 6)
-
+        "kp0": Keyboard.kp0, "kp1": Keyboard.kp1, "kp2": Keyboard.kp2, "kp3": Keyboard.kp3,
+        "kp4": Keyboard.kp4, "kp5": Keyboard.kp5, "kp6": Keyboard.kp6, "kp7": Keyboard.kp7,
+        "kp8": Keyboard.kp8, "kp9": Keyboard.kp9,
+        "kpreturn": Keyboard.kpReturn, "kpenter": Keyboard.kpReturn,
+        "kpplus": Keyboard.kpPlus, "kpminus": Keyboard.kpMinus,
+        "kpmultiply": Keyboard.kpMultiply, "kpdivide": Keyboard.kpDivide,
+        "kpequal": Keyboard.kpEqual, "kpcomma": Keyboard.kpComma,
+        "kpperiod": Keyboard.kpPeriod,
         // 編集 / ページ / 変換
-        t["clr"] = Keyboard.Key(8, 0)
-        t["del"] = Keyboard.Key(8, 3)
-        t["bs"] = Keyboard.Key(12, 5)
-        t["ins"] = Keyboard.Key(12, 6)
-        t["del2"] = Keyboard.Key(12, 7)
-        t["capslock"] = Keyboard.Key(10, 7)
-        t["rolldown"] = Keyboard.Key(11, 0)
-        t["rollup"] = Keyboard.Key(11, 1)
-        t["henkan"] = Keyboard.Key(13, 0)
-        t["kettei"] = Keyboard.Key(13, 1)
-        t["pc"] = Keyboard.Key(13, 2)
-        t["zenkaku"] = Keyboard.Key(13, 3)
-
-        return t
-    }()
+        "clr": Keyboard.clr, "del": Keyboard.del, "bs": Keyboard.bs,
+        "ins": Keyboard.ins, "del2": Keyboard.del2, "capslock": Keyboard.capsLock,
+        "rollup": Keyboard.rollUp, "rolldown": Keyboard.rollDown,
+        "henkan": Keyboard.henkan, "kettei": Keyboard.kettei,
+        "pc": Keyboard.pc, "zenkaku": Keyboard.zenkaku,
+    ]
 }

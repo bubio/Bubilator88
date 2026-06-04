@@ -94,6 +94,7 @@ struct ScriptParserTests {
         #expect(throws: ScriptError.self) { try ScriptParser.parse("key NOPE tap") }
         #expect(throws: ScriptError.self) { try ScriptParser.parse("key RETURN sideways") }
         #expect(throws: ScriptError.self) { try ScriptParser.parse("key RETURN tap five") }
+        #expect(throws: ScriptError.self) { try ScriptParser.parse("key RETURN tap 0") }   // §6: hold は 1 以上
     }
 
     // MARK: - disk

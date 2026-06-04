@@ -113,11 +113,14 @@ struct ScriptPlayerTests {
         #expect(!pressed(m, ret))    // 3 フレーム目で自動リリース
     }
 
-    @Test func tapHoldZeroReleasesImmediately() {
+    @Test func tapHoldZeroClampedToOneFrame() {
+        // §6: 必ず 1 フレーム以上保持。hold 0 は 1 に丸める。
         let (p, m) = makePlayer()
         let ret = Keyboard.Key(1, 7)
         p.applyKey(ret, .tap(hold: 0))
-        #expect(!pressed(m, ret))
+        #expect(pressed(m, ret))     // 押下直後はまだ押下 (即離さない)
+        p.advance(1)
+        #expect(!pressed(m, ret))    // 1 フレーム後に解放
     }
 
     @Test func tapReleasedByFinish() throws {
@@ -215,5 +218,35 @@ struct ScriptPlayerTests {
         // eject して reset → 次の wait で ROM boot に再確定 (bit3=1)
         try p.run([.diskEject(drive: 0), .reset(preserveRAM: false), .wait(frames: 1)])
         #expect((m.bus.dipSw2 & 0x08) == 0x08)
+    }
+
+    @Test func resetPreservesScriptClock() throws {
+        // reset は clock8MHz を true に戻すが、スクリプトの clock 指定は再適用される。
+        let (p, m) = makePlayer()
+        try p.run([.clock(mhz: 4)])
+        #expect(m.clock8MHz == false)
+        try p.run([.reset(preserveRAM: false)])
+        #expect(m.clock8MHz == false)   // reset 後も 4MHz を維持
+    }
+
+    @Test func clockUnspecifiedFollowsResetDefault() throws {
+        // clock 未指定なら再適用しない (reset の既定 8MHz のまま)。
+        let (p, m) = makePlayer()
+        m.clock8MHz = false
+        try p.run([.reset(preserveRAM: false)])
+        #expect(m.clock8MHz == true)
+    }
+
+    @Test func waitZeroDoesNotLatchBootMode() throws {
+        // wait 0 は起動確定を進めない。後から mount したディスクで disk boot になる。
+        let d88 = makeD88(names: ["IMG0"])
+        let (p, m) = makePlayer(["A.d88": d88])
+        try p.run([
+            .boot(.n88v2),
+            .wait(frames: 0),                                  // ここで latch しないこと
+            .diskMount(drive: 0, path: "A.d88", image: 0),
+            .wait(frames: 1),                                  // ここで disk boot に確定
+        ])
+        #expect((m.bus.dipSw2 & 0x08) == 0)   // disk boot (bit3=0)
     }
 }

@@ -24,7 +24,14 @@ let requestedDiskPath: String? = {
         print("       swift run BootTester --script <file.txt>   # タイムラインスクリプト再生")
         exit(0)
     }
-    if first.hasPrefix("--") { return nil }   // フラグはディスクパスではない
+    if first.hasPrefix("--") {
+        // フラグはディスクパスではない。--script 以外の未知フラグは黙殺せず警告。
+        if first != "--script" {
+            FileHandle.standardError.write(
+                Data("warning: 未知のオプション \(first) を無視します\n".utf8))
+        }
+        return nil
+    }
     return first
 }()
 
@@ -188,116 +195,13 @@ struct BootTestKeyFrameEvent {
     let keyName: String
 }
 
-let bootTestKeyMap: [String: Keyboard.Key] = [
-    "return": Keyboard.kpReturn,
-    "enter": Keyboard.kpReturn,
-    "space": Keyboard.space,
-    "esc": Keyboard.esc,
-    "escape": Keyboard.esc,
-    "up": Keyboard.up,
-    "down": Keyboard.down,
-    "left": Keyboard.left,
-    "right": Keyboard.right,
-    "stop": Keyboard.stop,
-    "tab": Keyboard.tab,
-    "help": Keyboard.help,
-    "copy": Keyboard.copy,
-    "shift": Keyboard.shift,
-    "ctrl": Keyboard.ctrl,
-    "grph": Keyboard.grph,
-    "kana": Keyboard.kana,
-    "0": Keyboard.key0,
-    "1": Keyboard.key1,
-    "2": Keyboard.key2,
-    "3": Keyboard.key3,
-    "4": Keyboard.key4,
-    "5": Keyboard.key5,
-    "6": Keyboard.key6,
-    "7": Keyboard.key7,
-    "8": Keyboard.key8,
-    "9": Keyboard.key9,
-    "f1": Keyboard.f1,
-    "f2": Keyboard.f2,
-    "f3": Keyboard.f3,
-    "f4": Keyboard.f4,
-    "f5": Keyboard.f5,
-    "f6": Keyboard.f6,
-    "f7": Keyboard.f7,
-    "f8": Keyboard.f8,
-    "f9": Keyboard.f9,
-    "f10": Keyboard.f10,
-    // A-Z — letters must be lowercased by parseBootTestKey before lookup
-    "a": Keyboard.a, "b": Keyboard.b, "c": Keyboard.c, "d": Keyboard.d,
-    "e": Keyboard.e, "f": Keyboard.f, "g": Keyboard.g, "h": Keyboard.h,
-    "i": Keyboard.i, "j": Keyboard.j, "k": Keyboard.k, "l": Keyboard.l,
-    "m": Keyboard.m, "n": Keyboard.n, "o": Keyboard.o, "p": Keyboard.p,
-    "q": Keyboard.q, "r": Keyboard.r, "s": Keyboard.s, "t": Keyboard.t,
-    "u": Keyboard.u, "v": Keyboard.v, "w": Keyboard.w, "x": Keyboard.x,
-    "y": Keyboard.y, "z": Keyboard.z,
-    // Symbols (ASCII names)
-    "at": Keyboard.at,
-    "leftbracket": Keyboard.leftBracket,
-    "rightbracket": Keyboard.rightBracket,
-    "yen": Keyboard.yen,
-    "caret": Keyboard.caret,
-    "minus": Keyboard.minus,
-    "colon": Keyboard.colon,
-    "semicolon": Keyboard.semicolon,
-    "comma": Keyboard.comma,
-    "period": Keyboard.period,
-    "slash": Keyboard.slash,
-    "underscore": Keyboard.underscore,
-    // Numpad (kp* = keypad)
-    "kp0": Keyboard.kp0, "kp1": Keyboard.kp1, "kp2": Keyboard.kp2,
-    "kp3": Keyboard.kp3, "kp4": Keyboard.kp4, "kp5": Keyboard.kp5,
-    "kp6": Keyboard.kp6, "kp7": Keyboard.kp7, "kp8": Keyboard.kp8,
-    "kp9": Keyboard.kp9,
-    "kpreturn": Keyboard.kpReturn,
-    "kpenter":  Keyboard.kpReturn,
-    "kpplus":   Keyboard.kpPlus,
-    "kpminus":  Keyboard.kpMinus,
-    "kpmultiply": Keyboard.kpMultiply,
-    "kpdivide":   Keyboard.kpDivide,
-    "kpequal":    Keyboard.kpEqual,
-    "kpcomma":    Keyboard.kpComma,
-    "kpperiod":   Keyboard.kpPeriod,
-    // Other
-    "clr":  Keyboard.clr,
-    "del":  Keyboard.del,
-    "bs":   Keyboard.bs,
-    "ins":  Keyboard.ins,
-    "del2": Keyboard.del2,
-    "capslock": Keyboard.capsLock,
-    "rollup":   Keyboard.rollUp,
-    "rolldown": Keyboard.rollDown,
-    "henkan":   Keyboard.henkan,
-    "kettei":   Keyboard.kettei,
-    "pc":       Keyboard.pc,
-    "zenkaku":  Keyboard.zenkaku,
-]
+// キー名テーブルは ScriptParser に一本化した (BOOTTEST_KEY_EVENTS と
+// タイムラインスクリプトで共通)。parseBootTestKey は下で委譲する。
 
+/// キー名 / row-bit 表記を Keyboard.Key へ解決する。
+/// タイムラインスクリプトと同じ共有テーブル (ScriptParser) に委譲する。
 func parseBootTestKey(_ token: String) -> Keyboard.Key? {
-    if let mapped = bootTestKeyMap[token.lowercased()] {
-        return mapped
-    }
-
-    let parts = token.split(separator: "-", maxSplits: 1).map(String.init)
-    guard parts.count == 2 else { return nil }
-
-    func parseInt(_ raw: String) -> Int? {
-        if raw.lowercased().hasPrefix("0x") {
-            return Int(raw.dropFirst(2), radix: 16)
-        }
-        return Int(raw)
-    }
-
-    guard let row = parseInt(parts[0]),
-          let bit = parseInt(parts[1]),
-          row >= 0, row < 15,
-          bit >= 0, bit < 8 else {
-        return nil
-    }
-    return Keyboard.Key(row, bit)
+    ScriptParser.key(named: token)
 }
 
 func parseBootTestKeyEvents(from envName: String) -> [BootTestKeyFrameEvent] {
@@ -547,8 +451,12 @@ guard let romData = try? Data(contentsOf: appSupport.appendingPathComponent("N88
 /// host 時刻を参照する既定の RTC は相対的に止まって見える。RTC 経過を
 /// 当てにして画面遷移するゲーム (例: SB2 Music Disk v4) は、これで
 /// ゲーム視点の「秒」が正しく進むようになる。
-func maybeInstallVirtualRTC(machine: Machine) {
-    guard ProcessInfo.processInfo.environment["BOOTTEST_VIRTUAL_RTC"] == "1" else { return }
+func maybeInstallVirtualRTC(machine: Machine, forceDefault: Bool = false) {
+    // 通常経路は BOOTTEST_VIRTUAL_RTC=1 でのみ有効。script モードは
+    // forceDefault=true で既定 ON (BOOTTEST_VIRTUAL_RTC=0 で明示無効化のみ可)。
+    let env = ProcessInfo.processInfo.environment["BOOTTEST_VIRTUAL_RTC"]
+    let enabled = forceDefault ? (env != "0") : (env == "1")
+    guard enabled else { return }
     // 固定の仮想開始日時: 2025-01-01 00:00:00 (水曜)
     let baseYear = 125   // 1900 起算
     let baseMon  = 1     // 1-12 で返す
@@ -664,6 +572,8 @@ func runScriptMode(scriptPath: String) -> Never {
     }
 
     let machine = setupMachine()
+    // 決定性 (検証/リプレイ) のため、script モードでは virtual RTC を既定 ON。
+    maybeInstallVirtualRTC(machine: machine, forceDefault: true)
     machine.bus.directBasicBoot = ProcessInfo.processInfo.environment["BOOTTEST_DIRECT_BASIC"] == "1"
 
     // 相対パスはスクリプトのあるフォルダ基準、絶対パスはそのまま。

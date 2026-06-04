@@ -34,6 +34,10 @@ public final class ScriptPlayer {
     /// `dipsw2` を生値で指定したらユーザに従い自動解決しない。
     private var resolveDiskBoot = true
 
+    /// `clock` で明示されたクロック。`Machine.reset()` は clock8MHz を true に
+    /// 戻すため、reset 後に再適用してスクリプトの意図を保つ (nil = 未指定)。
+    private var desiredClock8MHz: Bool?
+
     public init(machine: Machine, loader: @escaping FileLoader) {
         self.machine = machine
         self.loader = loader
@@ -57,7 +61,9 @@ public final class ScriptPlayer {
             resolveDiskBoot = true
 
         case .clock(let mhz):
-            machine.clock8MHz = (mhz == 8)
+            let want = (mhz == 8)
+            machine.clock8MHz = want
+            desiredClock8MHz = want
 
         case .dipsw1(let v):
             machine.bus.dipSw1 = v
@@ -87,16 +93,20 @@ public final class ScriptPlayer {
 
         case .reset(let preserveRAM):
             machine.reset(preserveRAM: preserveRAM)
-            pendingReleases.removeAll()     // reset でキーマトリクスは全解放される
-            setupFinalized = false          // 次の advance 前に再確定
+            // reset は clock8MHz を true に戻し、キーマトリクスを全解放する。
+            // スクリプトで明示したクロックは再適用して意図を保つ
+            // (dipSw1/2 は reset で保持される)。
+            if let c = desiredClock8MHz { machine.clock8MHz = c }
+            pendingReleases.removeAll()
+            setupFinalized = false          // 次の advance 前に bit3 を再確定
         }
     }
 
     // MARK: - Time advancement
 
     func advance(_ frames: Int) {           // internal: タイミングのユニットテスト用
+        guard frames > 0 else { return }    // wait 0 は時間も起動確定も進めない
         finalizeSetupIfNeeded()
-        guard frames > 0 else { return }
         for _ in 0..<frames {
             machine.runFrame()
             tickPendingReleases()
@@ -106,7 +116,9 @@ public final class ScriptPlayer {
     /// 各フレーム後に呼び、予約された tap リリースを発火する。
     private func tickPendingReleases() {
         guard !pendingReleases.isEmpty else { return }
-        for (key, remaining) in pendingReleases {
+        // キーのスナップショットを反復し、辞書本体は中身だけ更新する。
+        for key in Array(pendingReleases.keys) {
+            guard let remaining = pendingReleases[key] else { continue }
             let next = remaining - 1
             if next <= 0 {
                 machine.keyboard.releaseKey(row: key.row, bit: key.bit)
@@ -142,14 +154,10 @@ public final class ScriptPlayer {
             machine.keyboard.releaseKey(row: key.row, bit: key.bit)
             pendingReleases[key] = nil
         case .tap(let hold):
-            // 保持中の同キーは先に解放してから押し直す。
+            // 保持中の同キーは先に解放してから押し直す (pressKey で上書き)。
+            // §6 の「必ず 1 フレーム以上保持」保証のため hold は 1 未満を 1 に丸める。
             machine.keyboard.pressKey(row: key.row, bit: key.bit)
-            if hold <= 0 {
-                machine.keyboard.releaseKey(row: key.row, bit: key.bit)
-                pendingReleases[key] = nil
-            } else {
-                pendingReleases[key] = hold
-            }
+            pendingReleases[key] = max(1, hold)
         }
     }
 

@@ -72,7 +72,7 @@ disk      = "disk" ( "swap"   drive path [ "image" index ]   ; 別ファイル�
 reset     = "reset" [ "cold" | "warm" ]
 
 duration  = integer [ "f" ] | number "s"
-hold      = integer            ; tap の押下フレーム数 (既定 2)
+hold      = integer            ; tap の押下フレーム数 (1 以上, 既定 2)
 drive     = "0" | "1"
 index     = integer            ; multi-image D88 のイメージ番号 (既定 0)
 byte      = "0x" hex | integer
@@ -147,6 +147,7 @@ comment   = "#" { any-char }
 - 同じキーへ保持中に再度 `tap`/`down` が来たら、先に強制リリースしてから処理する。
 - 複数キーの `tap` はそれぞれ独立に追跡する。
 - スクリプト終了時に未リリースの予約が残っていれば、終了処理で離す。
+- `hold` は 1 未満を許さない (パーサが拒否し、念のため再生側でも 1 に丸める)。
 
 キーを**長く保持**したい場合は `tap` ではなく明示的に書く:
 
@@ -204,7 +205,7 @@ key SHIFT up
 ファイルパスを内包するため)。core に乱数はないので、以下を満たせば bit-exact に再現する:
 
 - **virtual RTC を有効化** (RTC を `totalTStates` ベースの固定時刻に置換)。
-  ヘッドレス/drive モードでは既定 ON にする想定。
+  BootTester の `--script` では既定 ON (実装済み。`BOOTTEST_VIRTUAL_RTC=0` で無効化可)。
 - save state メタの生成時刻 (`Date()`) はエミュレーション状態に影響しない
   (検証ハッシュからは除外する)。
 
@@ -258,6 +259,11 @@ swift run BootTester --script demo.txt
 - `disk select` / `disk swap` で占有ドライブを差し替えると、`SubSystem` のドア開閉窓
   (~100ms) を経てコミットされる。これは DISK.ROM ありの非 legacy 動作でのみ完了する
   (ROM 無しの裸 Machine では sub-CPU が駆動されないため未コミットのまま)。
+- `reset` は `Machine.reset()` が clock8MHz を true に戻すため、スクリプトで `clock` を
+  明示していればその値を再適用する (dipSw1/2 は reset 後も保持される)。
+- ROM/ディスク起動 (DIPSW2 bit3) はドライブ0の状態から確定するが、確定は **最初に
+  時間が進むフレーム** で行う。`wait 0` では確定しないので、`wait` の後に `disk` を
+  マウントしても起動モードが固定されない。
 
 ---
 
