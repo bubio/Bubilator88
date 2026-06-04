@@ -295,6 +295,22 @@ struct ContentView: View {
 
             Spacer()
 
+            // Script playback indicator (shown only while a timeline script is playing)
+            if viewModel.isPlayingScript {
+                Button {
+                    viewModel.cancelScriptPlayback()
+                } label: {
+                    Image(systemName: "play.diamond")
+                        .symbolRenderingMode(.hierarchical)
+                        .symbolEffect(.wiggle.byLayer, options: .repeat(.periodic(delay: 1.0)))
+                        .foregroundStyle(.green)
+                        .font(.system(size: 20))
+                }
+                .buttonStyle(.plain)
+                .help(NSLocalizedString("Stop script playback",
+                                        comment: "Status bar script playback button tooltip"))
+            }
+
             // Recording indicator (shown only while recording)
             if viewModel.audioRecorder.isRecording {
                 Button {
