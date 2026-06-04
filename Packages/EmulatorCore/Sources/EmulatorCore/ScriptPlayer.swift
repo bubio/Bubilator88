@@ -158,7 +158,11 @@ public final class ScriptPlayer {
             resolveDiskBoot = false
 
         case .diskMount(let drive, let path, let image):
-            try mountFile(drive: drive, path: path, image: image)
+            // 初期セットアップ (コールドマウント): 交換ディレイを使わず即時マウントする。
+            // Machine を再利用する live 再生では reset 後もドライブにディスクが残るため
+            // (subSystem.reset は drives を保持)、eject せず mountDisk すると交換ディレイ
+            // 経路に入り drive0 が一時 nil → applyBootStrap が ROM 起動へ誤判定する。
+            try mountFile(drive: drive, path: path, image: image, immediate: true)
 
         case .wait(let frames):
             advance(frames)
@@ -248,7 +252,10 @@ public final class ScriptPlayer {
 
     // MARK: - Disk
 
-    private func mountFile(drive: Int, path: String, image: Int) throws {
+    /// - Parameter immediate: `true` ならマウント前に eject して交換ディレイ
+    ///   (ドアが開いている ~100ms 窓) を回避し、即座にディスクを実装する。
+    ///   コールドブートのセットアップ (`disk` コマンド) 用。`disk swap` は `false`。
+    private func mountFile(drive: Int, path: String, image: Int, immediate: Bool = false) throws {
         let data = try loader(path)
         let disks = D88Disk.parseAll(data: data)
         guard !disks.isEmpty else {
@@ -258,6 +265,7 @@ public final class ScriptPlayer {
             throw RuntimeError("イメージ番号 \(image) が範囲外 (\(path) は \(disks.count) 面)")
         }
         loadedImages[drive] = disks
+        if immediate { machine.ejectDisk(drive: drive) }
         machine.mountDisk(drive: drive, disk: disks[image])
     }
 

@@ -310,6 +310,31 @@ struct ScriptPlayerTests {
         #expect(!p.isLivePlaying)
     }
 
+    @Test func liveReplayMountsImmediatelyWhenDriveStillLoaded() throws {
+        // アプリの2回目再生の再現: subSystem.reset は drives を保持するため、
+        // 2回目の beginLive 開始時にドライブ0へ前回ディスクが残っている。
+        // diskMount は即時マウントすべき (交換ディレイに入ると finalize 時に
+        // drive0==nil となり applyBootStrap が ROM 起動へ誤判定する)。
+        let d88 = makeD88(names: ["IMG0"])
+        let (p, m) = makePlayer(["A.d88": d88])
+
+        // 1回目の再生相当: ディスクをマウントしておく。
+        try p.beginLive([.boot(.n88v2),
+                         .diskMount(drive: 0, path: "A.d88", image: 0),
+                         .wait(frames: 1)])
+        #expect(m.subSystem.drives[0] != nil)
+
+        // 2回目: アプリと同じく reset (drives 保持) 後に新しい player で再開。
+        m.reset(preserveRAM: false)
+        #expect(m.subSystem.drives[0] != nil)        // reset でも残っている
+        let p2 = ScriptPlayer(machine: m) { _ in d88 }
+        try p2.beginLive([.boot(.n88v2),
+                          .diskMount(drive: 0, path: "A.d88", image: 0),
+                          .wait(frames: 1)])
+        #expect(m.subSystem.drives[0] != nil)        // 即時マウント (交換ディレイで nil にならない)
+        #expect((m.bus.dipSw2 & 0x08) == 0)          // disk boot に確定
+    }
+
     @Test func waitZeroDoesNotLatchBootMode() throws {
         // wait 0 は起動確定を進めない。後から mount したディスクで disk boot になる。
         let d88 = makeD88(names: ["IMG0"])
