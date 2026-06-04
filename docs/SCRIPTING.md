@@ -185,17 +185,23 @@ key SHIFT up
                      machine.reset / runFrame で時間進行)
               ▲                              ▲
    ┌──────────┴──────────┐      ┌────────────┴────────────┐
-   │ GUI アプリ           │      │ BootTester              │
+   │ GUI アプリ (live)    │      │ BootTester (drive)      │
    │ スクリプト読込/再生   │      │ --script file.txt       │
    │ (将来: 操作の録画)    │      │ (env-var の大半を置換)   │
    └─────────────────────┘      └─────────────────────────┘
 ```
 
 - `ScriptPlayer` は `Machine` の public API を叩くだけの薄い層。LSI クラスは追加しない。
-- アプリ再生は **drive モード** (スクリプトが時計を所有し、自走 60Hz を止めて
-  フレームステップで再生) を基本とする。決定性が必要な検証もここで効く。
-- BootTester は単純な同期再生 (ヘッドレス・最大 turbo 可)。`--script` がディスクや
+  2 つの駆動モードを持つ:
+  - **drive モード** (`run()`): Player が時計を所有し `runFrame` を回す。BootTester 既定。
+  - **live モード** (`beginLive()` + 毎フレーム `liveTick()`): ホストが `runFrame` を所有し、
+    Player は各フレームでキー/ディスク操作を時間どおりに注入する。
+- **アプリ再生は live モード** (自走 60Hz の上にスクリプトを time-shift で乗せる、実時間)。
+  `runFrameForMetal()` が `tickPasteQueue()` と同じ位置で `tickScriptPlayer()` を毎フレーム
+  呼ぶ。実時間再生のため決定性は best-effort (§9)。
+- BootTester は drive モードの同期再生 (ヘッドレス・最大 turbo 可)。`--script` がディスクや
   ブートモードまで含むため、disk 引数や `BOOTTEST_DIPSW*` 等は不要 (スクリプトが優先)。
+  `BOOTTEST_SCRIPT_LIVE=1` で live ドライバ経路も検証できる。
 
 ---
 
@@ -251,7 +257,11 @@ swift run BootTester --script demo.txt
    `ScriptPlayer.swift`)。ユニットテスト 48 件 (`ScriptParserTests` / `ScriptPlayerTests`)。
 3. ✅ BootTester に `--script` を配線 (`swift run BootTester --script file.txt`)。
    相対パスはスクリプト基準で解決。sorpack 等で実ゲーム disk-boot をヘッドレス確認済。
-4. ⬜ GUI アプリに UI (読込/再生 → 最後に録画機能)。
+4. 🟡 GUI アプリに UI。
+   - ✅ 読込/再生 (live モード)。DEBUG メニュー「スクリプトを再生…」→ NSOpenPanel →
+     `ScriptParser.parse` → cold reset → `ScriptPlayer.beginLive` → 毎フレーム `tickScriptPlayer`。
+     `EmulatorViewModel+Script.swift`。bit3 自動確定は手順4の前準備で `Machine` に共通化済。
+   - ⬜ 操作の録画 (再生の逆: 実プレイ → スクリプト出力)。
 
 ### 実装メモ
 - `ScriptPlayer` は `Machine` の public API のみを叩く。ディスクパス→バイト列の解決は

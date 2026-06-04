@@ -212,6 +212,10 @@ final class EmulatorViewModel {
     /// Emulation running state
     var isRunning: Bool = false
 
+    /// Whether a timeline script is currently playing back (live mode).
+    /// UI-facing flag; the player itself lives in `scriptPlayer`.
+    var isPlayingScript: Bool = false
+
     // MARK: - Notifications (toast + alert)
 
     /// Toast message shown briefly over the emulator screen, auto-dismissed
@@ -561,6 +565,10 @@ final class EmulatorViewModel {
     /// Paste queue that replays clipboard text as simulated keystrokes.
     @ObservationIgnored let pasteQueue = TextPasteQueue()
     @ObservationIgnored let pasteQueueLock = NSLock()
+
+    /// Active timeline-script player (live mode). Driven once per machine
+    /// frame from `runFrameForMetal()`, same thread as `tickPasteQueue`.
+    @ObservationIgnored var scriptPlayer: ScriptPlayer?
 
     /// Audio output for YM2608 SSG sound
     let audio = AudioOutput()
@@ -945,6 +953,7 @@ final class EmulatorViewModel {
     /// previous save-state load or another unusual path.
     private func performReset(resetTranslation: Bool, forceRestart: Bool = false) {
         let wasRunning = isRunning || forceRestart
+        cancelScriptPlayback()
         stop()
         cancelPasteQueue()
         let mode = _bootModeStorage

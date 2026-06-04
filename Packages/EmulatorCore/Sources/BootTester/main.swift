@@ -588,10 +588,21 @@ func runScriptMode(scriptPath: String) -> Never {
         return [UInt8](data)
     }
 
-    print("=== Script mode: \(scriptURL.lastPathComponent) (\(steps.count) steps) ===")
+    // BOOTTEST_SCRIPT_LIVE=1 で live ドライバ (ホストが runFrame を所有) を使う。
+    // 既定は drive モード (Player が時計を所有)。app の live 再生経路の検証用。
+    let useLive = (ProcessInfo.processInfo.environment["BOOTTEST_SCRIPT_LIVE"] == "1")
+    print("=== Script mode: \(scriptURL.lastPathComponent) (\(steps.count) steps)"
+          + (useLive ? " [live]" : "") + " ===")
     let player = ScriptPlayer(machine: machine, loader: loader)
     do {
-        try player.run(steps)
+        if useLive {
+            try player.beginLive(steps)
+            while try player.liveTick() {
+                machine.runFrame()
+            }
+        } else {
+            try player.run(steps)
+        }
     } catch {
         print("script runtime error: \(error)")
         exit(1)

@@ -584,6 +584,17 @@ struct DebugCommands: Commands {
 
             Divider()
 
+            Button("スクリプトを再生…") {
+                viewModel.openAndPlayScript()
+            }
+            if viewModel.isPlayingScript {
+                Button("スクリプト再生を停止") {
+                    viewModel.cancelScriptPlayback()
+                }
+            }
+
+            Divider()
+
             Button("BIOS ROM フォルダを開く") {
                 Self.openBIOSROMFolder()
             }

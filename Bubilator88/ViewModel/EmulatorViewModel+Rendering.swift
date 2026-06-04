@@ -196,6 +196,7 @@ extension EmulatorViewModel {
         }
         for _ in 0..<frameCount {
             tickPasteQueue()
+            tickScriptPlayer()
             machine.runFrame()
         }
 

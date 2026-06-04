@@ -254,6 +254,62 @@ struct ScriptPlayerTests {
         #expect(m.clock8MHz == true)
     }
 
+    // MARK: - live モード (ホストが runFrame を所有)
+
+    @Test func liveTapHoldTiming() throws {
+        let (p, m) = makePlayer()
+        let ret = Keyboard.Key(1, 7)
+        // 先頭 wait 無しなので beginLive が即座に tap を押下する。
+        try p.beginLive([.key(ret, .tap(hold: 3)), .wait(frames: 5)])
+        #expect(pressed(m, ret))             // 押下直後
+        _ = try p.liveTick()                 // 3→2
+        #expect(pressed(m, ret))
+        _ = try p.liveTick()                 // 2→1
+        #expect(pressed(m, ret))
+        _ = try p.liveTick()                 // 1→0 で自動リリース
+        #expect(!pressed(m, ret))
+    }
+
+    @Test func liveWaitSchedulesKey() throws {
+        let (p, m) = makePlayer()
+        let sp = Keyboard.Key(9, 6)
+        try p.beginLive([.wait(frames: 3), .key(sp, .down)])
+        #expect(!pressed(m, sp))             // 先頭 wait 中はまだ
+        _ = try p.liveTick()                 // wait 3→2
+        _ = try p.liveTick()                 // 2→1
+        #expect(!pressed(m, sp))
+        _ = try p.liveTick()                 // 1→0 → 次ステップ (down) を適用
+        #expect(pressed(m, sp))
+    }
+
+    @Test func liveReturnsFalseWhenConsumed() throws {
+        let (p, _) = makePlayer()
+        try p.beginLive([.wait(frames: 1)])
+        #expect(p.isLivePlaying)
+        #expect(try p.liveTick() == false)   // 1 フレーム経過で完了
+        #expect(!p.isLivePlaying)
+    }
+
+    @Test func liveResolvesDiskBootOnFirstWait() throws {
+        let d88 = makeD88(names: ["IMG0"])
+        let (p, m) = makePlayer(["A.d88": d88])
+        try p.beginLive([.boot(.n88v2),
+                         .diskMount(drive: 0, path: "A.d88", image: 0),
+                         .wait(frames: 1)])
+        // ディスク mount 後に最初の wait で bit3 確定 → disk boot (bit3=0)。
+        #expect((m.bus.dipSw2 & 0x08) == 0)
+    }
+
+    @Test func liveCancelReleasesHeldKeys() throws {
+        let (p, m) = makePlayer()
+        let a = Keyboard.Key(2, 1)
+        try p.beginLive([.key(a, .down), .wait(frames: 10)])
+        #expect(pressed(m, a))
+        p.cancelLive()
+        #expect(!pressed(m, a))               // 中断でキー解放
+        #expect(!p.isLivePlaying)
+    }
+
     @Test func waitZeroDoesNotLatchBootMode() throws {
         // wait 0 は起動確定を進めない。後から mount したディスクで disk boot になる。
         let d88 = makeD88(names: ["IMG0"])
