@@ -65,8 +65,11 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
         super.init(frame: frame, device: device)
         self.delegate = self
         self.colorPixelFormat = .bgra8Unorm
-        self.preferredFramesPerSecond = 60
-        self.isPaused = true  // stays paused: a self-owned CADisplayLink drives draw(in:)
+        // isPaused stays true for the view's lifetime: MTKView's built-in timer
+        // is unreliable at document-open launch, so a self-owned CADisplayLink
+        // (see rebuildRenderLink) drives draw(in:). preferredFramesPerSecond is
+        // intentionally left at its default — it only affects the unused timer.
+        self.isPaused = true
         currentFilter = viewModel.videoFilter
         currentScanlineEnabled = viewModel.effectiveScanlineEnabled
         setupMetal()
@@ -825,24 +828,35 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
         showCursor()
     }
 
+    /// Block-based window observers, bound to the current window. Cleared and
+    /// re-registered on every `viewDidMoveToWindow` so they never accumulate
+    /// (the view can move windows — fullscreen, restore — more than once).
+    private var windowObservers: [NSObjectProtocol] = []
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         // Rebuild the render display link for the new window, and keep it in
         // sync with the window's on-screen visibility (the link should idle
         // while the window is hidden/occluded).
         rebuildRenderLink()
-        if let window {
-            NotificationCenter.default.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: window, queue: .main) { [weak self] _ in
+
+        // Drop observers bound to the previous window before re-registering.
+        let nc = NotificationCenter.default
+        windowObservers.forEach(nc.removeObserver)
+        windowObservers.removeAll()
+        guard let window else { return }
+        windowObservers = [
+            nc.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: window, queue: .main) { [weak self] _ in
                 self?.updateRenderLink()
-            }
-        }
-        NotificationCenter.default.addObserver(forName: NSWindow.didEnterFullScreenNotification, object: window, queue: .main) { [weak self] _ in
-            self?.startMouseMonitor()
-        }
-        NotificationCenter.default.addObserver(forName: NSWindow.didExitFullScreenNotification, object: window, queue: .main) { [weak self] _ in
-            self?.stopMouseMonitor()
-            self?.viewModel.showFullScreenOverlay = false
-        }
+            },
+            nc.addObserver(forName: NSWindow.didEnterFullScreenNotification, object: window, queue: .main) { [weak self] _ in
+                self?.startMouseMonitor()
+            },
+            nc.addObserver(forName: NSWindow.didExitFullScreenNotification, object: window, queue: .main) { [weak self] _ in
+                self?.stopMouseMonitor()
+                self?.viewModel.showFullScreenOverlay = false
+            },
+        ]
     }
 
     // MARK: - Key Events

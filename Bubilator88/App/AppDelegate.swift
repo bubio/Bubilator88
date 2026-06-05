@@ -37,11 +37,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         didSet { flushPendingScriptOpens() }
     }
 
-    /// `.b88script` files handed to us by Finder before the view model is
-    /// ready (cold launch via double-click fires `application(_:open:)`
-    /// ahead of `ContentView.onAppear`). Only the last one is meaningful —
-    /// a single emulator instance can play one script at a time.
-    private var pendingScriptURLs: [URL] = []
+    /// A `.b88script` handed to us by Finder before the view model is ready
+    /// (cold launch via double-click fires `application(_:open:)` ahead of
+    /// `ContentView.onAppear`). Only the most recent one is meaningful — a
+    /// single emulator instance can play one script at a time.
+    private var pendingScriptURL: URL?
 
     private var shortcutMonitor: Any?
     private var rewindMonitor: Any?
@@ -96,9 +96,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// We only ever play the last; queue it and flush once the view model
     /// exists and its window is on screen.
     func application(_ application: NSApplication, open urls: [URL]) {
-        let scripts = urls.filter { $0.pathExtension.lowercased() == "b88script" }
-        guard !scripts.isEmpty else { return }
-        pendingScriptURLs.append(contentsOf: scripts)
+        guard let script = urls.last(where: { $0.pathExtension.lowercased() == "b88script" }) else { return }
+        pendingScriptURL = script
         flushPendingScriptOpens()
     }
 
@@ -108,8 +107,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// race the emulator's startup. No-op while the view model is still
     /// nil (re-fired by its `didSet`).
     private func flushPendingScriptOpens() {
-        guard let vm = viewModel, let url = pendingScriptURLs.last else { return }
-        pendingScriptURLs.removeAll()
+        guard let vm = viewModel, let url = pendingScriptURL else { return }
+        pendingScriptURL = nil
         DispatchQueue.main.async { vm.requestScriptPlayback(url: url) }
     }
 
