@@ -1,0 +1,133 @@
+import AppKit
+import UniformTypeIdentifiers
+import EmulatorCore
+
+// MARK: - Operation recording (real play → .b88script)
+//
+// docs/SCRIPTING.md の手順4 残件「操作の記録」。再生 (EmulatorViewModel+Script.swift)
+// の対称。記録開始時に現在の boot/clock/ディスク構成で cold reset し、t=0 をリセット
+// 直後に置く(= playScript と同じセマンティクス)。これで出力スクリプトの
+// boot/clock/disk ヘッダで初期状態が完全に定まり、再生して同じ結果になる。
+//
+// 実ユーザ入力のみ記録: キーは keyDown/keyUp フックで拾う(ScriptPlayer/paste は
+// machine.keyboard 直叩きで keyDown/keyUp を通らない)。コントローラは v1 非対象。
+extension EmulatorViewModel {
+
+    /// DEBUG メニュー「スクリプトを記録…」: cold reset して記録を開始する。
+    func startScriptRecording() {
+        guard scriptRecorder == nil else { return }
+        if isPlayingScript {
+            showAlert(title: NSLocalizedString("記録できません", comment: ""),
+                      message: NSLocalizedString("スクリプト再生中は記録を開始できません。", comment: ""))
+            return
+        }
+        if audioRecorder.isRecording || videoRecorder.isRecording {
+            showAlert(title: NSLocalizedString("記録できません", comment: ""),
+                      message: NSLocalizedString("録画中は操作記録を開始できません(記録開始はマシンをリセットします)。", comment: ""))
+            return
+        }
+
+        // 現在の構成から setup ヘッダを組み立てる(リセット後の初期状態を定義)。
+        var setup = setupBootSteps()
+        setup.append(.clock(mhz: clock8MHz ? 8 : 4))
+        for drive in 0..<2 {
+            if let info = (drive == 0 ? drive0Info : drive1Info), let path = info.sourceURL?.path {
+                setup.append(.diskMount(drive: drive, path: path, image: info.currentImageIndex))
+            }
+        }
+
+        // cold reset(playScript と同じ手順)。ディスクは reset を跨いで保持される。
+        cancelPasteQueue()
+        turboMode = false
+        stop()
+        let use8 = clock8MHz
+        emuQueue.sync {
+            machine.reset(preserveRAM: false)
+            machine.applyBootStrap()      // 現ドライブ状態から bit3 を再確定(ディスク起動)
+            machine.clock8MHz = use8
+        }
+
+        let recorder = ScriptRecorder(setup: setup)
+        recorder.frameIndex = 0
+        scriptRecorder = recorder
+        isRecordingScript = true
+        renderScreen()
+        showToast(NSLocalizedString("記録開始", comment: ""))
+        start()
+    }
+
+    /// 記録を確定し、`.b88script` として保存する。
+    func stopScriptRecordingAndSave() {
+        guard let recorder = scriptRecorder else { return }
+        scriptRecorder = nil
+        isRecordingScript = false
+        let steps = recorder.finish()
+        saveRecordedScript(ScriptWriter.write(steps))
+    }
+
+    /// 記録を破棄する(リセット等で記録が中断されるとき)。
+    func cancelScriptRecording() {
+        guard scriptRecorder != nil else { return }
+        scriptRecorder = nil
+        isRecordingScript = false
+        showToast(NSLocalizedString("記録を中断しました", comment: ""))
+    }
+
+    /// ディスクをマウントしたとき(記録中のみ)`disk swap` を記録する。
+    /// `EmulatorViewModel+Disk.swift` の各マウント終端から呼ばれる。
+    func recordDiskMountIfNeeded(drive: Int) {
+        guard let recorder = scriptRecorder else { return }
+        let info = drive == 0 ? drive0Info : drive1Info
+        guard let path = info?.sourceURL?.path else { return }   // データ由来(URL無)は記録不可
+        recorder.diskSwap(drive: drive, path: path, image: info?.currentImageIndex ?? 0)
+    }
+
+    // MARK: - Setup header
+
+    /// 現在のブートモードを setup ステップへ。n88 系3モードは `boot`(再生時に bit3 自動確定)、
+    /// N-BASIC / Custom はアプリ独自の DIPSW 値を持つため生 `dipsw1/2` で出力する
+    /// (EmulatorCore.BootMode とアプリ BootMode で N-BASIC の DIPSW2 が異なるため)。
+    private func setupBootSteps() -> [ScriptStep] {
+        switch bootMode {
+        case .n88v2:  return [.boot(.n88v2)]
+        case .n88v1h: return [.boot(.n88v1h)]
+        case .n88v1s: return [.boot(.n88v1s)]
+        case .n, .custom:
+            return [.dipsw1(bootMode.dipSw1), .dipsw2(bootMode.dipSw2)]
+        }
+    }
+
+    // MARK: - Save
+
+    /// 記録テキストを保存先設定に従って書き出す(`saveScreenshot` と同じパターン)。
+    private func saveRecordedScript(_ text: String) {
+        let stamp = DateFormatter.stable(pattern: "yyyyMMdd-HHmmss").string(from: .now)
+        let defaultName = "Bubilator88-\(stamp).b88script"
+
+        let url: URL
+        if Settings.shared.scriptRecordingAutoSave {
+            let dir = Settings.shared.scriptRecordingDirectory ?? (NSHomeDirectory() + "/Documents")
+            let dirURL = URL(fileURLWithPath: dir, isDirectory: true)
+            try? FileManager.default.createDirectory(at: dirURL, withIntermediateDirectories: true)
+            url = dirURL.appendingPathComponent(defaultName)
+        } else {
+            let panel = NSSavePanel()
+            panel.title = NSLocalizedString("スクリプトを保存", comment: "")
+            panel.nameFieldStringValue = defaultName
+            if let type = UTType("com.bubio.bubilator88.timeline-script") {
+                panel.allowedContentTypes = [type]
+            }
+            panel.canCreateDirectories = true
+            guard panel.runModal() == .OK, let chosen = panel.url else { return }
+            url = chosen
+        }
+
+        do {
+            try text.write(to: url, atomically: true, encoding: .utf8)
+            showToast(NSLocalizedString("スクリプトを保存しました", comment: ""))
+        } catch {
+            showAlert(title: NSLocalizedString("保存に失敗しました", comment: ""),
+                      message: error.localizedDescription)
+        }
+    }
+}

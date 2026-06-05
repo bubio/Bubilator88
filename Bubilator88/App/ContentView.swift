@@ -314,6 +314,22 @@ struct ContentView: View {
                                         comment: "Status bar script playback button tooltip"))
             }
 
+            // Operation-recording indicator (distinct from the red A/V record
+            // dots and the green playback diamond: indigo "compose" glyph).
+            if viewModel.isRecordingScript {
+                Button {
+                    viewModel.stopScriptRecordingAndSave()
+                } label: {
+                    Image(systemName: "square.and.pencil.circle.fill")
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.indigo)
+                        .font(.system(size: 20))
+                }
+                .buttonStyle(.plain)
+                .help(NSLocalizedString("Stop recording and save script",
+                                        comment: "Status bar operation-recording button tooltip"))
+            }
+
             // Recording indicator (shown only while recording)
             if viewModel.audioRecorder.isRecording {
                 Button {

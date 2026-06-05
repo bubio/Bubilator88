@@ -1,7 +1,8 @@
 # Scripting — タイムライン操作スクリプト
 
-> **ステータス**: パーサ + 再生エンジン (`ScriptPlayer`) + BootTester の `--script`
-> まで実装済み (§11 の手順 1〜3)。GUI アプリの読込/再生/録画 UI (手順 4) は未着手。
+> **ステータス**: パーサ + 再生エンジン (`ScriptPlayer`) + 記録エンジン
+> (`ScriptRecorder` / `ScriptWriter`) + BootTester `--script` + GUI の
+> 読込/再生/記録 UI まで実装済み (§11 手順 1〜4)。
 
 ---
 
@@ -186,8 +187,8 @@ key SHIFT up
               ▲                              ▲
    ┌──────────┴──────────┐      ┌────────────┴────────────┐
    │ GUI アプリ (live)    │      │ BootTester (drive)      │
-   │ スクリプト読込/再生   │      │ --script file.txt       │
-   │ (将来: 操作の録画)    │      │ (env-var の大半を置換)   │
+   │ 読込/再生/記録        │      │ --script file.txt       │
+   │ (Recorder→Writer)   │      │ (env-var の大半を置換)   │
    └─────────────────────┘      └─────────────────────────┘
 ```
 
@@ -265,7 +266,30 @@ swift run BootTester --script demo.txt
      `public.plain-text` 準拠) + `CFBundleDocumentTypes` (Owner/Editor) で登録。Finder
      ダブルクリック → `AppDelegate.application(_:open:)` → `playScript`。中身はプレーン
      テキストなのでテキストエディタでも編集可。再生中はステータスバーに `play.diamond`。
-   - ⬜ 操作の録画 (再生の逆: 実プレイ → スクリプト出力)。
+   - ✅ 操作の記録 (再生の逆: 実プレイ → `.b88script` 出力)。DEBUG メニュー
+     「スクリプトを記録…」/「記録を停止して保存…」。記録中はステータスバーに
+     `square.and.pencil.circle.fill` (インディゴ、A/V 録画の赤・再生の緑と区別)。
+     `EmulatorViewModel+ScriptRecord.swift` + `ScriptRecorder` / `ScriptWriter` (下記)。
+
+### 記録 (ScriptRecorder / ScriptWriter)
+- **ScriptWriter** (EmulatorCore, 純粋): `[ScriptStep] → text`。`ScriptParser` の逆で、
+  `parse(write(steps)) == steps` を保証 (`ScriptWriterTests` の round-trip)。非単射な
+  キー名 (esc/escape、return/enter/…) は正準名を 1 つ選ぶ。
+- **ScriptRecorder** (EmulatorCore, 純粋): ホストが毎フレーム `frameIndex` を進め、
+  実ユーザのキー/ディスク操作を投入。`finish()` が setup + 畳み込み済みタイムラインを返す。
+- **reset-at-start**: 記録開始は現在の boot/clock/ディスク構成で cold reset し、t=0 を
+  リセット直後に置く (再生 `playScript` と同じ)。出力の boot/clock/disk ヘッダで初期状態が
+  完全に定まり、再生して同じ結果になる。n88 系3モードは `boot`、N-BASIC/Custom は
+  アプリ独自 DIPSW のため生 `dipsw1/2` で出力 (EmulatorCore.BootMode と DIPSW2 が異なる)。
+- **tap 畳み込み**: down→up を `key X tap hold` に畳む (閾値 8 フレーム以下)。ScriptPlayer の
+  tap 自動リリースは後続 `wait` 中に `Fd+hold` で発火し明示 `up@Fu` と同フレームになるため
+  **厳密に等価**。長押しは明示 down/up。OS のキーオートリピートは押下中なら無視。
+- **入力フック**: `keyDown`/`keyUp` のみ (ScriptPlayer/paste は machine.keyboard 直叩きで
+  これを通らない=実ユーザ入力だけ記録)。**ゲームコントローラは v1 非対象** —
+  `.hostShortcut` マッピングは keyDown 経由で拾えるが `.pc88Key` は `pressKey/releaseKey`
+  直叩きで漏れるため一貫性が無い。完全対応は follow-up (`pressKey/releaseKey` も要フック)。
+- **ディスクパス**: `MountedDiskInfo.sourceURL.path`。URL を持たないデータ由来ディスクは
+  記録できない (setup/swap 行が省かれる)。アーカイブ由来はキャッシュパスになる。
 
 ### 実装メモ
 - `ScriptPlayer` は `Machine` の public API のみを叩く。ディスクパス→バイト列の解決は

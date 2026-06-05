@@ -216,6 +216,10 @@ final class EmulatorViewModel {
     /// UI-facing flag; the player itself lives in `scriptPlayer`.
     var isPlayingScript: Bool = false
 
+    /// Whether operation recording is in progress (real input → `.b88script`).
+    /// UI-facing flag; the recorder itself lives in `scriptRecorder`.
+    var isRecordingScript: Bool = false
+
     // MARK: - Notifications (toast + alert)
 
     /// Toast message shown briefly over the emulator screen, auto-dismissed
@@ -574,6 +578,10 @@ final class EmulatorViewModel {
     /// to play it. Consumed by `consumePendingScript()` from
     /// `ContentView.onAppear`, right after the run loop is started.
     @ObservationIgnored var pendingScriptURL: URL?
+
+    /// Active operation recorder. Fed real key/disk events; its `frameIndex`
+    /// is advanced once per machine frame from `runFrameForMetal()`.
+    @ObservationIgnored var scriptRecorder: ScriptRecorder?
 
     /// Audio output for YM2608 SSG sound
     let audio = AudioOutput()
@@ -959,6 +967,7 @@ final class EmulatorViewModel {
     private func performReset(resetTranslation: Bool, forceRestart: Bool = false) {
         let wasRunning = isRunning || forceRestart
         cancelScriptPlayback()
+        cancelScriptRecording()
         stop()
         cancelPasteQueue()
         let mode = _bootModeStorage
@@ -1391,6 +1400,9 @@ final class EmulatorViewModel {
         keyboardLock.lock()
         machine.keyboard.pressKey(row: key.row, bit: key.bit)
         keyboardLock.unlock()
+        // Record only real user input — ScriptPlayer/paste inject directly via
+        // machine.keyboard and never reach keyDown/keyUp.
+        scriptRecorder?.keyDown(key)
     }
 
     func keyUp(_ keyCode: UInt16) {
@@ -1398,6 +1410,7 @@ final class EmulatorViewModel {
         keyboardLock.lock()
         machine.keyboard.releaseKey(row: key.row, bit: key.bit)
         keyboardLock.unlock()
+        scriptRecorder?.keyUp(key)
     }
 
     /// Press a PC-8801 key directly (used by game controller).

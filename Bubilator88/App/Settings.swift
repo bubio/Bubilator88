@@ -161,6 +161,24 @@ final class Settings {
         }
     }
 
+    /// Auto-save recorded operation scripts (.b88script) to a preset directory
+    /// instead of showing NSSavePanel every time. Default true (~/Documents).
+    var scriptRecordingAutoSave: Bool = true {
+        didSet { UserDefaults.standard.set(scriptRecordingAutoSave, forKey: "scriptRecordingAutoSave") }
+    }
+
+    /// Directory for auto-saved operation scripts (absolute path). Nil means
+    /// use the default ~/Documents.
+    var scriptRecordingDirectory: String? = nil {
+        didSet {
+            if let dir = scriptRecordingDirectory {
+                UserDefaults.standard.set(dir, forKey: "scriptRecordingDirectory")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "scriptRecordingDirectory")
+            }
+        }
+    }
+
     // MARK: - Audio
 
     /// Audio ring buffer size in milliseconds (20–500).
@@ -479,6 +497,10 @@ final class Settings {
             videoRecordingAutoSave = v
         }
         videoRecordingDirectory = UserDefaults.standard.string(forKey: "videoRecordingDirectory")
+        if let v = UserDefaults.standard.object(forKey: "scriptRecordingAutoSave") as? Bool {
+            scriptRecordingAutoSave = v
+        }
+        scriptRecordingDirectory = UserDefaults.standard.string(forKey: "scriptRecordingDirectory")
         if let v = UserDefaults.standard.object(forKey: "fullscreenIntegerScaling") as? Bool {
             fullscreenIntegerScaling = v
         }

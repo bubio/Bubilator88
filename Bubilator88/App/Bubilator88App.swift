@@ -587,9 +587,21 @@ struct DebugCommands: Commands {
             Button("スクリプトを再生…") {
                 viewModel.openAndPlayScript()
             }
+            .disabled(viewModel.isRecordingScript)
             if viewModel.isPlayingScript {
                 Button("スクリプト再生を停止") {
                     viewModel.cancelScriptPlayback()
+                }
+            }
+
+            if !viewModel.isRecordingScript {
+                Button("スクリプトを記録…") {
+                    viewModel.startScriptRecording()
+                }
+                .disabled(viewModel.isPlayingScript)
+            } else {
+                Button("記録を停止して保存…") {
+                    viewModel.stopScriptRecordingAndSave()
                 }
             }
 

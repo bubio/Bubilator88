@@ -198,6 +198,8 @@ extension EmulatorViewModel {
             tickPasteQueue()
             tickScriptPlayer()
             machine.runFrame()
+            // Advance the recording clock in lockstep with machine frames.
+            if let r = scriptRecorder { r.frameIndex += 1 }
         }
 
         // Breakpoint check: when the debugger halted the machine
