@@ -421,6 +421,26 @@ extension EmulatorViewModel {
                        originArchiveURL: originArchive)
     }
 
+    /// 単一ソース (.d88) の `MountedDiskInfo` を構築する共通ヘルパ。
+    /// imageNames (空名は `fileName #i` へフォールバック)、単一 `DiskImageGroup`、
+    /// index のクランプ規則を一本化する。手動マウント (`mountDiskImage`)、
+    /// セーブステート復元 (`reconstructDiskInfo`)、スクリプト再生後の再構築
+    /// (`rebuildDriveInfoFromScript`) が同じ規則を共有するため。
+    func makeDirectDiskInfo(allImages: [D88Disk], fileName: String, imageIndex: Int,
+                            sourceURL: URL?, archiveEntryName: String? = nil,
+                            originArchiveURL: URL? = nil) -> MountedDiskInfo {
+        let imageNames = allImages.enumerated().map { i, d in
+            d.name.isEmpty ? (allImages.count > 1 ? "\(fileName) #\(i)" : fileName) : d.name
+        }
+        let groups = [DiskImageGroup(d88FileName: fileName, startIndex: 0, count: allImages.count)]
+        let index = min(max(0, imageIndex), max(0, allImages.count - 1))
+        return MountedDiskInfo(sourceURL: sourceURL, archiveEntryName: archiveEntryName,
+                               originArchiveURL: originArchiveURL,
+                               allImages: allImages, imageNames: imageNames,
+                               currentImageIndex: index, fileName: fileName,
+                               imageGroups: groups)
+    }
+
     private func mountDiskImage(_ disk: D88Disk, allImages: [D88Disk], imageIndex: Int,
                                  url: URL?, drive: Int, archiveEntryName: String? = nil,
                                  originArchiveURL: URL? = nil) {
@@ -433,21 +453,16 @@ extension EmulatorViewModel {
             }
             return url?.deletingPathExtension().lastPathComponent ?? "Disk"
         }()
-        let imageNames = allImages.enumerated().map { i, d in
-            d.name.isEmpty ? (allImages.count > 1 ? "\(fileName) #\(i)" : fileName) : d.name
-        }
-        let groups = [DiskImageGroup(d88FileName: fileName, startIndex: 0, count: allImages.count)]
-        let displayName = imageNames[imageIndex]
+        let info = makeDirectDiskInfo(allImages: allImages, fileName: fileName,
+                                      imageIndex: imageIndex, sourceURL: url,
+                                      archiveEntryName: archiveEntryName,
+                                      originArchiveURL: originArchiveURL)
+        let displayName = info.imageNames[info.currentImageIndex]
         diskWriteBackScheduler.flushNow(drive: drive)
         emuQueue.sync {
             machine.mountDisk(drive: drive, disk: disk)
         }
         clearRewindBuffer()
-        let info = MountedDiskInfo(sourceURL: url, archiveEntryName: archiveEntryName,
-                                    originArchiveURL: originArchiveURL,
-                                    allImages: allImages, imageNames: imageNames,
-                                    currentImageIndex: imageIndex, fileName: fileName,
-                                    imageGroups: groups)
         applyDriveState(
             DriveState(name: displayName, fileName: fileName, info: info,
                        writeProtected: disk.writeProtected),
