@@ -161,6 +161,7 @@
 
 /* ===== SettingsView.swift — General Tab ===== */
 "Screenshot" = "スクリーンショット";
+"Script Recording" = "スクリプト記録";
 "Format" = "フォーマット";
 "Development" = "開発";
 "Show DEBUG Menu" = "DEBUGメニューを表示";
@@ -234,6 +235,8 @@
 "Stop Audio Recording" = "録音を停止";
 "Stop audio recording" = "録音を停止";
 "Recording" = "録音";
+"Stop script playback" = "スクリプト再生を停止";
+"Stop recording and save script" = "記録を停止してスクリプトを保存";
 "Channels" = "チャンネル";
 "Stereo only" = "ステレオのみ";
 "Separated (8ch)" = "分離 (8ch)";
