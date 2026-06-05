@@ -579,6 +579,10 @@ final class EmulatorViewModel {
     /// `ContentView.onAppear`, right after the run loop is started.
     @ObservationIgnored var pendingScriptURL: URL?
 
+    /// 再生中スクリプトのディレクトリ。再生後に各ドライブの `MountedDiskInfo`
+    /// を再構築する際、スクリプト内の相対ディスクパスを解決するために保持する。
+    @ObservationIgnored var scriptDir: URL?
+
     /// Active operation recorder. Fed real key/disk events; its `frameIndex`
     /// is advanced once per machine frame from `runFrameForMetal()`.
     @ObservationIgnored var scriptRecorder: ScriptRecorder?
@@ -1275,18 +1279,8 @@ final class EmulatorViewModel {
                 // Direct D88 file (existing logic)
                 let allImages = D88Disk.parseAll(data: [UInt8](data))
                 if !allImages.isEmpty {
-                    let imageNames = allImages.enumerated().map { i, d in
-                        d.name.isEmpty ? (allImages.count > 1 ? "\(fileName) #\(i)" : fileName) : d.name
-                    }
-                    let groups = [DiskImageGroup(d88FileName: fileName,
-                                                 startIndex: 0, count: allImages.count)]
-                    let index = min(savedImageIndex ?? 0, allImages.count - 1)
-                    return MountedDiskInfo(sourceURL: url,
-                                           archiveEntryName: nil,
-                                           originArchiveURL: nil,
-                                           allImages: allImages, imageNames: imageNames,
-                                           currentImageIndex: index, fileName: fileName,
-                                           imageGroups: groups)
+                    return makeDirectDiskInfo(allImages: allImages, fileName: fileName,
+                                              imageIndex: savedImageIndex ?? 0, sourceURL: url)
                 }
             }
         }
