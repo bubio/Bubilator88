@@ -102,7 +102,17 @@ extension EmulatorViewModel {
     /// 記録テキストを保存先設定に従って書き出す(`saveScreenshot` と同じパターン)。
     private func saveRecordedScript(_ text: String) {
         let stamp = DateFormatter.stable(pattern: "yyyyMMdd-HHmmss").string(from: .now)
-        let defaultName = "Bubilator88-\(stamp).b88script"
+        // Include the D88 file name from Drive 1 (= internal drive 0, the boot
+        // drive) so recordings are identifiable by game. Empty drive → keep the
+        // plain "Bubilator88-<stamp>" name.
+        let defaultName: String
+        if let disk = drive0Info?.fileName, !disk.isEmpty {
+            let safe = disk.replacingOccurrences(of: "/", with: "-")
+                           .replacingOccurrences(of: ":", with: "-")
+            defaultName = "Bubilator88-\(safe)-\(stamp).b88script"
+        } else {
+            defaultName = "Bubilator88-\(stamp).b88script"
+        }
 
         let url: URL
         if Settings.shared.scriptRecordingAutoSave {
