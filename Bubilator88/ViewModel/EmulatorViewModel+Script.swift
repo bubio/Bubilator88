@@ -76,19 +76,23 @@ extension EmulatorViewModel {
         }
 
         // ディスクパスはスクリプトのあるディレクトリ基準で解決 (絶対パスはそのまま)。
+        // loader はローカル `scriptDir` を捕捉する (self.scriptDir には依存しない)。
         let scriptDir = url.deletingLastPathComponent()
-        let loader: ScriptPlayer.FileLoader = { path in
-            let fileURL = (path as NSString).isAbsolutePath
-                ? URL(fileURLWithPath: path)
-                : scriptDir.appendingPathComponent(path)
+        let loader: ScriptPlayer.FileLoader = { [weak self] path in
+            let fileURL = self?.resolveScriptDiskURL(path, scriptDir: scriptDir)
+                ?? URL(fileURLWithPath: path)
             return [UInt8](try Data(contentsOf: fileURL))
         }
 
         // draw ループを止め (= machine への排他)、cold reset してセットアップを適用。
+        // self.scriptDir の確定は cancelScriptPlayback() の後にする。さもないと
+        // 前スクリプトの player を再構築する cancel 側が新ディレクトリで相対パスを
+        // 誤解決してしまう。
         cancelScriptPlayback()
         stop()
         turboMode = false
         cancelPasteQueue()
+        self.scriptDir = scriptDir
 
         let player = ScriptPlayer(machine: machine, loader: loader)
         var setupError: Error?
@@ -111,7 +115,9 @@ extension EmulatorViewModel {
 
         scriptPlayer = player
         isPlayingScript = true
-        refreshDriveLabelsFromMachine()
+        // セットアップ済みディスクを手動マウントと同じ情報で反映 (再生中も
+        // ディスクメニューからイメージ選択できるようにする)。
+        rebuildDriveInfoFromScript(player: player)
         showToast(NSLocalizedString("スクリプト再生開始", comment: ""))
         start()
     }
@@ -133,12 +139,12 @@ extension EmulatorViewModel {
             return
         }
         guard !ongoing else { return }
-        // 自走完了。状態反映は main へ。
+        // 自走完了。状態反映は main へ。`driveMount` 照会のため player を捕捉。
         scriptPlayer = nil
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.isPlayingScript = false
-            self.refreshDriveLabelsFromMachine()
+            self.rebuildDriveInfoFromScript(player: player)
             self.showToast(NSLocalizedString("スクリプト再生終了", comment: ""))
         }
     }
@@ -149,11 +155,51 @@ extension EmulatorViewModel {
         scriptPlayer = nil
         emuQueue.sync { player.cancelLive() }
         isPlayingScript = false
+        // 中断時点でドライブに残ったディスクも手動と同じく選択できるよう、
+        // マウント素性から driveXInfo を再構築する。
+        rebuildDriveInfoFromScript(player: player)
     }
 
-    /// 機種のドライブ状態からステータスバーのラベルを更新する。
-    func refreshDriveLabelsFromMachine() {
-        drive0Name = machine.subSystem.drives[0]?.name ?? "Empty"
-        drive1Name = machine.subSystem.drives[1]?.name ?? "Empty"
+    /// スクリプト内のディスクパスを URL へ解決する (絶対パスはそのまま、相対は
+    /// スクリプトのあるディレクトリ基準)。`playScript` の loader と同じ規則。
+    func resolveScriptDiskURL(_ path: String, scriptDir: URL) -> URL {
+        (path as NSString).isAbsolutePath
+            ? URL(fileURLWithPath: path)
+            : scriptDir.appendingPathComponent(path)
+    }
+
+    /// スクリプト再生後 (または中断時)、各ドライブのマウント素性から
+    /// `MountedDiskInfo` を再構築する。スクリプトは `machine` を直接叩くため
+    /// `driveXInfo` が埋まらず、手動マウント時と違ってディスクメニューから
+    /// イメージ選択ができない。手動経路 (`mountDiskImage`) と同じ情報を組み立て、
+    /// 再生後も多面 D88 のイメージ選択を可能にする。
+    func rebuildDriveInfoFromScript(player: ScriptPlayer) {
+        let scriptDir = self.scriptDir
+        for drive in 0..<2 {
+            // スクリプトがこのドライブにマウントした素性を最優先で使う。
+            // disk swap/select の交換ディレイ中は machine.subSystem.drives[drive]
+            // が一時的に nil になるが、pendingMount は必ず commit されるので、
+            // 機種の瞬間状態ではなく driveMount の情報で再構築する。
+            if let mount = player.driveMount(drive), let scriptDir {
+                let url = resolveScriptDiskURL(mount.path, scriptDir: scriptDir)
+                let fileName = url.deletingPathExtension().lastPathComponent
+                let info = makeDirectDiskInfo(allImages: mount.images, fileName: fileName,
+                                              imageIndex: mount.imageIndex, sourceURL: url)
+                let index = info.currentImageIndex
+                applyDriveState(
+                    DriveState(name: info.imageNames[index], fileName: fileName, info: info,
+                               writeProtected: mount.images[index].writeProtected),
+                    drive: drive)
+                continue
+            }
+            // スクリプトが触れていないドライブは機種の実状態に従う。
+            if machine.subSystem.drives[drive] != nil {
+                // 既存ディスク (手動マウント等): 名前だけ反映し driveXInfo は保持。
+                let name = machine.subSystem.drives[drive]?.name ?? "Empty"
+                if drive == 0 { drive0Name = name } else { drive1Name = name }
+            } else {
+                applyDriveState(.empty, drive: drive)
+            }
+        }
     }
 }
