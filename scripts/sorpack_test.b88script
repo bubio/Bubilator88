@@ -1,0 +1,63 @@
+# sorpack 起動テストスクリプト
+# 機種: N88-BASIC V2 / 4MHz
+# Drive1(=drive 0) = DISK1(image 0) / Drive2(=drive 1) = DISK2(image 1)
+# (D88 のイメージ番号は 0 始まり: DISK1=0, DISK2=1, DISK4=3)
+#
+# 注: 「順番に入力」の連続キーは、tap の自動リリースが次の wait 中に
+#     発火する仕様のため、取りこぼし防止に 0.2s 間隔を挟んでいる
+#     (間隔指定がなかったので既定値)。
+
+# --- setup ---
+boot  N88-V2
+clock 4
+disk  0 "/Volumes/CrucialX6/roms/PC88/sorpack.d88" image 0   # Drive1 = DISK1
+disk  1 "/Volumes/CrucialX6/roms/PC88/sorpack.d88" image 1   # Drive2 = DISK2
+
+# --- timeline ---
+wait 8s
+key SPACE tap          # 10秒後: スペース
+
+wait 10s
+key z tap              # その15秒後: z
+
+wait 1s
+key z tap              # その1秒後: z
+
+wait 1s
+key 2 tap              # その1秒後: 2
+
+wait 2s                # その1秒後: テンキー 4,8,8,8 を順番に
+key kp4 tap
+wait 0.2s
+key kp8 tap
+wait 0.2s
+key kp8 tap
+wait 0.2s
+key kp8 tap
+
+wait 0.2s              # その後: z を 500ms 間隔で 4 回
+key z tap
+wait 0.5s
+key z tap
+wait 0.5s
+key z tap
+wait 0.5s
+key z tap
+
+wait 0.5s
+key SPACE tap          # その500ms後: スペース
+
+wait 1s                # その1秒後: テンキー 8 を 2 回
+key kp8 tap
+wait 0.2s
+key kp8 tap
+
+wait 0.2s
+key z tap              # z
+
+wait 1s                # その1秒後: Drive2 を DISK4 へ入れ替え + z
+disk select 1 3        # Drive2(=drive 1) を DISK4(image 3) へ
+key z tap
+
+wait 5s
+key z tap              # その1秒後: z

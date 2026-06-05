@@ -212,6 +212,14 @@ final class EmulatorViewModel {
     /// Emulation running state
     var isRunning: Bool = false
 
+    /// Whether a timeline script is currently playing back (live mode).
+    /// UI-facing flag; the player itself lives in `scriptPlayer`.
+    var isPlayingScript: Bool = false
+
+    /// Whether operation recording is in progress (real input → `.b88script`).
+    /// UI-facing flag; the recorder itself lives in `scriptRecorder`.
+    var isRecordingScript: Bool = false
+
     // MARK: - Notifications (toast + alert)
 
     /// Toast message shown briefly over the emulator screen, auto-dismissed
@@ -561,6 +569,19 @@ final class EmulatorViewModel {
     /// Paste queue that replays clipboard text as simulated keystrokes.
     @ObservationIgnored let pasteQueue = TextPasteQueue()
     @ObservationIgnored let pasteQueueLock = NSLock()
+
+    /// Active timeline-script player (live mode). Driven once per machine
+    /// frame from `runFrameForMetal()`, same thread as `tickPasteQueue`.
+    @ObservationIgnored var scriptPlayer: ScriptPlayer?
+
+    /// A `.b88script` opened (double-click) before the emulator was ready
+    /// to play it. Consumed by `consumePendingScript()` from
+    /// `ContentView.onAppear`, right after the run loop is started.
+    @ObservationIgnored var pendingScriptURL: URL?
+
+    /// Active operation recorder. Fed real key/disk events; its `frameIndex`
+    /// is advanced once per machine frame from `runFrameForMetal()`.
+    @ObservationIgnored var scriptRecorder: ScriptRecorder?
 
     /// Audio output for YM2608 SSG sound
     let audio = AudioOutput()
@@ -945,6 +966,8 @@ final class EmulatorViewModel {
     /// previous save-state load or another unusual path.
     private func performReset(resetTranslation: Bool, forceRestart: Bool = false) {
         let wasRunning = isRunning || forceRestart
+        cancelScriptPlayback()
+        cancelScriptRecording()
         stop()
         cancelPasteQueue()
         let mode = _bootModeStorage
@@ -961,10 +984,10 @@ final class EmulatorViewModel {
             // Auto-select ROM/DISK boot: if drive 0 is empty, set DIP SW2
             // bit 3 to skip the ~30s disk-boot timeout and go straight to
             // BASIC. When a disk is mounted, clear bit 3 for normal IPL boot.
-            let hasDisk = machine.subSystem.drives[0] != nil
-            let sw2 = hasDisk ? (sw2Base & ~UInt8(0x08)) : (sw2Base | 0x08)
+            // (Machine.applyBootStrap is the single source of truth shared with
+            // ScriptPlayer / BootTester.)
             machine.bus.dipSw1 = sw1
-            machine.bus.dipSw2 = sw2
+            machine.applyBootStrap(base: sw2Base)
             machine.reset(preserveRAM: true)
             machine.clock8MHz = use8MHz
             machine.cpuOverclock = cpuOverclock
@@ -1093,6 +1116,12 @@ final class EmulatorViewModel {
             showToast(NSLocalizedString("Save state not found", comment: ""))
             return
         }
+        // Loading replaces the whole machine state, so a live script player /
+        // recorder would be operating on a different machine than it began on
+        // (corrupt recording, player injecting into the wrong state). Tear them
+        // down first — symmetric with performReset.
+        cancelScriptPlayback()
+        cancelScriptRecording()
         // セーブステートロードで現在のディスク状態は破棄されるため、
         // 未保存のディスク書込を先にフラッシュしておく。
         diskWriteBackScheduler.flushAll()
@@ -1377,6 +1406,9 @@ final class EmulatorViewModel {
         keyboardLock.lock()
         machine.keyboard.pressKey(row: key.row, bit: key.bit)
         keyboardLock.unlock()
+        // Record only real user input — ScriptPlayer/paste inject directly via
+        // machine.keyboard and never reach keyDown/keyUp.
+        scriptRecorder?.keyDown(key)
     }
 
     func keyUp(_ keyCode: UInt16) {
@@ -1384,6 +1416,7 @@ final class EmulatorViewModel {
         keyboardLock.lock()
         machine.keyboard.releaseKey(row: key.row, bit: key.bit)
         keyboardLock.unlock()
+        scriptRecorder?.keyUp(key)
     }
 
     /// Press a PC-8801 key directly (used by game controller).

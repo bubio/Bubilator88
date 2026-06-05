@@ -30,8 +30,18 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// Set by the root SwiftUI scene so terminate hooks can reach the
     /// recorder. Weak to avoid a retain cycle; the view model outlives
-    /// the delegate in practice.
-    weak var viewModel: EmulatorViewModel?
+    /// the delegate in practice. When a `.b88script` was double-clicked
+    /// before the scene finished wiring this up, the queued URL is
+    /// flushed the moment the view model arrives.
+    weak var viewModel: EmulatorViewModel? {
+        didSet { flushPendingScriptOpens() }
+    }
+
+    /// A `.b88script` handed to us by Finder before the view model is ready
+    /// (cold launch via double-click fires `application(_:open:)` ahead of
+    /// `ContentView.onAppear`). Only the most recent one is meaningful — a
+    /// single emulator instance can play one script at a time.
+    private var pendingScriptURL: URL?
 
     private var shortcutMonitor: Any?
     private var rewindMonitor: Any?
@@ -80,6 +90,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         )
     }
 
+    // MARK: - Document open (double-click / "Open With")
+
+    /// Finder hands `.b88script` files here (one call may carry several).
+    /// We only ever play the last; queue it and flush once the view model
+    /// exists and its window is on screen.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard let script = urls.last(where: { $0.pathExtension.lowercased() == "b88script" }) else { return }
+        pendingScriptURL = script
+        flushPendingScriptOpens()
+    }
+
+    /// Hand the most recently queued script to the view model once it
+    /// exists. `requestScriptPlayback` decides whether to play now (run
+    /// loop already up) or defer to `ContentView.onAppear` — so we never
+    /// race the emulator's startup. No-op while the view model is still
+    /// nil (re-fired by its `didSet`).
+    private func flushPendingScriptOpens() {
+        guard let vm = viewModel, let url = pendingScriptURL else { return }
+        pendingScriptURL = nil
+        DispatchQueue.main.async { vm.requestScriptPlayback(url: url) }
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         // Finalize an in-progress recording. M4A/AAC needs its `moov` atom
         // written at close — skipping stopRecording here leaves the file
@@ -87,6 +119,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // process exits.
         MainActor.assumeIsolated {
             viewModel?.stopRecording()
+            // 記録中なら無言で自動保存(終了中は保存パネルを出せないため)
+            viewModel?.flushScriptRecordingIfNeeded()
             // 未書込のディスク変更をファイルに反映させる
             viewModel?.diskWriteBackScheduler.flushAll()
         }

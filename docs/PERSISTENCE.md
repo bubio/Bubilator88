@@ -61,6 +61,8 @@
 | `translationTargetLanguage` | String | "en-Latn-US" | 翻訳オーバーレイの対象言語 (BCP 47) |
 | `showDebugMenu` | Bool | false | DEBUGメニュー表示 |
 | `showTapeInStatusBar` | Bool | false | ステータスバーにテープアイコン表示 |
+| `scriptRecordingAutoSave` | Bool | true | 操作スクリプト記録の自動保存 (false=毎回保存先確認) |
+| `scriptRecordingDirectory` | String? | nil (~/Documents) | `.b88script` 記録の自動保存先 (絶対パス) |
 | `recentDiskFiles` | Data (JSON) | [] | 最近使用したディスク (最大10件, セキュリティスコープ付きブックマーク) |
 | `recentTapeFiles` | Data (JSON) | [] | 最近使用したテープ (最大10件, セキュリティスコープ付きブックマーク) |
 

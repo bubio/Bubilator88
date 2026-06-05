@@ -64,6 +64,31 @@ private struct GeneralSettingsTab: View {
                 }
             }
 
+            Section("Script Recording") {
+                Toggle("Ask save location every time", isOn: Binding(
+                    get: { !settings.scriptRecordingAutoSave },
+                    set: { settings.scriptRecordingAutoSave = !$0 }
+                ))
+
+                HStack {
+                    Text(settings.scriptRecordingDirectory ?? "~/Documents")
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.head)
+                    Spacer()
+                    Button("Choose...") {
+                        let panel = NSOpenPanel()
+                        panel.canChooseDirectories = true
+                        panel.canChooseFiles = false
+                        panel.canCreateDirectories = true
+                        panel.prompt = "Select"
+                        if panel.runModal() == .OK, let url = panel.url {
+                            settings.scriptRecordingDirectory = url.path
+                        }
+                    }
+                }
+            }
+
             Section("Reset") {
                 Toggle("Play dissolve animation on reset", isOn: $settings.resetAnimationEnabled)
             }
