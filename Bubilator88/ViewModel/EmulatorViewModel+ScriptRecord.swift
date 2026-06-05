@@ -65,12 +65,27 @@ extension EmulatorViewModel {
         saveRecordedScript(ScriptWriter.write(steps))
     }
 
-    /// 記録を破棄する(リセット等で記録が中断されるとき)。
+    /// 記録を破棄する(リセット / セーブステート読込で記録が中断されるとき)。
     func cancelScriptRecording() {
         guard scriptRecorder != nil else { return }
         scriptRecorder = nil
         isRecordingScript = false
         showToast(NSLocalizedString("記録を中断しました", comment: ""))
+    }
+
+    /// アプリ終了時に記録中なら自動保存する(終了中は保存パネルを出せないので、
+    /// 設定に関わらず保存先ディレクトリへ無言で書き出してデータ消失を防ぐ)。
+    /// `AppDelegate.applicationWillTerminate` から呼ばれる。
+    func flushScriptRecordingIfNeeded() {
+        guard let recorder = scriptRecorder else { return }
+        scriptRecorder = nil
+        isRecordingScript = false
+        let text = ScriptWriter.write(recorder.finish())
+        let dir = Settings.shared.scriptRecordingDirectory ?? (NSHomeDirectory() + "/Documents")
+        let dirURL = URL(fileURLWithPath: dir, isDirectory: true)
+        try? FileManager.default.createDirectory(at: dirURL, withIntermediateDirectories: true)
+        try? text.write(to: dirURL.appendingPathComponent(recordingDefaultName()),
+                        atomically: true, encoding: .utf8)
     }
 
     /// ディスクをマウントしたとき(記録中のみ)`disk swap` を記録する。
@@ -99,20 +114,21 @@ extension EmulatorViewModel {
 
     // MARK: - Save
 
-    /// 記録テキストを保存先設定に従って書き出す(`saveScreenshot` と同じパターン)。
-    private func saveRecordedScript(_ text: String) {
+    /// 記録ファイルの既定名。Drive 1 (= 内部 drive 0、ブートドライブ) の D88 ベース名を
+    /// 含めてゲームを識別しやすくする。空ドライブなら素の "Bubilator88-<stamp>"。
+    private func recordingDefaultName() -> String {
         let stamp = DateFormatter.stable(pattern: "yyyyMMdd-HHmmss").string(from: .now)
-        // Include the D88 file name from Drive 1 (= internal drive 0, the boot
-        // drive) so recordings are identifiable by game. Empty drive → keep the
-        // plain "Bubilator88-<stamp>" name.
-        let defaultName: String
         if let disk = drive0Info?.fileName, !disk.isEmpty {
             let safe = disk.replacingOccurrences(of: "/", with: "-")
                            .replacingOccurrences(of: ":", with: "-")
-            defaultName = "Bubilator88-\(safe)-\(stamp).b88script"
-        } else {
-            defaultName = "Bubilator88-\(stamp).b88script"
+            return "Bubilator88-\(safe)-\(stamp).b88script"
         }
+        return "Bubilator88-\(stamp).b88script"
+    }
+
+    /// 記録テキストを保存先設定に従って書き出す(`saveScreenshot` と同じパターン)。
+    private func saveRecordedScript(_ text: String) {
+        let defaultName = recordingDefaultName()
 
         let url: URL
         if Settings.shared.scriptRecordingAutoSave {

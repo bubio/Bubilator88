@@ -41,8 +41,19 @@ public enum ScriptWriter {
 
     /// `<prefix> "<path>" [image <i>]`。image == 0 は省略 (パーサの既定)。
     private static func diskLine(_ prefix: String, path: String, image: Int) -> String {
-        let base = "\(prefix) \"\(path)\""
+        let base = "\(prefix) \"\(escapeQuoted(path))\""
         return image != 0 ? "\(base) image \(image)" : base
+    }
+
+    /// クォート文字列内の `\` と `"` を `\` でエスケープする (Foundation 非依存)。
+    /// トークナイザが `\\` → `\`、`\"` → `"` として読み戻す。
+    private static func escapeQuoted(_ s: String) -> String {
+        var out = ""
+        for ch in s {
+            if ch == "\\" || ch == "\"" { out.append("\\") }
+            out.append(ch)
+        }
+        return out
     }
 
     private static func keyLine(_ key: Keyboard.Key, _ action: KeyAction) -> String {

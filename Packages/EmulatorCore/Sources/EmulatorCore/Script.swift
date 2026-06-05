@@ -92,10 +92,16 @@ public enum ScriptParser {
         var current = ""
         var inQuotes = false
         var hasCurrent = false
+        var escaped = false             // クォート内 `\` エスケープ
 
         for ch in line {
             if inQuotes {
-                if ch == "\"" {
+                if escaped {
+                    current.append(ch)      // `\"` → `"`、`\\` → `\`、その他は文字そのまま
+                    escaped = false
+                } else if ch == "\\" {
+                    escaped = true
+                } else if ch == "\"" {
                     inQuotes = false
                 } else {
                     current.append(ch)

@@ -120,6 +120,20 @@ struct ScriptWriterTests {
         try roundTrip([.key(Keyboard.Key(14, 7), .down)])
     }
 
+    @Test func roundTripPathWithQuotesAndBackslashes() throws {
+        // パス中の " と \ がエスケープされ round-trip する
+        try roundTrip([
+            .diskMount(drive: 0, path: #"/weird/disk"v2.d88"#, image: 0),
+            .diskSwap(drive: 1, path: #"/a\b/disk "x".d88"#, image: 1),
+        ])
+    }
+
+    @Test func quotedPathEscapesQuote() {
+        // 直列化形を直接確認 (" → \" 、\ → \\)
+        #expect(ScriptWriter.write([.diskMount(drive: 0, path: #"/x"y.d88"#, image: 0)])
+                == "disk 0 \"/x\\\"y.d88\"\n")
+    }
+
     @Test func roundTripAllNamedKeys() throws {
         // keyNameTable の全キーを tap して round-trip (重複キーは集合で潰れる)
         let keys = Set(ScriptParser.keyNameTable.values)

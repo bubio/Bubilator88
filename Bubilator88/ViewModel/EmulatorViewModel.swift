@@ -1116,6 +1116,12 @@ final class EmulatorViewModel {
             showToast(NSLocalizedString("Save state not found", comment: ""))
             return
         }
+        // Loading replaces the whole machine state, so a live script player /
+        // recorder would be operating on a different machine than it began on
+        // (corrupt recording, player injecting into the wrong state). Tear them
+        // down first — symmetric with performReset.
+        cancelScriptPlayback()
+        cancelScriptRecording()
         // セーブステートロードで現在のディスク状態は破棄されるため、
         // 未保存のディスク書込を先にフラッシュしておく。
         diskWriteBackScheduler.flushAll()

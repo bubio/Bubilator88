@@ -119,6 +119,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // process exits.
         MainActor.assumeIsolated {
             viewModel?.stopRecording()
+            // 記録中なら無言で自動保存(終了中は保存パネルを出せないため)
+            viewModel?.flushScriptRecordingIfNeeded()
             // 未書込のディスク変更をファイルに反映させる
             viewModel?.diskWriteBackScheduler.flushAll()
         }
