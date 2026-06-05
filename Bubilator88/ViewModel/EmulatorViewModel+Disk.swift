@@ -387,6 +387,7 @@ extension EmulatorViewModel {
                        writeProtected: req.disk.writeProtected),
             drive: req.drive
         )
+        recordDiskMountIfNeeded(drive: req.drive)
     }
 
     /// Mount the selected file from an archive.
@@ -452,6 +453,7 @@ extension EmulatorViewModel {
                        writeProtected: disk.writeProtected),
             drive: drive
         )
+        recordDiskMountIfNeeded(drive: drive)
     }
 
     /// Switch to a different disk image within the same source file.
@@ -472,6 +474,7 @@ extension EmulatorViewModel {
                        writeProtected: disk.writeProtected),
             drive: drive
         )
+        scriptRecorder?.diskSelect(drive: drive, image: index)
     }
 
     /// Toggle the write-protect flag on the disk mounted in the specified drive.
@@ -497,6 +500,7 @@ extension EmulatorViewModel {
         }
         clearRewindBuffer()
         applyDriveState(.empty, drive: drive)
+        scriptRecorder?.diskEject(drive: drive)
         // FDD boot is always the default; no need to revert to ROM boot
         // (eject confirmation not shown)
     }

@@ -96,6 +96,9 @@ struct ContentView: View {
             viewModel.loadROMs()
             viewModel.renderScreen()
             viewModel.start()
+            // A `.b88script` double-clicked to launch the app is held until
+            // here, so it plays only after ROMs + run loop are live.
+            viewModel.consumePendingScript()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.willEnterFullScreenNotification)) { _ in
             viewModel.isFullScreen = true
@@ -294,6 +297,38 @@ struct ContentView: View {
             }
 
             Spacer()
+
+            // Script playback indicator (shown only while a timeline script is playing)
+            if viewModel.isPlayingScript {
+                Button {
+                    viewModel.cancelScriptPlayback()
+                } label: {
+                    Image(systemName: "play.diamond")
+                        .symbolRenderingMode(.hierarchical)
+                        .symbolEffect(.wiggle.byLayer, options: .repeat(.periodic(delay: 1.0)))
+                        .foregroundStyle(.green)
+                        .font(.system(size: 20))
+                }
+                .buttonStyle(.plain)
+                .help(NSLocalizedString("Stop script playback",
+                                        comment: "Status bar script playback button tooltip"))
+            }
+
+            // Operation-recording indicator (distinct from the red A/V record
+            // dots and the green playback diamond: indigo "compose" glyph).
+            if viewModel.isRecordingScript {
+                Button {
+                    viewModel.stopScriptRecordingAndSave()
+                } label: {
+                    Image(systemName: "square.and.pencil.circle.fill")
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.indigo)
+                        .font(.system(size: 20))
+                }
+                .buttonStyle(.plain)
+                .help(NSLocalizedString("Stop recording and save script",
+                                        comment: "Status bar operation-recording button tooltip"))
+            }
 
             // Recording indicator (shown only while recording)
             if viewModel.audioRecorder.isRecording {
