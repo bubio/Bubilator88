@@ -88,13 +88,67 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             name: NSWindow.didBecomeKeyNotification,
             object: nil
         )
+        // Take over the "open documents" Apple Event ourselves.
+        //
+        // Why: with a singleton SwiftUI `Window` scene (and no
+        // `DocumentGroup`), AppKit's *default* kAEOpenDocuments handler
+        // tears down the existing main window before delivering the URLs
+        // to `application(_:open:)`. That transient zero-window moment
+        // trips `applicationShouldTerminateAfterLastWindowClosed`, so a
+        // `.b88script` double-clicked onto the already-running app quietly
+        // quits it (window closes → app terminates). The teardown fired
+        // only on the first open after the window had settled, which made
+        // it look intermittent.
+        //
+        // Installing our own handler here (after AppKit registered its
+        // default during `finishLaunching`) replaces it: we extract the
+        // file URLs and route them straight to `application(_:open:)`,
+        // and the window is never touched. The cold-launch path is
+        // unaffected — the queued event is delivered to this handler the
+        // same way once launch finishes.
+        NSAppleEventManager.shared().setEventHandler(
+            self,
+            andSelector: #selector(handleOpenDocumentsEvent(_:replyEvent:)),
+            forEventClass: AEEventClass(kCoreEventClass),
+            andEventID: AEEventID(kAEOpenDocuments)
+        )
+    }
+
+    @objc private func handleOpenDocumentsEvent(
+        _ event: NSAppleEventDescriptor,
+        replyEvent: NSAppleEventDescriptor
+    ) {
+        guard let list = event.paramDescriptor(forKeyword: keyDirectObject),
+              list.numberOfItems > 0 else { return }
+        var urls: [URL] = []
+        // AEDescList is 1-indexed.
+        for i in 1...list.numberOfItems {
+            guard let item = list.atIndex(i) else { continue }
+            // Open-document descriptors are typeFileURL; coerce and decode
+            // its raw bytes. Fall back to the string form for safety.
+            if let fileURL = item.coerce(toDescriptorType: typeFileURL),
+               let url = URL(dataRepresentation: fileURL.data, relativeTo: nil) {
+                urls.append(url)
+            } else if let s = item.stringValue {
+                // `URL(string:)` also accepts a bare POSIX path and yields a
+                // schemeless URL, so only use it for actual `file://` strings;
+                // a plain path must go through `URL(fileURLWithPath:)`.
+                urls.append(s.hasPrefix("file://")
+                    ? (URL(string: s) ?? URL(fileURLWithPath: s))
+                    : URL(fileURLWithPath: s))
+            }
+        }
+        guard !urls.isEmpty else { return }
+        application(NSApp, open: urls)
     }
 
     // MARK: - Document open (double-click / "Open With")
 
     /// Finder hands `.b88script` files here (one call may carry several).
     /// We only ever play the last; queue it and flush once the view model
-    /// exists and its window is on screen.
+    /// exists and its window is on screen. Reached via our
+    /// `handleOpenDocumentsEvent` Apple Event handler (see above), not
+    /// AppKit's default open-document machinery.
     func application(_ application: NSApplication, open urls: [URL]) {
         guard let script = urls.last(where: { $0.pathExtension.lowercased() == "b88script" }) else { return }
         pendingScriptURL = script
