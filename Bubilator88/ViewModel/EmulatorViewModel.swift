@@ -363,6 +363,13 @@ final class EmulatorViewModel {
     /// Currently active clock mode (reflects what Machine is actually using)
     private(set) var activeClock8MHz: Bool = true
 
+    /// Sync the status-bar clock indicator to the machine's actual clock.
+    /// Used by the script-playback path (a separate file, which can't reach
+    /// the file-private setter) to reflect a script-set clock.
+    func syncActiveClockFromMachine() {
+        activeClock8MHz = machine.clock8MHz
+    }
+
     /// Mounted disk names for UI display
     var drive0Name: String = "Empty"
     var drive1Name: String = "Empty"

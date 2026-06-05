@@ -115,6 +115,9 @@ extension EmulatorViewModel {
 
         scriptPlayer = player
         isPlayingScript = true
+        // スクリプトの boot/clock ヘッダをアプリの現在設定として採用し、
+        // ステータスバー/メニュー表示を実機の構成に一致させる。
+        adoptScriptSetup(steps)
         // セットアップ済みディスクを手動マウントと同じ情報で反映 (再生中も
         // ディスクメニューからイメージ選択できるようにする)。
         rebuildDriveInfoFromScript(player: player)
@@ -158,6 +161,49 @@ extension EmulatorViewModel {
         // 中断時点でドライブに残ったディスクも手動と同じく選択できるよう、
         // マウント素性から driveXInfo を再構築する。
         rebuildDriveInfoFromScript(player: player)
+    }
+
+    /// スクリプトの setup (`boot` / `clock` / `dipsw1/2`) を、アプリの現在設定
+    /// として採用する。機種は既に `beginLive` で構成済みなので、ここでは ViewModel
+    /// の表示/設定状態だけを同期する (`applyBootMode` は呼ばない — 呼ぶと再リセット
+    /// してスクリプトが構成した状態を壊す)。save-state ロードの `performLoad` と
+    /// 同じ「機種は触らず ViewModel state だけ追従させる」方式。
+    ///
+    /// 起動モード/DIPSW は **`beginLive` 適用後の実機の実状態** (`machine.bus`) から
+    /// 逆引きする。`Pc88Bus.reset` は DIPSW を保持するので、`boot` 行・生 `dipsw`・
+    /// ヘッダ無しのいずれでも、ステータスバー表示・`Settings`・機種が必ず一致する
+    /// (ヘッダ無し時は現状維持の no-op)。`performLoad` と同じ preset/custom 分岐。
+    func adoptScriptSetup(_ steps: [ScriptStep]) {
+        // クロックはスクリプトが明示した場合のみ永続化する (ヘッダ省略時に
+        // ユーザのクロック設定を勝手に書き換えない)。表示は常に実機値で同期。
+        clockScan: for step in steps {
+            switch step {
+            case .clock(let mhz):
+                Settings.shared.clock8MHz = (mhz == 8)
+                break clockScan
+            case .boot, .dipsw1, .dipsw2, .diskMount:
+                continue                 // setup ブロック内 — clock を探し続ける
+            default:
+                break clockScan          // timeline 開始 — clock 指定なし
+            }
+        }
+        syncActiveClockFromMachine()
+
+        // 起動モード: 実機 DIPSW をプリセットへ逆引き。一致すればその機種の正準
+        // DIPSW を、一致しなければ Custom として生値を採用する (= performLoad と同型)。
+        let sw1 = machine.bus.dipSw1
+        let sw2 = machine.bus.dipSw2
+        let preset = BootModePreset.from(dipSw1: sw1, dipSw2Base: sw2)
+        if preset == .custom {
+            _bootModeStorage = .custom
+            Settings.shared.dipSw1 = sw1
+            Settings.shared.dipSw2Base = sw2
+        } else {
+            let mode = BootMode(rawValue: preset.rawValue) ?? .custom
+            _bootModeStorage = mode
+            Settings.shared.dipSw1 = mode.dipSw1
+            Settings.shared.dipSw2Base = mode.dipSw2
+        }
     }
 
     /// スクリプト内のディスクパスを URL へ解決する (絶対パスはそのまま、相対は
