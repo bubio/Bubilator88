@@ -139,7 +139,7 @@ fragment float4 fragmentCRT(VertexOut in [[stage_in]],
 
     // Subtle vignette (PC monitor — very mild corner darkening)
     float2 vig = in.texCoord * 2.0 - 1.0;
-    float vignette = 1.0 - smoothstep(1.0, 1.8, length(vig));
+    float vignette = 1.0 - smoothstep(1.2, 2.0, length(vig));
     color.rgb *= vignette;
 
     return float4(clamp(color.rgb, 0.0, 1.0), 1.0);
@@ -193,7 +193,7 @@ fragment float4 fragmentCRTComposite(VertexOut in [[stage_in]],
 
     // Subtle vignette (same as fragmentCRT)
     float2 vig = in.texCoord * 2.0 - 1.0;
-    float vignette = 1.0 - smoothstep(1.0, 1.8, length(vig));
+    float vignette = 1.0 - smoothstep(1.2, 2.0, length(vig));
     color.rgb *= vignette;
 
     return float4(clamp(color.rgb, 0.0, 1.0), 1.0);
