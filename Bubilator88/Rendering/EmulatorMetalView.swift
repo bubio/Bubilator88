@@ -65,10 +65,10 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
         super.init(frame: frame, device: device)
         self.delegate = self
         self.colorPixelFormat = .bgra8Unorm
-        // isPaused stays true for the view's lifetime: MTKView's built-in timer
-        // is unreliable at document-open launch, so a self-owned CADisplayLink
-        // (see rebuildRenderLink) drives draw(in:). preferredFramesPerSecond is
-        // intentionally left at its default — it only affects the unused timer.
+        // draw(in:) is driven by MTKView's built-in display loop. isPaused is
+        // toggled by startEmulation/stopEmulation and window occlusion (see
+        // updateDrawLoop); it starts paused until the emulator is started.
+        self.preferredFramesPerSecond = 60
         self.isPaused = true
         currentFilter = viewModel.videoFilter
         currentScanlineEnabled = viewModel.effectiveScanlineEnabled
@@ -390,53 +390,27 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
         emulatedTime = 0
         fpsFrameCount = 0
         fpsLastTime = emulationStartTime
-        updateRenderLink()
+        updateDrawLoop()
     }
 
     func stopEmulation() {
-        updateRenderLink()
+        updateDrawLoop()
     }
 
-    // MARK: - Render driver (self-owned CADisplayLink)
+    // MARK: - Render driver (MTKView internal display loop)
     //
-    // We drive draw(in:) from our own NSView display link rather than MTKView's
-    // built-in paused-mode timer. That internal timer derives from the view's
-    // CVDisplayLink and is established lazily the first time the view is shown;
-    // when the app is launched by opening a document (a `.b88script`
-    // double-clicked in Finder) the view enters the window before it is
-    // on-screen, the internal link is born dead, and from then on draw(in:) is
-    // never called no matter how isPaused / needsDisplay are toggled — black
-    // screen at 0 fps. An NSView.displayLink, rebuilt on every window move, is
-    // reliable across all launch paths. MTKView.isPaused stays true so its
-    // internal loop never double-draws; we invoke draw(in:) via self.draw().
+    // draw(in:) is driven by MTKView's own built-in display loop, gated by
+    // isPaused. The loop runs only while the emulator is running and the window
+    // is on-screen, and idles otherwise. Document opens go through SwiftUI's
+    // `.onOpenURL` (see AppDelegate), so the view always attaches to an
+    // on-screen window and the internal display link is born alive — no custom
+    // CADisplayLink is needed.
 
-    private var renderLink: CADisplayLink?
-
-    /// Rebuild the display link for the current window. Called on every
-    /// window move so the link is always tied to the live window/screen.
-    private func rebuildRenderLink() {
-        renderLink?.invalidate()
-        renderLink = nil
-        guard window != nil else { return }
-        let link = displayLink(target: self, selector: #selector(renderTick))
-        link.isPaused = true
-        // Cap at 60Hz to match the previous MTKView preferredFramesPerSecond
-        // (emulation is 60fps logical; draw(in:) paces itself either way, but
-        // this avoids redundant ticks on a 120Hz ProMotion display).
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 60, preferred: 60)
-        link.add(to: .main, forMode: .common)
-        renderLink = link
-        updateRenderLink()
-    }
-
-    /// Run the link iff the emulator is running and the window is on-screen.
-    func updateRenderLink() {
+    /// Run the internal draw loop iff the emulator is running and the window
+    /// is on-screen; pause it otherwise.
+    func updateDrawLoop() {
         let visible = window != nil && (window?.occlusionState.contains(.visible) ?? false)
-        renderLink?.isPaused = !(viewModel.isRunning && visible)
-    }
-
-    @objc private func renderTick() {
-        self.draw()   // synchronously invokes draw(in:)
+        isPaused = !(viewModel.isRunning && visible)
     }
 
     // MARK: - MTKViewDelegate
@@ -835,10 +809,9 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        // Rebuild the render display link for the new window, and keep it in
-        // sync with the window's on-screen visibility (the link should idle
-        // while the window is hidden/occluded).
-        rebuildRenderLink()
+        // Keep the draw loop in sync with the new window's on-screen visibility
+        // (idle while the window is hidden/occluded).
+        updateDrawLoop()
 
         // Drop observers bound to the previous window before re-registering.
         let nc = NotificationCenter.default
@@ -847,7 +820,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
         guard let window else { return }
         windowObservers = [
             nc.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: window, queue: .main) { [weak self] _ in
-                self?.updateRenderLink()
+                self?.updateDrawLoop()
             },
             nc.addObserver(forName: NSWindow.didEnterFullScreenNotification, object: window, queue: .main) { [weak self] _ in
                 self?.startMouseMonitor()
