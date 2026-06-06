@@ -9,39 +9,27 @@ import AppKit
 /// bar skips the confirmation, on the theory that a deliberate menu
 /// click already expresses intent.
 ///
-/// Design: the local `.keyDown` monitor **does not** try to cancel the
-/// event or present any UI. It only sets a flag recording "the next
-/// terminate / window-close request was triggered by Cmd+Q / Cmd+W".
-/// The actual cancel decision happens in the standard AppKit hooks:
-///
-/// - `applicationShouldTerminate(_:)` for Cmd+Q
-/// - `NSWindowDelegate.windowShouldClose(_:)` for Cmd+W
-///
-/// Those hooks run *after* the event dispatch is complete, so we can
-/// safely put up an `NSAlert` via `runModal()` without the reentrancy
-/// problem we hit when we tried to present the alert from inside the
-/// event monitor itself (the nested modal loop re-delivered the same
-/// Cmd+W keystroke to the alert and matched its default button).
-///
-/// Menu-click path: the menu invokes the action directly via the
-/// responder chain, so the keyDown monitor never fires → the flag
-/// stays false → the shouldTerminate / shouldClose hooks return
-/// without prompting. Exactly the behavior we want.
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+/// Design:
+/// - **Cmd+Q** flows through unchanged to `applicationShouldTerminate(_:)`,
+///   which puts up the confirmation sheet. The keyDown monitor only records
+///   that the terminate was shortcut-triggered (so a *menu* Quit skips the
+///   prompt — the menu invokes the action directly, the monitor never fires).
+/// - **Cmd+W** is intercepted *and swallowed* by the keyDown monitor, which
+///   then drives the confirmation itself. We do this in the monitor rather than
+///   from `NSWindowDelegate.windowShouldClose(_:)` because we must NOT become
+///   the window's delegate: SwiftUI owns the `Window` scene's delegate, and
+///   stealing it tears the window down on a backgrounded document open
+///   (`.b88script` double-clicked while another app is frontmost) → the app
+///   quits. The sheet is presented via `beginSheetModal` dispatched async, so
+///   there is no nested-runloop reentrancy (the bug that originally pushed this
+///   onto the delegate hook).
+/// - Closing the main window cascades to the supplementary windows (Debugger)
+///   via `NSWindow.willCloseNotification` — a notification, so again no delegate.
+final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Set by the root SwiftUI scene so terminate hooks can reach the
     /// recorder. Weak to avoid a retain cycle; the view model outlives
-    /// the delegate in practice. When a `.b88script` was double-clicked
-    /// before the scene finished wiring this up, the queued URL is
-    /// flushed the moment the view model arrives.
-    weak var viewModel: EmulatorViewModel? {
-        didSet { flushPendingScriptOpens() }
-    }
-
-    /// A `.b88script` handed to us by Finder before the view model is ready
-    /// (cold launch via double-click fires `application(_:open:)` ahead of
-    /// `ContentView.onAppear`). Only the most recent one is meaningful — a
-    /// single emulator instance can play one script at a time.
-    private var pendingScriptURL: URL?
+    /// the delegate in practice.
+    weak var viewModel: EmulatorViewModel?
 
     private var shortcutMonitor: Any?
     private var rewindMonitor: Any?
@@ -50,6 +38,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// rewind regardless of localized character (Z is the same physical
     /// position on JIS as well, where keyCode 6 maps to "z").
     private static let rewindKeyCode: UInt16 = 6
+
+    /// Title of the SwiftUI `Window("Bubilator88", id: "main")` scene. Used to
+    /// identify the emulator window (the only window that carries it). One
+    /// source of truth for the by-title matching the window observers rely on.
+    private static let mainWindowTitle = "Bubilator88"
     private var rewindHoldActive = false
 
     /// Strong identity reference to the emulator window, captured the
@@ -62,108 +55,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     /// Cleared inside `applicationShouldTerminate(_:)` once consumed.
     private var lastTerminateWasShortcut = false
 
-    /// True if the most recent window-close attempt was triggered by Cmd+W.
-    /// Cleared inside `windowShouldClose(_:)` once consumed.
-    private var lastCloseWasShortcut = false
+    /// Guards against stacking close-confirmation sheets when Cmd+W is hit
+    /// repeatedly. Cleared when the sheet finishes.
+    private var closeConfirmationActive = false
 
     // MARK: - NSApplicationDelegate
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         shortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            self?.recordShortcut(event)
-            return event
+            guard let self else { return event }
+            return self.handleShortcut(event)
         }
         rewindMonitor = NSEvent.addLocalMonitorForEvents(
             matching: [.keyDown, .keyUp, .flagsChanged]
         ) { [weak self] event in
             self?.handleRewindEvent(event) ?? event
         }
-        // The SwiftUI `Window` scene has created the NSWindow by this
-        // point, but it may not be available on the first runloop tick.
-        // Defer the delegate attach until the main window notifies us
-        // that it has become key.
+        // Cache the main window's identity the first time it becomes key
+        // (used to gate Cmd+Z rewind and Cmd+W to the emulator window). We do
+        // NOT set ourselves as its delegate — SwiftUI owns that.
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(mainWindowDidBecomeKey(_:)),
             name: NSWindow.didBecomeKeyNotification,
             object: nil
         )
-        // Take over the "open documents" Apple Event ourselves.
-        //
-        // Why: with a singleton SwiftUI `Window` scene (and no
-        // `DocumentGroup`), AppKit's *default* kAEOpenDocuments handler
-        // tears down the existing main window before delivering the URLs
-        // to `application(_:open:)`. That transient zero-window moment
-        // trips `applicationShouldTerminateAfterLastWindowClosed`, so a
-        // `.b88script` double-clicked onto the already-running app quietly
-        // quits it (window closes → app terminates). The teardown fired
-        // only on the first open after the window had settled, which made
-        // it look intermittent.
-        //
-        // Installing our own handler here (after AppKit registered its
-        // default during `finishLaunching`) replaces it: we extract the
-        // file URLs and route them straight to `application(_:open:)`,
-        // and the window is never touched. The cold-launch path is
-        // unaffected — the queued event is delivered to this handler the
-        // same way once launch finishes.
-        NSAppleEventManager.shared().setEventHandler(
+        // Cascade-close supplementary windows (Debugger) when the main window
+        // closes, so `applicationShouldTerminateAfterLastWindowClosed` can fire.
+        // A notification, not a delegate method — see the type doc.
+        NotificationCenter.default.addObserver(
             self,
-            andSelector: #selector(handleOpenDocumentsEvent(_:replyEvent:)),
-            forEventClass: AEEventClass(kCoreEventClass),
-            andEventID: AEEventID(kAEOpenDocuments)
+            selector: #selector(mainWindowWillClose(_:)),
+            name: NSWindow.willCloseNotification,
+            object: nil
         )
-    }
-
-    @objc private func handleOpenDocumentsEvent(
-        _ event: NSAppleEventDescriptor,
-        replyEvent: NSAppleEventDescriptor
-    ) {
-        guard let list = event.paramDescriptor(forKeyword: keyDirectObject),
-              list.numberOfItems > 0 else { return }
-        var urls: [URL] = []
-        // AEDescList is 1-indexed.
-        for i in 1...list.numberOfItems {
-            guard let item = list.atIndex(i) else { continue }
-            // Open-document descriptors are typeFileURL; coerce and decode
-            // its raw bytes. Fall back to the string form for safety.
-            if let fileURL = item.coerce(toDescriptorType: typeFileURL),
-               let url = URL(dataRepresentation: fileURL.data, relativeTo: nil) {
-                urls.append(url)
-            } else if let s = item.stringValue {
-                // `URL(string:)` also accepts a bare POSIX path and yields a
-                // schemeless URL, so only use it for actual `file://` strings;
-                // a plain path must go through `URL(fileURLWithPath:)`.
-                urls.append(s.hasPrefix("file://")
-                    ? (URL(string: s) ?? URL(fileURLWithPath: s))
-                    : URL(fileURLWithPath: s))
-            }
-        }
-        guard !urls.isEmpty else { return }
-        application(NSApp, open: urls)
-    }
-
-    // MARK: - Document open (double-click / "Open With")
-
-    /// Finder hands `.b88script` files here (one call may carry several).
-    /// We only ever play the last; queue it and flush once the view model
-    /// exists and its window is on screen. Reached via our
-    /// `handleOpenDocumentsEvent` Apple Event handler (see above), not
-    /// AppKit's default open-document machinery.
-    func application(_ application: NSApplication, open urls: [URL]) {
-        guard let script = urls.last(where: { $0.pathExtension.lowercased() == "b88script" }) else { return }
-        pendingScriptURL = script
-        flushPendingScriptOpens()
-    }
-
-    /// Hand the most recently queued script to the view model once it
-    /// exists. `requestScriptPlayback` decides whether to play now (run
-    /// loop already up) or defer to `ContentView.onAppear` — so we never
-    /// race the emulator's startup. No-op while the view model is still
-    /// nil (re-fired by its `didSet`).
-    private func flushPendingScriptOpens() {
-        guard let vm = viewModel, let url = pendingScriptURL else { return }
-        pendingScriptURL = nil
-        DispatchQueue.main.async { vm.requestScriptPlayback(url: url) }
+        // NOTE: document opens (`.b88script` double-click / "Open With") are
+        // handled by SwiftUI's `.onOpenURL` on the root scene, NOT here.
+        //
+        // We deliberately do NOT implement `application(_:open:)` nor install a
+        // custom kAEOpenDocuments handler. Doing either makes AppKit route
+        // document opens through its default open-document machinery, which —
+        // for a singleton SwiftUI `Window` (no `DocumentGroup`) — tears down
+        // the main window before delivering the URLs. That transient
+        // zero-window moment trips `applicationShouldTerminateAfterLastWindowClosed`
+        // and quietly quits the app on a warm open, and on a cold-launch open it
+        // also leaves the MTKView's display link born dead (black screen).
+        // Letting SwiftUI keep ownership via `.onOpenURL` avoids both: it fires
+        // for cold AND warm opens, never touches the window, and the internal
+        // display loop comes up alive. (Verified end-to-end, 2026-06-05.)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -200,7 +139,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // Cmd+Z legitimately means "undo" in a text field. Identity
         // comparison rather than title matching so localization or any
         // future title change doesn't silently disable rewind.
-        guard let emu = emulatorWindow, NSApp.keyWindow === emu else {
+        guard let emu = emulatorKeyWindow(), NSApp.keyWindow === emu else {
             return event
         }
 
@@ -269,45 +208,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         true
     }
 
-    // MARK: - NSWindowDelegate
+    // MARK: - Window observers (notifications, not delegate)
 
     @objc private func mainWindowDidBecomeKey(_ note: Notification) {
         guard let window = note.object as? NSWindow,
-              window.title == "Bubilator88" else {
+              window.title == Self.mainWindowTitle else {
             return
         }
-        // Cache identity for Cmd+Z gating. Title-based comparison is
-        // brittle (localization, in-flight setTitle calls, etc.) so we
-        // do it once here and from then on rely on `===` identity.
+        // Cache identity for Cmd+Z / Cmd+W gating. Title-based comparison is
+        // brittle (localization, in-flight setTitle calls, etc.) so we do it
+        // once here and from then on rely on `===` identity. We deliberately do
+        // not set ourselves as the window's delegate (see the type doc).
         if emulatorWindow == nil {
             emulatorWindow = window
         }
-        if window.delegate !== self {
-            window.delegate = self
-        }
     }
 
-    func windowShouldClose(_ sender: NSWindow) -> Bool {
-        guard lastCloseWasShortcut else { return true }
-        lastCloseWasShortcut = false
-        MainActor.assumeIsolated { viewModel?.beginQuitDissolve() }
-        presentCloseConfirmationSheet(on: sender)
-        // Always refuse the close here; if the user confirms, the sheet's
-        // completion handler calls `sender.close()` directly, which bypasses
-        // `windowShouldClose` and so won't recurse into this branch.
-        return false
-    }
-
-    /// When the main emulator window is about to close, dismiss every
-    /// other window so the "last window closed" check can fire and
-    /// terminate the app. Without this the Debugger (and any other
-    /// supplementary scene) would keep the process alive after the
-    /// user has clearly asked to go away.
-    func windowWillClose(_ notification: Notification) {
-        guard let window = notification.object as? NSWindow,
-              window.title == "Bubilator88" else {
+    /// When the main emulator window closes, dismiss every other window so the
+    /// "last window closed" check can fire and terminate the app. Without this
+    /// the Debugger (and any other supplementary scene) would keep the process
+    /// alive after the user has clearly asked to go away.
+    @objc private func mainWindowWillClose(_ note: Notification) {
+        guard let window = note.object as? NSWindow,
+              window.title == Self.mainWindowTitle else {
             return
         }
+        // The window is going away; any pending close confirmation is moot.
+        // Reset the guard so a future window (or re-show) isn't left unable to
+        // present the Cmd+W sheet because the flag latched true.
+        closeConfirmationActive = false
         for other in NSApp.windows where other !== window && other.isVisible {
             other.close()
         }
@@ -316,7 +245,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // MARK: - Sheet / modal helpers
 
     private func mainEmulatorWindow() -> NSWindow? {
-        return NSApp.windows.first { $0.title == "Bubilator88" }
+        return NSApp.windows.first { $0.title == Self.mainWindowTitle }
+    }
+
+    /// The cached main-window identity, resolved lazily by title if
+    /// `didBecomeKey` hasn't captured it yet (it can miss when the window first
+    /// becomes key before SwiftUI sets the title). Keeps Cmd+W / Cmd+Z gating
+    /// reliable from the very first keypress after launch. Callers still
+    /// `=== NSApp.keyWindow` so a non-key emulator window won't match.
+    private func emulatorKeyWindow() -> NSWindow? {
+        if emulatorWindow == nil { emulatorWindow = mainEmulatorWindow() }
+        return emulatorWindow
     }
 
     private func presentQuitConfirmationSheet(on host: NSWindow) {
@@ -333,6 +272,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func presentCloseConfirmationSheet(on host: NSWindow) {
         let alert = makeCloseAlert()
         alert.beginSheetModal(for: host) { [weak self] response in
+            self?.closeConfirmationActive = false
             if response == .alertFirstButtonReturn {
                 host.close()
             } else {
@@ -350,14 +290,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     // MARK: - Shortcut detection
 
-    private func recordShortcut(_ event: NSEvent) {
+    /// Returns the event to let it propagate, or `nil` to swallow it. Only
+    /// Cmd+W (on the emulator window) is swallowed — we drive its confirmation
+    /// ourselves. Cmd+Q passes through to `applicationShouldTerminate`.
+    private func handleShortcut(_ event: NSEvent) -> NSEvent? {
         // Only bare Command+<letter> counts. Cmd+Shift+Q etc. are left
         // alone so the user can still build custom shortcuts elsewhere.
         let required: NSEvent.ModifierFlags = .command
         let forbidden: NSEvent.ModifierFlags = [.shift, .option, .control]
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard flags.contains(required), flags.isDisjoint(with: forbidden) else { return }
-        guard let chars = event.charactersIgnoringModifiers?.lowercased() else { return }
+        guard flags.contains(required), flags.isDisjoint(with: forbidden) else { return event }
+        guard let chars = event.charactersIgnoringModifiers?.lowercased() else { return event }
 
         switch chars {
         case "q":
@@ -365,11 +308,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         case "w":
             // Only gate Cmd+W for the main emulator window. Settings /
             // About / Help sheets should still close with a single keypress.
-            if let emu = emulatorWindow, NSApp.keyWindow === emu {
-                lastCloseWasShortcut = true
+            if let emu = emulatorKeyWindow(), NSApp.keyWindow === emu {
+                requestCloseConfirmation(for: emu)
+                return nil  // swallow so AppKit doesn't close the window now
             }
         default:
             break
+        }
+        return event
+    }
+
+    /// Present the Cmd+W close-confirmation sheet (async so the keyDown event
+    /// finishes dispatching first — no nested-runloop reentrancy). On confirm,
+    /// the sheet closes the window; on cancel it reverses the quit dissolve.
+    private func requestCloseConfirmation(for window: NSWindow) {
+        guard !closeConfirmationActive else { return }
+        closeConfirmationActive = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            MainActor.assumeIsolated { self.viewModel?.beginQuitDissolve() }
+            self.presentCloseConfirmationSheet(on: window)
         }
     }
 
