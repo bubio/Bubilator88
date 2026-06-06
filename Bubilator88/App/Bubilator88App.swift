@@ -11,6 +11,16 @@ struct Bubilator88App: App {
         Window("Bubilator88", id: "main") {
             ContentView(viewModel: viewModel)
                 .onAppear { appDelegate.viewModel = viewModel }
+                // `.b88script` double-click / "Open With" arrives here for both
+                // cold-launch and warm (already-running) opens. requestScriptPlayback
+                // plays immediately if the run loop is up, otherwise defers to
+                // ContentView.onAppear's consumePendingScript() (cold launch may
+                // fire onOpenURL before ROMs load). See AppDelegate for why this
+                // lives in SwiftUI rather than application(_:open:).
+                .onOpenURL { url in
+                    guard url.pathExtension.lowercased() == "b88script" else { return }
+                    viewModel.requestScriptPlayback(url: url)
+                }
                 .windowResizeBehavior(.disabled)
                 .windowFullScreenBehavior(.enabled)
                 .sheet(isPresented: $showAbout) {
