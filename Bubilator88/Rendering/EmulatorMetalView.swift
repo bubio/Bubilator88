@@ -379,7 +379,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
                 textureDimensions: dims, outputDimensions: outDims,
                 scanlineEnabled: 0, is400LineMode: is400 ? 1 : 0,
                 hqOffset: 0, hqGradient: 0, hqMaxBlend: 0, hqPadding: 0,
-                persistR: 0.65, persistG: 0.50, persistB: 0.30, persistPad: 0)
+                persistR: 0.55, persistG: 0.50, persistB: 0.30, persistPad: 0)
         }
     }
 
