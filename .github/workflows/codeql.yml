@@ -63,21 +63,47 @@ jobs:
           xcrun metal -c /tmp/probe.metal -o /tmp/probe.air
           echo "Metal toolchain verified: compiled probe.metal successfully"
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: swift
-
-      - name: Build
+      - name: Pre-compile Metal shaders (untraced)
+        # CodeQL's build tracer (DYLD_INSERT_LIBRARIES) breaks the Metal
+        # toolchain lookup, so `metal` fails only when invoked under CodeQL —
+        # a plain build works fine (see release.yml). Compile everything here,
+        # untraced, into a shared DerivedData. The later CodeQL-traced build
+        # then finds the Metal outputs up-to-date and skips CompileMetalFile,
+        # so `metal` is never launched under the tracer.
         run: |
           xcodebuild \
             -scheme Bubilator88 \
             -configuration Release \
+            -derivedDataPath build \
             -destination 'generic/platform=macOS' \
             ARCHS=arm64 \
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: swift
+
+      - name: Build (traced — Swift only)
+        # Re-run the build under CodeQL. OTHER_SWIFT_FLAGS differs from the
+        # pre-build, so every Swift compile task's command line changes and
+        # swiftc re-runs (CodeQL extracts it). The Metal compile tasks' command
+        # lines are unchanged, so XCBuild treats them as up-to-date and skips
+        # them — keeping `metal` out of the traced build entirely.
+        run: |
+          xcodebuild \
+            -scheme Bubilator88 \
+            -configuration Release \
+            -derivedDataPath build \
+            -destination 'generic/platform=macOS' \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            OTHER_SWIFT_FLAGS='-DCODEQL_TRACED_BUILD' \
             build
 
       - name: Perform CodeQL Analysis
