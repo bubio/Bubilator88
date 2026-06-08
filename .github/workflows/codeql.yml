@@ -1,0 +1,65 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ "main" ]
+
+  pull_request:
+    branches: [ "main" ]
+
+  schedule:
+    - cron: '15 15 * * 3'
+
+permissions:
+  security-events: write
+  contents: read
+  actions: read
+  packages: read
+
+jobs:
+  analyze:
+    name: Analyze Swift
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select latest Xcode 26
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH=/Applications/Xcode.app
+          fi
+
+          echo "Using: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+
+          xcodebuild -version
+
+      - name: Install Metal Toolchain
+        run: |
+          sudo xcodebuild -downloadComponent MetalToolchain
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: swift
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -scheme Bubilator88 \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:swift"
