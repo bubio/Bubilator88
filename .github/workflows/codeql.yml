@@ -36,28 +36,22 @@ jobs:
           echo "Using: $XCODE_PATH"
           sudo xcode-select -s "$XCODE_PATH"
 
+          # Pin DEVELOPER_DIR for ALL later steps (including the CodeQL-traced
+          # build). The runner ships two Xcodes (e.g. Xcode_26.5.app and
+          # Xcode_26.5.0.app); without this the build can pick a different one
+          # than the step that installed the Metal toolchain, which surfaces as
+          # "missing Metal Toolchain" even though it was downloaded.
+          echo "DEVELOPER_DIR=$XCODE_PATH/Contents/Developer" >> "$GITHUB_ENV"
+
           xcodebuild -version
 
       - name: Install Metal Toolchain
-        # Xcode 26 ships the Metal compiler as an on-demand component. A plain
-        # download is enough for a normal build (see release.yml). But under
-        # CodeQL's build tracer the on-demand mount of the toolchain cryptex
-        # fails, so the traced build reports "missing Metal Toolchain". We
-        # therefore download AND mount the cryptex persistently *before* the
-        # CodeQL-traced build runs.
+        # Xcode 26 ships the Metal compiler as a separate on-demand component
+        # that isn't on the runner image by default (see release.yml).
         run: |
           set -x
+          echo "DEVELOPER_DIR=$DEVELOPER_DIR"
           sudo xcodebuild -downloadComponent MetalToolchain
-
-          if [ ! -d /Volumes/MetalToolchainCryptex ]; then
-            open /System/Library/AssetsV2/com_apple_MobileAsset_MetalToolchain/*.asset/AssetData/Restore/*.dmg
-            for i in $(seq 1 30); do
-              [ -d /Volumes/MetalToolchainCryptex ] && break
-              sleep 2
-            done
-          fi
-          # Should report "Toolchain Search Path: /Volumes/MetalToolchainCryptex".
-          xcodebuild -showComponent metalToolchain || true
 
           # Verify by actually compiling a trivial shader (NOT `metal --version`,
           # which succeeds even when the compile backend is missing).
