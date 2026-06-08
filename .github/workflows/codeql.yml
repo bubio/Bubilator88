@@ -43,13 +43,14 @@ jobs:
           set -x
           echo "Active developer dir: $(xcode-select -p)"
 
-          # The Metal toolchain is no longer bundled in Xcode 26+.
-          # NOTE: `-showComponent` returning success only means the asset is
-          # present on disk (the macos-26 image ships it) — it does NOT mean it
-          # is integrated into the build system. A plain `-downloadComponent`
-          # makes `xcrun metal -c` work, but command-line `xcodebuild build`
-          # still fails with "missing Metal Toolchain" until the component is
-          # explicitly *imported*. So always run download (-exportPath)+import.
+          # The Metal toolchain is no longer bundled in Xcode 26+. On the
+          # macos-26 image the asset is already INSTALLED (downloadComponent
+          # reports "already installed"), and `xcrun metal -c` works on demand,
+          # but `xcodebuild build` still fails with "missing Metal Toolchain"
+          # because the toolchain *cryptex DMG is not mounted*. Mounting it at
+          # /Volumes/MetalToolchainCryptex is what makes the build find it.
+
+          # Best-effort install (idempotent — tolerate "already installed").
           for i in 1 2 3; do
             xcodebuild -downloadComponent metalToolchain \
               -exportPath /tmp/metalToolchainDownload/ && break
@@ -57,7 +58,19 @@ jobs:
             sleep 20
           done
           xcodebuild -importComponent metalToolchain \
-            -importPath /tmp/metalToolchainDownload/*.exportedBundle
+            -importPath /tmp/metalToolchainDownload/*.exportedBundle || true
+
+          # Mount the toolchain cryptex so the build system can locate it.
+          if [ ! -d /Volumes/MetalToolchainCryptex ]; then
+            open /System/Library/AssetsV2/com_apple_MobileAsset_MetalToolchain/*.asset/AssetData/Restore/*.dmg
+            for i in $(seq 1 30); do
+              [ -d /Volumes/MetalToolchainCryptex ] && break
+              sleep 2
+            done
+          fi
+          # Show where the build will look for the toolchain (should report a
+          # "Toolchain Search Path: /Volumes/MetalToolchainCryptex").
+          xcodebuild -showComponent metalToolchain || true
 
           # Verify by actually compiling a trivial shader (NOT `metal --version`,
           # which succeeds even when the compile backend is missing).
