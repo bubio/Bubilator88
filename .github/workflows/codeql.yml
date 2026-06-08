@@ -40,12 +40,28 @@ jobs:
 
       - name: Install Metal Toolchain
         run: |
-          # Run WITHOUT sudo so the toolchain is installed for the runner
-          # user that the Build step uses. `sudo` installs it under root and
-          # the build then fails with "missing Metal Toolchain".
-          xcodebuild -downloadComponent MetalToolchain
-          # Verify the metal tool is actually usable before continuing.
-          xcrun metal --version
+          set -x
+          echo "Active developer dir: $(xcode-select -p)"
+
+          # Download the Metal toolchain (not bundled in Xcode 26+).
+          # Retry because the component is ~700MB and the CDN is flaky.
+          for i in 1 2 3; do
+            xcodebuild -downloadComponent MetalToolchain && break
+            echo "downloadComponent attempt $i failed; retrying in 20s"
+            sleep 20
+          done
+
+          # NOTE: `metal --version` succeeds even when the compile backend is
+          # missing, so it is NOT a valid check. Verify by actually compiling
+          # a trivial shader — this fails loudly here if the toolchain is
+          # genuinely absent, instead of confusingly failing in the Build step.
+          cat > /tmp/probe.metal <<'EOF'
+          #include <metal_stdlib>
+          using namespace metal;
+          kernel void probe() {}
+          EOF
+          xcrun metal -c /tmp/probe.metal -o /tmp/probe.air
+          echo "Metal toolchain verified: compiled probe.metal successfully"
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
