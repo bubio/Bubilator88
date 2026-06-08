@@ -43,18 +43,26 @@ jobs:
           set -x
           echo "Active developer dir: $(xcode-select -p)"
 
-          # Download the Metal toolchain (not bundled in Xcode 26+).
-          # Retry because the component is ~700MB and the CDN is flaky.
-          for i in 1 2 3; do
-            xcodebuild -downloadComponent MetalToolchain && break
-            echo "downloadComponent attempt $i failed; retrying in 20s"
-            sleep 20
-          done
+          # The Metal toolchain is no longer bundled in Xcode 26+.
+          # A plain `-downloadComponent` makes `xcrun metal -c` work, but does
+          # NOT integrate the toolchain into the build system, so command-line
+          # `xcodebuild build` still fails with "missing Metal Toolchain".
+          # The reliable CI sequence is download (-exportPath) + import.
+          if xcodebuild -showComponent metalToolchain >/dev/null 2>&1; then
+            echo "Metal toolchain already installed"
+          else
+            for i in 1 2 3; do
+              xcodebuild -downloadComponent metalToolchain \
+                -exportPath /tmp/metalToolchainDownload/ && break
+              echo "downloadComponent attempt $i failed; retrying in 20s"
+              sleep 20
+            done
+            xcodebuild -importComponent metalToolchain \
+              -importPath /tmp/metalToolchainDownload/*.exportedBundle
+          fi
 
-          # NOTE: `metal --version` succeeds even when the compile backend is
-          # missing, so it is NOT a valid check. Verify by actually compiling
-          # a trivial shader — this fails loudly here if the toolchain is
-          # genuinely absent, instead of confusingly failing in the Build step.
+          # Verify by actually compiling a trivial shader (NOT `metal --version`,
+          # which succeeds even when the compile backend is missing).
           cat > /tmp/probe.metal <<'EOF'
           #include <metal_stdlib>
           using namespace metal;
