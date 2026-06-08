@@ -44,22 +44,20 @@ jobs:
           echo "Active developer dir: $(xcode-select -p)"
 
           # The Metal toolchain is no longer bundled in Xcode 26+.
-          # A plain `-downloadComponent` makes `xcrun metal -c` work, but does
-          # NOT integrate the toolchain into the build system, so command-line
-          # `xcodebuild build` still fails with "missing Metal Toolchain".
-          # The reliable CI sequence is download (-exportPath) + import.
-          if xcodebuild -showComponent metalToolchain >/dev/null 2>&1; then
-            echo "Metal toolchain already installed"
-          else
-            for i in 1 2 3; do
-              xcodebuild -downloadComponent metalToolchain \
-                -exportPath /tmp/metalToolchainDownload/ && break
-              echo "downloadComponent attempt $i failed; retrying in 20s"
-              sleep 20
-            done
-            xcodebuild -importComponent metalToolchain \
-              -importPath /tmp/metalToolchainDownload/*.exportedBundle
-          fi
+          # NOTE: `-showComponent` returning success only means the asset is
+          # present on disk (the macos-26 image ships it) — it does NOT mean it
+          # is integrated into the build system. A plain `-downloadComponent`
+          # makes `xcrun metal -c` work, but command-line `xcodebuild build`
+          # still fails with "missing Metal Toolchain" until the component is
+          # explicitly *imported*. So always run download (-exportPath)+import.
+          for i in 1 2 3; do
+            xcodebuild -downloadComponent metalToolchain \
+              -exportPath /tmp/metalToolchainDownload/ && break
+            echo "downloadComponent attempt $i failed; retrying in 20s"
+            sleep 20
+          done
+          xcodebuild -importComponent metalToolchain \
+            -importPath /tmp/metalToolchainDownload/*.exportedBundle
 
           # Verify by actually compiling a trivial shader (NOT `metal --version`,
           # which succeeds even when the compile backend is missing).
