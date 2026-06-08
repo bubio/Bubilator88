@@ -40,7 +40,12 @@ jobs:
 
       - name: Install Metal Toolchain
         run: |
-          sudo xcodebuild -downloadComponent MetalToolchain
+          # Run WITHOUT sudo so the toolchain is installed for the runner
+          # user that the Build step uses. `sudo` installs it under root and
+          # the build then fails with "missing Metal Toolchain".
+          xcodebuild -downloadComponent MetalToolchain
+          # Verify the metal tool is actually usable before continuing.
+          xcrun metal --version
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
