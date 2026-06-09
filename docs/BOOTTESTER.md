@@ -4,12 +4,58 @@
 
 ```bash
 cd Packages/EmulatorCore
-swift run BootTester [disk.d88]
+swift run BootTester [disk.d88]                 # ディスク (またはBASIC) ブートテスト
+swift run BootTester --script <file.b88script>  # タイムラインスクリプト再生
 ```
 
 Without a disk argument, runs N88-BASIC cold boot test (types "0" + Return at "How many files?" prompt, verifies "Ok" appears).
 
 With a disk argument, loads the D88 image and runs disk boot for the configured number of frames.
+
+## Script Mode (`.b88script` / タイムラインスクリプト)
+
+`--script <file>` を渡すと、ブートモード・クロック・DIPSW・ディスクマウント・
+キー操作・ディスク入れ替え・リセットを記述したタイムラインスクリプトを
+決定論的に再生して終了する。アプリの「操作スクリプト記録」機能が書き出す
+**`.b88script` ファイルをそのまま渡せる** — `.b88script` は `ScriptParser` が
+読むのと同一の正準テキスト形式 (`ScriptWriter` ↔ `ScriptParser` の round-trip
+保証) なので、変換は不要。手書きの `.txt` でも拡張子を問わず同じパーサで読める。
+
+```bash
+# アプリで記録した操作をそのままリプレイ
+swift run BootTester --script ~/Documents/Bubilator88-Ys-20260609.b88script
+
+# 最終フレームのスクリーンショットを取る
+BOOTTEST_SCREENSHOT_PATH=/tmp/shot.ppm \
+  swift run BootTester --script ./session.b88script
+```
+
+スクリプト内のディスクパスは、**絶対パスはそのまま**、**相対パスはスクリプト
+ファイルのあるフォルダ基準**で解決される。
+
+スクリプト構文の一例 (1 行 1 ステップ):
+
+```
+boot n88-v2
+clock 8
+disk 0 Ys.d88 0
+wait 600
+key RETURN tap
+disk swap 0 Ys-B.d88 0
+reset warm
+```
+
+動詞: `boot` (`n88-v2`/`n88-v1h`/`n88-v1s`/`n-basic`) / `clock` / `dipsw1` /
+`dipsw2` / `disk <drive> <path> <image>` / `disk swap` / `disk select` /
+`disk eject` / `wait <frames>` / `key <name> <down|up|tap>` / `reset <warm|cold>`。
+キー名テーブルは `BOOTTEST_KEY_EVENTS` と共通 (ScriptParser)。
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BOOTTEST_SCRIPT_LIVE` | `0` | `1` = live ドライバ (ホストが `runFrame` を所有、アプリの live 再生経路を検証)。既定は drive モード (Player が時計を所有)。 |
+| `BOOTTEST_DIRECT_BASIC` | `0` | `1` = directBasicBoot を有効化。 |
+
+決定性 (検証/リプレイ) のため、script モードでは virtual RTC が既定 ON になる。
 
 ## Environment Variables
 
