@@ -6,17 +6,13 @@
 
 NEC PC-8801 エミュレーター for macOS
 
-<p align="center">
-  <a href="https://github.com/bubio/Bubilator88/releases/latest">
-    <img src="https://img.shields.io/github/v/release/bubio/Bubilator88" alt="Latest Release">
-  </a>
-  <a href="https://github.com/bubio/Bubilator88/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/bubio/Bubilator88" alt="License">
-  </a>
-  <a href="https://github.com/bubio/Bubilator88/releases/latest">
-    <img src="https://img.shields.io/github/downloads/bubio/Bubilator88/total.svg" alt="Downloads">
-  </a>
-</p>
+[![Latest Release](https://img.shields.io/github/v/release/bubio/Bubilator88)](https://github.com/bubio/Bubilator88/releases/latest)
+
+[![License](https://img.shields.io/github/license/bubio/Bubilator88)](https://github.com/bubio/Bubilator88/blob/main/LICENSE)
+
+[![Downloads](https://img.shields.io/github/downloads/bubio/Bubilator88/total.svg)](https://github.com/bubio/Bubilator88/releases/latest)
+
+[![CodeQL](https://github.com/bubio/Bubilator88/actions/workflows/codeql.yml/badge.svg)](https://github.com/bubio/Bubilator88/actions/workflows/codeql.yml)
 
 ## About
 
