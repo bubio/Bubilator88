@@ -215,3 +215,26 @@ var value: Float = 0.5 {
 - 対応する SenseInterruptStatus は `ST0 = ST0_IC_AT(0x40) | ST0_SE(0x20) | ST0_NR(0x08) | us` を返す。
 
 **教訓**: **`ST0_SE` (Seek End) を立てたまま**にすること。異常終了 (AT|NR) でも SE を落とすと、FR DISK.ROM は「これは seek 完了割り込みではない」と解釈して `ei; halt` から復帰できずハングする (QUASI88 も両ケースで SE を立てている)。「ドライブが存在しない」と「ディスク未挿入」は別概念 — drive 0,1 はディスク無しでもドライブは存在する (SenseDriveStatus は別経路)。本修正は drive 2,3 のみを対象とし、FA / 既存 15 シナリオ regression には無影響 (FA は drive 2,3 をプローブしないため不活性)。
+
+---
+
+## 17. アナログパレット port 0x54 の bit 7 (背景色レジスタ)
+
+**問題**: アーコン ARCHON の背景が本来の濃紺ではなく**白**になる。BubiC では正常。盤面のカラーモード描画で画素値 0 (背景) が白く塗られる。
+
+**原因**: PC-8801 のアナログパレット (port 0x32 bit 5 = MISC_CTRL_ANALOG) では **port 0x54 だけが特別**。`アナログモード && bit 7 = 1` の書き込みは、グラフィック `palette[0]` ではなく**背景色 (ボーダー) レジスタ** (QUASI88 `vram_bg_palette`、port 0x52 のアナログ版) を更新する。bit 7 が立った 0x54 書き込みを `palette[0]` に流すと、ゲームがボーダー色を設定するつもりの値で背景プレーン色が破壊される。
+
+ARCHON の手順:
+1. `0x01` (bit7=0, bit6=0) で `palette[0]` を濃紺 (Blue=1, Red=0) に設定 → 正しい背景
+2. その後 `0xBF`/`0xCF` (bit7=1) でボーダー色を白に設定
+
+旧実装は bit 7 分岐を持たず手順 2 が `palette[0]` を白 (7,7,7) に潰していた。
+
+**正しい定義** (QUASI88 `pc88main.c:1186-1208` 準拠):
+- port **0x54** のみ: `analog && (val & 0x80) != 0` → 背景色レジスタ (`analogBgPalette`) 更新、`palette[0]` には触れない
+  - `bit 6 = 0`: bits 0-2 = Blue, bits 3-5 = Red (Green は保持)
+  - `bit 6 = 1`: bits 0-2 = Green (Blue/Red は保持)
+- port **0x55-0x5B**: bit 7 は無視。通常どおり `palette[index]` を更新
+- bit 7 がクリアの 0x54 は通常の `palette[0]` 書き込み
+
+**教訓**: 背景色レジスタはボーダー (可視 640x400 外) 用で本エミュレータの描画には現れないが、**書き込みを `palette[0]` に誤って流すと可視背景が壊れる**。カラーモードの画素値 0 は `palette[0]` 直結。アナログパレットを疑うときは port 0x54 の bit 7 を最初に確認すること。port 0x52 (デジタル背景) と port 0x54 bit 7 (アナログ背景) は同じ概念レジスタの別経路。
