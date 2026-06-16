@@ -106,6 +106,35 @@ BOOTTEST_KEY_EVENTS="120:RETURN:tap,300:S:tap" \
   BOOTTEST_FRAMES=600 swift run BootTester ~/disks/game.d88
 ```
 
+### Save State Load & Mouse Injection
+
+`BOOTTEST_LOAD_STATE` loads a `.b88s` save state and runs `BOOTTEST_FRAMES`
+frames from there (instead of disk boot). Useful for reproducing an in-game
+scene (the mouse/joystick polling loop) deterministically. Combine with the
+mouse variables below to drive the emulated mouse, and with port tracing to
+inspect the OPN port A/B (reg 0x0E/0x0F) reads.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BOOTTEST_LOAD_STATE` | (none) | Path to a `.b88s` save state to load and run from |
+| `BOOTTEST_RESET_AFTER_LOAD` | `0` | `1` = warm-reset after loading (preserve RAM) |
+| `BOOTTEST_MOUSE_MOVE` | (none) | `dx:dy` relative movement injected every frame (enables the mouse) |
+| `BOOTTEST_MOUSE_BUTTON` | (none) | Held buttons: `L` / `R` / `LR` (enables the mouse) |
+| `BOOTTEST_MOUSE_JOY` | `0` | `1` = joystick mode (mouse-as-joystick), `0` = bus mouse (strobed) |
+
+Port tracing in load-state mode logs **both reads and writes** for the
+configured ports (disk-boot mode logs writes only). Ports parse with or
+without `0x` (`40,44,45` or `0x40,0x44`).
+
+```bash
+# Drive あーくしゅ's joystick read with a rightward mouse move and trace port A/B
+BOOTTEST_LOAD_STATE=~/Library/Application\ Support/Bubilator88/SaveStates/quicksave.b88s \
+  BOOTTEST_FRAMES=120 BOOTTEST_USE_RUNFRAME=1 \
+  BOOTTEST_MOUSE_JOY=1 BOOTTEST_MOUSE_MOVE="20:0" \
+  BOOTTEST_PORT_TRACE_PATH=/tmp/mouse.txt BOOTTEST_PORT_TRACE_PORTS=44,45 \
+  swift run BootTester
+```
+
 ### Tracing & Diagnostics
 
 | Variable | Format | Description |
