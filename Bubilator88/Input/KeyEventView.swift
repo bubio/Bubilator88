@@ -17,6 +17,8 @@ struct KeyEventView: NSViewRepresentable {
     var mouseCaptureEnabled: Bool = false
     /// Movement sensitivity multiplier.
     var mouseSensitivity: Float = 1.0
+    /// Fires when the host cursor capture engages / releases.
+    var onCaptureChange: ((Bool) -> Void)?
 
     func makeNSView(context: Context) -> KeyCaptureNSView {
         let view = KeyCaptureNSView()
@@ -25,6 +27,7 @@ struct KeyEventView: NSViewRepresentable {
         view.onTurbo = onTurbo
         view.onMouseMove = onMouseMove
         view.onMouseButton = onMouseButton
+        view.onCaptureChange = onCaptureChange
         view.mouseSensitivity = mouseSensitivity
         view.setMouseCaptureEnabled(mouseCaptureEnabled)
         return view
@@ -36,6 +39,7 @@ struct KeyEventView: NSViewRepresentable {
         nsView.onTurbo = onTurbo
         nsView.onMouseMove = onMouseMove
         nsView.onMouseButton = onMouseButton
+        nsView.onCaptureChange = onCaptureChange
         nsView.mouseSensitivity = mouseSensitivity
         nsView.setMouseCaptureEnabled(mouseCaptureEnabled)
     }
@@ -47,6 +51,7 @@ class KeyCaptureNSView: NSView {
     var onTurbo: ((Bool) -> Void)?
     var onMouseMove: ((Int, Int) -> Void)?
     var onMouseButton: ((Bool, Bool) -> Void)?
+    var onCaptureChange: ((Bool) -> Void)?
     var mouseSensitivity: Float = 1.0
 
     private var monitors: [Any] = []
@@ -106,6 +111,7 @@ class KeyCaptureNSView: NSView {
         // flowing without the pointer drifting off-window, and hide the cursor.
         CGAssociateMouseAndMouseCursorPosition(0)
         NSCursor.hide()
+        onCaptureChange?(true)
     }
 
     private func endCapture() {
@@ -115,6 +121,7 @@ class KeyCaptureNSView: NSView {
         NSCursor.unhide()
         // Release any held buttons so a game doesn't see them stuck.
         onMouseButton?(false, false)
+        onCaptureChange?(false)
     }
 
     @objc private func windowDidResignKey() {

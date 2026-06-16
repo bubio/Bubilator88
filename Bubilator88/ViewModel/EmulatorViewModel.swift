@@ -212,6 +212,10 @@ final class EmulatorViewModel {
     /// Emulation running state
     var isRunning: Bool = false
 
+    /// Whether the host cursor is currently captured (hidden + locked) for
+    /// bus-mouse input. UI-facing flag, driven by `KeyEventView`.
+    var mouseCapturing: Bool = false
+
     /// Whether a timeline script is currently playing back (live mode).
     /// UI-facing flag; the player itself lives in `scriptPlayer`.
     var isPlayingScript: Bool = false

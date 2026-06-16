@@ -509,7 +509,7 @@ private struct ControllerSettingsTab: View {
                         .monospacedDigit()
                         .frame(width: 40, alignment: .trailing)
                 }
-                Text("Click the emulation screen to capture the pointer (cursor hidden + locked); press Control+Esc to release. Bus Mouse drives genuine PC-8872 mouse software; Joystick mode lets the mouse control games that read the OPN port as a joystick (e.g. あーくしゅ).")
+                Text("Click the emulation screen to capture the pointer; press Control+Esc to release.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
