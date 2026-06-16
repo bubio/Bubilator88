@@ -107,6 +107,12 @@ class KeyCaptureNSView: NSView {
         capturing = true
         accumX = 0
         accumY = 0
+        // Clear any button state left over from a prior capture session that
+        // ended (window-resign / Control+Esc) while a button was held — its
+        // matching mouseUp was ignored, so the held flag would otherwise leak
+        // a phantom press into this session.
+        leftHeld = false
+        rightHeld = false
         // Decouple the hardware mouse from the on-screen cursor so deltas keep
         // flowing without the pointer drifting off-window, and hide the cursor.
         CGAssociateMouseAndMouseCursorPosition(0)
