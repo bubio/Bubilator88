@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="Mouse">
+    <meta name="description" content="バスマウス／ジョイスティックモード、ポインタの捕捉と解除、感度">
+    <meta name="keywords" content="マウス, バスマウス, PC-8872, ジョイスティック, ポインタ, 捕捉, 感度">
+    <meta name="robots" content="index">
+    <title>マウス</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>目次</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 ヘルプ</a></li>
+            <li><a href="getting-started.html">はじめに</a></li>
+            <li><a href="disks.html">ディスク操作</a></li>
+            <li><a href="cassette.html">カセットテープ</a></li>
+            <li><a href="keyboard.html">キーボード</a></li>
+            <li><a href="display.html">表示設定</a></li>
+            <li><a href="audio.html">サウンド</a></li>
+            <li><a href="savestates.html">ステートセーブ</a></li>
+            <li><a href="controller.html">ゲームコントローラ</a></li>
+            <li><a href="mouse.html">マウス</a></li>
+            <li><a href="shortcuts.html">ショートカット一覧</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="mouse"></a>
+    <h1>マウス</h1>
+
+    <p>Bubilator88 は PC-8801 のバスマウス (PC-8872) をエミュレートし、Mac の相対マウス移動と左右クリックを PC-8801 へ伝えます。マウスやジョイスティックに対応したお絵描きソフトやゲームで利用できます。</p>
+
+    <h2>有効にする</h2>
+    <p><strong>設定 &gt; マウス &gt; マウス入力を有効にする</strong> をオンにします。初期状態ではオフです。</p>
+
+    <h2>モード</h2>
+    <p><strong>モード</strong> で読み取り方式を選びます。</p>
+    <ul>
+        <li><strong>バスマウス (PC-8872)</strong> — 純正バスマウスとして動作します。マウス対応のお絵描きソフトなどはこちらです。</li>
+        <li><strong>ジョイスティック (マウス→ジョイ)</strong> — マウスの動きを方向入力として送ります。OPN ポートをジョイスティックとして読むゲーム向けです。</li>
+    </ul>
+    <p>どちらが必要かはタイトルによります。動かない場合はもう一方を試してください。</p>
+
+    <h2>感度</h2>
+    <p><strong>感度</strong> スライダで移動量の倍率を調整します (0.5x〜3.0x、初期値 0.5x)。バスマウスモードではカーソルの動く速さ、ジョイスティックモードでは方向が反応する敏感さに影響します。</p>
+
+    <h2>ポインタの捕捉と解除</h2>
+    <p>マウス入力が有効なときは、<strong>エミュレーション画面をクリック</strong> するとポインタが捕捉されます。捕捉中は Mac のカーソルが非表示になり、画面外に出ることなく動きが PC-8801 へ送られます。</p>
+    <p>捕捉中はステータスバーにマウスアイコンが表示されます。<strong>Control+Esc</strong> で解除でき、もう一度画面をクリックすると再び捕捉します。ウインドウが非アクティブになったときも自動的に解除されます。</p>
+
+    <p><a href="../index.html">Bubilator88 ヘルプに戻る</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>

@@ -271,6 +271,17 @@
 "Faithful color reproduction; even single-pixel lines keep their color. Very large files (~600 MB per minute)." = "色を忠実に再現します。1ドット幅の線も色が薄くなりません。ファイルサイズはとても大きくなります (1分あたり約 600MB)。";
 "Compact files that are easy to share (~45 MB per minute). Thin lines and single-pixel colors may look slightly washed out." = "ファイルサイズが小さく共有しやすいです (1分あたり約 45MB)。細い線や1ドットの色が少し薄く見えることがあります。";
 
+/* ===== SettingsView.swift / ContentView.swift — Mouse ===== */
+"Mouse" = "マウス";
+"Enable Mouse Input" = "マウス入力を有効にする";
+"Mode" = "モード";
+"Bus Mouse (PC-8872)" = "バスマウス (PC-8872)";
+"Joystick (mouse-as-joystick)" = "ジョイスティック (マウス→ジョイ)";
+"Sensitivity" = "感度";
+"Click the emulation screen to capture the pointer; press Control+Esc to release." = "エミュレーション画面をクリックすると捕捉します。Control+Esc で解除します。";
+"Mouse captured — press Control+Esc to release" = "マウス捕捉中 — Control+Esc で解除";
+"Mouse captured" = "マウス捕捉中";
+
 /* ===== AppDelegate.swift — Shortcut confirmation dialogs ===== */
 "Quit Bubilator88?" = "Bubilator88 を終了しますか?";
 "Close the emulator window?" = "エミュレータウィンドウを閉じますか?";
