@@ -43,7 +43,8 @@ struct ContentView: View {
                     onMouseMove: { viewModel.injectMouseMovement(dx: $0, dy: $1) },
                     onMouseButton: { viewModel.setMouseButton(left: $0, right: $1) },
                     mouseCaptureEnabled: Settings.shared.mouseEnabled,
-                    mouseSensitivity: Settings.shared.mouseSensitivity
+                    mouseSensitivity: Settings.shared.mouseSensitivity,
+                    onCaptureChange: { viewModel.mouseCapturing = $0 }
                 )
                 .onAppear {
                     viewModel.mouseModeEnabled = Settings.shared.mouseEnabled
@@ -311,6 +312,17 @@ struct ContentView: View {
             }
 
             Spacer()
+
+            // Mouse capture indicator (shown only while the host cursor is
+            // captured for bus-mouse input). Control+Esc releases it.
+            if viewModel.mouseCapturing {
+                Image(systemName: "computermouse.fill")
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(Color.accentColor)
+                    .font(.system(size: 18))
+                    .help(NSLocalizedString("Mouse captured — press Control+Esc to release",
+                                            comment: "Status bar mouse capture indicator tooltip"))
+            }
 
             // Script playback indicator (shown only while a timeline script is playing)
             if viewModel.isPlayingScript {

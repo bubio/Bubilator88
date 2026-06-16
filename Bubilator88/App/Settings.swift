@@ -253,7 +253,7 @@ final class Settings {
     }
 
     /// Mouse movement sensitivity multiplier (0.5x – 3.0x).
-    var mouseSensitivity: Float = 1.0 {
+    var mouseSensitivity: Float = 0.5 {
         didSet { UserDefaults.standard.set(mouseSensitivity, forKey: "mouseSensitivity") }
     }
 
