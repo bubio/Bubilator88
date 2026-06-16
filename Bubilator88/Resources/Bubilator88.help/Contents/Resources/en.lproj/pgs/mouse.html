@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="Mouse">
+    <meta name="description" content="Bus mouse / joystick mode, capturing and releasing the pointer, sensitivity">
+    <meta name="keywords" content="mouse, bus mouse, PC-8872, joystick, pointer, capture, sensitivity">
+    <meta name="robots" content="index">
+    <title>Mouse</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>Contents</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 Help</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li><a href="disks.html">Using Disks</a></li>
+            <li><a href="cassette.html">Cassette Tape</a></li>
+            <li><a href="keyboard.html">Keyboard</a></li>
+            <li><a href="display.html">Display</a></li>
+            <li><a href="audio.html">Audio</a></li>
+            <li><a href="savestates.html">Save States</a></li>
+            <li><a href="controller.html">Game Controller</a></li>
+            <li><a href="mouse.html">Mouse</a></li>
+            <li><a href="shortcuts.html">Shortcuts</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="mouse"></a>
+    <h1>Mouse</h1>
+
+    <p>Bubilator88 emulates the PC-8801 bus mouse (PC-8872), forwarding your Mac's relative mouse motion and left/right clicks to the PC-8801. Use it with drawing software and games that support a mouse or joystick.</p>
+
+    <h2>Enabling</h2>
+    <p>Turn on <strong>Settings &gt; Mouse &gt; Enable Mouse Input</strong>. It is off by default.</p>
+
+    <h2>Mode</h2>
+    <p>Choose how the mouse is read with <strong>Mode</strong>.</p>
+    <ul>
+        <li><strong>Bus Mouse (PC-8872)</strong> — Behaves as the genuine bus mouse. This is the right choice for mouse-aware drawing software.</li>
+        <li><strong>Joystick (mouse-as-joystick)</strong> — Sends mouse motion as directional input, for games that read the OPN ports as a joystick.</li>
+    </ul>
+    <p>Which one you need depends on the title. If one does not work, try the other.</p>
+
+    <h2>Sensitivity</h2>
+    <p>The <strong>Sensitivity</strong> slider scales movement (0.5x–3.0x, default 0.5x). In Bus Mouse mode it controls cursor speed; in Joystick mode it controls how readily a direction registers.</p>
+
+    <h2>Capturing and releasing the pointer</h2>
+    <p>While mouse input is enabled, <strong>click the emulation screen</strong> to capture the pointer. During capture the Mac cursor is hidden and locked, so motion is delivered to the PC-8801 without the pointer drifting off-window.</p>
+    <p>A mouse icon appears in the status bar while captured. Press <strong>Control+Esc</strong> to release; click the screen again to re-capture. Capture is also released automatically when the window loses focus.</p>
+
+    <p><a href="../index.html">Back to Bubilator88 Help</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>
