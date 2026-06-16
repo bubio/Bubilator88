@@ -2,16 +2,31 @@ import SwiftUI
 import AppKit
 
 /// NSView that captures keyboard events and forwards them to the emulator.
+/// When the PC-8801 bus mouse is enabled, it also captures (hides + locks)
+/// the host cursor and forwards relative motion and left/right buttons.
 struct KeyEventView: NSViewRepresentable {
     let onKeyDown: (UInt16) -> Void
     let onKeyUp: (UInt16) -> Void
     var onTurbo: ((Bool) -> Void)?
+
+    /// Relative mouse movement (dx, dy) in emulator units.
+    var onMouseMove: ((Int, Int) -> Void)?
+    /// Left/right button state.
+    var onMouseButton: ((Bool, Bool) -> Void)?
+    /// Whether bus-mouse capture is active (mirrors Settings.mouseEnabled).
+    var mouseCaptureEnabled: Bool = false
+    /// Movement sensitivity multiplier.
+    var mouseSensitivity: Float = 1.0
 
     func makeNSView(context: Context) -> KeyCaptureNSView {
         let view = KeyCaptureNSView()
         view.onKeyDown = onKeyDown
         view.onKeyUp = onKeyUp
         view.onTurbo = onTurbo
+        view.onMouseMove = onMouseMove
+        view.onMouseButton = onMouseButton
+        view.mouseSensitivity = mouseSensitivity
+        view.setMouseCaptureEnabled(mouseCaptureEnabled)
         return view
     }
 
@@ -19,6 +34,10 @@ struct KeyEventView: NSViewRepresentable {
         nsView.onKeyDown = onKeyDown
         nsView.onKeyUp = onKeyUp
         nsView.onTurbo = onTurbo
+        nsView.onMouseMove = onMouseMove
+        nsView.onMouseButton = onMouseButton
+        nsView.mouseSensitivity = mouseSensitivity
+        nsView.setMouseCaptureEnabled(mouseCaptureEnabled)
     }
 }
 
@@ -26,28 +45,98 @@ class KeyCaptureNSView: NSView {
     var onKeyDown: ((UInt16) -> Void)?
     var onKeyUp: ((UInt16) -> Void)?
     var onTurbo: ((Bool) -> Void)?
+    var onMouseMove: ((Int, Int) -> Void)?
+    var onMouseButton: ((Bool, Bool) -> Void)?
+    var mouseSensitivity: Float = 1.0
 
     private var monitors: [Any] = []
     private var turboActive: Bool = false
+
+    /// Mouse mode requested by settings.
+    private var mouseModeEnabled: Bool = false
+    /// True while the host cursor is hidden + decoupled (pointer lock active).
+    private var capturing: Bool = false
+    /// Fractional movement remainder, so low sensitivity stays smooth.
+    private var accumX: Float = 0
+    private var accumY: Float = 0
 
     override var acceptsFirstResponder: Bool { true }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if window != nil {
+        if let window {
+            window.acceptsMouseMovedEvents = true
             installMonitors()
             NotificationCenter.default.addObserver(
                 self, selector: #selector(windowDidResignKey),
                 name: NSWindow.didResignKeyNotification, object: window)
         } else {
             NotificationCenter.default.removeObserver(self, name: NSWindow.didResignKeyNotification, object: nil)
+            endCapture()
             removeMonitors()
         }
+    }
+
+    // MARK: - Mouse capture lifecycle
+
+    /// Reflects the settings toggle. Capture itself does NOT auto-engage here —
+    /// it begins only when the user clicks inside the emulation view. Turning
+    /// the setting off releases any active capture.
+    func setMouseCaptureEnabled(_ enabled: Bool) {
+        mouseModeEnabled = enabled
+        if !enabled {
+            endCapture()
+        }
+    }
+
+    /// True when a mouse event occurred inside this view's bounds (the emulation
+    /// screen area). Clicks on the status bar / other chrome fall outside.
+    private func eventInsideView(_ event: NSEvent) -> Bool {
+        guard let window, event.window === window else { return false }
+        let pt = convert(event.locationInWindow, from: nil)
+        return bounds.contains(pt)
+    }
+
+    private func beginCapture() {
+        guard !capturing, mouseModeEnabled else { return }
+        capturing = true
+        accumX = 0
+        accumY = 0
+        // Decouple the hardware mouse from the on-screen cursor so deltas keep
+        // flowing without the pointer drifting off-window, and hide the cursor.
+        CGAssociateMouseAndMouseCursorPosition(0)
+        NSCursor.hide()
+    }
+
+    private func endCapture() {
+        guard capturing else { return }
+        capturing = false
+        CGAssociateMouseAndMouseCursorPosition(1)
+        NSCursor.unhide()
+        // Release any held buttons so a game doesn't see them stuck.
+        onMouseButton?(false, false)
     }
 
     @objc private func windowDidResignKey() {
         turboActive = false
         onTurbo?(false)
+        endCapture()
+    }
+
+    private func forwardMovement(_ event: NSEvent) {
+        guard capturing else { return }
+        // deltaX/deltaY are raw hardware deltas (independent of the decoupled
+        // cursor). The bus mouse negates internally; if a game's Y feels
+        // inverted, flip event.deltaY here.
+        let dxF = Float(event.deltaX) * mouseSensitivity + accumX
+        let dyF = Float(event.deltaY) * mouseSensitivity + accumY
+        let dxI = Int(dxF)
+        let dyI = Int(dyF)
+        accumX = dxF - Float(dxI)
+        accumY = dyF - Float(dyI)
+        if dxI != 0 || dyI != 0 {
+            onMouseMove?(dxI, dyI)
+        }
     }
 
     private func installMonitors() {
@@ -57,6 +146,12 @@ class KeyCaptureNSView: NSView {
             guard let self, self.window?.isKeyWindow == true else { return event }
             guard !event.isARepeat else { return event }
             guard !event.modifierFlags.contains(.command) else { return event }
+            // Control+Esc → release the captured cursor (re-grab by clicking
+            // the emulation view again).
+            if event.keyCode == 0x35 && event.modifierFlags.contains(.control) && self.capturing {
+                self.endCapture()
+                return nil  // consume; do not forward Esc to the emulator
+            }
             // Shift+Tab → turbo mode (no PC88 key event)
             if event.keyCode == 0x30 && event.modifierFlags.contains(.shift) {
                 self.turboActive = true
@@ -97,6 +192,49 @@ class KeyCaptureNSView: NSView {
             return event
         } as Any)
 
+        // Mouse movement (with and without buttons held).
+        for mask: NSEvent.EventTypeMask in [.mouseMoved, .leftMouseDragged, .rightMouseDragged] {
+            monitors.append(NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
+                guard let self, self.window?.isKeyWindow == true else { return event }
+                self.forwardMovement(event)
+                return event
+            } as Any)
+        }
+
+        // Left button.
+        monitors.append(NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            guard let self, self.window?.isKeyWindow == true else { return event }
+            // Not yet captured: a click *inside the emulation view* grabs the
+            // cursor. Clicks elsewhere (status bar, chrome) are left alone.
+            if self.mouseModeEnabled && !self.capturing {
+                if self.eventInsideView(event) {
+                    self.beginCapture()
+                }
+                return event
+            }
+            if self.capturing { self.onMouseButton?(true, self.rightHeld); self.leftHeld = true }
+            return event
+        } as Any)
+
+        monitors.append(NSEvent.addLocalMonitorForEvents(matching: .leftMouseUp) { [weak self] event in
+            guard let self, self.window?.isKeyWindow == true else { return event }
+            if self.capturing { self.leftHeld = false; self.onMouseButton?(false, self.rightHeld) }
+            return event
+        } as Any)
+
+        // Right button.
+        monitors.append(NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [weak self] event in
+            guard let self, self.window?.isKeyWindow == true else { return event }
+            if self.capturing { self.rightHeld = true; self.onMouseButton?(self.leftHeld, true) }
+            return self.capturing ? nil : event  // suppress context menu while captured
+        } as Any)
+
+        monitors.append(NSEvent.addLocalMonitorForEvents(matching: .rightMouseUp) { [weak self] event in
+            guard let self, self.window?.isKeyWindow == true else { return event }
+            if self.capturing { self.rightHeld = false; self.onMouseButton?(self.leftHeld, false) }
+            return self.capturing ? nil : event
+        } as Any)
+
         // Middle mouse button → turbo mode
         monitors.append(NSEvent.addLocalMonitorForEvents(matching: .otherMouseDown) { [weak self] event in
             guard let self, self.window?.isKeyWindow == true else { return event }
@@ -111,6 +249,9 @@ class KeyCaptureNSView: NSView {
         } as Any)
     }
 
+    private var leftHeld: Bool = false
+    private var rightHeld: Bool = false
+
     private func removeMonitors() {
         monitors.forEach { NSEvent.removeMonitor($0) }
         monitors.removeAll()
@@ -121,6 +262,7 @@ class KeyCaptureNSView: NSView {
     }
 
     deinit {
+        endCapture()
         removeMonitors()
     }
 }

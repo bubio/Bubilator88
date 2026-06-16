@@ -39,8 +39,22 @@ struct ContentView: View {
                 KeyEventView(
                     onKeyDown: { viewModel.keyDown($0) },
                     onKeyUp: { viewModel.keyUp($0) },
-                    onTurbo: { viewModel.turboMode = $0 }
+                    onTurbo: { viewModel.turboMode = $0 },
+                    onMouseMove: { viewModel.injectMouseMovement(dx: $0, dy: $1) },
+                    onMouseButton: { viewModel.setMouseButton(left: $0, right: $1) },
+                    mouseCaptureEnabled: Settings.shared.mouseEnabled,
+                    mouseSensitivity: Settings.shared.mouseSensitivity
                 )
+                .onAppear {
+                    viewModel.mouseModeEnabled = Settings.shared.mouseEnabled
+                    viewModel.mouseJoyMode = Settings.shared.mouseJoyMode
+                }
+                .onChange(of: Settings.shared.mouseEnabled) { _, newValue in
+                    viewModel.mouseModeEnabled = newValue
+                }
+                .onChange(of: Settings.shared.mouseJoyMode) { _, newValue in
+                    viewModel.mouseJoyMode = newValue
+                }
                 if viewModel.translationManager.isSessionActive {
                     TranslationOverlayView(
                         detectionRects: viewModel.translationManager.isOverlayVisible

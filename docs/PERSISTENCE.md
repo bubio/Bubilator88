@@ -54,6 +54,14 @@
 | `controllerHapticEnabled` | Bool | true | ディスクアクセス時の触覚フィードバック |
 | `controllerMappings` | Data (JSON) | {} | コントローラ種別ごとのボタンマッピング |
 
+### 入力 (マウス)
+
+| キー | 型 | デフォルト | 説明 |
+|------|-----|----------|------|
+| `mouseEnabled` | Bool | false | マウス入力有効。ON 時はホストカーソルを捕捉 (非表示+ロック) し相対移動/左右ボタンを OPN ポート経由で供給 |
+| `mouseJoyMode` | Bool | false | マウス読み取りモード。false=バスマウス (PC-8872 ストローブ式4段ニブル) / true=ジョイモード (マウス→ジョイスティック、OPNポートをジョイスティックとして読むゲーム用) |
+| `mouseSensitivity` | Float | 1.0 | マウス移動感度倍率 (0.5x–3.0x) |
+
 ### その他
 
 | キー | 型 | デフォルト | 説明 |

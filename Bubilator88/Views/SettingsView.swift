@@ -493,6 +493,27 @@ private struct ControllerSettingsTab: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Mouse") {
+                Toggle("Enable Mouse Input", isOn: $settings.mouseEnabled)
+                Picker("Mode", selection: $settings.mouseJoyMode) {
+                    Text("Bus Mouse (PC-8872)").tag(false)
+                    Text("Joystick (mouse-as-joystick)").tag(true)
+                }
+                .pickerStyle(.radioGroup)
+                .disabled(!settings.mouseEnabled)
+                HStack {
+                    Text("Sensitivity")
+                    Slider(value: $settings.mouseSensitivity, in: 0.5...3.0, step: 0.1)
+                        .disabled(!settings.mouseEnabled)
+                    Text(String(format: "%.1f×", settings.mouseSensitivity))
+                        .monospacedDigit()
+                        .frame(width: 40, alignment: .trailing)
+                }
+                Text("Click the emulation screen to capture the pointer (cursor hidden + locked); press Control+Esc to release. Bus Mouse drives genuine PC-8872 mouse software; Joystick mode lets the mouse control games that read the OPN port as a joystick (e.g. あーくしゅ).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             if let active = gc.activeControllerInfo, settings.gameControllerEnabled {
                 let category = active.productCategory
                 let currentMapping = settings.controllerMappings[category] ?? ControllerButtonMapping()

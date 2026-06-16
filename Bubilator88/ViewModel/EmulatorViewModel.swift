@@ -1433,6 +1433,36 @@ final class EmulatorViewModel {
         machine.keyboard.releaseKey(row: key.row, bit: key.bit)
         keyboardLock.unlock()
     }
+
+    // MARK: - Bus mouse
+
+    /// Whether the mouse intercepts OPN I/O port reads.
+    /// Mirrors `Settings.shared.mouseEnabled`.
+    var mouseModeEnabled: Bool {
+        get { machine.mouse.enabled }
+        set { machine.mouse.enabled = newValue }
+    }
+
+    /// Mouse read mode: false = bus mouse (strobed), true = joystick mode.
+    /// Mirrors `Settings.shared.mouseJoyMode`.
+    var mouseJoyMode: Bool {
+        get { machine.mouse.joyMode }
+        set { machine.mouse.joyMode = newValue }
+    }
+
+    /// Feed host relative mouse movement to the emulated bus mouse.
+    func injectMouseMovement(dx: Int, dy: Int) {
+        keyboardLock.lock()
+        machine.mouse.injectMovement(dx: dx, dy: dy)
+        keyboardLock.unlock()
+    }
+
+    /// Set the emulated bus mouse left/right button state.
+    func setMouseButton(left: Bool, right: Bool) {
+        keyboardLock.lock()
+        machine.mouse.setButtons(left: left, right: right)
+        keyboardLock.unlock()
+    }
 }
 
 // MARK: - Mounted Disk Info
