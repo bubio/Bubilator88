@@ -476,8 +476,8 @@ final class Settings {
         if let v = UserDefaults.standard.object(forKey: "mouseJoyMode") as? Bool {
             mouseJoyMode = v
         }
-        if let v = UserDefaults.standard.object(forKey: "mouseSensitivity") as? Float {
-            mouseSensitivity = v
+        if let v = UserDefaults.standard.object(forKey: "mouseSensitivity") {
+            mouseSensitivity = (v as? NSNumber)?.floatValue ?? 0.5
         }
         if let v = UserDefaults.standard.object(forKey: "arrowKeysAsNumpad") as? Bool {
             arrowKeysAsNumpad = v
