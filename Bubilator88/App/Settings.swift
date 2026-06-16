@@ -236,6 +236,27 @@ final class Settings {
         }
     }
 
+    // MARK: - Mouse
+
+    /// Enable mouse input. When on, the host mouse is captured (cursor hidden +
+    /// locked) while the window is key, and relative motion / left+right buttons
+    /// are fed to the emulator via the OPN I/O ports.
+    var mouseEnabled: Bool = false {
+        didSet { UserDefaults.standard.set(mouseEnabled, forKey: "mouseEnabled") }
+    }
+
+    /// Mouse read mode. false = bus mouse (PC-8872, strobed 4-phase nibble),
+    /// true = joystick mode (mouse drives an Atari-spec joystick on the OPN
+    /// port, for games like あーくしゅ that read the port as a joystick).
+    var mouseJoyMode: Bool = false {
+        didSet { UserDefaults.standard.set(mouseJoyMode, forKey: "mouseJoyMode") }
+    }
+
+    /// Mouse movement sensitivity multiplier (0.5x – 3.0x).
+    var mouseSensitivity: Float = 1.0 {
+        didSet { UserDefaults.standard.set(mouseSensitivity, forKey: "mouseSensitivity") }
+    }
+
     // MARK: - Keyboard
 
     /// Map arrow keys to numpad (↑→8, ↓→2, ←→4, →→6).
@@ -448,6 +469,15 @@ final class Settings {
         if let data = UserDefaults.standard.data(forKey: "controllerMappings"),
            let m = try? JSONDecoder().decode([String: ControllerButtonMapping].self, from: data) {
             controllerMappings = m
+        }
+        if let v = UserDefaults.standard.object(forKey: "mouseEnabled") as? Bool {
+            mouseEnabled = v
+        }
+        if let v = UserDefaults.standard.object(forKey: "mouseJoyMode") as? Bool {
+            mouseJoyMode = v
+        }
+        if let v = UserDefaults.standard.object(forKey: "mouseSensitivity") as? Float {
+            mouseSensitivity = v
         }
         if let v = UserDefaults.standard.object(forKey: "arrowKeysAsNumpad") as? Bool {
             arrowKeysAsNumpad = v

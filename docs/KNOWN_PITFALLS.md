@@ -238,3 +238,34 @@ ARCHON の手順:
 - bit 7 がクリアの 0x54 は通常の `palette[0]` 書き込み
 
 **教訓**: 背景色レジスタはボーダー (可視 640x400 外) 用で本エミュレータの描画には現れないが、**書き込みを `palette[0]` に誤って流すと可視背景が壊れる**。カラーモードの画素値 0 は `palette[0]` 直結。アナログパレットを疑うときは port 0x54 の bit 7 を最初に確認すること。port 0x52 (デジタル背景) と port 0x54 bit 7 (アナログ背景) は同じ概念レジスタの別経路。
+
+---
+
+## 18. マウス入力は OPN 汎用 I/O ポート経由・**2 モード**
+
+**重要な前提**: PC-8801 で「OPN port A/B (reg `$0E`/`$0F`) を読む入力」には **2 種類**ある。混同するとゲームが動かない。
+
+1. **バスマウス (PC-8872)**: port 0x40 bit6 ストローブ + reg `$0E` の**4 段ニブル読み出し**。実在するが少数。
+2. **ジョイスティック / マウス擬態ジョイ**: **ストローブ無し**で reg `$0E` を 1 回読む (方向ビット) + reg `$0F` を 1 回読む (ボタン)。OPN ポートをジョイスティックとして読むゲーム (あーくしゅ等) はこちら。**こちらの方が圧倒的に多い**。
+
+`Peripherals/Mouse.swift` が M88 (cisc) `mouse.cpp` と同じく**両モードを 1 デバイスに内包** (`joyMode` フラグで切替)。`Pc88Bus` が port 0x40 write (ストローブ) と port 0x45 read (`sound.selectedAddr` が `$0E`/`$0F` のとき横取り) でフック。
+
+**バスマウスモード (`joyMode=false`)** — BubiC `pc88.cpp` 準拠:
+- ストローブ: port 0x40 write の **bit 6 (JOP1)** 反転でフェーズ進行。
+- 4 段ニブル (phase 0→3): X上位 / X下位 / Y上位 / Y下位。下位4bit有効、上位 `| 0xF0`。
+- ラッチ: phase 0 突入時に累積移動量を `-clip127(d)` (符号反転 + ±127 クリップ) してラッチ&クリア。
+- タイムアウト: ストローブ間隔 > `(8MHz?1800:900)` T-state で phase=0。`Pc88Bus.currentTState` を Machine が step 毎に更新して供給。
+
+**ジョイモード (`joyMode=true`)** — M88 `mouse.cpp` / QUASI88 ジョイ bit 配置準拠:
+- reg `$0E` read → 累積移動量を方向ビット (アクティブLow) に変換: bit0=上, bit1=下, bit2=左, bit3=右、上位 `| 0xF0`。`joyThreshold` (既定3) のデッドゾーン。
+- VSync (`Machine` の `crtc.onVSYNC` → `mouse.vsync()`) ごとにラッチ解除 = 1 フレーム 1 サンプル。
+
+**ボタン (両モード共通)**: reg `$0F` → `(~buttons & 0x03) | 0xFC` (左=bit0 / 右=bit1、負論理)。BubiC host 側の `[2]/[3]` 分離は SDL3 移植の簡略化なので真似ない。
+
+**落とし穴 / 教訓**:
+- **「OPN port A/B を読む = マウス」と決めつけない**。strobe (port 0x40 bit6) の有無で判別する。strobe 無し + reg `$0E` 1回読みはジョイスティック。あーくしゅはこれで、バスマウス実装だけでは動かずジョイモードが必要だった。
+- `Mouse.enabled` / `joyMode` は設定 (`Settings.mouseEnabled` / `mouseJoyMode`) 由来の**外部設定**。`Mouse.reset()` は過渡状態のみクリアし両者は保持 (machine reset でモードを落とさない)。
+- 無効時は port A/B 読みを横取りせず YM2608 の既定 (`0xFF`) にフォールスルー → 回帰ゼロ。
+- App 層 (`KeyEventView`) は `CGAssociateMouseAndMouseCursorPosition(0)` + `NSCursor.hide()` でポインタロックし `event.deltaX/deltaY` を読む。`deltaY` は画面下向きと符号が逆なので必要なら符号反転。
+- **キャプチャは自動開始しない**。設定 ON でも、ユーザが**エミュレーションビュー内**を左クリックして初めて捕捉する (`eventInsideView` で bounds 判定)。ステータスバー等のクロームのクリックでは捕捉しない。Control+Esc で解除 (再捕捉は画面を再クリック)。NSEvent のローカルモニタはアプリ全体に発火するため、捕捉開始クリックは必ずビュー bounds 内か判定すること (これを怠るとステータスバー操作で捕捉してしまう)。
+- **検証手順**: BootTester は `BOOTTEST_LOAD_STATE` でセーブステートをロードでき、`BOOTTEST_MOUSE_MOVE="dx:dy"` / `BOOTTEST_MOUSE_BUTTON=LR` / `BOOTTEST_MOUSE_JOY=1` でマウス注入、`BOOTTEST_PORT_TRACE_PORTS=40,44,45` (0x 接頭辞不可) で read/write をトレースできる。あーくしゅはジョイモードで reg `$0E` が方向ビットを返し、画面のカーソルが動くことを確認済み。
