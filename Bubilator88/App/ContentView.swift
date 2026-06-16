@@ -46,14 +46,10 @@ struct ContentView: View {
                     mouseSensitivity: Settings.shared.mouseSensitivity,
                     onCaptureChange: { viewModel.mouseCapturing = $0 }
                 )
-                .onAppear {
-                    viewModel.mouseModeEnabled = Settings.shared.mouseEnabled
-                    viewModel.mouseJoyMode = Settings.shared.mouseJoyMode
-                }
-                .onChange(of: Settings.shared.mouseEnabled) { _, newValue in
+                .onChange(of: Settings.shared.mouseEnabled, initial: true) { _, newValue in
                     viewModel.mouseModeEnabled = newValue
                 }
-                .onChange(of: Settings.shared.mouseJoyMode) { _, newValue in
+                .onChange(of: Settings.shared.mouseJoyMode, initial: true) { _, newValue in
                     viewModel.mouseJoyMode = newValue
                 }
                 if viewModel.translationManager.isSessionActive {
@@ -322,6 +318,8 @@ struct ContentView: View {
                     .font(.system(size: 18))
                     .help(NSLocalizedString("Mouse captured — press Control+Esc to release",
                                             comment: "Status bar mouse capture indicator tooltip"))
+                    .accessibilityLabel(Text(NSLocalizedString("Mouse captured",
+                                                               comment: "Status bar mouse capture indicator accessibility label")))
             }
 
             // Script playback indicator (shown only while a timeline script is playing)

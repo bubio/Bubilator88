@@ -280,6 +280,7 @@
 "Sensitivity" = "感度";
 "Click the emulation screen to capture the pointer; press Control+Esc to release." = "エミュレーション画面をクリックすると捕捉します。Control+Esc で解除します。";
 "Mouse captured — press Control+Esc to release" = "マウス捕捉中 — Control+Esc で解除";
+"Mouse captured" = "マウス捕捉中";
 
 /* ===== AppDelegate.swift — Shortcut confirmation dialogs ===== */
 "Quit Bubilator88?" = "Bubilator88 を終了しますか?";
