@@ -17,6 +17,9 @@ jobs:
   build:
     runs-on: macos-26
     timeout-minutes: 40
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      sha256: ${{ steps.dmg.outputs.sha256 }}
 
     steps:
       - uses: actions/checkout@v4
@@ -110,6 +113,9 @@ jobs:
           du -sh "$DMG_NAME"
           echo "name=$DMG_NAME" >> "$GITHUB_OUTPUT"
 
+          SHA256=$(shasum -a 256 "$DMG_NAME" | awk '{print $1}')
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+
       - name: Upload artifact (for workflow_dispatch runs)
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
@@ -127,3 +133,44 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: false
+
+  # Bump the Homebrew cask in bubio/homebrew-bubilator88 to the freshly
+  # released version + DMG checksum. Only runs for real published releases
+  # (not workflow_dispatch dev builds). Requires a HOMEBREW_TAP_TOKEN secret
+  # with contents:write on the tap repo.
+  update-tap:
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tap
+        uses: actions/checkout@v4
+        with:
+          repository: bubio/homebrew-bubilator88
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Bump cask
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          SHA256: ${{ needs.build.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          CASK="Casks/bubilator88.rb"
+          test -n "$VERSION"
+          test -n "$SHA256"
+          sed -i -E "s|^  version \".*\"|  version \"${VERSION}\"|" "$CASK"
+          sed -i -E "s|^  sha256 \".*\"|  sha256 \"${SHA256}\"|" "$CASK"
+          echo "--- updated cask ---"
+          grep -E "^  (version|sha256) " "$CASK"
+
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "Cask already up to date; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "bubilator88 ${{ needs.build.outputs.version }}"
+          git push
