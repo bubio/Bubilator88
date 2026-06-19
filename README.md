@@ -88,12 +88,6 @@ Apple Vision OCR + Translation フレームワークを使い、画面上の日�
 brew install --cask bubio/bubilator88/bubilator88
 ```
 
-公証を受けていないため、Gatekeeper にブロックされる場合は `--no-quarantine` を付けてください：
-
-```bash
-brew install --cask --no-quarantine bubio/bubilator88/bubilator88
-```
-
 ### 手動ダウンロード
 
 [Releases](https://github.com/bubio/Bubilator88/releases)ページから最新版をダウンロードしてください。
