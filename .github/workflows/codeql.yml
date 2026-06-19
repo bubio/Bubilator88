@@ -1,23 +1,10 @@
 name: "CodeQL"
 
 on:
-  # Only run when code that CodeQL actually analyzes changes — skip doc-only
-  # and asset-only commits. The weekly schedule below still gives full coverage.
-  push:
-    branches: [ "main" ]
-    paths:
-      - '**/*.swift'
-      - '**/*.xcodeproj/**'
-      - '**/Package.swift'
-      - '.github/workflows/codeql.yml'
-
-  pull_request:
-    branches: [ "main" ]
-    paths:
-      - '**/*.swift'
-      - '**/*.xcodeproj/**'
-      - '**/Package.swift'
-      - '.github/workflows/codeql.yml'
+  # The Swift CodeQL build takes ~30 min, so it does NOT run per-push or
+  # per-PR. Coverage comes from the weekly schedule; run it on demand via
+  # workflow_dispatch when a change warrants a security scan before merge.
+  workflow_dispatch:
 
   schedule:
     - cron: '15 15 * * 3'
