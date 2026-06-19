@@ -126,7 +126,7 @@ jobs:
 
       - name: Attach DMG to Release
         if: github.event_name != 'workflow_dispatch'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: ${{ steps.dmg.outputs.name }}
           tag_name: ${{ steps.version.outputs.ref }}
