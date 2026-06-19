@@ -246,7 +246,7 @@ ARCHON の手順:
 **重要な前提**: PC-8801 で「OPN port A/B (reg `$0E`/`$0F`) を読む入力」には **2 種類**ある。混同するとゲームが動かない。
 
 1. **バスマウス (PC-8872)**: port 0x40 bit6 ストローブ + reg `$0E` の**4 段ニブル読み出し**。実在するが少数。
-2. **ジョイスティック / マウス擬態ジョイ**: **ストローブ無し**で reg `$0E` を 1 回読む (方向ビット) + reg `$0F` を 1 回読む (ボタン)。OPN ポートをジョイスティックとして読むゲーム (あーくしゅ等) はこちら。**こちらの方が圧倒的に多い**。
+2. **ジョイスティック / マウス擬態ジョイ**: **ストローブ無し**で reg `$0E` を 1 回読む (方向ビット) + reg `$0F` を 1 回読む (ボタン)。OPN ポートをジョイスティックとして読むタイプ。`Mouse.swift` に `joyMode` として実装はあるが、**現時点でこのモードを必要とする実タイトルは未発見**。あくまで将来のための受け皿で、既定では使わない。
 
 `Peripherals/Mouse.swift` が M88 (cisc) `mouse.cpp` と同じく**両モードを 1 デバイスに内包** (`joyMode` フラグで切替)。`Pc88Bus` が port 0x40 write (ストローブ) と port 0x45 read (`sound.selectedAddr` が `$0E`/`$0F` のとき横取り) でフック。
 
@@ -263,9 +263,9 @@ ARCHON の手順:
 **ボタン (両モード共通)**: reg `$0F` → `(~buttons & 0x03) | 0xFC` (左=bit0 / 右=bit1、負論理)。BubiC host 側の `[2]/[3]` 分離は SDL3 移植の簡略化なので真似ない。
 
 **落とし穴 / 教訓**:
-- **「OPN port A/B を読む = マウス」と決めつけない**。strobe (port 0x40 bit6) の有無で判別する。strobe 無し + reg `$0E` 1回読みはジョイスティック。あーくしゅはこれで、バスマウス実装だけでは動かずジョイモードが必要だった。
+- **「OPN port A/B を読む = マウス」と決めつけない**。strobe (port 0x40 bit6) の有無で判別する。strobe ありの 4 段ニブル読みがバスマウス、strobe 無し + reg `$0E` 1 回読みがジョイスティック。あーくしゅは**バスマウス**タイトルで、**起動時にバスマウスを検出**してから使う — したがって `mouseEnabled` (バスマウスモード = `joyMode=false`) を**ブート前に ON** にしておかないと検出されず操作できない。ジョイモードは不要だった (ジョイモードを必要とする実タイトルは現時点で未発見)。
 - `Mouse.enabled` / `joyMode` は設定 (`Settings.mouseEnabled` / `mouseJoyMode`) 由来の**外部設定**。`Mouse.reset()` は過渡状態のみクリアし両者は保持 (machine reset でモードを落とさない)。
 - 無効時は port A/B 読みを横取りせず YM2608 の既定 (`0xFF`) にフォールスルー → 回帰ゼロ。
 - App 層 (`KeyEventView`) は `CGAssociateMouseAndMouseCursorPosition(0)` + `NSCursor.hide()` でポインタロックし `event.deltaX/deltaY` を読む。`deltaY` は画面下向きと符号が逆なので必要なら符号反転。
 - **キャプチャは自動開始しない**。設定 ON でも、ユーザが**エミュレーションビュー内**を左クリックして初めて捕捉する (`eventInsideView` で bounds 判定)。ステータスバー等のクロームのクリックでは捕捉しない。Control+Esc で解除 (再捕捉は画面を再クリック)。NSEvent のローカルモニタはアプリ全体に発火するため、捕捉開始クリックは必ずビュー bounds 内か判定すること (これを怠るとステータスバー操作で捕捉してしまう)。
-- **検証手順**: BootTester は `BOOTTEST_LOAD_STATE` でセーブステートをロードでき、`BOOTTEST_MOUSE_MOVE="dx:dy"` / `BOOTTEST_MOUSE_BUTTON=LR` / `BOOTTEST_MOUSE_JOY=1` でマウス注入、`BOOTTEST_PORT_TRACE_PORTS=40,44,45` (0x 接頭辞不可) で read/write をトレースできる。あーくしゅはジョイモードで reg `$0E` が方向ビットを返し、画面のカーソルが動くことを確認済み。
+- **検証手順**: BootTester は `BOOTTEST_LOAD_STATE` でセーブステートをロードでき、`BOOTTEST_MOUSE_MOVE="dx:dy"` / `BOOTTEST_MOUSE_BUTTON=LR` / `BOOTTEST_MOUSE_JOY=1` でマウス注入、`BOOTTEST_PORT_TRACE_PORTS=40,44,45` (0x 接頭辞不可) で read/write をトレースできる。あーくしゅは**バスマウスモード** (`BOOTTEST_MOUSE_JOY` 無し) で strobe→reg `$0E` の 4 段ニブルが返り、ゲーム内カーソルが動くことを確認済み。
