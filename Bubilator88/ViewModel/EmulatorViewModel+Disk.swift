@@ -185,6 +185,10 @@ extension EmulatorViewModel {
     /// 役割はファイル読込と「archive / direct」ディスパッチのみ。
     /// 具体的なマウント処理は `mountArchive` / `mountDirectD88` に委譲する。
     func mountDisk(url: URL, target: MountTarget) {
+        if url.pathExtension.lowercased() == "m3u" {
+            mountM3U(url: url, target: target)
+            return
+        }
         let accessing = url.startAccessingSecurityScopedResource()
         defer { if accessing { url.stopAccessingSecurityScopedResource() } }
         guard let data = try? Data(contentsOf: url) else {
@@ -314,6 +318,85 @@ extension EmulatorViewModel {
                 diskPickerDrive = drive
             }
         }
+    }
+
+    // MARK: - M3U playlist mount path
+
+    /// Mount disks listed in an `.m3u` playlist. Each non-empty, non-comment
+    /// line is a disk image path — absolute, `~`-relative, or relative to the
+    /// playlist's own directory. The first entry goes to drive 0 and the
+    /// second to drive 1 (Mount 0&1), matching how a 2-disk game boots.
+    ///
+    /// Each entry is mounted as its own independent source file (its own
+    /// `sourceURL` + local image index), NOT flattened into a shared image
+    /// list. This keeps disk write-back correct: `DiskWriteBackIO.writeBank`
+    /// writes the current image index into `sourceURL`, so a per-file index
+    /// must address a bank that actually exists in that file.
+    private func mountM3U(url: URL, target: MountTarget) {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else {
+            presentDiskLoadErrorAlert(fileName: url.lastPathComponent, reason: .unreadable)
+            return
+        }
+        let baseDir = url.deletingLastPathComponent()
+        let entryURLs: [URL] = text
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !$0.hasPrefix("#") }
+            .map { line -> URL in
+                let expanded = (line as NSString).expandingTildeInPath
+                return (expanded as NSString).isAbsolutePath
+                    ? URL(fileURLWithPath: expanded)
+                    : baseDir.appendingPathComponent(expanded)
+            }
+        guard !entryURLs.isEmpty else {
+            presentDiskLoadErrorAlert(fileName: url.lastPathComponent, reason: .emptyArchive)
+            return
+        }
+        Settings.shared.addRecentFile(url: url)
+
+        // Mount one playlist entry as an independent source file. Multi-image
+        // entries mount their first image; the user can switch within that
+        // drive via the existing image menu. Returns false on read/parse fail.
+        func mountEntry(_ fileURL: URL, drive: Int) -> Bool {
+            guard let data = try? Data(contentsOf: fileURL) else { return false }
+            let disks = D88Disk.parseAll(data: Array(data))
+            guard !disks.isEmpty else { return false }
+            mountDiskImage(disks[0], allImages: disks, imageIndex: 0,
+                           url: fileURL, drive: drive)
+            return true
+        }
+
+        switch target {
+        case .both:
+            guard mountEntry(entryURLs[0], drive: 0) else {
+                presentDiskLoadErrorAlert(
+                    fileName: entryURLs[0].lastPathComponent,
+                    reason: classifyM3UEntryFailure(entryURLs[0])
+                )
+                return
+            }
+            if entryURLs.count >= 2, mountEntry(entryURLs[1], drive: 1) {
+                // drive 1 mounted from the second entry
+            } else {
+                ejectDisk(drive: 1)
+            }
+        case .drive(let drive):
+            if !mountEntry(entryURLs[0], drive: drive) {
+                presentDiskLoadErrorAlert(
+                    fileName: entryURLs[0].lastPathComponent,
+                    reason: classifyM3UEntryFailure(entryURLs[0])
+                )
+            }
+        }
+    }
+
+    /// Classify why an `.m3u` entry could not be mounted (file missing vs. not
+    /// a valid disk image) so the alert message is accurate.
+    private func classifyM3UEntryFailure(_ fileURL: URL) -> DiskLoadFailureReason {
+        guard let data = try? Data(contentsOf: fileURL) else { return .unreadable }
+        return classifyDiskLoadFailure(data: Array(data))
     }
 
     /// Mount a D88 from raw bytes (extracted from archive).
