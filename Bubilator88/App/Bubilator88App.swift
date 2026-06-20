@@ -358,8 +358,10 @@ struct ViewCommands: Commands {
         CommandGroup(after: .toolbar) {
             Divider()
 
-            Button("Software Keyboard") {
+            Button {
                 openWindow(id: "software-keyboard")
+            } label: {
+                Text("Software Keyboard")
             }
             .keyboardShortcut("k", modifiers: [.command, .shift])
 
