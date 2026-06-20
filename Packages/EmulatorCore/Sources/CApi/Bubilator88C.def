@@ -20,3 +20,4 @@ EXPORTS
     b88_release_key
     b88_render_rgba
     b88_drain_audio
+    b88_disk_access

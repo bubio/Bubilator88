@@ -75,6 +75,19 @@ internal sealed unsafe class EmulatorHost : IDisposable
     public void EjectDisk(int drive) => NativeApi.b88_eject_disk(_handle, drive);
 
     /// <summary>
+    /// Sample and clear the per-drive disk-access flags (drives 0 and 1).
+    /// Each flag pulses true while the FDC touched that drive since the last
+    /// call — drive the status-bar activity LEDs from it.
+    /// </summary>
+    public void SampleDiskAccess(out bool drive0, out bool drive1)
+    {
+        int a = 0, b = 0;
+        NativeApi.b88_disk_access(_handle, &a, &b);
+        drive0 = a != 0;
+        drive1 = b != 0;
+    }
+
+    /// <summary>
     /// Configure boot mode and reset. Mount disks BEFORE calling so the boot
     /// strap (DIP SW2 bit 3) picks FDD boot when drive 0 is occupied.
     /// </summary>
@@ -87,6 +100,9 @@ internal sealed unsafe class EmulatorHost : IDisposable
     }
 
     public void Reset(bool preserveRam = false) => NativeApi.b88_reset(_handle, preserveRam ? 1 : 0);
+
+    /// <summary>Live CPU clock change (8 MHz / 4 MHz) — no machine reset.</summary>
+    public void SetClock(bool clock8MHz) => NativeApi.b88_set_clock_8mhz(_handle, clock8MHz ? 1 : 0);
 
     /// <summary>Run one frame and composite into the internal pixel buffer.</summary>
     public void RunFrameAndRender(bool blinkCursor)

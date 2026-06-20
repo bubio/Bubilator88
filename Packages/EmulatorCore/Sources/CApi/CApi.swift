@@ -205,6 +205,22 @@ public func b88_drain_audio(_ handle: UnsafeMutableRawPointer?,
     return Int32(copyFloats / 2)
 }
 
+// MARK: - Status
+
+/// Read and clear the per-drive disk-access flags. Writes 1/0 into `out0`/`out1`
+/// for drive 0 and drive 1, then resets both to false. Mirrors the macOS
+/// status-bar indicator, which samples the flags and clears them each tick.
+@_cdecl("b88_disk_access")
+public func b88_disk_access(_ handle: UnsafeMutableRawPointer?,
+                            _ out0: UnsafeMutablePointer<Int32>?,
+                            _ out1: UnsafeMutablePointer<Int32>?) {
+    guard let c = context(handle) else { return }
+    let access = c.machine.subSystem.diskAccess
+    out0?.pointee = (access.count > 0 && access[0]) ? 1 : 0
+    out1?.pointee = (access.count > 1 && access[1]) ? 1 : 0
+    c.machine.subSystem.diskAccess = [false, false]
+}
+
 // MARK: - Frame compositing (ported from EmulatorViewModel+Rendering.swift)
 //
 // Pure logic — `ScreenRenderer` + bus/CRTC reads only, no platform APIs. Kept

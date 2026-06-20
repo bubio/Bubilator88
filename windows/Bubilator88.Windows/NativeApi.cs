@@ -76,4 +76,7 @@ internal static unsafe partial class NativeApi
 
     [LibraryImport(Dll)]
     public static partial int b88_drain_audio(IntPtr handle, float* outPtr, int maxPairs);
+
+    [LibraryImport(Dll)]
+    public static partial void b88_disk_access(IntPtr handle, int* out0, int* out1);
 }
