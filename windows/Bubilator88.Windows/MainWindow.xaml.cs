@@ -75,6 +75,12 @@ public sealed partial class MainWindow : Window
             CompositionTarget.Rendering += OnRendering;
             Root.Focus(FocusState.Programmatic);
             UpdateDiskStatus();
+
+            // Auto-mount a disk passed on the command line (Explorer "Open with",
+            // drag-drop onto the exe, or `Bubilator88.Windows.exe game.d88`).
+            string? diskArg = FindDiskArgument();
+            if (diskArg is not null)
+                MountPath(0, diskArg);
         }
         catch (Exception ex)
         {
@@ -151,6 +157,7 @@ public sealed partial class MainWindow : Window
         {
             _screen.Present(_host.Pixels);
             SampleAndDecayLeds();
+            LevelMeter.Width = 56.0 * Math.Clamp(_host.LastPeak, 0f, 1f);
             _fpsFrames += frames;
         }
         UpdateFps(dt);
@@ -233,14 +240,37 @@ public sealed partial class MainWindow : Window
         if (file is null) return;
 
         byte[] bytes = await File.ReadAllBytesAsync(file.Path);
+        MountBytes(drive, file.Name, bytes);
+    }
+
+    private static string? FindDiskArgument()
+    {
+        foreach (string a in Environment.GetCommandLineArgs())
+        {
+            string ext = System.IO.Path.GetExtension(a).ToLowerInvariant();
+            if ((ext == ".d88" || ext == ".d77") && File.Exists(a))
+                return a;
+        }
+        return null;
+    }
+
+    private void MountPath(int drive, string path)
+    {
+        try { MountBytes(drive, System.IO.Path.GetFileName(path), File.ReadAllBytes(path)); }
+        catch (Exception ex) { StatusText.Text = $"Mount failed: {ex.Message}"; }
+    }
+
+    private void MountBytes(int drive, string name, byte[] bytes)
+    {
+        if (_host is null) return;
         int images = _host.MountDisk(drive, bytes);
         if (images <= 0)
         {
-            StatusText.Text = $"Failed to parse {file.Name}";
+            StatusText.Text = $"Failed to parse {name}";
             return;
         }
 
-        if (drive == 0) _disk0Name = file.Name; else _disk1Name = file.Name;
+        if (drive == 0) _disk0Name = name; else _disk1Name = name;
         // Mounting drive 0 flips the boot strap (DIP SW2 bit 3) — reboot so the
         // FDD boot path kicks in. Drive 1 doesn't affect the strap.
         if (drive == 0) ApplyBootConfig();

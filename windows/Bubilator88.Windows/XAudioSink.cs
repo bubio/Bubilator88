@@ -7,20 +7,23 @@ using Vortice.XAudio2;
 namespace Bubilator88.Windows;
 
 /// <summary>
-/// Minimal XAudio2 streaming sink for 44.1 kHz interleaved-stereo float32 —
-/// the format the YM2608 core produces. XAudio2 references (does not copy)
-/// submitted memory until playback ends, so we recycle a fixed pool of pinned
-/// buffers via the BufferEnd callback. On pool exhaustion we drop the frame
-/// (brief underrun) rather than block the render thread.
+/// XAudio2 streaming sink for 44.1 kHz interleaved-stereo float32 — the format
+/// the YM2608 core produces. Each frame's drained samples are submitted as one
+/// source-voice buffer; XAudio2 references (does not copy) the memory until
+/// playback ends, so we recycle a fixed pool of pinned buffers via the
+/// BufferEnd callback.
 ///
-/// v1 is intentionally simple; the macOS adaptive-rate ring buffer
-/// (Audio/AudioOutput.swift) is a later-phase port.
+/// <para>Stability comes from <see cref="QueuedPairs"/>: the caller feeds it to
+/// the core's adaptive rate control each frame so the producer (60 Hz frame
+/// loop) and consumer (44.1 kHz device) don't drift. The pool is sized well
+/// above the steady-state queue depth, so submissions are never dropped in
+/// normal operation.</para>
 /// </summary>
 internal sealed unsafe class XAudioSink : IDisposable
 {
     private const int SampleRate = 44100;
     private const int Channels = 2;
-    private const int PoolSize = 8;
+    private const int PoolSize = 24;
     private const int SlotFloats = 4096 * Channels; // matches EmulatorHost.AudioMaxPairs
 
     private readonly IXAudio2 _xaudio;
@@ -32,10 +35,15 @@ internal sealed unsafe class XAudioSink : IDisposable
     private readonly IntPtr[] _pointers = new IntPtr[PoolSize];
     private readonly ConcurrentQueue<int> _free = new();
 
+    // Total stereo frames ever submitted; compared against SamplesPlayed to
+    // derive the queued (not-yet-played) latency.
+    private long _submittedFrames;
+
     public XAudioSink()
     {
         _xaudio = XAudio2.XAudio2Create();
         _master = _xaudio.CreateMasteringVoice(Channels, SampleRate);
+        _master.Volume = 0.6f;
 
         var format = WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, Channels);
         _source = _xaudio.CreateSourceVoice(format);
@@ -54,11 +62,27 @@ internal sealed unsafe class XAudioSink : IDisposable
 
     private void OnBufferEnd(IntPtr context) => _free.Enqueue(context.ToInt32());
 
+    /// <summary>
+    /// Stereo pairs submitted to XAudio2 but not yet played — i.e. the current
+    /// output-buffer fill / latency. Drives the core's adaptive rate control.
+    /// </summary>
+    public int QueuedPairs
+    {
+        get
+        {
+            long queued = _submittedFrames - (long)_source.State.SamplesPlayed;
+            return queued < 0 ? 0 : (int)queued;
+        }
+    }
+
+    /// <summary>Master output volume (0.0–1.0).</summary>
+    public void SetVolume(float volume) => _master.Volume = Math.Clamp(volume, 0f, 1f);
+
     /// <summary>Submit <paramref name="floatCount"/> interleaved floats.</summary>
     public void Submit(float[] samples, int floatCount)
     {
         if (floatCount <= 0) return;
-        if (!_free.TryDequeue(out int slot)) return; // pool empty → drop (underrun)
+        if (!_free.TryDequeue(out int slot)) return; // pool empty → drop (rare; rate control keeps depth low)
 
         floatCount = Math.Min(floatCount, SlotFloats);
         Array.Copy(samples, _slots[slot], floatCount);
@@ -71,6 +95,7 @@ internal sealed unsafe class XAudioSink : IDisposable
             Context = new IntPtr(slot),
         };
         _source.SubmitSourceBuffer(buffer);
+        _submittedFrames += floatCount / Channels;
     }
 
     public void Dispose()

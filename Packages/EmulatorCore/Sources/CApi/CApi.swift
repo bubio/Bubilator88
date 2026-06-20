@@ -205,6 +205,25 @@ public func b88_drain_audio(_ handle: UnsafeMutableRawPointer?,
     return Int32(copyFloats / 2)
 }
 
+/// Adaptive audio rate control. Nudges the YM2608 sample clock so its output
+/// rate tracks the host audio device, keeping the host's queued latency
+/// (`fillPairs`) near `capacityPairs / 2`. Without this the emulator (paced by
+/// the 60 Hz frame loop) and XAudio2 (locked to 44.1 kHz) slowly drift, causing
+/// latency growth or dropouts. Ported verbatim from AudioOutput.adaptiveRate.
+@_cdecl("b88_audio_rate_control")
+public func b88_audio_rate_control(_ handle: UnsafeMutableRawPointer?,
+                                   _ fillPairs: Int32,
+                                   _ capacityPairs: Int32) {
+    guard let c = context(handle) else { return }
+    let sound = c.machine.sound
+    let targetFill = Int(capacityPairs) / 2
+    let error = Int(fillPairs) - targetFill
+    let baseClock = sound.clock8MHz ? YM2608.baseCpuClockHz8MHz : YM2608.baseCpuClockHz4MHz
+    let maxAdj = baseClock / 200
+    let adj = max(-maxAdj, min(maxAdj, error * 16))
+    sound.cpuClockHz = baseClock + adj
+}
+
 // MARK: - Status
 
 /// Read and clear the per-drive disk-access flags. Writes 1/0 into `out0`/`out1`

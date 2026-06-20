@@ -15,6 +15,12 @@ internal sealed unsafe class EmulatorHost : IDisposable
     public const int ScreenHeight = 400;
     private const int PixelBytes = ScreenWidth * ScreenHeight * 4;
     private const int AudioMaxPairs = 4096;
+    // Target output latency for adaptive rate control (~40 ms = half of this).
+    private const int AudioTargetCapacityPairs = (int)(SampleRate * 0.08);
+    private const int SampleRate = 44100;
+
+    /// <summary>Peak |sample| of the most recent audio drain (0..1), for a UI level meter.</summary>
+    public float LastPeak { get; private set; }
 
     private IntPtr _handle;
 
@@ -121,7 +127,26 @@ internal sealed unsafe class EmulatorHost : IDisposable
         fixed (float* p = _audio)
             pairs = NativeApi.b88_drain_audio(_handle, p, AudioMaxPairs);
         if (pairs > 0)
+        {
             sink.Submit(_audio, pairs * 2);
+
+            float peak = 0f;
+            int n = pairs * 2;
+            for (int i = 0; i < n; i++)
+            {
+                float a = Math.Abs(_audio[i]);
+                if (a > peak) peak = a;
+            }
+            // Decay so the meter falls smoothly between bursts.
+            LastPeak = peak > LastPeak ? peak : LastPeak * 0.85f;
+        }
+        else
+        {
+            LastPeak *= 0.85f;
+        }
+
+        // Keep XAudio2's queued latency near target so producer/consumer don't drift.
+        NativeApi.b88_audio_rate_control(_handle, sink.QueuedPairs, AudioTargetCapacityPairs);
         return pairs;
     }
 
