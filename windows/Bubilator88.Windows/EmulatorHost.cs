@@ -78,6 +78,30 @@ internal sealed unsafe class EmulatorHost : IDisposable
             return NativeApi.b88_mount_disk(_handle, drive, p, d88.Length, imageIndex);
     }
 
+    /// <summary>
+    /// Probe a (multi-image) D88 blob without mounting. Returns the image count
+    /// and the embedded image names (empty string where a disk has no name).
+    /// </summary>
+    public int ProbeDisk(byte[] d88, out string[] names)
+    {
+        const int Cap = 8192;
+        byte* o = stackalloc byte[Cap];
+        int count;
+        fixed (byte* p = d88)
+            count = NativeApi.b88_d88_probe(p, d88.Length, o, Cap);
+
+        if (count <= 0)
+        {
+            names = Array.Empty<string>();
+            return count;
+        }
+        int end = 0;
+        while (end < Cap && o[end] != 0) end++;
+        string joined = end > 0 ? System.Text.Encoding.UTF8.GetString(o, end) : "";
+        names = joined.Length > 0 ? joined.Split('\n') : Array.Empty<string>();
+        return count;
+    }
+
     public void EjectDisk(int drive) => NativeApi.b88_eject_disk(_handle, drive);
 
     /// <summary>

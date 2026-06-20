@@ -47,22 +47,10 @@
             </muxc:MenuBarItem>
 
             <muxc:MenuBarItem Title="Disk">
-                <MenuFlyoutSubItem Text="Drive 1">
-                    <MenuFlyoutItem Text="Mount…" Click="OnMountDrive0">
-                        <MenuFlyoutItem.KeyboardAccelerators>
-                            <KeyboardAccelerator Modifiers="Control" Key="Number1" />
-                        </MenuFlyoutItem.KeyboardAccelerators>
-                    </MenuFlyoutItem>
-                    <MenuFlyoutItem Text="Eject" Click="OnEjectDrive0" />
-                </MenuFlyoutSubItem>
-                <MenuFlyoutSubItem Text="Drive 2">
-                    <MenuFlyoutItem Text="Mount…" Click="OnMountDrive1">
-                        <MenuFlyoutItem.KeyboardAccelerators>
-                            <KeyboardAccelerator Modifiers="Control" Key="Number2" />
-                        </MenuFlyoutItem.KeyboardAccelerators>
-                    </MenuFlyoutItem>
-                    <MenuFlyoutItem Text="Eject" Click="OnEjectDrive1" />
-                </MenuFlyoutSubItem>
+                <!-- Items (Mount/Eject + per-image radio list) are built in code:
+                     RebuildDriveMenu, so a multi-image .d88 shows its images. -->
+                <MenuFlyoutSubItem x:Name="Drive0Sub" Text="Drive 1" />
+                <MenuFlyoutSubItem x:Name="Drive1Sub" Text="Drive 2" />
             </muxc:MenuBarItem>
 
             <muxc:MenuBarItem Title="View">

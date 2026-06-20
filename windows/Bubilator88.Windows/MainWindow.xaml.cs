@@ -12,6 +12,7 @@ using Microsoft.UI.Xaml.Shapes;
 using Windows.Graphics;
 using Windows.Storage;
 using Windows.Storage.Pickers;
+using Windows.System;
 using Windows.UI;
 using WinRT.Interop;
 
@@ -41,9 +42,20 @@ public sealed partial class MainWindow : Window
     private int _bootModeIndex;
     private bool _clock8MHz = true;
 
+    // Per-drive mounted-disk state (bytes kept so images can be switched without
+    // re-reading the file; mirrors macOS MountedDiskInfo for multi-image .d88).
+    private sealed class DriveSlot
+    {
+        public byte[]? Bytes;
+        public string FileName = "";       // display base name (no extension)
+        public string[] ImageNames = Array.Empty<string>();
+        public int ImageCount;
+        public int CurrentImage;
+        public bool Occupied => Bytes != null;
+    }
+    private readonly DriveSlot[] _drives = { new(), new() };
+
     // Status-bar state.
-    private string? _disk0Name;
-    private string? _disk1Name;
     private int _drive0Led;
     private int _drive1Led;
     private int _fpsFrames;
@@ -74,6 +86,8 @@ public sealed partial class MainWindow : Window
             _lastTick = _clock.Elapsed.TotalSeconds;
             CompositionTarget.Rendering += OnRendering;
             Root.Focus(FocusState.Programmatic);
+            RebuildDriveMenu(0);
+            RebuildDriveMenu(1);
             UpdateDiskStatus();
 
             // Auto-mount a disk passed on the command line (Explorer "Open with",
@@ -263,45 +277,125 @@ public sealed partial class MainWindow : Window
     private void MountBytes(int drive, string name, byte[] bytes)
     {
         if (_host is null) return;
-        int images = _host.MountDisk(drive, bytes);
+
+        // Parse once to learn the image count + names, then mount image 0.
+        int images = _host.ProbeDisk(bytes, out string[] rawNames);
         if (images <= 0)
         {
             StatusText.Text = $"Failed to parse {name}";
             return;
         }
 
-        if (drive == 0) _disk0Name = name; else _disk1Name = name;
+        string fileBase = System.IO.Path.GetFileNameWithoutExtension(name);
+        var slot = _drives[drive];
+        slot.Bytes = bytes;
+        slot.FileName = fileBase;
+        slot.ImageCount = images;
+        slot.ImageNames = ResolveImageNames(rawNames, fileBase, images);
+        slot.CurrentImage = 0;
+
+        _host.MountDisk(drive, bytes, 0);
         // Mounting drive 0 flips the boot strap (DIP SW2 bit 3) — reboot so the
         // FDD boot path kicks in. Drive 1 doesn't affect the strap.
         if (drive == 0) ApplyBootConfig();
+
+        RebuildDriveMenu(drive);
         UpdateDiskStatus();
     }
 
-    private void OnEjectDrive0(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Switch to a different image within the same mounted .d88 — a floppy swap,
+    /// NOT a reboot (matches macOS switchDiskImage). The machine keeps running.
+    /// </summary>
+    private void SwitchImage(int drive, int index)
     {
-        _host?.EjectDisk(0);
-        _disk0Name = null;
+        var slot = _drives[drive];
+        if (_host is null || !slot.Occupied || index < 0 || index >= slot.ImageCount) return;
+        if (index == slot.CurrentImage) return;
+
+        _host.MountDisk(drive, slot.Bytes!, index);
+        slot.CurrentImage = index;
+        RebuildDriveMenu(drive);
         UpdateDiskStatus();
     }
 
-    private void OnEjectDrive1(object sender, RoutedEventArgs e)
+    private void OnEjectDrive0(object sender, RoutedEventArgs e) => EjectDrive(0);
+    private void OnEjectDrive1(object sender, RoutedEventArgs e) => EjectDrive(1);
+
+    private void EjectDrive(int drive)
     {
-        _host?.EjectDisk(1);
-        _disk1Name = null;
+        _host?.EjectDisk(drive);
+        _drives[drive] = new DriveSlot();
+        RebuildDriveMenu(drive);
         UpdateDiskStatus();
+    }
+
+    /// Resolve embedded image names, falling back to "<file> #<i>" for unnamed
+    /// images (and bare "<file>" for a single-image disk). Mirrors macOS
+    /// makeDirectDiskInfo.
+    private static string[] ResolveImageNames(string[] raw, string fileBase, int count)
+    {
+        var result = new string[count];
+        for (int i = 0; i < count; i++)
+        {
+            string n = i < raw.Length ? raw[i].Trim() : "";
+            result[i] = n.Length > 0 ? n : (count > 1 ? $"{fileBase} #{i}" : fileBase);
+        }
+        return result;
+    }
+
+    /// Rebuild a drive's submenu: Mount… / Eject, plus a radio list of images
+    /// when the mounted .d88 holds more than one.
+    private void RebuildDriveMenu(int drive)
+    {
+        var sub = drive == 0 ? Drive0Sub : Drive1Sub;
+        sub.Items.Clear();
+
+        var mount = new MenuFlyoutItem { Text = "Mount…" };
+        mount.Click += drive == 0 ? OnMountDrive0 : OnMountDrive1;
+        mount.KeyboardAccelerators.Add(new KeyboardAccelerator
+        {
+            Modifiers = VirtualKeyModifiers.Control,
+            Key = drive == 0 ? VirtualKey.Number1 : VirtualKey.Number2,
+        });
+        sub.Items.Add(mount);
+
+        var slot = _drives[drive];
+        var eject = new MenuFlyoutItem { Text = "Eject", IsEnabled = slot.Occupied };
+        eject.Click += drive == 0 ? OnEjectDrive0 : OnEjectDrive1;
+        sub.Items.Add(eject);
+
+        if (slot.Occupied && slot.ImageCount > 1)
+        {
+            sub.Items.Add(new MenuFlyoutSeparator());
+            for (int i = 0; i < slot.ImageCount; i++)
+            {
+                int index = i;
+                var item = new RadioMenuFlyoutItem
+                {
+                    Text = $"{i + 1}. {slot.ImageNames[i]}",
+                    GroupName = $"Drive{drive}Images",
+                    IsChecked = i == slot.CurrentImage,
+                };
+                item.Click += (_, _) => SwitchImage(drive, index);
+                sub.Items.Add(item);
+            }
+        }
     }
 
     private void UpdateDiskStatus()
     {
-        if (_disk0Name is null && _disk1Name is null)
-        {
-            StatusText.Text = "No disk (→ BASIC)";
-            return;
-        }
         var parts = new List<string>();
-        if (_disk0Name is not null) parts.Add($"D1: {_disk0Name}");
-        if (_disk1Name is not null) parts.Add($"D2: {_disk1Name}");
-        StatusText.Text = string.Join("    ", parts);
+        for (int d = 0; d < 2; d++)
+        {
+            var slot = _drives[d];
+            if (!slot.Occupied) continue;
+            string label = slot.ImageCount > 1
+                ? $"{slot.ImageNames[slot.CurrentImage]} ({slot.CurrentImage + 1}/{slot.ImageCount})"
+                : slot.FileName;
+            parts.Add($"D{d + 1}: {label}");
+        }
+        StatusText.Text = parts.Count == 0 ? "No disk (→ BASIC)" : string.Join("    ", parts);
     }
 
     // MARK: - View menu

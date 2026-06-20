@@ -51,6 +51,9 @@ internal static unsafe partial class NativeApi
     public static partial void b88_eject_disk(IntPtr handle, int drive);
 
     [LibraryImport(Dll)]
+    public static partial int b88_d88_probe(byte* ptr, int len, byte* outUtf8, int outCap);
+
+    [LibraryImport(Dll)]
     public static partial void b88_set_dipsw1(IntPtr handle, int value);
 
     [LibraryImport(Dll)]

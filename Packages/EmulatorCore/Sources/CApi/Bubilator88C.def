@@ -11,6 +11,7 @@ EXPORTS
     b88_load_rom
     b88_mount_disk
     b88_eject_disk
+    b88_d88_probe
     b88_set_dipsw1
     b88_apply_bootstrap
     b88_reset

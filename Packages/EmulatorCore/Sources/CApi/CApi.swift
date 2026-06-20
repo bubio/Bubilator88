@@ -110,6 +110,34 @@ public func b88_eject_disk(_ handle: UnsafeMutableRawPointer?, _ drive: Int32) {
     context(handle)?.machine.ejectDisk(drive: Int(drive))
 }
 
+/// Probe a (possibly multi-image) D88 blob WITHOUT mounting. Returns the image
+/// count (0 = not a parseable D88). The image names are written to `outUtf8` as
+/// a NUL-terminated, newline-separated UTF-8 string (one line per image; an
+/// empty line means that image has no embedded name, and the host substitutes a
+/// "<file> #<i>" fallback). Pass `outUtf8 == nil` to query just the count.
+///
+/// Stateless — no handle needed; the host holds the bytes and calls this once at
+/// mount time to build the per-drive image menu.
+@_cdecl("b88_d88_probe")
+public func b88_d88_probe(_ ptr: UnsafePointer<UInt8>?,
+                          _ len: Int32,
+                          _ outUtf8: UnsafeMutablePointer<UInt8>?,
+                          _ outCap: Int32) -> Int32 {
+    let data = bytes(ptr, len)
+    guard !data.isEmpty else { return 0 }
+    let disks = D88Disk.parseAll(data: data)
+    if let outUtf8, outCap > 0 {
+        let joined = disks.map { $0.name }.joined(separator: "\n")
+        let utf8 = Array(joined.utf8)
+        let n = max(0, min(utf8.count, Int(outCap) - 1))
+        utf8.withUnsafeBufferPointer { src in
+            if n > 0 { outUtf8.update(from: src.baseAddress!, count: n) }
+        }
+        outUtf8[n] = 0  // NUL-terminate
+    }
+    return Int32(disks.count)
+}
+
 // MARK: - Machine control
 
 /// Set DIP SW1 raw value (e.g. 0xC3 = N88-BASIC, 0xC2 = N-BASIC).
