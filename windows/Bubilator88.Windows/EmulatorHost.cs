@@ -109,16 +109,20 @@ internal sealed unsafe class EmulatorHost : IDisposable
         return pairs;
     }
 
-    public void KeyDown(VirtualKey key)
+    /// <summary>Press a key. Returns true if the key mapped to the matrix.</summary>
+    public bool KeyDown(VirtualKey key)
     {
-        if (KeyMapping.TryMap(key, out var m))
-            NativeApi.b88_press_key(_handle, m.Row, m.Bit);
+        if (!KeyMapping.TryMap(key, out var m)) return false;
+        NativeApi.b88_press_key(_handle, m.Row, m.Bit);
+        return true;
     }
 
-    public void KeyUp(VirtualKey key)
+    /// <summary>Release a key. Returns true if the key mapped to the matrix.</summary>
+    public bool KeyUp(VirtualKey key)
     {
-        if (KeyMapping.TryMap(key, out var m))
-            NativeApi.b88_release_key(_handle, m.Row, m.Bit);
+        if (!KeyMapping.TryMap(key, out var m)) return false;
+        NativeApi.b88_release_key(_handle, m.Row, m.Bit);
+        return true;
     }
 
     public void Dispose()

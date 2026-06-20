@@ -49,6 +49,16 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            // Tear down anything that was constructed before the failure so the
+            // native handle / D3D / XAudio resources don't leak.
+            _running = false;
+            CompositionTarget.Rendering -= OnRendering;
+            _audio?.Dispose();
+            _screen?.Dispose();
+            _host?.Dispose();
+            _audio = null;
+            _screen = null;
+            _host = null;
             StatusText.Text = $"Init failed: {ex.Message}";
         }
     }
@@ -127,14 +137,16 @@ public sealed partial class MainWindow : Window
 
     private void OnKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        _host?.KeyDown(e.Key);
-        e.Handled = true;
+        // Only swallow keys the emulator actually consumes, so system
+        // accelerators (Alt+F4 etc.) and unmapped keys keep working.
+        if (_host?.KeyDown(e.Key) == true)
+            e.Handled = true;
     }
 
     private void OnKeyUp(object sender, KeyRoutedEventArgs e)
     {
-        _host?.KeyUp(e.Key);
-        e.Handled = true;
+        if (_host?.KeyUp(e.Key) == true)
+            e.Handled = true;
     }
 
     private void OnClosed(object sender, WindowEventArgs e)
