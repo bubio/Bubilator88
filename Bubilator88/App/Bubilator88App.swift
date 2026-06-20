@@ -89,6 +89,18 @@ struct Bubilator88App: App {
         // Window menu duplicates the one we already expose from the
         // Debug menu. Strip it.
         .commandsRemoved()
+
+        // On-screen PC-8801 keyboard. Separate window so the emulation view
+        // keeps driving frames; clicks feed the matrix via the ViewModel.
+        Window("Software Keyboard", id: "software-keyboard") {
+            SoftwareKeyboardView(viewModel: viewModel)
+                .windowResizeBehavior(.disabled)
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.bottom)
+        // The View menu already exposes "Software Keyboard"; drop the
+        // auto-generated Window menu duplicate.
+        .commandsRemoved()
     }
 }
 
@@ -340,9 +352,19 @@ struct DiskCommands: Commands {
 
 struct ViewCommands: Commands {
     let viewModel: EmulatorViewModel
-    
+    @Environment(\.openWindow) private var openWindow
+
     var body: some Commands {
         CommandGroup(after: .toolbar) {
+            Divider()
+
+            Button {
+                openWindow(id: "software-keyboard")
+            } label: {
+                Text("Software Keyboard")
+            }
+            .keyboardShortcut("k", modifiers: [.command, .shift])
+
             Divider()
 
             Button {
