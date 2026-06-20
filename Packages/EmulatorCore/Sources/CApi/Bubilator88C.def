@@ -1,0 +1,22 @@
+; Module-definition file for the Windows DLL.
+;
+; Swift's @_cdecl gives C linkage but does NOT add __declspec(dllexport), so on
+; Windows the symbols are not exported from the DLL by default. This .def file
+; makes the linker export them. Referenced from Package.swift (CApi target
+; linkerSettings, Windows-only).
+LIBRARY Bubilator88C
+EXPORTS
+    b88_create
+    b88_destroy
+    b88_load_rom
+    b88_mount_disk
+    b88_eject_disk
+    b88_set_dipsw1
+    b88_apply_bootstrap
+    b88_reset
+    b88_set_clock_8mhz
+    b88_run_frame
+    b88_press_key
+    b88_release_key
+    b88_render_rgba
+    b88_drain_audio

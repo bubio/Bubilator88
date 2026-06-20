@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Bubilator88.Windows.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid x:Name="Root" IsTabStop="True" Background="Black"
+          KeyDown="OnKeyDown" KeyUp="OnKeyUp">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Padding="8"
+                    Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}">
+            <Button x:Name="MountButton" Content="Mount Disk…" Click="OnMountDisk" />
+            <Button x:Name="ResetButton" Content="Reset" Click="OnReset" />
+            <ComboBox x:Name="BootModeCombo" VerticalAlignment="Center" SelectedIndex="0">
+                <ComboBoxItem>N88-V2</ComboBoxItem>
+                <ComboBoxItem>N88-V1H</ComboBoxItem>
+                <ComboBoxItem>N88-V1S</ComboBoxItem>
+                <ComboBoxItem>N-BASIC</ComboBoxItem>
+            </ComboBox>
+            <ToggleSwitch x:Name="ClockToggle" OnContent="8MHz" OffContent="4MHz"
+                          IsOn="True" VerticalAlignment="Center" />
+            <TextBlock x:Name="StatusText" VerticalAlignment="Center"
+                       Text="No disk" Margin="8,0,0,0" />
+        </StackPanel>
+
+        <SwapChainPanel x:Name="ScreenPanel" Grid.Row="1" SizeChanged="OnPanelSizeChanged" />
+    </Grid>
+</Window>

@@ -83,6 +83,61 @@ macOS は `canImport(Darwin)` が先行するため無影響(build 確認済み)
    ここが動けば残りは各機能を埋めるだけの作業になる。
 3. 各機能を順次移植(§4)。
 
+### Vertical slice 実装状況(2026-06-20, スキャフォールド済み)
+
+決定: **シェル = C# + WinUI 3(GC対策)**、コア = Swift→DLL。コード一式を配置済み
+(Windows 実機での build/run 検証は未。Swift toolchain と Windows App SDK 環境が要る)。
+
+- **コア側 DLL シム**: `Packages/EmulatorCore/Sources/CApi/CApi.swift` 新規。opaque handle で
+  `Machine` を包み、`b88_create/run_frame/render_rgba/press_key/mount_disk/...` を `@_cdecl` export。
+  **ピクセル合成ロジック(`EmulatorViewModel+Rendering.swift` の `renderCurrentFrame` +
+  パレット純関数)を移植して `b88_render_rgba` に内蔵** — C# はパレット計算を持たず diverg を断つ。
+  `Package.swift` に `.library(type:.dynamic, name:"Bubilator88C")` + `CApi` target 追加。
+  Windows シンボル公開は `Sources/CApi/Bubilator88C.def`(linkerSettings, Windows 限定)。
+- **シェル側**: `windows/Bubilator88.Windows/`。`NativeApi.cs`(P/Invoke)/`EmulatorHost.cs`
+  (再利用バッファ)/`D3DScreen.cs`(SwapChainPanel+D3D11+nearest HLSL)/`XAudioSink.cs`
+  (XAudio2)/`KeyMapping.cs`(VirtualKey→マトリクス)/`MainWindow`(60Hzループ+入力+マウント)。
+  ビルド手順は `windows/README.md`。
+### 実機検証済み(2026-06-20, Windows 11 / Swift 6.3.2 swift-6.3.2-RELEASE / x86_64-windows-msvc)
+
+Swift toolchain を導入して実ビルド。**コア→DLL パイプラインがフルに通った。**
+
+- ✅ `swift build` 全ターゲット成功(Z80 / FMSynthesis / Peripherals / EmulatorCore / CApi / BootTester)。
+- ✅ `swift test` **760/760 パス**(29 suites)。挙動精度が macOS と同一であることを Windows で実証。
+- ✅ `swift build -c release --product Bubilator88C` → `Bubilator88C.dll`(~5MB)リンク成功。
+- ✅ `dumpbin /exports` で `b88_*` **14 シンボルがクリーン名で公開**(`.def` 経由)を確認。
+- DLL は `windows/Bubilator88.Windows/native/Bubilator88C.dll` に配置済み。
+
+#### 机上監査が見落としていた実ブロッカー(2件・修正済み)
+
+§2 の机上監査では math だけが挙がっていたが、実ビルドで追加2件が出た。いずれも修正済み:
+
+1. **`Peripherals/UPD1990A.swift`** RTC の `localtime_r`(POSIX)が ucrt に無い。
+   `#if os(Windows)` で `localtime_s(&cal, &t)`(**引数順が逆**)に分岐。結果は同一。
+2. **`BootTester/main.swift`** の `CFAbsoluteTimeGetCurrent`(CoreFoundation)が Windows 非対応。
+   `Date().timeIntervalSinceReferenceDate`(同じ 2001 基準秒・Foundation クロスプラットフォーム)へ置換 ×6。
+
+> 教訓: 「Foundation 互換だから動く」の机上判断は **libc/CoreFoundation 直叩き**を取りこぼす。
+> ライブラリ単位の grep より **実 `swift build` 一発**の方が速く確実。
+
+#### C# シェルも実機起動成功(2026-06-20)
+
+- ✅ `dotnet build -c Release -r win-x64` 成功(.NET 10 / Windows App SDK 1.6 / Vortice 3.6)。
+- ✅ 実起動して **N88-BASIC コールドブート画面**(`How many files(0-15)?` + F-key 表示)を 640×400 で確認。
+  Swift コア DLL → P/Invoke → `b88_run_frame`/`b88_render_rgba` → D3D11 nearest 表示の全経路が画素レベルで正常。
+- C# 側ではまった点(修正済み):
+  1. csproj の XML コメントに `--`(`--product`)は不正 → 文言修正。
+  2. Vortice 3.6 API: `AudioBuffer.AudioBytes` は `uint`、`Compiler.Compile` は `ReadOnlyMemory<byte>` を返す(`.Span`)。
+  3. `WindowsAppSDKSelfContained` は RID 必須 → `dotnet build/run -r win-x64`。
+  4. **DLL 配置**: `None Include="native\..."` を `<Link>Bubilator88C.dll</Link>` で**出力直下**に置かないと
+     P/Invoke が `ERROR_MOD_NOT_FOUND (0x8007007E)` で落ちる(native\ サブフォルダは探索対象外)。
+- ランタイム: `Bubilator88C.dll` は Swift ランタイム DLL(`...\Swift\Runtimes\6.3.2\usr\bin`)に依存。
+  開発機は同 bin が PATH 上で解決。**配布時は同梱が要る**(未対応)。
+
+#### 残(v1 以降)
+
+- キー入力・`.d88` ゲーム起動の実操作確認、§4 の各機能移植(フィルタ/コントローラ/マウス/セーブステート/AI/OCR)。
+
 ---
 
 ## 4. 機能ごとの移植マッピング

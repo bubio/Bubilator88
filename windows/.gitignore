@@ -1,0 +1,7 @@
+# Build artifacts
+Bubilator88.Windows/bin/
+Bubilator88.Windows/obj/
+
+# The Swift core DLL is a build output of the EmulatorCore package, copied here
+# by hand (see README.md). Don't commit it.
+Bubilator88.Windows/native/*.dll

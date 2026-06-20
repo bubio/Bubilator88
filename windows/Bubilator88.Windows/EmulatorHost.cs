@@ -1,0 +1,133 @@
+using System;
+using System.IO;
+using Windows.System;
+
+namespace Bubilator88.Windows;
+
+/// <summary>
+/// Managed lifetime wrapper around one native <c>B88Context</c>. Owns the
+/// reusable pixel + audio scratch buffers so the per-frame path never
+/// allocates. Not thread-safe; drive it from a single (UI) thread.
+/// </summary>
+internal sealed unsafe class EmulatorHost : IDisposable
+{
+    public const int ScreenWidth = 640;
+    public const int ScreenHeight = 400;
+    private const int PixelBytes = ScreenWidth * ScreenHeight * 4;
+    private const int AudioMaxPairs = 4096;
+
+    private IntPtr _handle;
+
+    // Pre-allocated, reused every frame (zero per-frame GC pressure).
+    private readonly byte[] _pixels = new byte[PixelBytes];
+    private readonly float[] _audio = new float[AudioMaxPairs * 2];
+
+    public ReadOnlySpan<byte> Pixels => _pixels;
+
+    public EmulatorHost()
+    {
+        _handle = NativeApi.b88_create();
+        if (_handle == IntPtr.Zero)
+            throw new InvalidOperationException("b88_create returned null — is Bubilator88C.dll present?");
+    }
+
+    /// <summary>
+    /// Load ROM files from <paramref name="romDir"/> (defaults to
+    /// %LOCALAPPDATA%\Bubilator88). N88.ROM is required; the rest are optional.
+    /// </summary>
+    public void LoadRoms(string? romDir = null)
+    {
+        romDir ??= Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Bubilator88");
+
+        LoadRom(romDir, "N88.ROM", NativeApi.RomN88, required: true);
+        LoadRom(romDir, "N80.ROM", NativeApi.RomN80);
+        LoadRom(romDir, "DISK.ROM", NativeApi.RomDisk);
+        LoadRom(romDir, "FONT.ROM", NativeApi.RomFont);
+        LoadRom(romDir, "KANJI1.ROM", NativeApi.RomKanji1);
+        LoadRom(romDir, "KANJI2.ROM", NativeApi.RomKanji2);
+        for (int bank = 0; bank < 4; bank++)
+            LoadRom(romDir, $"N88_{bank}.ROM", NativeApi.RomN88Ext0 + bank);
+    }
+
+    private void LoadRom(string dir, string name, int kind, bool required = false)
+    {
+        string path = Path.Combine(dir, name);
+        if (!File.Exists(path))
+        {
+            if (required)
+                throw new FileNotFoundException($"Required ROM missing: {path}");
+            return;
+        }
+        byte[] data = File.ReadAllBytes(path);
+        fixed (byte* p = data)
+            NativeApi.b88_load_rom(_handle, kind, p, data.Length);
+    }
+
+    /// <summary>Mount a D88 image. Returns image count in the blob.</summary>
+    public int MountDisk(int drive, byte[] d88, int imageIndex = 0)
+    {
+        fixed (byte* p = d88)
+            return NativeApi.b88_mount_disk(_handle, drive, p, d88.Length, imageIndex);
+    }
+
+    public void EjectDisk(int drive) => NativeApi.b88_eject_disk(_handle, drive);
+
+    /// <summary>
+    /// Configure boot mode and reset. Mount disks BEFORE calling so the boot
+    /// strap (DIP SW2 bit 3) picks FDD boot when drive 0 is occupied.
+    /// </summary>
+    public void Configure(bool clock8MHz, int dipSw1, int dipSw2Base)
+    {
+        NativeApi.b88_set_clock_8mhz(_handle, clock8MHz ? 1 : 0);
+        NativeApi.b88_set_dipsw1(_handle, dipSw1);
+        NativeApi.b88_apply_bootstrap(_handle, dipSw2Base);
+        NativeApi.b88_reset(_handle, 0);
+    }
+
+    public void Reset(bool preserveRam = false) => NativeApi.b88_reset(_handle, preserveRam ? 1 : 0);
+
+    /// <summary>Run one frame and composite into the internal pixel buffer.</summary>
+    public void RunFrameAndRender(bool blinkCursor)
+    {
+        NativeApi.b88_run_frame(_handle);
+        fixed (byte* p = _pixels)
+            NativeApi.b88_render_rgba(_handle, p, _pixels.Length, blinkCursor ? 1 : 0);
+    }
+
+    /// <summary>
+    /// Drain available audio into <paramref name="sink"/>. Returns pairs drained.
+    /// </summary>
+    public int DrainAudio(XAudioSink sink)
+    {
+        int pairs;
+        fixed (float* p = _audio)
+            pairs = NativeApi.b88_drain_audio(_handle, p, AudioMaxPairs);
+        if (pairs > 0)
+            sink.Submit(_audio, pairs * 2);
+        return pairs;
+    }
+
+    public void KeyDown(VirtualKey key)
+    {
+        if (KeyMapping.TryMap(key, out var m))
+            NativeApi.b88_press_key(_handle, m.Row, m.Bit);
+    }
+
+    public void KeyUp(VirtualKey key)
+    {
+        if (KeyMapping.TryMap(key, out var m))
+            NativeApi.b88_release_key(_handle, m.Row, m.Bit);
+    }
+
+    public void Dispose()
+    {
+        if (_handle != IntPtr.Zero)
+        {
+            NativeApi.b88_destroy(_handle);
+            _handle = IntPtr.Zero;
+        }
+        GC.SuppressFinalize(this);
+    }
+}

@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>Bubilator88.Windows</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64;arm64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+
+    <!-- Unpackaged, self-contained: ships as a plain exe + Bubilator88C.dll,
+         matching the "native exe + DLL" deployment goal. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!-- GC tuning for the 60 Hz render/audio loop. The emulation hot loop is
+         entirely native (Bubilator88C.dll); the managed side per frame only
+         calls run/render/drain and is written allocation-free. Concurrent
+         background GC keeps any Gen0 collection sub-millisecond. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.*" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.*" />
+    <!-- Thin native bindings: D3D11 + DXGI + runtime HLSL compile + XAudio2. -->
+    <PackageReference Include="Vortice.Direct3D11" Version="3.6.*" />
+    <PackageReference Include="Vortice.DXGI" Version="3.6.*" />
+    <PackageReference Include="Vortice.D3DCompiler" Version="3.6.*" />
+    <PackageReference Include="Vortice.XAudio2" Version="3.6.*" />
+  </ItemGroup>
+
+  <!-- The Swift core DLL is built separately (see windows/README.md). The
+       Link metadata places it at the OUTPUT ROOT (next to the exe) so the
+       P/Invoke loader finds it — without Link it would land in a native\
+       subfolder and fail with ERROR_MOD_NOT_FOUND (0x8007007E). -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)native\Bubilator88C.dll')">
+    <None Include="native\Bubilator88C.dll">
+      <Link>Bubilator88C.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
