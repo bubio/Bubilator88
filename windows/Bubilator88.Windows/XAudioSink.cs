@@ -42,11 +42,17 @@ internal sealed unsafe class XAudioSink : IDisposable
     public XAudioSink()
     {
         _xaudio = XAudio2.XAudio2Create();
-        _master = _xaudio.CreateMasteringVoice(Channels, SampleRate);
+        // Follow the Windows default output device: pass 0/0 so the mastering
+        // voice adopts the device's native channel count and sample rate
+        // (deviceId == null also means it tracks default-device changes).
+        // Forcing 44.1 kHz/stereo here makes XAudio2 produce silence on devices
+        // whose mix format differs (e.g. 48 kHz). The source voice stays at
+        // 44.1 kHz stereo (the YM2608 format) and XAudio2 sample-rate-converts.
+        _master = _xaudio.CreateMasteringVoice(0, 0);
         _master.Volume = 0.6f;
 
         var format = WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, Channels);
-        _source = _xaudio.CreateSourceVoice(format);
+        _source = _xaudio.CreateSourceVoice(format, enableCallbackEvents: true);
         _source.BufferEnd += OnBufferEnd;
 
         for (int i = 0; i < PoolSize; i++)
