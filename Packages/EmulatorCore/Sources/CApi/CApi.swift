@@ -111,13 +111,15 @@ public func b88_eject_disk(_ handle: UnsafeMutableRawPointer?, _ drive: Int32) {
 }
 
 /// Probe a (possibly multi-image) D88 blob WITHOUT mounting. Returns the image
-/// count (0 = not a parseable D88). The image names are written to `outUtf8` as
-/// a NUL-terminated, newline-separated UTF-8 string (one line per image; an
-/// empty line means that image has no embedded name, and the host substitutes a
-/// "<file> #<i>" fallback). Pass `outUtf8 == nil` to query just the count.
+/// count (0 = not a parseable D88). Per-image metadata is written to `outUtf8`
+/// as a NUL-terminated UTF-8 string: one line per image, newline-separated, each
+/// line being TAB-separated `name\t<diskTypeRaw>\t<writeProtected>` where
+/// diskTypeRaw is the D88 type byte (0=2D, 16=2DD, 32=2HD) and writeProtected is
+/// 0/1. An empty name field means the host substitutes a "<file> #<i>" fallback.
+/// Pass `outUtf8 == nil` to query just the count.
 ///
 /// Stateless — no handle needed; the host holds the bytes and calls this once at
-/// mount time to build the per-drive image menu.
+/// mount time to build the per-drive image menu / selection dialog.
 @_cdecl("b88_d88_probe")
 public func b88_d88_probe(_ ptr: UnsafePointer<UInt8>?,
                           _ len: Int32,
@@ -127,8 +129,10 @@ public func b88_d88_probe(_ ptr: UnsafePointer<UInt8>?,
     guard !data.isEmpty else { return 0 }
     let disks = D88Disk.parseAll(data: data)
     if let outUtf8, outCap > 0 {
-        let joined = disks.map { $0.name }.joined(separator: "\n")
-        let utf8 = Array(joined.utf8)
+        let lines = disks.map { d in
+            "\(d.name)\t\(d.diskType.rawValue)\t\(d.writeProtected ? 1 : 0)"
+        }
+        let utf8 = Array(lines.joined(separator: "\n").utf8)
         let n = max(0, min(utf8.count, Int(outCap) - 1))
         utf8.withUnsafeBufferPointer { src in
             if n > 0 { outUtf8.update(from: src.baseAddress!, count: n) }

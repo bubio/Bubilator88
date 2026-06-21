@@ -50,6 +50,7 @@ public sealed partial class MainWindow : Window
         public byte[]? Bytes;
         public string FileName = "";       // display base name (no extension)
         public string[] ImageNames = Array.Empty<string>();
+        public EmulatorHost.ImageInfo[] Images = Array.Empty<EmulatorHost.ImageInfo>();
         public int ImageCount;
         public int CurrentImage;
         public bool WriteProtected;
@@ -288,7 +289,7 @@ public sealed partial class MainWindow : Window
     {
         if (_host is null) return;
 
-        int images = _host.ProbeDisk(bytes, out string[] rawNames);
+        int images = _host.ProbeDisk(bytes, out EmulatorHost.ImageInfo[] infos);
         if (images <= 0)
         {
             StatusText.Text = $"Failed to parse {name}";
@@ -298,12 +299,11 @@ public sealed partial class MainWindow : Window
         int index = 0;
         if (images > 1)
         {
-            string[] names = ResolveImageNames(rawNames, System.IO.Path.GetFileNameWithoutExtension(name), images);
-            index = await PickImageAsync(name, names);
+            index = await PickImageAsync(name, infos);
             if (index < 0) return;   // user cancelled
         }
 
-        FillSlot(_drives[drive], bytes, name, images, rawNames, index);
+        FillSlot(_drives[drive], bytes, name, infos, index);
         _host.MountDisk(drive, bytes, index);
         // Mounting drive 0 flips the boot strap (DIP SW2 bit 3) — reboot so the
         // FDD boot path kicks in. Drive 1 doesn't affect the strap.
@@ -314,28 +314,76 @@ public sealed partial class MainWindow : Window
         UpdateDiskStatus();
     }
 
-    /// Show the disk-image selection dialog for a multi-image .d88. Returns the
+    /// Show the disk-image selection dialog for a multi-image .d88 (mirrors the
+    /// macOS picker: a row per image showing index, name, disk type and a lock
+    /// for write-protected images; click a row to mount, or Cancel). Returns the
     /// chosen image index, or -1 if cancelled.
-    private async Task<int> PickImageAsync(string fileName, string[] names)
+    private async Task<int> PickImageAsync(string fileName, EmulatorHost.ImageInfo[] images)
     {
+        int chosen = -1;
+
         var list = new ListView
         {
-            SelectionMode = ListViewSelectionMode.Single,
-            ItemsSource = names.Select((n, i) => $"{i + 1}.  {n}").ToList(),
-            SelectedIndex = 0,
+            SelectionMode = ListViewSelectionMode.None,
+            IsItemClickEnabled = true,
         };
+        for (int i = 0; i < images.Length; i++)
+            list.Items.Add(MakeImageRow(i, images[i]));
+
         var dialog = new ContentDialog
         {
-            Title = $"Select Disk Image — {fileName}",
+            Title = "Select Disk Image",
             Content = list,
-            PrimaryButtonText = "Mount",
             CloseButtonText = "Cancel",
-            DefaultButton = ContentDialogButton.Primary,
             XamlRoot = Root.XamlRoot,
         };
-        ContentDialogResult result = await dialog.ShowAsync();
-        if (result != ContentDialogResult.Primary) return -1;
-        return list.SelectedIndex < 0 ? 0 : list.SelectedIndex;
+        list.ItemClick += (_, e) =>
+        {
+            chosen = list.Items.IndexOf(e.ClickedItem);
+            dialog.Hide();
+        };
+        await dialog.ShowAsync();
+        return chosen;
+    }
+
+    /// One row of the image-selection dialog: "#i  Name … Type 🔒".
+    private static Grid MakeImageRow(int index, EmulatorHost.ImageInfo info)
+    {
+        var grid = new Grid { ColumnSpacing = 12, MinWidth = 380 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(34) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
+
+        var idx = new TextBlock { Text = $"#{index}", Opacity = 0.55, VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(idx, 0);
+
+        var name = new TextBlock
+        {
+            Text = info.Name,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+        };
+        Grid.SetColumn(name, 1);
+
+        var type = new TextBlock { Text = info.Type, Opacity = 0.55, VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(type, 2);
+
+        var locked = new FontIcon
+        {
+            Glyph = "",   // Lock (Segoe Fluent Icons)
+            FontSize = 12,
+            Opacity = 0.7,
+            VerticalAlignment = VerticalAlignment.Center,
+            Visibility = info.WriteProtected ? Visibility.Visible : Visibility.Collapsed,
+        };
+        Grid.SetColumn(locked, 3);
+
+        grid.Children.Add(idx);
+        grid.Children.Add(name);
+        grid.Children.Add(type);
+        grid.Children.Add(locked);
+        return grid;
     }
 
     /// Mount a (multi-image) file across both drives: image 0 → drive 1, image 1
@@ -349,14 +397,14 @@ public sealed partial class MainWindow : Window
         catch (Exception ex) { StatusText.Text = $"Mount failed: {ex.Message}"; return; }
         string name = System.IO.Path.GetFileName(path);
 
-        int images = _host.ProbeDisk(bytes, out string[] rawNames);
+        int images = _host.ProbeDisk(bytes, out EmulatorHost.ImageInfo[] infos);
         if (images <= 0) { StatusText.Text = $"Failed to parse {name}"; return; }
 
-        FillSlot(_drives[0], bytes, name, images, rawNames, 0);
+        FillSlot(_drives[0], bytes, name, infos, 0);
         _host.MountDisk(0, bytes, 0);
         if (images >= 2)
         {
-            FillSlot(_drives[1], bytes, name, images, rawNames, 1);
+            FillSlot(_drives[1], bytes, name, infos, 1);
             _host.MountDisk(1, bytes, 1);
         }
         else
@@ -372,15 +420,16 @@ public sealed partial class MainWindow : Window
     }
 
     private static void FillSlot(DriveSlot slot, byte[] bytes, string name,
-                                 int images, string[] rawNames, int current)
+                                 EmulatorHost.ImageInfo[] infos, int current)
     {
         string fileBase = System.IO.Path.GetFileNameWithoutExtension(name);
         slot.Bytes = bytes;
         slot.FileName = fileBase;
-        slot.ImageCount = images;
-        slot.ImageNames = ResolveImageNames(rawNames, fileBase, images);
+        slot.Images = infos;
+        slot.ImageCount = infos.Length;
+        slot.ImageNames = ResolveImageNames(infos.Select(i => i.Name).ToArray(), fileBase, infos.Length);
         slot.CurrentImage = current;
-        slot.WriteProtected = false;
+        slot.WriteProtected = current >= 0 && current < infos.Length && infos[current].WriteProtected;
     }
 
     /// <summary>
@@ -395,6 +444,7 @@ public sealed partial class MainWindow : Window
 
         _host.MountDisk(drive, slot.Bytes!, index);
         slot.CurrentImage = index;
+        slot.WriteProtected = index < slot.Images.Length && slot.Images[index].WriteProtected;
         RebuildDiskMenu();
         UpdateDiskStatus();
     }

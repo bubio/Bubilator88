@@ -78,11 +78,14 @@ internal sealed unsafe class EmulatorHost : IDisposable
             return NativeApi.b88_mount_disk(_handle, drive, p, d88.Length, imageIndex);
     }
 
+    /// <summary>Per-image metadata returned by <see cref="ProbeDisk"/>.</summary>
+    public readonly record struct ImageInfo(string Name, string Type, bool WriteProtected);
+
     /// <summary>
     /// Probe a (multi-image) D88 blob without mounting. Returns the image count
-    /// and the embedded image names (empty string where a disk has no name).
+    /// and per-image metadata (embedded name, disk type label, write-protect).
     /// </summary>
-    public int ProbeDisk(byte[] d88, out string[] names)
+    public int ProbeDisk(byte[] d88, out ImageInfo[] images)
     {
         const int Cap = 8192;
         byte* o = stackalloc byte[Cap];
@@ -92,15 +95,37 @@ internal sealed unsafe class EmulatorHost : IDisposable
 
         if (count <= 0)
         {
-            names = Array.Empty<string>();
+            images = Array.Empty<ImageInfo>();
             return count;
         }
         int end = 0;
         while (end < Cap && o[end] != 0) end++;
         string joined = end > 0 ? System.Text.Encoding.UTF8.GetString(o, end) : "";
-        names = joined.Length > 0 ? joined.Split('\n') : Array.Empty<string>();
+        string[] lines = joined.Length > 0 ? joined.Split('\n') : Array.Empty<string>();
+
+        images = new ImageInfo[count];
+        for (int i = 0; i < count; i++)
+        {
+            string name = "", type = "2D";
+            bool wp = false;
+            if (i < lines.Length)
+            {
+                string[] f = lines[i].Split('\t');
+                if (f.Length > 0) name = f[0];
+                if (f.Length > 1) type = TypeLabel(f[1]);
+                if (f.Length > 2) wp = f[2] == "1";
+            }
+            images[i] = new ImageInfo(name, type, wp);
+        }
         return count;
     }
+
+    private static string TypeLabel(string raw) => raw switch
+    {
+        "16" => "2DD",
+        "32" => "2HD",
+        _ => "2D",
+    };
 
     public void EjectDisk(int drive) => NativeApi.b88_eject_disk(_handle, drive);
 
