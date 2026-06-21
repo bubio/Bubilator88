@@ -256,7 +256,7 @@ public sealed partial class MainWindow : Window
         if (file is null) return;
 
         byte[] bytes = await File.ReadAllBytesAsync(file.Path);
-        MountBytes(drive, file.Name, bytes, file.Path);
+        await MountSingleAsync(drive, file.Name, bytes, file.Path);
     }
 
     private static string? FindDiskArgument()
@@ -272,13 +272,19 @@ public sealed partial class MainWindow : Window
 
     private void MountPath(int drive, string path)
     {
-        try { MountBytes(drive, System.IO.Path.GetFileName(path), File.ReadAllBytes(path), path); }
+        try
+        {
+            byte[] bytes = File.ReadAllBytes(path);
+            _ = MountSingleAsync(drive, System.IO.Path.GetFileName(path), bytes, path);
+        }
         catch (Exception ex) { StatusText.Text = $"Mount failed: {ex.Message}"; }
     }
 
-    /// Mount one drive from a .d88 blob (image 0). A non-null sourcePath is
+    /// Mount a single drive from a .d88 blob. For a multi-image file the user is
+    /// first shown an image-selection dialog (matching the macOS .multiImageD88
+    /// picker sheet); single-image files mount directly. A non-null sourcePath is
     /// recorded in the recent-files list.
-    private void MountBytes(int drive, string name, byte[] bytes, string? sourcePath = null)
+    private async Task MountSingleAsync(int drive, string name, byte[] bytes, string? sourcePath)
     {
         if (_host is null) return;
 
@@ -288,8 +294,17 @@ public sealed partial class MainWindow : Window
             StatusText.Text = $"Failed to parse {name}";
             return;
         }
-        FillSlot(_drives[drive], bytes, name, images, rawNames, 0);
-        _host.MountDisk(drive, bytes, 0);
+
+        int index = 0;
+        if (images > 1)
+        {
+            string[] names = ResolveImageNames(rawNames, System.IO.Path.GetFileNameWithoutExtension(name), images);
+            index = await PickImageAsync(name, names);
+            if (index < 0) return;   // user cancelled
+        }
+
+        FillSlot(_drives[drive], bytes, name, images, rawNames, index);
+        _host.MountDisk(drive, bytes, index);
         // Mounting drive 0 flips the boot strap (DIP SW2 bit 3) — reboot so the
         // FDD boot path kicks in. Drive 1 doesn't affect the strap.
         if (drive == 0) ApplyBootConfig();
@@ -297,6 +312,30 @@ public sealed partial class MainWindow : Window
         if (sourcePath is not null) AddRecent(sourcePath);
         RebuildDiskMenu();
         UpdateDiskStatus();
+    }
+
+    /// Show the disk-image selection dialog for a multi-image .d88. Returns the
+    /// chosen image index, or -1 if cancelled.
+    private async Task<int> PickImageAsync(string fileName, string[] names)
+    {
+        var list = new ListView
+        {
+            SelectionMode = ListViewSelectionMode.Single,
+            ItemsSource = names.Select((n, i) => $"{i + 1}.  {n}").ToList(),
+            SelectedIndex = 0,
+        };
+        var dialog = new ContentDialog
+        {
+            Title = $"Select Disk Image — {fileName}",
+            Content = list,
+            PrimaryButtonText = "Mount",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Root.XamlRoot,
+        };
+        ContentDialogResult result = await dialog.ShowAsync();
+        if (result != ContentDialogResult.Primary) return -1;
+        return list.SelectedIndex < 0 ? 0 : list.SelectedIndex;
     }
 
     /// Mount a (multi-image) file across both drives: image 0 → drive 1, image 1
