@@ -138,6 +138,14 @@ public func b88_d88_probe(_ ptr: UnsafePointer<UInt8>?,
     return Int32(disks.count)
 }
 
+/// Set the write-protect flag on the disk mounted in `drive`.
+@_cdecl("b88_set_write_protect")
+public func b88_set_write_protect(_ handle: UnsafeMutableRawPointer?,
+                                  _ drive: Int32,
+                                  _ protected: Int32) {
+    context(handle)?.machine.setWriteProtect(drive: Int(drive), protected: protected != 0)
+}
+
 // MARK: - Machine control
 
 /// Set DIP SW1 raw value (e.g. 0xC3 = N88-BASIC, 0xC2 = N-BASIC).

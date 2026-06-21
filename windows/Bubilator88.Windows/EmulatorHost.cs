@@ -104,6 +104,9 @@ internal sealed unsafe class EmulatorHost : IDisposable
 
     public void EjectDisk(int drive) => NativeApi.b88_eject_disk(_handle, drive);
 
+    public void SetWriteProtect(int drive, bool protectedFlag)
+        => NativeApi.b88_set_write_protect(_handle, drive, protectedFlag ? 1 : 0);
+
     /// <summary>
     /// Sample and clear the per-drive disk-access flags (drives 0 and 1).
     /// Each flag pulses true while the FDC touched that drive since the last

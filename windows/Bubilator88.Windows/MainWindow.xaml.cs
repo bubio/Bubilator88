@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -51,6 +52,7 @@ public sealed partial class MainWindow : Window
         public string[] ImageNames = Array.Empty<string>();
         public int ImageCount;
         public int CurrentImage;
+        public bool WriteProtected;
         public bool Occupied => Bytes != null;
     }
     private readonly DriveSlot[] _drives = { new(), new() };
@@ -86,8 +88,8 @@ public sealed partial class MainWindow : Window
             _lastTick = _clock.Elapsed.TotalSeconds;
             CompositionTarget.Rendering += OnRendering;
             Root.Focus(FocusState.Programmatic);
-            RebuildDriveMenu(0);
-            RebuildDriveMenu(1);
+            LoadRecent();
+            RebuildDiskMenu();
             UpdateDiskStatus();
 
             // Auto-mount a disk passed on the command line (Explorer "Open with",
@@ -254,7 +256,7 @@ public sealed partial class MainWindow : Window
         if (file is null) return;
 
         byte[] bytes = await File.ReadAllBytesAsync(file.Path);
-        MountBytes(drive, file.Name, bytes);
+        MountBytes(drive, file.Name, bytes, file.Path);
     }
 
     private static string? FindDiskArgument()
@@ -270,37 +272,76 @@ public sealed partial class MainWindow : Window
 
     private void MountPath(int drive, string path)
     {
-        try { MountBytes(drive, System.IO.Path.GetFileName(path), File.ReadAllBytes(path)); }
+        try { MountBytes(drive, System.IO.Path.GetFileName(path), File.ReadAllBytes(path), path); }
         catch (Exception ex) { StatusText.Text = $"Mount failed: {ex.Message}"; }
     }
 
-    private void MountBytes(int drive, string name, byte[] bytes)
+    /// Mount one drive from a .d88 blob (image 0). A non-null sourcePath is
+    /// recorded in the recent-files list.
+    private void MountBytes(int drive, string name, byte[] bytes, string? sourcePath = null)
     {
         if (_host is null) return;
 
-        // Parse once to learn the image count + names, then mount image 0.
         int images = _host.ProbeDisk(bytes, out string[] rawNames);
         if (images <= 0)
         {
             StatusText.Text = $"Failed to parse {name}";
             return;
         }
-
-        string fileBase = System.IO.Path.GetFileNameWithoutExtension(name);
-        var slot = _drives[drive];
-        slot.Bytes = bytes;
-        slot.FileName = fileBase;
-        slot.ImageCount = images;
-        slot.ImageNames = ResolveImageNames(rawNames, fileBase, images);
-        slot.CurrentImage = 0;
-
+        FillSlot(_drives[drive], bytes, name, images, rawNames, 0);
         _host.MountDisk(drive, bytes, 0);
         // Mounting drive 0 flips the boot strap (DIP SW2 bit 3) — reboot so the
         // FDD boot path kicks in. Drive 1 doesn't affect the strap.
         if (drive == 0) ApplyBootConfig();
 
-        RebuildDriveMenu(drive);
+        if (sourcePath is not null) AddRecent(sourcePath);
+        RebuildDiskMenu();
         UpdateDiskStatus();
+    }
+
+    /// Mount a (multi-image) file across both drives: image 0 → drive 1, image 1
+    /// → drive 2 (matches the macOS "Drive 1&2" / 2-disk-game boot). Single-image
+    /// files leave drive 2 empty.
+    private void MountBothFromPath(string path)
+    {
+        if (_host is null) return;
+        byte[] bytes;
+        try { bytes = File.ReadAllBytes(path); }
+        catch (Exception ex) { StatusText.Text = $"Mount failed: {ex.Message}"; return; }
+        string name = System.IO.Path.GetFileName(path);
+
+        int images = _host.ProbeDisk(bytes, out string[] rawNames);
+        if (images <= 0) { StatusText.Text = $"Failed to parse {name}"; return; }
+
+        FillSlot(_drives[0], bytes, name, images, rawNames, 0);
+        _host.MountDisk(0, bytes, 0);
+        if (images >= 2)
+        {
+            FillSlot(_drives[1], bytes, name, images, rawNames, 1);
+            _host.MountDisk(1, bytes, 1);
+        }
+        else
+        {
+            _host.EjectDisk(1);
+            _drives[1] = new DriveSlot();
+        }
+        ApplyBootConfig();   // drive 0 occupied → FDD boot
+
+        AddRecent(path);
+        RebuildDiskMenu();
+        UpdateDiskStatus();
+    }
+
+    private static void FillSlot(DriveSlot slot, byte[] bytes, string name,
+                                 int images, string[] rawNames, int current)
+    {
+        string fileBase = System.IO.Path.GetFileNameWithoutExtension(name);
+        slot.Bytes = bytes;
+        slot.FileName = fileBase;
+        slot.ImageCount = images;
+        slot.ImageNames = ResolveImageNames(rawNames, fileBase, images);
+        slot.CurrentImage = current;
+        slot.WriteProtected = false;
     }
 
     /// <summary>
@@ -315,7 +356,7 @@ public sealed partial class MainWindow : Window
 
         _host.MountDisk(drive, slot.Bytes!, index);
         slot.CurrentImage = index;
-        RebuildDriveMenu(drive);
+        RebuildDiskMenu();
         UpdateDiskStatus();
     }
 
@@ -326,7 +367,17 @@ public sealed partial class MainWindow : Window
     {
         _host?.EjectDisk(drive);
         _drives[drive] = new DriveSlot();
-        RebuildDriveMenu(drive);
+        RebuildDiskMenu();
+        UpdateDiskStatus();
+    }
+
+    private void ToggleWriteProtect(int drive)
+    {
+        var slot = _drives[drive];
+        if (_host is null || !slot.Occupied) return;
+        slot.WriteProtected = !slot.WriteProtected;
+        _host.SetWriteProtect(drive, slot.WriteProtected);
+        RebuildDiskMenu();
         UpdateDiskStatus();
     }
 
@@ -344,11 +395,22 @@ public sealed partial class MainWindow : Window
         return result;
     }
 
-    /// Rebuild a drive's submenu: Mount… / Eject, plus a radio list of images
-    /// when the mounted .d88 holds more than one.
+    // MARK: - Disk menu construction (mirrors the macOS Disk menu)
+
+    private void RebuildDiskMenu()
+    {
+        RebuildDriveMenu(0);
+        RebuildDriveMenu(1);
+        RebuildBothMenu();
+        RebuildRecentMenu();
+    }
+
+    /// Build one drive's submenu: Mount… / Eject / Write Protect, then (when a
+    /// disk is mounted) the file name and, for multi-image .d88, the image list.
     private void RebuildDriveMenu(int drive)
     {
         var sub = drive == 0 ? Drive0Sub : Drive1Sub;
+        var slot = _drives[drive];
         sub.Items.Clear();
 
         var mount = new MenuFlyoutItem { Text = "Mount…" };
@@ -360,27 +422,97 @@ public sealed partial class MainWindow : Window
         });
         sub.Items.Add(mount);
 
-        var slot = _drives[drive];
         var eject = new MenuFlyoutItem { Text = "Eject", IsEnabled = slot.Occupied };
         eject.Click += drive == 0 ? OnEjectDrive0 : OnEjectDrive1;
         sub.Items.Add(eject);
 
-        if (slot.Occupied && slot.ImageCount > 1)
+        var wp = new ToggleMenuFlyoutItem
+        {
+            Text = "Write Protect",
+            IsEnabled = slot.Occupied,
+            IsChecked = slot.WriteProtected,
+        };
+        wp.Click += (_, _) => ToggleWriteProtect(drive);
+        sub.Items.Add(wp);
+
+        if (slot.Occupied)
         {
             sub.Items.Add(new MenuFlyoutSeparator());
-            for (int i = 0; i < slot.ImageCount; i++)
+            sub.Items.Add(new MenuFlyoutItem { Text = slot.FileName, IsEnabled = false });
+            if (slot.ImageCount > 1)
             {
-                int index = i;
-                var item = new RadioMenuFlyoutItem
+                for (int i = 0; i < slot.ImageCount; i++)
                 {
-                    Text = $"{i + 1}. {slot.ImageNames[i]}",
-                    GroupName = $"Drive{drive}Images",
-                    IsChecked = i == slot.CurrentImage,
-                };
-                item.Click += (_, _) => SwitchImage(drive, index);
-                sub.Items.Add(item);
+                    int index = i;
+                    var item = new RadioMenuFlyoutItem
+                    {
+                        Text = $"{i + 1}. {slot.ImageNames[i]}",
+                        GroupName = $"Drive{drive}Images",
+                        IsChecked = i == slot.CurrentImage,
+                    };
+                    item.Click += (_, _) => SwitchImage(drive, index);
+                    sub.Items.Add(item);
+                }
             }
         }
+    }
+
+    /// "Drive 1&2": mount a 2-disk set across both drives, or eject both.
+    private void RebuildBothMenu()
+    {
+        BothSub.Items.Clear();
+
+        var mount = new MenuFlyoutItem { Text = "Mount…" };
+        mount.Click += async (_, _) => await MountBothAsync();
+        mount.KeyboardAccelerators.Add(new KeyboardAccelerator
+        {
+            Modifiers = VirtualKeyModifiers.Control,
+            Key = VirtualKey.Number3,
+        });
+        BothSub.Items.Add(mount);
+
+        var eject = new MenuFlyoutItem
+        {
+            Text = "Eject",
+            IsEnabled = _drives[0].Occupied || _drives[1].Occupied,
+        };
+        eject.Click += (_, _) => { EjectDrive(0); EjectDrive(1); };
+        BothSub.Items.Add(eject);
+    }
+
+    private void RebuildRecentMenu()
+    {
+        RecentSub.Items.Clear();
+        if (_recent.Count == 0)
+        {
+            RecentSub.Items.Add(new MenuFlyoutItem { Text = "No Recent Files", IsEnabled = false });
+            return;
+        }
+        foreach (string path in _recent)
+        {
+            string p = path;
+            var item = new MenuFlyoutItem
+            {
+                Text = $"{System.IO.Path.GetFileName(p)}  —  {System.IO.Path.GetDirectoryName(p)}",
+            };
+            item.Click += (_, _) => MountBothFromPath(p);
+            RecentSub.Items.Add(item);
+        }
+        RecentSub.Items.Add(new MenuFlyoutSeparator());
+        var clear = new MenuFlyoutItem { Text = "Clear Recent Files" };
+        clear.Click += (_, _) => { _recent.Clear(); SaveRecent(); RebuildRecentMenu(); };
+        RecentSub.Items.Add(clear);
+    }
+
+    private async Task MountBothAsync()
+    {
+        if (_host is null) return;
+        var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
+        picker.FileTypeFilter.Add(".d88");
+        picker.FileTypeFilter.Add(".d77");
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+        StorageFile? file = await picker.PickSingleFileAsync();
+        if (file is not null) MountBothFromPath(file.Path);
     }
 
     private void UpdateDiskStatus()
@@ -393,9 +525,50 @@ public sealed partial class MainWindow : Window
             string label = slot.ImageCount > 1
                 ? $"{slot.ImageNames[slot.CurrentImage]} ({slot.CurrentImage + 1}/{slot.ImageCount})"
                 : slot.FileName;
+            if (slot.WriteProtected) label += " [WP]";
             parts.Add($"D{d + 1}: {label}");
         }
         StatusText.Text = parts.Count == 0 ? "No disk (→ BASIC)" : string.Join("    ", parts);
+    }
+
+    // MARK: - Recent files (MRU persisted to %LOCALAPPDATA%\Bubilator88\recent.json)
+
+    private const int MaxRecent = 10;
+    private readonly List<string> _recent = new();
+
+    private static string RecentPath => System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Bubilator88", "recent.json");
+
+    private void LoadRecent()
+    {
+        try
+        {
+            if (!File.Exists(RecentPath)) return;
+            var list = System.Text.Json.JsonSerializer.Deserialize<List<string>>(File.ReadAllText(RecentPath));
+            if (list is not null)
+                _recent.AddRange(list.Where(File.Exists).Take(MaxRecent));
+        }
+        catch { /* corrupt or unreadable — start empty */ }
+    }
+
+    private void SaveRecent()
+    {
+        try
+        {
+            string? dir = System.IO.Path.GetDirectoryName(RecentPath);
+            if (dir is not null) Directory.CreateDirectory(dir);
+            File.WriteAllText(RecentPath, System.Text.Json.JsonSerializer.Serialize(_recent));
+        }
+        catch { /* best effort */ }
+    }
+
+    private void AddRecent(string path)
+    {
+        _recent.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        _recent.Insert(0, path);
+        while (_recent.Count > MaxRecent) _recent.RemoveAt(_recent.Count - 1);
+        SaveRecent();
     }
 
     // MARK: - View menu

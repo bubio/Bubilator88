@@ -47,10 +47,15 @@
             </muxc:MenuBarItem>
 
             <muxc:MenuBarItem Title="Disk">
-                <!-- Items (Mount/Eject + per-image radio list) are built in code:
-                     RebuildDriveMenu, so a multi-image .d88 shows its images. -->
+                <!-- Submenu children (Mount/Eject/Write Protect + per-image radio
+                     list) are built in code (RebuildDiskMenu), mirroring the
+                     macOS Disk menu. The top-level structure is static here. -->
                 <MenuFlyoutSubItem x:Name="Drive0Sub" Text="Drive 1" />
                 <MenuFlyoutSubItem x:Name="Drive1Sub" Text="Drive 2" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutSubItem x:Name="BothSub" Text="Drive 1&amp;2" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutSubItem x:Name="RecentSub" Text="Recent Files" />
             </muxc:MenuBarItem>
 
             <muxc:MenuBarItem Title="View">
