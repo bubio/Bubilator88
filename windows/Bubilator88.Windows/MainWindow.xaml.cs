@@ -38,6 +38,7 @@ public sealed partial class MainWindow : Window
     private bool _running;
     private bool _paused;
     private bool _fullscreen;
+    private int _windowScale = 2;   // ×1/×2/×3, persisted
 
     // Boot configuration (mirrors the former combo/toggle state).
     private int _bootModeIndex;
@@ -89,6 +90,13 @@ public sealed partial class MainWindow : Window
             _lastTick = _clock.Elapsed.TotalSeconds;
             CompositionTarget.Rendering += OnRendering;
             Root.Focus(FocusState.Programmatic);
+
+            // Lock the window to fixed view scales and restore the saved scale.
+            ConfigureFixedSize();
+            LoadSettings();
+            (_windowScale switch { 1 => Scale1, 3 => Scale3, _ => Scale2 }).IsChecked = true;
+            ApplyWindowScale(_windowScale, persist: false);
+
             LoadRecent();
             RebuildDiskMenu();
             UpdateDiskStatus();
@@ -660,17 +668,68 @@ public sealed partial class MainWindow : Window
         SaveRecent();
     }
 
+    // MARK: - App settings (persisted to %LOCALAPPDATA%\Bubilator88\settings.json)
+
+    private sealed class AppSettings { public int WindowScale { get; set; } = 2; }
+
+    private static string SettingsPath => System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Bubilator88", "settings.json");
+
+    private void LoadSettings()
+    {
+        try
+        {
+            if (!File.Exists(SettingsPath)) return;
+            var s = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath));
+            if (s is not null) _windowScale = Math.Clamp(s.WindowScale, 1, 3);
+        }
+        catch { /* corrupt or unreadable — keep defaults */ }
+    }
+
+    private void SaveSettings()
+    {
+        try
+        {
+            string? dir = System.IO.Path.GetDirectoryName(SettingsPath);
+            if (dir is not null) Directory.CreateDirectory(dir);
+            File.WriteAllText(SettingsPath,
+                System.Text.Json.JsonSerializer.Serialize(new AppSettings { WindowScale = _windowScale }));
+        }
+        catch { /* best effort */ }
+    }
+
     // MARK: - View menu
 
     private void OnWindowScale(object sender, RoutedEventArgs e)
     {
-        if (_fullscreen) return;
         if (sender is FrameworkElement fe && int.TryParse(fe.Tag?.ToString(), out int scale))
+            ApplyWindowScale(scale);
+    }
+
+    /// Resize the window to an exact integer view multiple and (optionally)
+    /// persist it. The window cannot be freely resized (see ConfigureFixedSize),
+    /// so these scales are the only way to change its size.
+    private void ApplyWindowScale(int scale, bool persist = true)
+    {
+        _windowScale = Math.Clamp(scale, 1, 3);
+        if (persist) SaveSettings();
+        if (_fullscreen) return;
+        double rs = Root.XamlRoot?.RasterizationScale ?? 1.0;
+        int w = (int)(EmulatorHost.ScreenWidth * _windowScale * rs);
+        int h = (int)((EmulatorHost.ScreenHeight * _windowScale + ChromeHeightDip) * rs);
+        AppWindow.Resize(new SizeInt32(w, h));
+    }
+
+    /// Forbid arbitrary user resizing/maximizing — the window only changes size
+    /// via the fixed ×1/×2/×3 view scales (matches the macOS .contentSize /
+    /// disabled-resize behavior). Programmatic AppWindow.Resize still works.
+    private void ConfigureFixedSize()
+    {
+        if (AppWindow.Presenter is OverlappedPresenter op)
         {
-            double rs = Root.XamlRoot?.RasterizationScale ?? 1.0;
-            int w = (int)(EmulatorHost.ScreenWidth * scale * rs);
-            int h = (int)((EmulatorHost.ScreenHeight * scale + ChromeHeightDip) * rs);
-            AppWindow.Resize(new SizeInt32(w, h));
+            op.IsResizable = false;
+            op.IsMaximizable = false;
         }
     }
 
@@ -681,6 +740,13 @@ public sealed partial class MainWindow : Window
             ? AppWindowPresenterKind.FullScreen
             : AppWindowPresenterKind.Default);
         FullscreenItem.IsChecked = _fullscreen;
+        if (!_fullscreen)
+        {
+            // The Default presenter is freshly created — re-lock it and restore
+            // the saved view scale.
+            ConfigureFixedSize();
+            ApplyWindowScale(_windowScale, persist: false);
+        }
     }
 
     // MARK: - Help menu

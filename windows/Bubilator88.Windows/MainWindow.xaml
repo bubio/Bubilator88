@@ -59,10 +59,10 @@
             </muxc:MenuBarItem>
 
             <muxc:MenuBarItem Title="View">
-                <muxc:RadioMenuFlyoutItem Text="Actual Size (×1)" GroupName="Scale" Click="OnWindowScale" Tag="1" />
+                <muxc:RadioMenuFlyoutItem x:Name="Scale1" Text="Actual Size (×1)" GroupName="Scale" Click="OnWindowScale" Tag="1" />
                 <muxc:RadioMenuFlyoutItem x:Name="Scale2" Text="Double Size (×2)" GroupName="Scale"
                                           IsChecked="True" Click="OnWindowScale" Tag="2" />
-                <muxc:RadioMenuFlyoutItem Text="Triple Size (×3)" GroupName="Scale" Click="OnWindowScale" Tag="3" />
+                <muxc:RadioMenuFlyoutItem x:Name="Scale3" Text="Triple Size (×3)" GroupName="Scale" Click="OnWindowScale" Tag="3" />
                 <MenuFlyoutSeparator />
                 <ToggleMenuFlyoutItem x:Name="FullscreenItem" Text="Fullscreen" Click="OnToggleFullscreen">
                     <ToggleMenuFlyoutItem.KeyboardAccelerators>
