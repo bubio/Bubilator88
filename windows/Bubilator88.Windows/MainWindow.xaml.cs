@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -68,9 +69,20 @@ public sealed partial class MainWindow : Window
     private readonly SolidColorBrush _ledOn = new(Microsoft.UI.Colors.LimeGreen);
     private readonly SolidColorBrush _ledOff = new(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF));
 
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
+
     public MainWindow()
     {
         InitializeComponent();
+
+        // Size and lock the window BEFORE App.Activate() shows it, so it doesn't
+        // briefly flash at the default size before snapping to the saved scale.
+        LoadSettings();
+        ConfigureFixedSize();
+        uint dpi = GetDpiForWindow(WindowNative.GetWindowHandle(this));
+        ResizeWindow(_windowScale, dpi > 0 ? dpi / 96.0 : 1.0);
+
         Root.Loaded += OnLoaded;
         Closed += OnClosed;
     }
@@ -91,10 +103,11 @@ public sealed partial class MainWindow : Window
             CompositionTarget.Rendering += OnRendering;
             Root.Focus(FocusState.Programmatic);
 
-            // Lock the window to fixed view scales and restore the saved scale.
-            ConfigureFixedSize();
-            LoadSettings();
+            // The window was already sized + locked in the constructor (before it
+            // was shown). Here just reflect the saved scale in the View menu and
+            // re-assert the size now that the XAML rasterization scale is known.
             (_windowScale switch { 1 => Scale1, 3 => Scale3, _ => Scale2 }).IsChecked = true;
+            ConfigureFixedSize();
             ApplyWindowScale(_windowScale, persist: false);
 
             LoadRecent();
@@ -715,9 +728,13 @@ public sealed partial class MainWindow : Window
         _windowScale = Math.Clamp(scale, 1, 3);
         if (persist) SaveSettings();
         if (_fullscreen) return;
-        double rs = Root.XamlRoot?.RasterizationScale ?? 1.0;
-        int w = (int)(EmulatorHost.ScreenWidth * _windowScale * rs);
-        int h = (int)((EmulatorHost.ScreenHeight * _windowScale + ChromeHeightDip) * rs);
+        ResizeWindow(_windowScale, Root.XamlRoot?.RasterizationScale ?? 1.0);
+    }
+
+    private void ResizeWindow(int scale, double rasterScale)
+    {
+        int w = (int)(EmulatorHost.ScreenWidth * scale * rasterScale);
+        int h = (int)((EmulatorHost.ScreenHeight * scale + ChromeHeightDip) * rasterScale);
         AppWindow.Resize(new SizeInt32(w, h));
     }
 
