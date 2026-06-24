@@ -74,6 +74,7 @@ public sealed partial class MainWindow : Window
     private int _drive1Led;
     private int _fpsFrames;
     private double _fpsAccum;
+    private long _aiLastCompleted;   // throughput baseline for the AI-filter FPS path
 
     private readonly SolidColorBrush _ledOn = new(Microsoft.UI.Colors.LimeGreen);
     private readonly SolidColorBrush _ledOff = new(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF));
@@ -276,7 +277,23 @@ public sealed partial class MainWindow : Window
     {
         _fpsAccum += dt;
         if (_fpsAccum < 0.5) return;
-        double fps = _fpsFrames / _fpsAccum;
+
+        // Mirror the macOS metal view: in AI-upscale mode the meter reports inference
+        // throughput (completed inferences / elapsed), which lands far below 60 Hz,
+        // rather than the emulation frame count. The completed counter is monotonic
+        // and frozen while the AI filter is inactive, so the delta naturally reads 0
+        // on re-entry and grows from there.
+        double fps;
+        if (_screen is not null && _screen.TryGetAiInferenceCount(out long completed))
+        {
+            fps = (completed - _aiLastCompleted) / _fpsAccum;
+            _aiLastCompleted = completed;
+        }
+        else
+        {
+            fps = _fpsFrames / _fpsAccum;
+        }
+
         FpsLabel.Text = $"{fps:0} fps";
         _fpsFrames = 0;
         _fpsAccum = 0;

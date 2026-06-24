@@ -50,6 +50,12 @@ internal sealed class AiUpscaler : IDisposable
     public int OutputWidth => OutW;
     public int OutputHeight => OutH;
 
+    /// <summary>Total inferences completed over this upscaler's lifetime. Monotonic
+    /// — never reset (matching macOS <c>AIUpscaler.completedCount</c>), so the render
+    /// loop can measure AI throughput as the delta over a sampling window. Frozen
+    /// while the AI filter is inactive because <see cref="Submit"/> isn't called.</summary>
+    public long CompletedCount { get { lock (_lock) return _completed; } }
+
     public AiUpscaler(string modelName = "RealESRGAN_x2")
     {
         _modelName = modelName;
@@ -240,7 +246,9 @@ internal sealed class AiUpscaler : IDisposable
 
     /// <summary>Drop pending/completed output (keeps the loaded session) when the
     /// AI filter is deselected. Bumps the generation so in-flight inference is
-    /// discarded instead of surfacing a stale frame on re-entry.</summary>
+    /// discarded instead of surfacing a stale frame on re-entry. <c>_completed</c>
+    /// is intentionally NOT reset — it stays monotonic so <see cref="CompletedCount"/>
+    /// throughput sampling survives filter switches (matching macOS).</summary>
     public void Reset()
     {
         lock (_lock)
@@ -248,7 +256,6 @@ internal sealed class AiUpscaler : IDisposable
             _generation++;
             _hasFrame = false;
             _inferring = false;
-            _completed = 0;
         }
     }
 

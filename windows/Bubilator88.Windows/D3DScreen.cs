@@ -852,6 +852,23 @@ internal sealed unsafe class D3DScreen : IDisposable
         _persistFlip = !_persistFlip;
     }
 
+    /// <summary>For the status-bar FPS readout: when the AI filter is active the
+    /// meter should report inference throughput (completed inferences per second),
+    /// which lands well under 60 Hz, rather than emulation frames — mirroring the
+    /// macOS metal view, which measures <c>aiUpscaler.completedCount</c> deltas in
+    /// AI mode. Returns false for every other filter so the caller falls back to the
+    /// normal frame count.</summary>
+    public bool TryGetAiInferenceCount(out long completed)
+    {
+        if (_filter == ScreenFilter.Ai && _ai is not null)
+        {
+            completed = _ai.CompletedCount;
+            return true;
+        }
+        completed = 0;
+        return false;
+    }
+
     // AI upscale: show the latest 1280×800 inference output (passthrough, point
     // sampled, letterboxed). Until the first frame lands — or if the model /
     // DirectML is unavailable — fall back to Bicubic on the raw 640×400 frame,
