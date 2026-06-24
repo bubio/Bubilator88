@@ -817,7 +817,7 @@ public sealed partial class MainWindow : Window
     }
 
     /// Forbid arbitrary user resizing/maximizing — the window only changes size
-    /// via the fixed ×1/×2/×3 view scales (matches the macOS .contentSize /
+    /// via the fixed ×1/×2/×4 view scales (matches the macOS .contentSize /
     /// disabled-resize behavior). Programmatic AppWindow.Resize still works.
     private void ConfigureFixedSize()
     {
@@ -868,6 +868,39 @@ public sealed partial class MainWindow : Window
         int w = (int)(ScreenPanel.ActualWidth * ScreenPanel.CompositionScaleX);
         int h = (int)(ScreenPanel.ActualHeight * ScreenPanel.CompositionScaleY);
         _screen.Resize(w, h);
+        FitWindowToContent();
+    }
+
+    private bool _fitting;
+
+    /// Correct the window size so the screen panel is *exactly* 640×400×scale,
+    /// eliminating the letterbox padding that appears when the actual chrome
+    /// (title bar + menu + status bar) differs from the ChromeHeightDip estimate
+    /// used by ResizeWindow. Chrome size is constant, so this converges in one
+    /// correction: after the resize the panel matches the target and the next
+    /// pass is a no-op.
+    private void FitWindowToContent()
+    {
+        if (_fullscreen || _fitting) return;
+        double sx = ScreenPanel.CompositionScaleX <= 0 ? 1.0 : ScreenPanel.CompositionScaleX;
+        double sy = ScreenPanel.CompositionScaleY <= 0 ? 1.0 : ScreenPanel.CompositionScaleY;
+
+        int panelW = (int)Math.Round(ScreenPanel.ActualWidth * sx);
+        int panelH = (int)Math.Round(ScreenPanel.ActualHeight * sy);
+        if (panelW <= 0 || panelH <= 0) return;
+
+        int targetW = (int)Math.Round(EmulatorHost.ScreenWidth * _windowScale * sx);
+        int targetH = (int)Math.Round(EmulatorHost.ScreenHeight * _windowScale * sy);
+
+        // chrome (physical px) = current window outer size − current panel size.
+        var size = AppWindow.Size;
+        int desiredW = targetW + (size.Width - panelW);
+        int desiredH = targetH + (size.Height - panelH);
+        if (Math.Abs(desiredW - size.Width) <= 1 && Math.Abs(desiredH - size.Height) <= 1) return;
+
+        _fitting = true;
+        try { AppWindow.Resize(new SizeInt32(desiredW, desiredH)); }
+        finally { _fitting = false; }
     }
 
     private void OnKeyDown(object sender, KeyRoutedEventArgs e)
