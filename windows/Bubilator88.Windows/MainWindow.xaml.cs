@@ -127,6 +127,9 @@ public sealed partial class MainWindow : Window
             (_clock8MHz ? Clock8 : Clock4).IsChecked = true;
             ConfigureFixedSize();
             ApplyWindowScale(_windowScale, persist: false);
+            // ApplyWindowScale re-asserts the ctor's size (no SizeChanged fires),
+            // so correct the panel-vs-chrome mismatch explicitly here too.
+            FitWindowToContent();
 
             RebuildDiskMenu();
             UpdateDiskStatus();
@@ -864,11 +867,15 @@ public sealed partial class MainWindow : Window
 
     private void OnPanelSizeChanged(object sender, SizeChangedEventArgs e)
     {
+        // Fit FIRST, and unconditionally — the first valid layout happens before
+        // _screen exists, and OnLoaded re-asserts the same size (no SizeChanged),
+        // so gating the fit on _screen would skip the only chance to correct the
+        // initial size.
+        FitWindowToContent();
         if (_screen is null) return;
         int w = (int)(ScreenPanel.ActualWidth * ScreenPanel.CompositionScaleX);
         int h = (int)(ScreenPanel.ActualHeight * ScreenPanel.CompositionScaleY);
         _screen.Resize(w, h);
-        FitWindowToContent();
     }
 
     private bool _fitting;
