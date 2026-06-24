@@ -282,11 +282,11 @@ public sealed partial class MainWindow : Window
         if (_host is null) return;
         if (sender is FrameworkElement fe && int.TryParse(fe.Tag?.ToString(), out int mhz))
         {
-            // CPU clock is a live timing change — no reset needed.
+            // Switching the CPU clock resets the machine, matching macOS (where
+            // clock8MHz is applied through performReset, not as a live change).
             _clock8MHz = mhz == 8;
             SaveSettings();
-            _host.SetClock(_clock8MHz);
-            ClockLabel.Text = _clock8MHz ? "8MHz" : "4MHz";
+            ApplyBootConfig();
         }
     }
 

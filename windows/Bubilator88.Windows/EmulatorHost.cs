@@ -184,9 +184,6 @@ internal sealed unsafe class EmulatorHost : IDisposable
 
     public void Reset(bool preserveRam = false) => NativeApi.b88_reset(_handle, preserveRam ? 1 : 0);
 
-    /// <summary>Live CPU clock change (8 MHz / 4 MHz) — no machine reset.</summary>
-    public void SetClock(bool clock8MHz) => NativeApi.b88_set_clock_8mhz(_handle, clock8MHz ? 1 : 0);
-
     /// <summary>Run one frame and composite into the internal pixel buffer.</summary>
     public void RunFrameAndRender(bool blinkCursor)
     {
