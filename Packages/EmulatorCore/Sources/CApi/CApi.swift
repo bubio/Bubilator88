@@ -84,6 +84,70 @@ public func b88_load_rom(_ handle: UnsafeMutableRawPointer?,
     }
 }
 
+// MARK: - YM2608 rhythm samples
+//
+// The OPNA rhythm (BD/SD/TOP/HH/TOM/RIM) needs external WAV samples to make any
+// sound — without them the rhythm channels are silent. macOS loads these from
+// the app-support dir (EmulatorViewModel+Disk.swift); the Windows shell reads
+// the same 2608_*.WAV files and passes their raw bytes here. We parse the WAV
+// in the core so both shells share one parser.
+//
+// index: 0=BD 1=SD 2=TOP 3=HH 4=TOM 5=RIM (order must match the host's file list)
+@_cdecl("b88_load_rhythm_sample")
+public func b88_load_rhythm_sample(_ handle: UnsafeMutableRawPointer?,
+                                   _ index: Int32,
+                                   _ ptr: UnsafePointer<UInt8>?,
+                                   _ len: Int32) {
+    guard let c = context(handle) else { return }
+    let data = bytes(ptr, len)
+    guard let (samples, sampleRate) = parseWAV(data) else { return }
+    c.machine.loadRhythmSample(index: Int(index), data: samples, sampleRate: sampleRate)
+}
+
+/// Parse a RIFF/WAVE blob and extract signed 16-bit PCM samples + sample rate.
+/// Mirrors `EmulatorViewModel+Disk.swift`'s parser. Returns nil if not a 16-bit
+/// PCM WAVE.
+private func parseWAV(_ data: [UInt8]) -> (samples: [Int16], sampleRate: Int)? {
+    guard data.count > 44 else { return nil }
+    // "RIFF" .... "WAVE"
+    guard data[0] == 0x52, data[1] == 0x49, data[2] == 0x46, data[3] == 0x46 else { return nil }
+    guard data[8] == 0x57, data[9] == 0x41, data[10] == 0x56, data[11] == 0x45 else { return nil }
+
+    var sampleRate = 44100
+    var bitsPerSample = 16
+    var numChannels = 1
+    var dataOffset = 0
+    var dataSize = 0
+
+    var offset = 12
+    while offset + 8 <= data.count {
+        let chunkID = String(bytes: data[offset..<offset+4], encoding: .ascii) ?? ""
+        let chunkSize = Int(data[offset+4]) | Int(data[offset+5]) << 8 |
+                        Int(data[offset+6]) << 16 | Int(data[offset+7]) << 24
+        if chunkID == "fmt " {
+            numChannels = Int(data[offset+10]) | Int(data[offset+11]) << 8
+            sampleRate = Int(data[offset+12]) | Int(data[offset+13]) << 8 |
+                         Int(data[offset+14]) << 16 | Int(data[offset+15]) << 24
+            bitsPerSample = Int(data[offset+22]) | Int(data[offset+23]) << 8
+        } else if chunkID == "data" {
+            dataOffset = offset + 8
+            dataSize = chunkSize
+            break
+        }
+        offset += 8 + chunkSize
+        if chunkSize & 1 != 0 { offset += 1 }  // Word-align
+    }
+
+    guard dataOffset > 0, bitsPerSample == 16, numChannels > 0 else { return nil }
+    let sampleCount = min(dataSize, data.count - dataOffset) / (2 * numChannels)
+    var samples = [Int16](repeating: 0, count: sampleCount)
+    for i in 0..<sampleCount {
+        let byteOffset = dataOffset + i * 2 * numChannels
+        samples[i] = Int16(bitPattern: UInt16(data[byteOffset]) | UInt16(data[byteOffset+1]) << 8)
+    }
+    return (samples, sampleRate)
+}
+
 // MARK: - Disk
 
 /// Parses a (possibly multi-image) D88 blob and mounts image `imageIndex` on

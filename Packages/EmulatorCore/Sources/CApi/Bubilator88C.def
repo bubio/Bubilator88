@@ -9,6 +9,7 @@ EXPORTS
     b88_create
     b88_destroy
     b88_load_rom
+    b88_load_rhythm_sample
     b88_mount_disk
     b88_eject_disk
     b88_set_write_protect

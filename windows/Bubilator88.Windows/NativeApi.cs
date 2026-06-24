@@ -44,6 +44,10 @@ internal static unsafe partial class NativeApi
     [LibraryImport(Dll)]
     public static partial void b88_load_rom(IntPtr handle, int kind, byte* ptr, int len);
 
+    // index: 0=BD 1=SD 2=TOP 3=HH 4=TOM 5=RIM. ptr/len is the raw 2608_*.WAV blob.
+    [LibraryImport(Dll)]
+    public static partial void b88_load_rhythm_sample(IntPtr handle, int index, byte* ptr, int len);
+
     [LibraryImport(Dll)]
     public static partial int b88_mount_disk(IntPtr handle, int drive, byte* ptr, int len, int imageIndex);
 
