@@ -69,6 +69,22 @@
                         <KeyboardAccelerator Modifiers="None" Key="F11" />
                     </ToggleMenuFlyoutItem.KeyboardAccelerators>
                 </ToggleMenuFlyoutItem>
+                <MenuFlyoutSeparator />
+                <MenuFlyoutSubItem Text="Video Filter">
+                    <muxc:RadioMenuFlyoutItem x:Name="FilterNone" Text="None" GroupName="Filter"
+                                              IsChecked="True" Click="OnVideoFilter" Tag="None" />
+                    <muxc:RadioMenuFlyoutItem x:Name="FilterLinear" Text="Linear" GroupName="Filter"
+                                              Click="OnVideoFilter" Tag="Linear" />
+                    <muxc:RadioMenuFlyoutItem x:Name="FilterBicubic" Text="Bicubic" GroupName="Filter"
+                                              Click="OnVideoFilter" Tag="Bicubic" />
+                    <muxc:RadioMenuFlyoutItem x:Name="FilterCRT" Text="CRT" GroupName="Filter"
+                                              Click="OnVideoFilter" Tag="CRT" />
+                    <muxc:RadioMenuFlyoutItem x:Name="FilterXBRZ" Text="xBRZ" GroupName="Filter"
+                                              Click="OnVideoFilter" Tag="xBRZ" />
+                    <muxc:RadioMenuFlyoutItem x:Name="FilterEnhanced" Text="Enhanced" GroupName="Filter"
+                                              Click="OnVideoFilter" Tag="Enhanced" />
+                </MenuFlyoutSubItem>
+                <ToggleMenuFlyoutItem x:Name="ScanlineItem" Text="Scanlines" Click="OnScanlines" />
             </muxc:MenuBarItem>
 
             <muxc:MenuBarItem Title="Control">

@@ -256,6 +256,17 @@ public func b88_get_clock_8mhz(_ handle: UnsafeMutableRawPointer?) -> Int32 {
     (context(handle)?.machine.clock8MHz ?? true) ? 1 : 0
 }
 
+/// Query the current line mode (1 = native 400-line, 0 = 200-line doubled).
+/// The renderer always emits a 640×400 buffer (200-line content is row-doubled),
+/// so the host needs this to feed video filters the correct content resolution:
+/// in 200-line mode filters operate on the even rows (640×200), matching the
+/// macOS EmulatorMetalView which extracts even rows before filtering (see
+/// KNOWN_PITFALLS §9 — filters must run at real content resolution).
+@_cdecl("b88_is_400line")
+public func b88_is_400line(_ handle: UnsafeMutableRawPointer?) -> Int32 {
+    (context(handle)?.machine.bus.is400LineMode ?? false) ? 1 : 0
+}
+
 // MARK: - Save state
 //
 // Mirrors the macOS quick/slot save-state feature (EmulatorViewModel save/load).

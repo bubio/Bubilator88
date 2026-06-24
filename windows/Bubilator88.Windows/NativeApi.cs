@@ -75,6 +75,11 @@ internal static unsafe partial class NativeApi
     [LibraryImport(Dll)]
     public static partial int b88_get_clock_8mhz(IntPtr handle);
 
+    // 1 = native 400-line, 0 = 200-line (doubled). Lets the host feed video
+    // filters the correct content resolution (640×200 vs 640×400).
+    [LibraryImport(Dll)]
+    public static partial int b88_is_400line(IntPtr handle);
+
     // Save state. b88_save_state builds + stashes the blob and returns its length;
     // b88_save_state_read copies it out. b88_load_state returns 1 on success.
     [LibraryImport(Dll)]

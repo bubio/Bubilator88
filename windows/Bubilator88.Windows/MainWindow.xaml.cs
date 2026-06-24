@@ -46,6 +46,8 @@ public sealed partial class MainWindow : Window
     private int _windowScale = 2;   // ×1/×2/×3, persisted
     private int _cpuSpeed = 1;      // fast-forward multiplier: 1/2/4/8/16
     private bool _busy;             // suspends the frame loop during a state load
+    private string _videoFilter = "None";   // None/Linear/Bicubic/CRT/xBRZ/Enhanced
+    private bool _scanlineEnabled;           // scanline overlay (None/Linear/Bicubic only)
 
     // Boot configuration (mirrors the former combo/toggle state).
     private int _bootModeIndex;
@@ -140,6 +142,11 @@ public sealed partial class MainWindow : Window
 
             RebuildDiskMenu();
             UpdateDiskStatus();
+
+            // Reflect the saved video filter / scanline state and push it to the
+            // presenter (the screen was just created with the default filter).
+            SyncVideoFilterMenu();
+            ApplyVideoFilter();
         }
         catch (Exception ex)
         {
@@ -242,7 +249,7 @@ public sealed partial class MainWindow : Window
         if (frames > 0)
         {
             _host.Render(blinkCursor: true);   // render once per draw, not per emulation frame
-            _screen.Present(_host.Pixels);
+            _screen.Present(_host.Pixels, _host.Is400Line);
             SampleAndDecayLeds();
             _fpsFrames += frames;
         }
@@ -766,6 +773,8 @@ public sealed partial class MainWindow : Window
         public int BootModeIndex { get; set; }       // 0=N88-V2 1=V1H 2=V1S 3=N-BASIC
         public bool Clock8MHz { get; set; } = true;
         public double Volume { get; set; } = 0.5;    // matches macOS default
+        public string VideoFilter { get; set; } = "None";  // None/Linear/Bicubic/CRT/xBRZ/Enhanced
+        public bool ScanlineEnabled { get; set; }    // matches macOS default (off)
     }
 
     private double _volume = 0.5;
@@ -785,6 +794,8 @@ public sealed partial class MainWindow : Window
             _bootModeIndex = Math.Clamp(s.BootModeIndex, 0, 3);
             _clock8MHz = s.Clock8MHz;
             _volume = Math.Clamp(s.Volume, 0.0, 1.0);
+            _videoFilter = NormalizeFilter(s.VideoFilter);
+            _scanlineEnabled = s.ScanlineEnabled;
         }
         catch { /* corrupt or unreadable — keep defaults */ }
     }
@@ -801,6 +812,8 @@ public sealed partial class MainWindow : Window
                 BootModeIndex = _bootModeIndex,
                 Clock8MHz = _clock8MHz,
                 Volume = _volume,
+                VideoFilter = _videoFilter,
+                ScanlineEnabled = _scanlineEnabled,
             }));
         }
         catch { /* best effort */ }
@@ -864,6 +877,65 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    // MARK: - Video filter (mirrors the macOS VideoFilter / scanline settings)
+
+    private static readonly string[] FilterTags =
+        { "None", "Linear", "Bicubic", "CRT", "xBRZ", "Enhanced" };
+
+    private static string NormalizeFilter(string? s)
+        => Array.Exists(FilterTags, t => t == s) ? s! : "None";
+
+    private static ScreenFilter ParseFilter(string tag) => tag switch
+    {
+        "Linear" => ScreenFilter.Linear,
+        "Bicubic" => ScreenFilter.Bicubic,
+        "CRT" => ScreenFilter.Crt,
+        "xBRZ" => ScreenFilter.Xbrz,
+        "Enhanced" => ScreenFilter.Enhanced,
+        _ => ScreenFilter.None,
+    };
+
+    private void OnVideoFilter(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is string tag)
+        {
+            _videoFilter = NormalizeFilter(tag);
+            SaveSettings();
+            ApplyVideoFilter();
+        }
+    }
+
+    private void OnScanlines(object sender, RoutedEventArgs e)
+    {
+        _scanlineEnabled = ScanlineItem.IsChecked;
+        SaveSettings();
+        ApplyVideoFilter();
+    }
+
+    /// Push the current filter + scanline state to the D3D presenter and reflect
+    /// the scanline availability in the UI (scanlines apply to None/Linear/Bicubic
+    /// only, matching macOS isScanlineAvailable).
+    private void ApplyVideoFilter()
+    {
+        var filter = ParseFilter(_videoFilter);
+        _screen?.SetFilter(filter, _scanlineEnabled);
+        ScanlineItem.IsEnabled = D3DScreen.FilterSupportsScanlines(filter);
+    }
+
+    private void SyncVideoFilterMenu()
+    {
+        (_videoFilter switch
+        {
+            "Linear" => FilterLinear,
+            "Bicubic" => FilterBicubic,
+            "CRT" => FilterCRT,
+            "xBRZ" => FilterXBRZ,
+            "Enhanced" => FilterEnhanced,
+            _ => FilterNone,
+        }).IsChecked = true;
+        ScanlineItem.IsChecked = _scanlineEnabled;
+    }
+
     // MARK: - Help menu
 
     private async void OnAbout(object sender, RoutedEventArgs e)
@@ -893,10 +965,24 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// Capture the current frame through the active video filter (CRT phosphor,
+    /// xBRZ, scanlines, …) for screenshots/thumbnails, mirroring the macOS
+    /// filter-included capture. Falls back to the raw 640×400 buffer if the
+    /// presenter can't read back. Must be called on the UI thread.
+    private (byte[] pixels, int w, int h) CaptureFrame()
+    {
+        if (_screen is not null)
+        {
+            byte[]? filtered = _screen.CaptureFiltered(out int w, out int h);
+            if (filtered is not null) return (filtered, w, h);
+        }
+        return (_host!.Pixels.ToArray(), EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight);
+    }
+
     private async void OnSaveScreenshot(object sender, RoutedEventArgs e)
     {
         if (_host is null) return;
-        byte[] pixels = _host.Pixels.ToArray();   // snapshot the current frame
+        var (pixels, cw, ch) = CaptureFrame();   // snapshot (filtered) before awaits
 
         var picker = new FileSavePicker { SuggestedStartLocation = PickerLocationId.PicturesLibrary };
         picker.FileTypeChoices.Add("PNG Image", new List<string> { ".png" });
@@ -907,7 +993,7 @@ public sealed partial class MainWindow : Window
         if (file is null) return;
         try
         {
-            byte[] png = await ImageCodec.EncodePngAsync(pixels, EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight);
+            byte[] png = await ImageCodec.EncodePngAsync(pixels, cw, ch);
             await File.WriteAllBytesAsync(file.Path, png);
             ShowToast("Screenshot saved");
         }
@@ -917,10 +1003,10 @@ public sealed partial class MainWindow : Window
     private async void OnCopyScreen(object sender, RoutedEventArgs e)
     {
         if (_host is null) return;
-        byte[] pixels = _host.Pixels.ToArray();
+        var (pixels, cw, ch) = CaptureFrame();
         try
         {
-            byte[] png = await ImageCodec.EncodePngAsync(pixels, EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight);
+            byte[] png = await ImageCodec.EncodePngAsync(pixels, cw, ch);
             var stream = new InMemoryRandomAccessStream();
             await stream.WriteAsync(png.AsBuffer());
             stream.Seek(0);
@@ -941,7 +1027,7 @@ public sealed partial class MainWindow : Window
     private async Task SaveToSlotAsync(int slot)
     {
         if (_host is null) return;
-        byte[] pixels = _host.Pixels.ToArray();   // snapshot before any awaits
+        var (pixels, cw, ch) = CaptureFrame();   // filtered snapshot before any awaits
         byte[] blob = _host.SaveState();
         if (blob.Length == 0) { ShowToast("Save failed"); return; }
         try
@@ -951,7 +1037,7 @@ public sealed partial class MainWindow : Window
             WinSaveState.WriteMeta(slot, BuildMeta());
             try
             {
-                await ImageCodec.WritePngAsync(pixels, EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight,
+                await ImageCodec.WritePngAsync(pixels, cw, ch,
                                                WinSaveState.ThumbPath(slot), 320, 200);
             }
             catch { /* thumbnail is cosmetic — ignore failures */ }
@@ -979,7 +1065,7 @@ public sealed partial class MainWindow : Window
 
         ApplyLoadedMeta(WinSaveState.ReadMeta(slot));
         _host.Render(blinkCursor: true);
-        _screen?.Present(_host.Pixels);
+        _screen?.Present(_host.Pixels, _host.Is400Line);
         ShowToast(slot < 0 ? "Quick loaded" : $"Loaded slot {slot + 1}");
     }
 

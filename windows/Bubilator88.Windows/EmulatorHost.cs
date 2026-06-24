@@ -202,6 +202,13 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// <summary>True if the restored/active CPU clock is 8 MHz.</summary>
     public bool Clock8MHz => NativeApi.b88_get_clock_8mhz(_handle) != 0;
 
+    /// <summary>
+    /// True if the machine is in native 400-line mode; false for 200-line
+    /// (the renderer row-doubles it to 640×400). Video filters use this to pick
+    /// the content resolution they operate on.
+    /// </summary>
+    public bool Is400Line => NativeApi.b88_is_400line(_handle) != 0;
+
     /// <summary>Advance the machine by one 1/60s frame (no rendering).</summary>
     public void RunFrame() => NativeApi.b88_run_frame(_handle);
 
