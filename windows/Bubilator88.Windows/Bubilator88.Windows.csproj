@@ -36,6 +36,10 @@
     <PackageReference Include="Vortice.DXGI" Version="3.6.*" />
     <PackageReference Include="Vortice.D3DCompiler" Version="3.6.*" />
     <PackageReference Include="Vortice.XAudio2" Version="3.6.*" />
+    <!-- AI upscale (Quality / Real-ESRGAN x2). DirectML EP runs the ONNX model on
+         any DX12 GPU; the package brings onnxruntime.dll + DirectML.dll into the
+         output. Mirrors the macOS CoreML AI filter. -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.*" />
   </ItemGroup>
 
   <!-- The Swift core DLL is built separately (see windows/README.md). The
@@ -45,6 +49,17 @@
   <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)native\Bubilator88C.dll')">
     <None Include="native\Bubilator88C.dll">
       <Link>Bubilator88C.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- AI upscale model (generate with scripts/convert_realesrgan_onnx.py and drop
+       into native\). ~34 MB generated artifact — not committed to git; copied to
+       the output root next to the exe, where AiUpscaler discovers it. Optional:
+       absent → the AI filter degrades to its Bicubic fallback. -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)native\RealESRGAN_x2.onnx')">
+    <None Include="native\RealESRGAN_x2.onnx">
+      <Link>RealESRGAN_x2.onnx</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

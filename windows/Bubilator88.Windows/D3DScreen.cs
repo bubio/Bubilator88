@@ -10,9 +10,10 @@ using static Vortice.Direct3D11.D3D11;
 
 namespace Bubilator88.Windows;
 
-/// <summary>Video filter selection (mirrors the macOS EmulatorViewModel.VideoFilter,
-/// minus the CoreML AI-upscale modes which have no Windows equivalent).</summary>
-internal enum ScreenFilter { None, Linear, Bicubic, Crt, Xbrz, Enhanced }
+/// <summary>Video filter selection (mirrors the macOS EmulatorViewModel.VideoFilter).
+/// <c>Ai</c> is the Quality tier (Real-ESRGAN x2) run via ONNX Runtime + DirectML;
+/// the macOS Fast/Balanced tiers are not (yet) ported.</summary>
+internal enum ScreenFilter { None, Linear, Bicubic, Crt, Xbrz, Enhanced, Ai }
 
 /// <summary>
 /// Direct3D 11 presenter for the 640×400 emulator frame, composited onto a
@@ -466,6 +467,16 @@ internal sealed unsafe class D3DScreen : IDisposable
 
     private byte[] _src200 = Array.Empty<byte>();   // even-row extraction scratch
 
+    // AI upscale (Quality / Real-ESRGAN x2). The upscaler infers asynchronously;
+    // its 1280×800 RGBA output is uploaded into _aiTex on the UI thread whenever a
+    // newer frame is ready (tracked by _aiUploadedVersion). Lazily created the
+    // first time the AI filter is selected.
+    private AiUpscaler? _ai;
+    private ID3D11Texture2D? _aiTex;                 // 1280×800 upload
+    private ID3D11ShaderResourceView? _aiSrv;
+    private long _aiUploadedVersion;
+    private bool _aiHasUpload;
+
     private ScreenFilter _filter = ScreenFilter.None;
     private bool _scanlineEnabled;
 
@@ -520,6 +531,22 @@ internal sealed unsafe class D3DScreen : IDisposable
         // bleeds in (matches macOS updateVideoFilter).
         if (filter == ScreenFilter.Crt && _filter != ScreenFilter.Crt)
             _persistPrimed = false;
+
+        if (filter == ScreenFilter.Ai && _filter != ScreenFilter.Ai)
+        {
+            // Lazily spin up the upscaler + kick off model load (idempotent).
+            _ai ??= new AiUpscaler();
+            _ai.EnsureLoaded();
+        }
+        else if (filter != ScreenFilter.Ai && _filter == ScreenFilter.Ai)
+        {
+            // Leaving AI: drop pending/completed output so a stale frame can't
+            // resurface on re-entry (the session stays loaded for fast re-entry).
+            _ai?.Reset();
+            _aiHasUpload = false;
+            _aiUploadedVersion = 0;
+        }
+
         _filter = filter;
         _scanlineEnabled = scanlineEnabled;
     }
@@ -678,13 +705,19 @@ internal sealed unsafe class D3DScreen : IDisposable
         _lastIs400Line = is400Line;
         bool useFilter = _filter != ScreenFilter.None;
 
+        // AI upscale always consumes the full 640×400 frame (even in 200-line
+        // mode), matching macOS — submit it for asynchronous inference.
+        if (_filter == ScreenFilter.Ai)
+            _ai?.Submit(rgba, _srcWidth, _srcHeight);
+
         fixed (byte* src = rgba)
         {
             Upload(_srcTex400, src, _srcHeight);
 
             // In 200-line mode, extract even rows → 640×200 content texture so
             // filters operate at real resolution (matches macOS uploadPixelBuffer).
-            if (!is400Line && useFilter)
+            // AI doesn't use the 200-line content texture (it upscales 640×400).
+            if (!is400Line && useFilter && _filter != ScreenFilter.Ai)
             {
                 int rowBytes = _srcWidth * 4;
                 fixed (byte* dst = _src200)
@@ -712,6 +745,9 @@ internal sealed unsafe class D3DScreen : IDisposable
                 break;
             case ScreenFilter.Enhanced when use200:
                 RenderEnhanced(srcSrv, vx, vy, vw, vh);
+                break;
+            case ScreenFilter.Ai:
+                RenderAi(vx, vy, vw, vh);
                 break;
             default:
                 RenderSinglePass(srcSrv, texH, vx, vy, vw, vh);
@@ -816,6 +852,66 @@ internal sealed unsafe class D3DScreen : IDisposable
         _persistFlip = !_persistFlip;
     }
 
+    // AI upscale: show the latest 1280×800 inference output (passthrough, point
+    // sampled, letterboxed). Until the first frame lands — or if the model /
+    // DirectML is unavailable — fall back to Bicubic on the raw 640×400 frame,
+    // matching the macOS selectActiveSource fallback. No scanlines.
+    private void RenderAi(float vx, float vy, float vw, float vh)
+    {
+        // Upload a freshly completed inference into the AI texture (UI thread).
+        if (_ai is not null && _ai.TryGetLatest(out var rgba, out int ow, out int oh, out long version)
+            && (!_aiHasUpload || version != _aiUploadedVersion))
+        {
+            EnsureAiTexture(ow, oh);
+            fixed (byte* p = rgba)
+            {
+                int rowBytes = ow * 4;
+                var map = _ctx.Map(_aiTex!, 0, MapMode.WriteDiscard);
+                try
+                {
+                    byte* dst = (byte*)map.DataPointer;
+                    for (int y = 0; y < oh; y++)
+                        Buffer.MemoryCopy(p + y * rowBytes, dst + y * map.RowPitch, rowBytes, rowBytes);
+                }
+                finally { _ctx.Unmap(_aiTex!, 0); }
+            }
+            _aiUploadedVersion = version;
+            _aiHasUpload = true;
+        }
+
+        _ctx.OMSetRenderTargets(_rtv);
+        _ctx.ClearRenderTargetView(_rtv, new Color4(0f, 0f, 0f, 1f));
+        _ctx.RSSetViewport(new Viewport(vx, vy, vw, vh, 0f, 1f));
+
+        if (_aiHasUpload && _aiSrv is not null)
+        {
+            WriteParams(_aiTex!.Description.Width, _aiTex.Description.Height, vw, vh, false, true, false);
+            _ctx.PSSetShader(_psNearest);
+            _ctx.PSSetShaderResource(0, _aiSrv);
+            _ctx.PSSetSampler(0, _pointSampler);
+        }
+        else
+        {
+            // Fallback: Bicubic on the original 640×400 until inference is ready.
+            WriteParams(_srcWidth, _srcHeight, vw, vh, false, true, false);
+            _ctx.PSSetShader(_psBicubic);
+            _ctx.PSSetShaderResource(0, _srv400);
+            _ctx.PSSetSampler(0, _pointSampler);
+        }
+        SetCb();
+        _ctx.Draw(3, 0);
+    }
+
+    private void EnsureAiTexture(int w, int h)
+    {
+        if (_aiTex is not null && _aiTex.Description.Width == w && _aiTex.Description.Height == h)
+            return;
+        _aiSrv?.Dispose();
+        _aiTex?.Dispose();
+        _aiTex = MakeDynamic(w, h);
+        _aiSrv = _device.CreateShaderResourceView(_aiTex);
+    }
+
     /// <summary>
     /// Render the current frame through the active filter into an offscreen
     /// target and read it back as RGBA8. Matches what's on screen (CRT phosphor,
@@ -885,6 +981,27 @@ internal sealed unsafe class D3DScreen : IDisposable
                 _ctx.RSSetViewport(new Viewport(0, 0, width, height, 0f, 1f));
                 _ctx.PSSetShader(_psXbrz);
                 _ctx.PSSetShaderResource(0, _intermediateSrv);
+                _ctx.PSSetSampler(0, _pointSampler);
+                SetCb();
+                _ctx.Draw(3, 0);
+            }
+            else if (_filter == ScreenFilter.Ai)
+            {
+                // Latest AI output (passthrough) if available, else Bicubic on the
+                // raw 640×400 — exactly what RenderAi shows on screen.
+                _ctx.OMSetRenderTargets(captureRtv);
+                if (_aiHasUpload && _aiSrv is not null)
+                {
+                    WriteParams(_aiTex!.Description.Width, _aiTex.Description.Height, width, height, false, true, false);
+                    _ctx.PSSetShader(_psNearest);
+                    _ctx.PSSetShaderResource(0, _aiSrv);
+                }
+                else
+                {
+                    WriteParams(_srcWidth, _srcHeight, width, height, false, true, false);
+                    _ctx.PSSetShader(_psBicubic);
+                    _ctx.PSSetShaderResource(0, _srv400);
+                }
                 _ctx.PSSetSampler(0, _pointSampler);
                 SetCb();
                 _ctx.Draw(3, 0);
@@ -968,6 +1085,9 @@ internal sealed unsafe class D3DScreen : IDisposable
 
     public void Dispose()
     {
+        _ai?.Dispose();
+        _aiSrv?.Dispose();
+        _aiTex?.Dispose();
         _cbuffer?.Dispose();
         _pointSampler?.Dispose();
         _linearSampler?.Dispose();

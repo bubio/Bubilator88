@@ -83,6 +83,8 @@
                                               Click="OnVideoFilter" Tag="xBRZ" />
                     <muxc:RadioMenuFlyoutItem x:Name="FilterEnhanced" Text="Enhanced" GroupName="Filter"
                                               Click="OnVideoFilter" Tag="Enhanced" />
+                    <muxc:RadioMenuFlyoutItem x:Name="FilterAI" Text="AI Upscale" GroupName="Filter"
+                                              Click="OnVideoFilter" Tag="AI" />
                 </MenuFlyoutSubItem>
                 <ToggleMenuFlyoutItem x:Name="ScanlineItem" Text="Scanlines" Click="OnScanlines" />
             </muxc:MenuBarItem>

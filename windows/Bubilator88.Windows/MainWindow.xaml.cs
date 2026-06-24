@@ -880,7 +880,7 @@ public sealed partial class MainWindow : Window
     // MARK: - Video filter (mirrors the macOS VideoFilter / scanline settings)
 
     private static readonly string[] FilterTags =
-        { "None", "Linear", "Bicubic", "CRT", "xBRZ", "Enhanced" };
+        { "None", "Linear", "Bicubic", "CRT", "xBRZ", "Enhanced", "AI" };
 
     private static string NormalizeFilter(string? s)
         => Array.Exists(FilterTags, t => t == s) ? s! : "None";
@@ -892,6 +892,7 @@ public sealed partial class MainWindow : Window
         "CRT" => ScreenFilter.Crt,
         "xBRZ" => ScreenFilter.Xbrz,
         "Enhanced" => ScreenFilter.Enhanced,
+        "AI" => ScreenFilter.Ai,
         _ => ScreenFilter.None,
     };
 
@@ -931,6 +932,7 @@ public sealed partial class MainWindow : Window
             "CRT" => FilterCRT,
             "xBRZ" => FilterXBRZ,
             "Enhanced" => FilterEnhanced,
+            "AI" => FilterAI,
             _ => FilterNone,
         }).IsChecked = true;
         ScanlineItem.IsChecked = _scanlineEnabled;
