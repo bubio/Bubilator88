@@ -29,6 +29,10 @@ public final class B88Context {
     let renderer = ScreenRenderer()
     /// Reusable 640×400 RGBA buffer; rendered into, then copied to the host.
     var pixelBuffer = [UInt8](repeating: 0, count: ScreenRenderer.bufferSize400)
+    /// Last save-state blob produced by `b88_save_state`, stashed so the host
+    /// can query the length and then copy it out in a second call (the blob is
+    /// variable-length: RAM + disk images, so the host can't pre-size a buffer).
+    var saveStateBlob: [UInt8] = []
 
     init() {}
 }
@@ -243,6 +247,65 @@ public func b88_reset(_ handle: UnsafeMutableRawPointer?, _ preserveRAM: Int32) 
 @_cdecl("b88_set_clock_8mhz")
 public func b88_set_clock_8mhz(_ handle: UnsafeMutableRawPointer?, _ on: Int32) {
     context(handle)?.machine.clock8MHz = (on != 0)
+}
+
+/// Query the current CPU clock (1 = 8 MHz, 0 = 4 MHz). Used after a save-state
+/// load to re-sync the host UI, since the clock is restored from the state.
+@_cdecl("b88_get_clock_8mhz")
+public func b88_get_clock_8mhz(_ handle: UnsafeMutableRawPointer?) -> Int32 {
+    (context(handle)?.machine.clock8MHz ?? true) ? 1 : 0
+}
+
+// MARK: - Save state
+//
+// Mirrors the macOS quick/slot save-state feature (EmulatorViewModel save/load).
+// The core owns the binary format (Machine.createSaveState / loadSaveState —
+// magic "BU88", versioned, with MAIN/DSK0/DSK1/CMT/META sections + optional
+// thumbnail). The host handles only the file layout (slot_N.b88s + sidecar
+// meta.json + thumb.png), so both shells write the same .b88s format and a
+// state saved on one platform loads on the other.
+
+/// Build a save state and stash it. Returns the blob length in bytes; the host
+/// then calls `b88_save_state_read` to copy it out. The thumbnail is generated
+/// host-side (separate .thumb.png), so none is embedded here (thumbnail = nil).
+@_cdecl("b88_save_state")
+public func b88_save_state(_ handle: UnsafeMutableRawPointer?) -> Int32 {
+    guard let c = context(handle) else { return 0 }
+    c.saveStateBlob = c.machine.createSaveState()
+    return Int32(c.saveStateBlob.count)
+}
+
+/// Copy the stashed save-state blob into `outPtr` (capacity `outCap` bytes).
+/// Returns bytes copied. Call after `b88_save_state` returned the length.
+@_cdecl("b88_save_state_read")
+public func b88_save_state_read(_ handle: UnsafeMutableRawPointer?,
+                                _ outPtr: UnsafeMutablePointer<UInt8>?,
+                                _ outCap: Int32) -> Int32 {
+    guard let c = context(handle), let outPtr else { return 0 }
+    let n = min(Int(outCap), c.saveStateBlob.count)
+    guard n > 0 else { return 0 }
+    c.saveStateBlob.withUnsafeBufferPointer { src in
+        outPtr.update(from: src.baseAddress!, count: n)
+    }
+    return Int32(n)
+}
+
+/// Load a save-state blob (the bytes of a .b88s file). Restores CPU, bus, sound,
+/// sub-system, and mounted disk images. Returns 1 on success, 0 on failure
+/// (not a save state, incompatible version, or corrupt data).
+@_cdecl("b88_load_state")
+public func b88_load_state(_ handle: UnsafeMutableRawPointer?,
+                           _ ptr: UnsafePointer<UInt8>?,
+                           _ len: Int32) -> Int32 {
+    guard let c = context(handle) else { return 0 }
+    let data = bytes(ptr, len)
+    guard !data.isEmpty else { return 0 }
+    do {
+        try c.machine.loadSaveState(data)
+        return 1
+    } catch {
+        return 0
+    }
 }
 
 /// Run one 1/60s frame. Returns T-states executed.

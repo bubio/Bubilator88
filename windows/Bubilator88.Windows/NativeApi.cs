@@ -73,6 +73,20 @@ internal static unsafe partial class NativeApi
     public static partial void b88_set_clock_8mhz(IntPtr handle, int on);
 
     [LibraryImport(Dll)]
+    public static partial int b88_get_clock_8mhz(IntPtr handle);
+
+    // Save state. b88_save_state builds + stashes the blob and returns its length;
+    // b88_save_state_read copies it out. b88_load_state returns 1 on success.
+    [LibraryImport(Dll)]
+    public static partial int b88_save_state(IntPtr handle);
+
+    [LibraryImport(Dll)]
+    public static partial int b88_save_state_read(IntPtr handle, byte* outPtr, int outCap);
+
+    [LibraryImport(Dll)]
+    public static partial int b88_load_state(IntPtr handle, byte* ptr, int len);
+
+    [LibraryImport(Dll)]
     public static partial int b88_run_frame(IntPtr handle);
 
     [LibraryImport(Dll)]

@@ -71,6 +71,38 @@
                 </ToggleMenuFlyoutItem>
             </muxc:MenuBarItem>
 
+            <muxc:MenuBarItem Title="Control">
+                <MenuFlyoutSubItem Text="CPU Speed">
+                    <muxc:RadioMenuFlyoutItem x:Name="Speed1" Text="x1" GroupName="Speed"
+                                              IsChecked="True" Click="OnCpuSpeed" Tag="1" />
+                    <muxc:RadioMenuFlyoutItem x:Name="Speed2" Text="x2" GroupName="Speed" Click="OnCpuSpeed" Tag="2" />
+                    <muxc:RadioMenuFlyoutItem x:Name="Speed4" Text="x4" GroupName="Speed" Click="OnCpuSpeed" Tag="4" />
+                    <muxc:RadioMenuFlyoutItem x:Name="Speed8" Text="x8" GroupName="Speed" Click="OnCpuSpeed" Tag="8" />
+                    <muxc:RadioMenuFlyoutItem x:Name="Speed16" Text="x16" GroupName="Speed" Click="OnCpuSpeed" Tag="16" />
+                </MenuFlyoutSubItem>
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem Text="Save Screenshot…" Click="OnSaveScreenshot" />
+                <MenuFlyoutItem Text="Copy Screen" Click="OnCopyScreen">
+                    <MenuFlyoutItem.KeyboardAccelerators>
+                        <KeyboardAccelerator Modifiers="Control,Shift" Key="C" />
+                    </MenuFlyoutItem.KeyboardAccelerators>
+                </MenuFlyoutItem>
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem Text="Quick Save" Click="OnQuickSave">
+                    <MenuFlyoutItem.KeyboardAccelerators>
+                        <KeyboardAccelerator Modifiers="Control" Key="S" />
+                    </MenuFlyoutItem.KeyboardAccelerators>
+                </MenuFlyoutItem>
+                <MenuFlyoutItem Text="Quick Load" Click="OnQuickLoad">
+                    <MenuFlyoutItem.KeyboardAccelerators>
+                        <KeyboardAccelerator Modifiers="Control" Key="L" />
+                    </MenuFlyoutItem.KeyboardAccelerators>
+                </MenuFlyoutItem>
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem Text="Save State…" Click="OnSaveStateSheet" />
+                <MenuFlyoutItem Text="Load State…" Click="OnLoadStateSheet" />
+            </muxc:MenuBarItem>
+
             <muxc:MenuBarItem Title="Help">
                 <MenuFlyoutItem Text="About Bubilator88" Click="OnAbout" />
             </muxc:MenuBarItem>

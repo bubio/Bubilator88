@@ -25,6 +25,7 @@ internal sealed unsafe class XAudioSink : IDisposable
     private const int Channels = 2;
     private const int PoolSize = 24;
     private const int SlotFloats = 4096 * Channels; // matches EmulatorHost.AudioMaxPairs
+    private const float MaxFreqRatio = 16.0f;        // top fast-forward multiplier (x16)
 
     private readonly IXAudio2 _xaudio;
     private readonly IXAudio2MasteringVoice _master;
@@ -52,7 +53,11 @@ internal sealed unsafe class XAudioSink : IDisposable
         _master.Volume = 0.6f;
 
         var format = WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, Channels);
-        _source = _xaudio.CreateSourceVoice(format, enableCallbackEvents: true);
+        // MaxFrequencyRatio caps SetFrequencyRatio; raise it to the top CPU-speed
+        // multiplier (x16) so fast-forward can play the over-produced samples back
+        // at up to 16× (sped-up audio), matching the macOS varispeed behavior.
+        _source = _xaudio.CreateSourceVoice(format, VoiceFlags.None, MaxFreqRatio,
+                                            enableCallbackEvents: true);
         _source.BufferEnd += OnBufferEnd;
 
         for (int i = 0; i < PoolSize; i++)
@@ -83,6 +88,14 @@ internal sealed unsafe class XAudioSink : IDisposable
 
     /// <summary>Master output volume (0.0–1.0).</summary>
     public void SetVolume(float volume) => _master.Volume = Math.Clamp(volume, 0f, 1f);
+
+    /// <summary>
+    /// Playback-rate multiplier for CPU fast-forward. At speed N the core
+    /// produces N× the samples per wall-second; a ratio of N plays them back in
+    /// real time (sped up / higher pitch), keeping audio in step with video.
+    /// </summary>
+    public void SetFrequencyRatio(float ratio)
+        => _source.SetFrequencyRatio(Math.Clamp(ratio, 1f / 1024f, MaxFreqRatio), 0);
 
     /// <summary>Submit <paramref name="floatCount"/> interleaved floats.</summary>
     public void Submit(float[] samples, int floatCount)

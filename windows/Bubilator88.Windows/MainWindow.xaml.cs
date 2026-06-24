@@ -10,10 +10,14 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Shapes;
+using System.Runtime.InteropServices.WindowsRuntime;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Graphics;
 using Windows.Storage;
 using Windows.Storage.Pickers;
+using Windows.Storage.Streams;
 using Windows.System;
 using Windows.UI;
 using WinRT.Interop;
@@ -40,6 +44,8 @@ public sealed partial class MainWindow : Window
     private bool _paused;
     private bool _fullscreen;
     private int _windowScale = 2;   // ×1/×2/×3, persisted
+    private int _cpuSpeed = 1;      // fast-forward multiplier: 1/2/4/8/16
+    private bool _busy;             // suspends the frame loop during a state load
 
     // Boot configuration (mirrors the former combo/toggle state).
     private int _bootModeIndex;
@@ -56,6 +62,7 @@ public sealed partial class MainWindow : Window
         public int ImageCount;
         public int CurrentImage;
         public bool WriteProtected;
+        public string? SourcePath;        // original file path (for save-state reconstruction)
         public bool Occupied => Bytes != null;
     }
     private readonly DriveSlot[] _drives = { new(), new() };
@@ -199,7 +206,7 @@ public sealed partial class MainWindow : Window
 
     private void OnRendering(object? sender, object e)
     {
-        if (!_running || _host is null || _screen is null) return;
+        if (!_running || _host is null || _screen is null || _busy) return;
 
         double now = _clock.Elapsed.TotalSeconds;
         double dt = now - _lastTick;
@@ -216,8 +223,15 @@ public sealed partial class MainWindow : Window
         int frames = 0;
         while (_accumulator >= FrameSeconds && frames < MaxCatchUpFrames)
         {
-            _host.RunFrameAndRender(blinkCursor: true);
-            if (_audio is not null) _host.DrainAudio(_audio);
+            // CPU speed N runs N emulation frames per logical 60 Hz frame (matches
+            // macOS CPUSpeed.framesPerDraw). Audio is drained every emulation frame
+            // so the core buffer never accumulates; the source voice plays the
+            // over-produced samples back at N× (see _audio.SetFrequencyRatio).
+            for (int s = 0; s < _cpuSpeed; s++)
+            {
+                _host.RunFrame();
+                if (_audio is not null) _host.DrainAudio(_audio);
+            }
             _accumulator -= FrameSeconds;
             frames++;
         }
@@ -227,6 +241,7 @@ public sealed partial class MainWindow : Window
 
         if (frames > 0)
         {
+            _host.Render(blinkCursor: true);   // render once per draw, not per emulation frame
             _screen.Present(_host.Pixels);
             SampleAndDecayLeds();
             _fpsFrames += frames;
@@ -347,7 +362,7 @@ public sealed partial class MainWindow : Window
             string name = System.IO.Path.GetFileName(path);
             int images = _host.ProbeDisk(bytes, out EmulatorHost.ImageInfo[] infos);
             if (images <= 0) { ShowError($"Failed to parse {name}"); return; }
-            FillSlot(_drives[drive], bytes, name, infos, 0);
+            FillSlot(_drives[drive], bytes, name, infos, 0, path);
             _host.MountDisk(drive, bytes, 0);
             AddRecent(path);
         }
@@ -376,7 +391,7 @@ public sealed partial class MainWindow : Window
             if (index < 0) return;   // user cancelled
         }
 
-        FillSlot(_drives[drive], bytes, name, infos, index);
+        FillSlot(_drives[drive], bytes, name, infos, index, sourcePath);
         _host.MountDisk(drive, bytes, index);
         // Mounting only inserts the disk — it does NOT reset the machine (matches
         // macOS mountDiskImage). The boot strap is re-evaluated on the next Reset,
@@ -473,11 +488,11 @@ public sealed partial class MainWindow : Window
         int images = _host.ProbeDisk(bytes, out EmulatorHost.ImageInfo[] infos);
         if (images <= 0) { ShowError($"Failed to parse {name}"); return; }
 
-        FillSlot(_drives[0], bytes, name, infos, 0);
+        FillSlot(_drives[0], bytes, name, infos, 0, path);
         _host.MountDisk(0, bytes, 0);
         if (images >= 2)
         {
-            FillSlot(_drives[1], bytes, name, infos, 1);
+            FillSlot(_drives[1], bytes, name, infos, 1, path);
             _host.MountDisk(1, bytes, 1);
         }
         else
@@ -493,7 +508,8 @@ public sealed partial class MainWindow : Window
     }
 
     private static void FillSlot(DriveSlot slot, byte[] bytes, string name,
-                                 EmulatorHost.ImageInfo[] infos, int current)
+                                 EmulatorHost.ImageInfo[] infos, int current,
+                                 string? sourcePath = null)
     {
         string fileBase = System.IO.Path.GetFileNameWithoutExtension(name);
         slot.Bytes = bytes;
@@ -503,6 +519,7 @@ public sealed partial class MainWindow : Window
         slot.ImageNames = ResolveImageNames(infos.Select(i => i.Name).ToArray(), fileBase, infos.Length);
         slot.CurrentImage = current;
         slot.WriteProtected = current >= 0 && current < infos.Length && infos[current].WriteProtected;
+        slot.SourcePath = sourcePath;
     }
 
     /// <summary>
@@ -861,6 +878,344 @@ public sealed partial class MainWindow : Window
             XamlRoot = Root.XamlRoot,
         };
         await dialog.ShowAsync();
+    }
+
+    // MARK: - Control menu (CPU speed, screenshot, save states)
+
+    /// CPU fast-forward. Speed N runs N emulation frames per draw and plays the
+    /// over-produced audio back at N× (matches macOS CPUSpeed / varispeed).
+    private void OnCpuSpeed(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && int.TryParse(fe.Tag?.ToString(), out int n))
+        {
+            _cpuSpeed = Math.Clamp(n, 1, 16);
+            _audio?.SetFrequencyRatio(_cpuSpeed);
+        }
+    }
+
+    private async void OnSaveScreenshot(object sender, RoutedEventArgs e)
+    {
+        if (_host is null) return;
+        byte[] pixels = _host.Pixels.ToArray();   // snapshot the current frame
+
+        var picker = new FileSavePicker { SuggestedStartLocation = PickerLocationId.PicturesLibrary };
+        picker.FileTypeChoices.Add("PNG Image", new List<string> { ".png" });
+        picker.SuggestedFileName = $"Bubilator88-{DateTime.Now:yyyyMMdd-HHmmss}";
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+
+        StorageFile? file = await picker.PickSaveFileAsync();
+        if (file is null) return;
+        try
+        {
+            byte[] png = await ImageCodec.EncodePngAsync(pixels, EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight);
+            await File.WriteAllBytesAsync(file.Path, png);
+            ShowToast("Screenshot saved");
+        }
+        catch (Exception ex) { ShowError($"Screenshot failed: {ex.Message}"); }
+    }
+
+    private async void OnCopyScreen(object sender, RoutedEventArgs e)
+    {
+        if (_host is null) return;
+        byte[] pixels = _host.Pixels.ToArray();
+        try
+        {
+            byte[] png = await ImageCodec.EncodePngAsync(pixels, EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight);
+            var stream = new InMemoryRandomAccessStream();
+            await stream.WriteAsync(png.AsBuffer());
+            stream.Seek(0);
+            var data = new DataPackage();
+            data.SetBitmap(RandomAccessStreamReference.CreateFromStream(stream));
+            Clipboard.SetContent(data);
+            ShowToast("Screen copied");
+        }
+        catch (Exception ex) { ShowError($"Copy failed: {ex.Message}"); }
+    }
+
+    private async void OnQuickSave(object sender, RoutedEventArgs e) => await SaveToSlotAsync(-1);
+    private async void OnQuickLoad(object sender, RoutedEventArgs e) => await LoadFromSlotAsync(-1);
+    private async void OnSaveStateSheet(object sender, RoutedEventArgs e) => await ShowSlotDialogAsync(save: true);
+    private async void OnLoadStateSheet(object sender, RoutedEventArgs e) => await ShowSlotDialogAsync(save: false);
+
+    // slot < 0 = quick save/load; 0..9 = numbered slots.
+    private async Task SaveToSlotAsync(int slot)
+    {
+        if (_host is null) return;
+        byte[] pixels = _host.Pixels.ToArray();   // snapshot before any awaits
+        byte[] blob = _host.SaveState();
+        if (blob.Length == 0) { ShowToast("Save failed"); return; }
+        try
+        {
+            Directory.CreateDirectory(WinSaveState.Dir);
+            await File.WriteAllBytesAsync(WinSaveState.StatePath(slot), blob);
+            WinSaveState.WriteMeta(slot, BuildMeta());
+            try
+            {
+                await ImageCodec.WritePngAsync(pixels, EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight,
+                                               WinSaveState.ThumbPath(slot), 320, 200);
+            }
+            catch { /* thumbnail is cosmetic — ignore failures */ }
+            ShowToast(slot < 0 ? "Quick saved" : $"Saved to slot {slot + 1}");
+        }
+        catch (Exception ex) { ShowError($"Save failed: {ex.Message}"); }
+    }
+
+    private async Task LoadFromSlotAsync(int slot)
+    {
+        if (_host is null) return;
+        if (!WinSaveState.Exists(slot)) { ShowToast("Save state not found"); return; }
+
+        byte[] blob;
+        try { blob = await File.ReadAllBytesAsync(WinSaveState.StatePath(slot)); }
+        catch (Exception ex) { ShowError($"Load failed: {ex.Message}"); return; }
+
+        // Suspend the frame loop across the state mutation so a render can't read
+        // a half-restored machine, then re-render once from the new state.
+        _busy = true;
+        bool ok;
+        try { ok = _host.LoadState(blob); }
+        finally { _busy = false; }
+        if (!ok) { ShowToast("Load failed: corrupt or incompatible state"); return; }
+
+        ApplyLoadedMeta(WinSaveState.ReadMeta(slot));
+        _host.Render(blinkCursor: true);
+        _screen?.Present(_host.Pixels);
+        ShowToast(slot < 0 ? "Quick loaded" : $"Loaded slot {slot + 1}");
+    }
+
+    private WinSaveMeta BuildMeta() => new()
+    {
+        BootModeIndex = _bootModeIndex,
+        Clock8MHz = _clock8MHz,
+        Drive0 = MetaForDrive(0),
+        Drive1 = MetaForDrive(1),
+    };
+
+    private WinSaveMeta.DriveMeta? MetaForDrive(int drive)
+    {
+        var slot = _drives[drive];
+        if (!slot.Occupied) return null;
+        return new WinSaveMeta.DriveMeta
+        {
+            FileName = slot.FileName,
+            ImageNames = slot.ImageNames,
+            ImageCount = slot.ImageCount,
+            CurrentImage = slot.CurrentImage,
+            WriteProtected = slot.WriteProtected,
+            SourcePath = slot.SourcePath,
+        };
+    }
+
+    /// Re-sync host UI state (boot mode, clock, disk menu/labels) after a load.
+    /// Does NOT reset the machine — the state is already restored in the core.
+    private void ApplyLoadedMeta(WinSaveMeta? meta)
+    {
+        if (meta is not null)
+        {
+            _bootModeIndex = Math.Clamp(meta.BootModeIndex, 0, 3);
+            _clock8MHz = meta.Clock8MHz;
+        }
+        else
+        {
+            _clock8MHz = _host?.Clock8MHz ?? _clock8MHz;
+        }
+
+        (_bootModeIndex switch { 1 => BootN88V1H, 2 => BootN88V1S, 3 => BootNBasic, _ => BootN88V2 }).IsChecked = true;
+        (_clock8MHz ? Clock8 : Clock4).IsChecked = true;
+        ModeLabel.Text = _bootModeIndex switch { 1 => "N88-V1H", 2 => "N88-V1S", 3 => "N-BASIC", _ => "N88-V2" };
+        ClockLabel.Text = _clock8MHz ? "8MHz" : "4MHz";
+        SaveSettings();
+
+        // Keep the core's DIP switches consistent with the restored boot mode so a
+        // later Reset behaves as the saved mode (the state omits DIP switches).
+        if (_host is not null)
+        {
+            var (dipSw1, dipSw2Base) = BootSelection();
+            _host.SyncDip(dipSw1, dipSw2Base);
+        }
+
+        _drives[0] = ReconstructDrive(0, meta?.Drive0);
+        _drives[1] = ReconstructDrive(1, meta?.Drive1);
+        RebuildDiskMenu();
+        UpdateDiskStatus();
+    }
+
+    /// Rebuild a drive's host-side tracking after a load. The disk itself is
+    /// already mounted in the core (restored from the .b88s), so we never remount
+    /// the current image (that would discard in-state disk writes); we only
+    /// reconstruct the UI/menu model. If the original file is still on disk we
+    /// re-read it so multi-image switching keeps working; otherwise we synthesize
+    /// a display-only slot from the metadata.
+    private DriveSlot ReconstructDrive(int drive, WinSaveMeta.DriveMeta? dm)
+    {
+        var slot = new DriveSlot();
+        if (dm is null) return slot;
+
+        if (dm.SourcePath is not null && File.Exists(dm.SourcePath) && _host is not null)
+        {
+            try
+            {
+                byte[] bytes = File.ReadAllBytes(dm.SourcePath);
+                int images = _host.ProbeDisk(bytes, out EmulatorHost.ImageInfo[] infos);
+                if (images > 0)
+                {
+                    int idx = Math.Clamp(dm.CurrentImage, 0, images - 1);
+                    FillSlot(slot, bytes, System.IO.Path.GetFileName(dm.SourcePath), infos, idx, dm.SourcePath);
+                    slot.WriteProtected = dm.WriteProtected;   // honor any runtime WP toggle
+                    return slot;
+                }
+            }
+            catch { /* fall through to the display-only reconstruction */ }
+        }
+
+        // No usable source file — display-only slot (image switching unavailable).
+        slot.Bytes = Array.Empty<byte>();
+        slot.FileName = dm.FileName;
+        slot.ImageCount = Math.Max(1, dm.ImageCount);
+        slot.ImageNames = dm.ImageNames.Length > 0 ? dm.ImageNames : new[] { dm.FileName };
+        slot.CurrentImage = Math.Clamp(dm.CurrentImage, 0, slot.ImageCount - 1);
+        slot.WriteProtected = dm.WriteProtected;
+        slot.SourcePath = dm.SourcePath;
+        return slot;
+    }
+
+    /// Save/Load slot picker — a 10-slot grid with thumbnails, mirroring the
+    /// macOS SaveStateSheetView. Click a slot to act; in load mode empty slots
+    /// are dimmed and non-interactive.
+    private async Task ShowSlotDialogAsync(bool save)
+    {
+        var gv = new GridView
+        {
+            SelectionMode = ListViewSelectionMode.None,
+            IsItemClickEnabled = true,
+            MaxHeight = 460,
+        };
+        for (int i = 0; i < WinSaveState.SlotCount; i++)
+            gv.Items.Add(MakeSlotCell(i, save));
+
+        var dialog = new ContentDialog
+        {
+            Title = save ? "Save State" : "Load State",
+            Content = gv,
+            CloseButtonText = "Cancel",
+            XamlRoot = Root.XamlRoot,
+        };
+        gv.ItemClick += async (_, ev) =>
+        {
+            if (ev.ClickedItem is FrameworkElement fe && fe.Tag is int slot)
+            {
+                dialog.Hide();
+                if (save) await SaveToSlotAsync(slot);
+                else await LoadFromSlotAsync(slot);
+            }
+        };
+        await dialog.ShowAsync();
+    }
+
+    private FrameworkElement MakeSlotCell(int slot, bool save)
+    {
+        bool exists = WinSaveState.Exists(slot);
+        var grid = new Grid { Width = 232, Height = 150 };
+
+        if (exists && File.Exists(WinSaveState.ThumbPath(slot)))
+        {
+            grid.Children.Add(new Image
+            {
+                Source = new BitmapImage(new Uri(WinSaveState.ThumbPath(slot))),
+                Stretch = Stretch.UniformToFill,
+            });
+        }
+        else
+        {
+            grid.Background = new SolidColorBrush(Color.FromArgb(0xB3, 0, 0, 0));
+            grid.Children.Add(new TextBlock
+            {
+                Text = "Empty",
+                Opacity = 0.4,
+                FontSize = 18,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+        }
+
+        WinSaveMeta? meta = exists ? WinSaveState.ReadMeta(slot) : null;
+        string label = $"Slot {slot + 1}";
+        if (exists)
+        {
+            string date = WinSaveState.ModifiedAt(slot)?.ToString("MM/dd HH:mm") ?? "";
+            string disks = SlotDiskNames(meta);
+            if (date.Length > 0) label += "  " + date;
+            if (disks.Length > 0) label += "  " + disks;
+        }
+        grid.Children.Add(new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(0x99, 0, 0, 0)),
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Padding = new Thickness(8, 4, 8, 4),
+            Child = new TextBlock
+            {
+                Text = label,
+                FontSize = 12,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
+            },
+        });
+
+        var border = new Border
+        {
+            CornerRadius = new CornerRadius(6),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF)),
+            BorderThickness = new Thickness(1),
+            Child = grid,
+            Tag = slot,
+        };
+        if (!save && !exists)
+        {
+            border.Opacity = 0.4;
+            border.IsHitTestVisible = false;   // can't load an empty slot
+        }
+        return border;
+    }
+
+    private static string SlotDiskNames(WinSaveMeta? meta)
+    {
+        if (meta is null) return "";
+        var names = new List<string>();
+        string? n0 = meta.Drive0?.FileName;
+        string? n1 = meta.Drive1?.FileName;
+        if (!string.IsNullOrEmpty(n0)) names.Add(n0!);
+        if (!string.IsNullOrEmpty(n1) && n1 != n0) names.Add(n1!);
+        return string.Join(", ", names);
+    }
+
+    /// Brief non-modal notification (mirrors the macOS showToast), auto-removed
+    /// after ~1.2 s. Sits over the screen panel, bottom-center.
+    private async void ShowToast(string message)
+    {
+        try
+        {
+            var toast = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(0xCC, 0, 0, 0)),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(16, 8, 16, 8),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Margin = new Thickness(0, 0, 0, 24),
+                IsHitTestVisible = false,
+                Child = new TextBlock
+                {
+                    Text = message,
+                    FontSize = 13,
+                    Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
+                },
+            };
+            Grid.SetRow(toast, 1);
+            Root.Children.Add(toast);
+            await Task.Delay(1200);
+            Root.Children.Remove(toast);
+        }
+        catch { /* best-effort UI */ }
     }
 
     // MARK: - Input & lifetime

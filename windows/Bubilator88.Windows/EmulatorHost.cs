@@ -187,12 +187,61 @@ internal sealed unsafe class EmulatorHost : IDisposable
 
     public void Reset(bool preserveRam = false) => NativeApi.b88_reset(_handle, preserveRam ? 1 : 0);
 
+    /// <summary>
+    /// Re-sync the DIP switches to a boot mode WITHOUT resetting. Used after a
+    /// save-state load (which doesn't serialize DIP switches) so a subsequent
+    /// Reset stays consistent with the restored boot mode — mirrors the macOS
+    /// performLoad DIP re-sync.
+    /// </summary>
+    public void SyncDip(int dipSw1, int dipSw2Base)
+    {
+        NativeApi.b88_set_dipsw1(_handle, dipSw1);
+        NativeApi.b88_apply_bootstrap(_handle, dipSw2Base);
+    }
+
+    /// <summary>True if the restored/active CPU clock is 8 MHz.</summary>
+    public bool Clock8MHz => NativeApi.b88_get_clock_8mhz(_handle) != 0;
+
+    /// <summary>Advance the machine by one 1/60s frame (no rendering).</summary>
+    public void RunFrame() => NativeApi.b88_run_frame(_handle);
+
+    /// <summary>Composite the current machine state into the internal pixel buffer.</summary>
+    public void Render(bool blinkCursor)
+    {
+        fixed (byte* p = _pixels)
+            NativeApi.b88_render_rgba(_handle, p, _pixels.Length, blinkCursor ? 1 : 0);
+    }
+
     /// <summary>Run one frame and composite into the internal pixel buffer.</summary>
     public void RunFrameAndRender(bool blinkCursor)
     {
-        NativeApi.b88_run_frame(_handle);
-        fixed (byte* p = _pixels)
-            NativeApi.b88_render_rgba(_handle, p, _pixels.Length, blinkCursor ? 1 : 0);
+        RunFrame();
+        Render(blinkCursor);
+    }
+
+    /// <summary>
+    /// Capture the current machine state as a .b88s blob (CPU, bus, sound,
+    /// sub-system, mounted disk images). Mirrors macOS Machine.createSaveState.
+    /// </summary>
+    public byte[] SaveState()
+    {
+        int len = NativeApi.b88_save_state(_handle);
+        if (len <= 0) return Array.Empty<byte>();
+        var blob = new byte[len];
+        fixed (byte* p = blob)
+        {
+            int n = NativeApi.b88_save_state_read(_handle, p, len);
+            if (n != len) Array.Resize(ref blob, n < 0 ? 0 : n);
+        }
+        return blob;
+    }
+
+    /// <summary>Restore machine state from a .b88s blob. Returns false on failure.</summary>
+    public bool LoadState(byte[] blob)
+    {
+        if (blob is null || blob.Length == 0) return false;
+        fixed (byte* p = blob)
+            return NativeApi.b88_load_state(_handle, p, blob.Length) != 0;
     }
 
     /// <summary>
