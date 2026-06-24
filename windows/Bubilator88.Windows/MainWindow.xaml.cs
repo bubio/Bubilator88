@@ -108,6 +108,8 @@ public sealed partial class MainWindow : Window
 
             _screen = new D3DScreen(ScreenPanel, EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight);
             _audio = new XAudioSink();
+            _audio.SetVolume((float)_volume);
+            VolumeSlider.Value = _volume * 100.0;
 
             _running = true;
             _lastTick = _clock.Elapsed.TotalSeconds;
@@ -117,7 +119,9 @@ public sealed partial class MainWindow : Window
             // The window was already sized + locked in the constructor (before it
             // was shown). Here just reflect the saved scale in the View menu and
             // re-assert the size now that the XAML rasterization scale is known.
-            (_windowScale switch { 1 => Scale1, 3 => Scale3, _ => Scale2 }).IsChecked = true;
+            (_windowScale switch { 1 => Scale1, 4 => Scale4, _ => Scale2 }).IsChecked = true;
+            (_bootModeIndex switch { 1 => BootN88V1H, 2 => BootN88V1S, 3 => BootNBasic, _ => BootN88V2 }).IsChecked = true;
+            (_clock8MHz ? Clock8 : Clock4).IsChecked = true;
             ConfigureFixedSize();
             ApplyWindowScale(_windowScale, persist: false);
 
@@ -199,7 +203,6 @@ public sealed partial class MainWindow : Window
         {
             _screen.Present(_host.Pixels);
             SampleAndDecayLeds();
-            LevelMeter.Width = 56.0 * Math.Clamp(_host.LastPeak, 0f, 1f);
             _fpsFrames += frames;
         }
         UpdateFps(dt);
@@ -248,6 +251,7 @@ public sealed partial class MainWindow : Window
         if (sender is FrameworkElement fe && int.TryParse(fe.Tag?.ToString(), out int idx))
         {
             _bootModeIndex = idx;
+            SaveSettings();
             ApplyBootConfig();
         }
     }
@@ -259,9 +263,17 @@ public sealed partial class MainWindow : Window
         {
             // CPU clock is a live timing change — no reset needed.
             _clock8MHz = mhz == 8;
+            SaveSettings();
             _host.SetClock(_clock8MHz);
             ClockLabel.Text = _clock8MHz ? "8MHz" : "4MHz";
         }
+    }
+
+    private void OnVolumeChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        _volume = Math.Clamp(e.NewValue / 100.0, 0.0, 1.0);
+        _audio?.SetVolume((float)_volume);
+        SaveSettings();
     }
 
     // MARK: - Disk menu
@@ -697,7 +709,17 @@ public sealed partial class MainWindow : Window
 
     // MARK: - App settings (persisted to %LOCALAPPDATA%\Bubilator88\settings.json)
 
-    private sealed class AppSettings { public int WindowScale { get; set; } = 2; }
+    // Persisted app settings (mirrors the macOS UserDefaults-backed Settings:
+    // window scale, boot mode, CPU clock, master volume).
+    private sealed class AppSettings
+    {
+        public int WindowScale { get; set; } = 2;
+        public int BootModeIndex { get; set; }       // 0=N88-V2 1=V1H 2=V1S 3=N-BASIC
+        public bool Clock8MHz { get; set; } = true;
+        public double Volume { get; set; } = 0.5;    // matches macOS default
+    }
+
+    private double _volume = 0.5;
 
     private static string SettingsPath => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -709,7 +731,11 @@ public sealed partial class MainWindow : Window
         {
             if (!File.Exists(SettingsPath)) return;
             var s = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath));
-            if (s is not null) _windowScale = Math.Clamp(s.WindowScale, 1, 3);
+            if (s is null) return;
+            _windowScale = NormalizeScale(s.WindowScale);
+            _bootModeIndex = Math.Clamp(s.BootModeIndex, 0, 3);
+            _clock8MHz = s.Clock8MHz;
+            _volume = Math.Clamp(s.Volume, 0.0, 1.0);
         }
         catch { /* corrupt or unreadable — keep defaults */ }
     }
@@ -720,8 +746,13 @@ public sealed partial class MainWindow : Window
         {
             string? dir = System.IO.Path.GetDirectoryName(SettingsPath);
             if (dir is not null) Directory.CreateDirectory(dir);
-            File.WriteAllText(SettingsPath,
-                System.Text.Json.JsonSerializer.Serialize(new AppSettings { WindowScale = _windowScale }));
+            File.WriteAllText(SettingsPath, System.Text.Json.JsonSerializer.Serialize(new AppSettings
+            {
+                WindowScale = _windowScale,
+                BootModeIndex = _bootModeIndex,
+                Clock8MHz = _clock8MHz,
+                Volume = _volume,
+            }));
         }
         catch { /* best effort */ }
     }
@@ -737,9 +768,13 @@ public sealed partial class MainWindow : Window
     /// Resize the window to an exact integer view multiple and (optionally)
     /// persist it. The window cannot be freely resized (see ConfigureFixedSize),
     /// so these scales are the only way to change its size.
+    // Allowed view scales are ×1/×2/×4 (matches macOS). Map any other value
+    // (e.g. a ×3 left over from an older build) to the nearest allowed scale.
+    private static int NormalizeScale(int s) => s <= 1 ? 1 : s == 2 ? 2 : 4;
+
     private void ApplyWindowScale(int scale, bool persist = true)
     {
-        _windowScale = Math.Clamp(scale, 1, 3);
+        _windowScale = NormalizeScale(scale);
         if (persist) SaveSettings();
         if (_fullscreen) return;
         ResizeWindow(_windowScale, Root.XamlRoot?.RasterizationScale ?? 1.0);
