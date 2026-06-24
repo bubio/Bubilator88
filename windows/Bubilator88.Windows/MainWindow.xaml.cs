@@ -93,7 +93,18 @@ public sealed partial class MainWindow : Window
         {
             _host = new EmulatorHost();
             _host.LoadRoms();
-            ApplyBootConfig();
+
+            LoadRecent();
+
+            // Mount a disk passed on the command line (Explorer "Open with",
+            // drag-drop onto the exe, or `Bubilator88.Windows.exe game.d88`)
+            // BEFORE the initial boot, so the machine boots from it. Menu mounts
+            // during a session, by contrast, never reset (see MountSingleAsync).
+            string? diskArg = FindDiskArgument();
+            if (diskArg is not null)
+                LoadDiskAtStartup(0, diskArg);
+
+            ApplyBootConfig();   // initial boot — strap reflects drive 0 occupancy
 
             _screen = new D3DScreen(ScreenPanel, EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight);
             _audio = new XAudioSink();
@@ -110,15 +121,8 @@ public sealed partial class MainWindow : Window
             ConfigureFixedSize();
             ApplyWindowScale(_windowScale, persist: false);
 
-            LoadRecent();
             RebuildDiskMenu();
             UpdateDiskStatus();
-
-            // Auto-mount a disk passed on the command line (Explorer "Open with",
-            // drag-drop onto the exe, or `Bubilator88.Windows.exe game.d88`).
-            string? diskArg = FindDiskArgument();
-            if (diskArg is not null)
-                MountPath(0, diskArg);
         }
         catch (Exception ex)
         {
@@ -292,12 +296,22 @@ public sealed partial class MainWindow : Window
         return null;
     }
 
-    private void MountPath(int drive, string path)
+    /// Mount a command-line disk into a slot at STARTUP (image 0, no dialog),
+    /// before the initial ApplyBootConfig — so the machine boots from it. This is
+    /// the one place mounting leads to a boot; the strap (set by the upcoming
+    /// ApplyBootConfig) sees drive 0 occupied and selects FDD boot.
+    private void LoadDiskAtStartup(int drive, string path)
     {
+        if (_host is null) return;
         try
         {
             byte[] bytes = File.ReadAllBytes(path);
-            _ = MountSingleAsync(drive, System.IO.Path.GetFileName(path), bytes, path);
+            string name = System.IO.Path.GetFileName(path);
+            int images = _host.ProbeDisk(bytes, out EmulatorHost.ImageInfo[] infos);
+            if (images <= 0) { StatusText.Text = $"Failed to parse {name}"; return; }
+            FillSlot(_drives[drive], bytes, name, infos, 0);
+            _host.MountDisk(drive, bytes, 0);
+            AddRecent(path);
         }
         catch (Exception ex) { StatusText.Text = $"Mount failed: {ex.Message}"; }
     }
@@ -326,9 +340,9 @@ public sealed partial class MainWindow : Window
 
         FillSlot(_drives[drive], bytes, name, infos, index);
         _host.MountDisk(drive, bytes, index);
-        // Mounting drive 0 flips the boot strap (DIP SW2 bit 3) — reboot so the
-        // FDD boot path kicks in. Drive 1 doesn't affect the strap.
-        if (drive == 0) ApplyBootConfig();
+        // Mounting only inserts the disk — it does NOT reset the machine (matches
+        // macOS mountDiskImage). The boot strap is re-evaluated on the next Reset,
+        // so the user mounts a disk and then presses Reset to boot it.
 
         if (sourcePath is not null) AddRecent(sourcePath);
         RebuildDiskMenu();
@@ -433,7 +447,7 @@ public sealed partial class MainWindow : Window
             _host.EjectDisk(1);
             _drives[1] = new DriveSlot();
         }
-        ApplyBootConfig();   // drive 0 occupied → FDD boot
+        // Insert only — no reset (matches macOS). Press Reset to boot the set.
 
         AddRecent(path);
         RebuildDiskMenu();
