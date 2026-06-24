@@ -151,10 +151,14 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// </summary>
     public void Configure(bool clock8MHz, int dipSw1, int dipSw2Base)
     {
-        NativeApi.b88_set_clock_8mhz(_handle, clock8MHz ? 1 : 0);
         NativeApi.b88_set_dipsw1(_handle, dipSw1);
         NativeApi.b88_apply_bootstrap(_handle, dipSw2Base);
         NativeApi.b88_reset(_handle, 0);
+        // Set the clock AFTER reset: Machine.reset() forces clock8MHz = true,
+        // so configuring the clock before the reset would be clobbered back to
+        // 8 MHz. This mirrors the macOS ordering in EmulatorViewModel (reset,
+        // then assign clock8MHz).
+        NativeApi.b88_set_clock_8mhz(_handle, clock8MHz ? 1 : 0);
     }
 
     public void Reset(bool preserveRam = false) => NativeApi.b88_reset(_handle, preserveRam ? 1 : 0);
