@@ -170,11 +170,14 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// Configure boot mode and reset. Mount disks BEFORE calling so the boot
     /// strap (DIP SW2 bit 3) picks FDD boot when drive 0 is occupied.
     /// </summary>
-    public void Configure(bool clock8MHz, int dipSw1, int dipSw2Base)
+    public void Configure(bool clock8MHz, int dipSw1, int dipSw2Base, bool preserveRam = false)
     {
         NativeApi.b88_set_dipsw1(_handle, dipSw1);
         NativeApi.b88_apply_bootstrap(_handle, dipSw2Base);
-        NativeApi.b88_reset(_handle, 0);
+        // Cold reset (clear RAM) only for the first boot; user-triggered
+        // re-applies (Reset / boot mode / clock) preserve RAM, matching the
+        // macOS performReset (machine.reset(preserveRAM: true)).
+        NativeApi.b88_reset(_handle, preserveRam ? 1 : 0);
         // Set the clock AFTER reset: Machine.reset() forces clock8MHz = true,
         // so configuring the clock before the reset would be clobbered back to
         // 8 MHz. This mirrors the macOS ordering in EmulatorViewModel (reset,

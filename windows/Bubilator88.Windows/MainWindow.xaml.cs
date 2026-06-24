@@ -175,11 +175,13 @@ public sealed partial class MainWindow : Window
         _ => (NativeApi.DipSw1_N88, NativeApi.DipSw2_V2),
     };
 
-    private void ApplyBootConfig()
+    // preserveRam: false for the first boot (cold), true for user-triggered
+    // re-applies (Reset / boot mode / clock), matching the macOS reset paths.
+    private void ApplyBootConfig(bool preserveRam = false)
     {
         if (_host is null) return;
         var (dipSw1, dipSw2Base) = BootSelection();
-        _host.Configure(_clock8MHz, dipSw1, dipSw2Base);
+        _host.Configure(_clock8MHz, dipSw1, dipSw2Base, preserveRam);
         ModeLabel.Text = _bootModeIndex switch
         {
             1 => "N88-V1H",
@@ -265,7 +267,7 @@ public sealed partial class MainWindow : Window
         RunStateLed.Fill = _paused ? _pausedLed : _runLed;
     }
 
-    private void OnReset(object sender, RoutedEventArgs e) => ApplyBootConfig();
+    private void OnReset(object sender, RoutedEventArgs e) => ApplyBootConfig(preserveRam: true);
 
     private void OnBootMode(object sender, RoutedEventArgs e)
     {
@@ -273,7 +275,7 @@ public sealed partial class MainWindow : Window
         {
             _bootModeIndex = idx;
             SaveSettings();
-            ApplyBootConfig();
+            ApplyBootConfig(preserveRam: true);
         }
     }
 
@@ -286,7 +288,7 @@ public sealed partial class MainWindow : Window
             // clock8MHz is applied through performReset, not as a live change).
             _clock8MHz = mhz == 8;
             SaveSettings();
-            ApplyBootConfig();
+            ApplyBootConfig(preserveRam: true);
         }
     }
 
