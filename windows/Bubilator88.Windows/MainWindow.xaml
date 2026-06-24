@@ -78,7 +78,9 @@
 
         <SwapChainPanel x:Name="ScreenPanel" Grid.Row="1" SizeChanged="OnPanelSizeChanged" />
 
-        <!-- Status bar -->
+        <!-- Status bar. Layout mirrors macOS left→right: boot mode, clock,
+             Drive 2, Drive 1 on the left; volume, fps, run-state LED on the
+             right (real-hardware drive order = Drive 2 before Drive 1). -->
         <Grid Grid.Row="2" Padding="8,3" ColumnSpacing="12"
               Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}">
             <Grid.ColumnDefinitions>
@@ -86,29 +88,33 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <TextBlock x:Name="StatusText" Grid.Column="0" VerticalAlignment="Center"
-                       FontSize="12" TextTrimming="CharacterEllipsis" Text="No disk" />
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <TextBlock x:Name="ModeLabel" FontSize="12" VerticalAlignment="Center" Text="N88-V2" />
+                <TextBlock x:Name="ClockLabel" FontSize="12" VerticalAlignment="Center" Text="8MHz" />
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <!-- Volume (mirrors the macOS status-bar volume slider). -->
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                    <Ellipse x:Name="Drive1Led" Width="9" Height="9" Fill="#33FFFFFF" />
+                    <TextBlock x:Name="Drive1Label" FontSize="12" VerticalAlignment="Center" Opacity="0.85"
+                               TextTrimming="CharacterEllipsis" Text="D2: Empty" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                    <Ellipse x:Name="Drive0Led" Width="9" Height="9" Fill="#33FFFFFF" />
+                    <TextBlock x:Name="Drive0Label" FontSize="12" VerticalAlignment="Center" Opacity="0.85"
+                               TextTrimming="CharacterEllipsis" Text="D1: Empty" />
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <FontIcon Glyph="&#xE767;" FontSize="12" VerticalAlignment="Center" Opacity="0.8" />
                     <Slider x:Name="VolumeSlider" Width="84" Minimum="0" Maximum="100"
                             VerticalAlignment="Center" StepFrequency="10"
                             IsThumbToolTipEnabled="True" ValueChanged="OnVolumeChanged" />
                 </StackPanel>
-                <!-- Real-hardware drive order: Drive 2 left of Drive 1 (matches macOS). -->
-                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                    <Ellipse x:Name="Drive1Led" Width="9" Height="9" Fill="#33FFFFFF" />
-                    <TextBlock Text="D2" FontSize="11" VerticalAlignment="Center" Opacity="0.8" />
-                    <Ellipse x:Name="Drive0Led" Width="9" Height="9" Fill="#33FFFFFF" Margin="6,0,0,0" />
-                    <TextBlock Text="D1" FontSize="11" VerticalAlignment="Center" Opacity="0.8" />
-                </StackPanel>
-                <TextBlock x:Name="ModeLabel" FontSize="12" VerticalAlignment="Center" Text="N88-V2" />
-                <TextBlock x:Name="ClockLabel" FontSize="12" VerticalAlignment="Center" Text="8MHz" />
-                <TextBlock x:Name="RunStateLabel" FontSize="12" VerticalAlignment="Center" Text="Running" />
                 <TextBlock x:Name="FpsLabel" FontSize="12" VerticalAlignment="Center"
                            MinWidth="52" Text="-- fps" />
+                <Ellipse x:Name="RunStateLed" Width="9" Height="9" VerticalAlignment="Center"
+                         Fill="LimeGreen" />
             </StackPanel>
         </Grid>
     </Grid>

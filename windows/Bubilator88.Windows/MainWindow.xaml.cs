@@ -68,6 +68,9 @@ public sealed partial class MainWindow : Window
 
     private readonly SolidColorBrush _ledOn = new(Microsoft.UI.Colors.LimeGreen);
     private readonly SolidColorBrush _ledOff = new(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF));
+    // Run-state LED (mirrors the macOS status-bar dot): green = running, gray = paused.
+    private readonly SolidColorBrush _runLed = new(Microsoft.UI.Colors.LimeGreen);
+    private readonly SolidColorBrush _pausedLed = new(Microsoft.UI.Colors.Gray);
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hwnd);
@@ -140,8 +143,26 @@ public sealed partial class MainWindow : Window
             _audio = null;
             _screen = null;
             _host = null;
-            StatusText.Text = $"Init failed: {ex.Message}";
+            ShowError($"Initialization failed: {ex.Message}");
         }
+    }
+
+    /// Transient error notification (replaces the old status-bar text line,
+    /// which no longer exists now the status bar mirrors macOS's layout).
+    private async void ShowError(string message)
+    {
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                Title = "Bubilator88",
+                Content = message,
+                CloseButtonText = "OK",
+                XamlRoot = Root.XamlRoot,
+            };
+            await dialog.ShowAsync();
+        }
+        catch { /* XamlRoot not ready yet — drop the message */ }
     }
 
     // MARK: - Boot configuration
@@ -241,7 +262,7 @@ public sealed partial class MainWindow : Window
         if (_host is null) return;
         _paused = !_paused;
         PauseResumeItem.Text = _paused ? "Resume" : "Pause";
-        RunStateLabel.Text = _paused ? "Paused" : "Running";
+        RunStateLed.Fill = _paused ? _pausedLed : _runLed;
     }
 
     private void OnReset(object sender, RoutedEventArgs e) => ApplyBootConfig();
@@ -320,12 +341,12 @@ public sealed partial class MainWindow : Window
             byte[] bytes = File.ReadAllBytes(path);
             string name = System.IO.Path.GetFileName(path);
             int images = _host.ProbeDisk(bytes, out EmulatorHost.ImageInfo[] infos);
-            if (images <= 0) { StatusText.Text = $"Failed to parse {name}"; return; }
+            if (images <= 0) { ShowError($"Failed to parse {name}"); return; }
             FillSlot(_drives[drive], bytes, name, infos, 0);
             _host.MountDisk(drive, bytes, 0);
             AddRecent(path);
         }
-        catch (Exception ex) { StatusText.Text = $"Mount failed: {ex.Message}"; }
+        catch (Exception ex) { ShowError($"Mount failed: {ex.Message}"); }
     }
 
     /// Mount a single drive from a .d88 blob. For a multi-image file the user is
@@ -339,7 +360,7 @@ public sealed partial class MainWindow : Window
         int images = _host.ProbeDisk(bytes, out EmulatorHost.ImageInfo[] infos);
         if (images <= 0)
         {
-            StatusText.Text = $"Failed to parse {name}";
+            ShowError($"Failed to parse {name}");
             return;
         }
 
@@ -441,11 +462,11 @@ public sealed partial class MainWindow : Window
         if (_host is null) return;
         byte[] bytes;
         try { bytes = File.ReadAllBytes(path); }
-        catch (Exception ex) { StatusText.Text = $"Mount failed: {ex.Message}"; return; }
+        catch (Exception ex) { ShowError($"Mount failed: {ex.Message}"); return; }
         string name = System.IO.Path.GetFileName(path);
 
         int images = _host.ProbeDisk(bytes, out EmulatorHost.ImageInfo[] infos);
-        if (images <= 0) { StatusText.Text = $"Failed to parse {name}"; return; }
+        if (images <= 0) { ShowError($"Failed to parse {name}"); return; }
 
         FillSlot(_drives[0], bytes, name, infos, 0);
         _host.MountDisk(0, bytes, 0);
@@ -653,18 +674,24 @@ public sealed partial class MainWindow : Window
 
     private void UpdateDiskStatus()
     {
-        var parts = new List<string>();
-        for (int d = 0; d < 2; d++)
-        {
-            var slot = _drives[d];
-            if (!slot.Occupied) continue;
-            string label = slot.ImageCount > 1
-                ? $"{slot.ImageNames[slot.CurrentImage]} ({slot.CurrentImage + 1}/{slot.ImageCount})"
-                : slot.FileName;
-            if (slot.WriteProtected) label += " [WP]";
-            parts.Add($"D{d + 1}: {label}");
-        }
-        StatusText.Text = parts.Count == 0 ? "No disk (→ BASIC)" : string.Join("    ", parts);
+        // The disk name is shown inside each drive's status-bar entry (like
+        // macOS), not in a separate text line. Drive1Label = Drive 2 (index 1),
+        // Drive0Label = Drive 1 (index 0).
+        Drive1Label.Text = DriveStatusText(1);
+        Drive0Label.Text = DriveStatusText(0);
+    }
+
+    /// "D2: <name> (i/n) [WP]" for an occupied drive, or "D2: Empty".
+    private string DriveStatusText(int drive)
+    {
+        string tag = $"D{drive + 1}";
+        var slot = _drives[drive];
+        if (!slot.Occupied) return $"{tag}: Empty";
+        string label = slot.ImageCount > 1
+            ? $"{slot.ImageNames[slot.CurrentImage]} ({slot.CurrentImage + 1}/{slot.ImageCount})"
+            : slot.FileName;
+        if (slot.WriteProtected) label += " [WP]";
+        return $"{tag}: {label}";
     }
 
     // MARK: - Recent files (MRU persisted to %LOCALAPPDATA%\Bubilator88\recent.json)
