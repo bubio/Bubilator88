@@ -19,16 +19,14 @@
             <muxc:MenuBarItem Title="Emulator">
                 <MenuFlyoutItem Text="Settings…" Click="OnSettings" />
                 <MenuFlyoutSeparator />
-                <MenuFlyoutItem x:Name="PauseResumeItem" Text="Pause" Click="OnPauseResume">
-                    <MenuFlyoutItem.KeyboardAccelerators>
-                        <KeyboardAccelerator Modifiers="Control" Key="R" />
-                    </MenuFlyoutItem.KeyboardAccelerators>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="Reset" Click="OnReset">
-                    <MenuFlyoutItem.KeyboardAccelerators>
-                        <KeyboardAccelerator Modifiers="Control" Key="E" />
-                    </MenuFlyoutItem.KeyboardAccelerators>
-                </MenuFlyoutItem>
+                <!-- Shortcuts are dispatched in code (OnKeyDown) because the screen
+                     greedily consumes letter/number keys for the PC-8801 matrix,
+                     which pre-empts XAML KeyboardAccelerators. These overrides only
+                     render the hint text next to the item. -->
+                <MenuFlyoutItem x:Name="PauseResumeItem" Text="Pause" Click="OnPauseResume"
+                                KeyboardAcceleratorTextOverride="Ctrl+R" />
+                <MenuFlyoutItem Text="Reset" Click="OnReset"
+                                KeyboardAcceleratorTextOverride="Ctrl+E" />
                 <MenuFlyoutSeparator />
                 <MenuFlyoutSubItem Text="Boot Mode">
                     <muxc:RadioMenuFlyoutItem x:Name="BootN88V2" Text="N88-BASIC V2" GroupName="Boot"
@@ -66,11 +64,8 @@
                                           IsChecked="True" Click="OnWindowScale" Tag="2" />
                 <muxc:RadioMenuFlyoutItem x:Name="Scale4" Text="Quad Size (×4)" GroupName="Scale" Click="OnWindowScale" Tag="4" />
                 <MenuFlyoutSeparator />
-                <ToggleMenuFlyoutItem x:Name="FullscreenItem" Text="Fullscreen" Click="OnToggleFullscreen">
-                    <ToggleMenuFlyoutItem.KeyboardAccelerators>
-                        <KeyboardAccelerator Modifiers="None" Key="F11" />
-                    </ToggleMenuFlyoutItem.KeyboardAccelerators>
-                </ToggleMenuFlyoutItem>
+                <ToggleMenuFlyoutItem x:Name="FullscreenItem" Text="Fullscreen" Click="OnToggleFullscreen"
+                                      KeyboardAcceleratorTextOverride="F11" />
                 <MenuFlyoutSeparator />
                 <MenuFlyoutSubItem Text="Video Filter">
                     <muxc:RadioMenuFlyoutItem x:Name="FilterNone" Text="None" GroupName="Filter"
@@ -102,22 +97,13 @@
                 </MenuFlyoutSubItem>
                 <MenuFlyoutSeparator />
                 <MenuFlyoutItem Text="Save Screenshot…" Click="OnSaveScreenshot" />
-                <MenuFlyoutItem Text="Copy Screen" Click="OnCopyScreen">
-                    <MenuFlyoutItem.KeyboardAccelerators>
-                        <KeyboardAccelerator Modifiers="Control,Shift" Key="C" />
-                    </MenuFlyoutItem.KeyboardAccelerators>
-                </MenuFlyoutItem>
+                <MenuFlyoutItem Text="Copy Screen" Click="OnCopyScreen"
+                                KeyboardAcceleratorTextOverride="Ctrl+Shift+C" />
                 <MenuFlyoutSeparator />
-                <MenuFlyoutItem Text="Quick Save" Click="OnQuickSave">
-                    <MenuFlyoutItem.KeyboardAccelerators>
-                        <KeyboardAccelerator Modifiers="Control" Key="S" />
-                    </MenuFlyoutItem.KeyboardAccelerators>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="Quick Load" Click="OnQuickLoad">
-                    <MenuFlyoutItem.KeyboardAccelerators>
-                        <KeyboardAccelerator Modifiers="Control" Key="L" />
-                    </MenuFlyoutItem.KeyboardAccelerators>
-                </MenuFlyoutItem>
+                <MenuFlyoutItem Text="Quick Save" Click="OnQuickSave"
+                                KeyboardAcceleratorTextOverride="Ctrl+S" />
+                <MenuFlyoutItem Text="Quick Load" Click="OnQuickLoad"
+                                KeyboardAcceleratorTextOverride="Ctrl+L" />
                 <MenuFlyoutSeparator />
                 <MenuFlyoutItem Text="Save State…" Click="OnSaveStateSheet" />
                 <MenuFlyoutItem Text="Load State…" Click="OnLoadStateSheet" />

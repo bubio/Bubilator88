@@ -96,6 +96,14 @@ public sealed partial class MainWindow : Window
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hwnd);
 
+    [DllImport("user32.dll")]
+    private static extern short GetKeyState(int nVirtKey);
+
+    private const int VkShift = 0x10;
+    private const int VkControl = 0x11;
+    private static bool KeyHeld(int vk) => (GetKeyState(vk) & 0x8000) != 0;
+    private static readonly RoutedEventArgs EmptyArgs = new();
+
     public MainWindow()
     {
         InitializeComponent();
@@ -644,13 +652,13 @@ public sealed partial class MainWindow : Window
         var slot = _drives[drive];
         sub.Items.Clear();
 
-        var mount = new MenuFlyoutItem { Text = "Mount…" };
-        mount.Click += drive == 0 ? OnMountDrive0 : OnMountDrive1;
-        mount.KeyboardAccelerators.Add(new KeyboardAccelerator
+        var mount = new MenuFlyoutItem
         {
-            Modifiers = VirtualKeyModifiers.Control,
-            Key = drive == 0 ? VirtualKey.Number1 : VirtualKey.Number2,
-        });
+            Text = "Mount…",
+            // Hint only — the chord is dispatched in OnKeyDown (see the XAML note).
+            KeyboardAcceleratorTextOverride = drive == 0 ? "Ctrl+1" : "Ctrl+2",
+        };
+        mount.Click += drive == 0 ? OnMountDrive0 : OnMountDrive1;
         sub.Items.Add(mount);
 
         var eject = new MenuFlyoutItem { Text = "Eject", IsEnabled = slot.Occupied };
@@ -693,13 +701,12 @@ public sealed partial class MainWindow : Window
     {
         BothSub.Items.Clear();
 
-        var mount = new MenuFlyoutItem { Text = "Mount…" };
-        mount.Click += async (_, _) => await MountBothAsync();
-        mount.KeyboardAccelerators.Add(new KeyboardAccelerator
+        var mount = new MenuFlyoutItem
         {
-            Modifiers = VirtualKeyModifiers.Control,
-            Key = VirtualKey.Number3,
-        });
+            Text = "Mount…",
+            KeyboardAcceleratorTextOverride = "Ctrl+3",   // hint only (see OnKeyDown)
+        };
+        mount.Click += async (_, _) => await MountBothAsync();
         BothSub.Items.Add(mount);
 
         var eject = new MenuFlyoutItem
@@ -1434,10 +1441,40 @@ public sealed partial class MainWindow : Window
 
     private void OnKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        // Host menu shortcuts win over emulator key input. The screen greedily
+        // consumes letter/number keys (they map to the PC-8801 matrix), which
+        // pre-empts the menu's accelerators, so the chords are dispatched here;
+        // the menu shows them via KeyboardAcceleratorTextOverride (hint only, no
+        // double-fire). Modifier state is read from the live keyboard.
+        if (TryHandleMenuShortcut(e.Key)) { e.Handled = true; return; }
+
         // Only swallow keys the emulator actually consumes, so system
         // accelerators (Alt+F4 etc.) and unmapped keys keep working.
         if (_host?.KeyDown(e.Key) == true)
             e.Handled = true;
+    }
+
+    /// Dispatch the menu keyboard shortcuts (the chords shown as hints on the menu
+    /// items). Returns true when the key was a shortcut and was handled.
+    private bool TryHandleMenuShortcut(VirtualKey key)
+    {
+        if (key == VirtualKey.F11) { OnToggleFullscreen(this, EmptyArgs); return true; }
+
+        if (!KeyHeld(VkControl)) return false;
+        bool shift = KeyHeld(VkShift);
+
+        switch (key)
+        {
+            case VirtualKey.R: OnPauseResume(this, EmptyArgs); return true;
+            case VirtualKey.E: OnReset(this, EmptyArgs); return true;
+            case VirtualKey.S: OnQuickSave(this, EmptyArgs); return true;
+            case VirtualKey.L: OnQuickLoad(this, EmptyArgs); return true;
+            case VirtualKey.C when shift: OnCopyScreen(this, EmptyArgs); return true;
+            case VirtualKey.Number1: _ = MountDriveAsync(0); return true;
+            case VirtualKey.Number2: _ = MountDriveAsync(1); return true;
+            case VirtualKey.Number3: _ = MountBothAsync(); return true;
+            default: return false;
+        }
     }
 
     private void OnKeyUp(object sender, KeyRoutedEventArgs e)
