@@ -145,7 +145,11 @@
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <FontIcon Glyph="&#xE767;" FontSize="12" VerticalAlignment="Center" Opacity="0.8" />
+                    <!-- IsTabStop=False so Tab never parks focus here; a pointer
+                         press still focuses it, but PointerCaptureLost returns
+                         focus to the emulation view when the drag/click ends. -->
                     <Slider x:Name="VolumeSlider" Width="84" Minimum="0" Maximum="100"
+                            IsTabStop="False"
                             VerticalAlignment="Center" StepFrequency="10"
                             IsThumbToolTipEnabled="True" ValueChanged="OnVolumeChanged" />
                 </StackPanel>

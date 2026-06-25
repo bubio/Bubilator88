@@ -118,7 +118,34 @@ public sealed partial class MainWindow : Window
 
         Root.Loaded += OnLoaded;
         Closed += OnClosed;
+
+        // Keep keyboard focus on the emulation view. Two chrome controls otherwise
+        // capture it and silence OnKeyDown (the PC-8801 key matrix + Ctrl chords):
+        //   • a top-level menu, which on dismissal parks focus back on its
+        //     MenuBarItem  → bounced back in OnRootGettingFocus;
+        //   • the volume slider, which grabs focus on a pointer press → returned
+        //     when the drag/click ends.
+        Root.GettingFocus += OnRootGettingFocus;
+        VolumeSlider.PointerCaptureLost += (_, _) => RestoreEmulatorFocus();
     }
+
+    /// Return keyboard focus to the emulation view so the PC-8801 key matrix and
+    /// the menu chord handler (OnKeyDown) keep receiving input.
+    private void RestoreEmulatorFocus() => Root.Focus(FocusState.Programmatic);
+
+    /// When a top-level menu closes, WinUI parks focus back on the MenuBarItem that
+    /// was open, which silences OnKeyDown. Catch that specific hand-off — a menu
+    /// flyout element giving focus to a MenuBarItem — and redirect to the emulation
+    /// view. Opening a menu (old focus = the screen, not a flyout item) and
+    /// navigating within an open menu (new focus ≠ a MenuBarItem) are left alone.
+    private void OnRootGettingFocus(UIElement sender, GettingFocusEventArgs e)
+    {
+        if (e.NewFocusedElement is MenuBarItem && IsMenuFlyoutElement(e.OldFocusedElement))
+            e.TrySetNewFocusedElement(Root);
+    }
+
+    private static bool IsMenuFlyoutElement(DependencyObject? element)
+        => element is MenuFlyoutItemBase or MenuFlyoutPresenter;
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
