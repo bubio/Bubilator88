@@ -22,7 +22,7 @@ jobs:
       sha256: ${{ steps.dmg.outputs.sha256 }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Show environment
         run: |
@@ -144,7 +144,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout tap
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: bubio/homebrew-bubilator88
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
