@@ -203,10 +203,10 @@ internal sealed class AiUpscaler : IDisposable
             const int oplane = OutH * OutW;
             for (int i = 0, q = 0; i < oplane; i++, q += 4)
             {
-                outBuf[q] = ToByte(o[i]);                  // R
-                outBuf[q + 1] = ToByte(o[oplane + i]);     // G
-                outBuf[q + 2] = ToByte(o[2 * oplane + i]); // B
-                outBuf[q + 3] = 255;                       // A
+                outBuf[q] = PixelMath.ClampToByte(o[i]);                  // R
+                outBuf[q + 1] = PixelMath.ClampToByte(o[oplane + i]);     // G
+                outBuf[q + 2] = PixelMath.ClampToByte(o[2 * oplane + i]); // B
+                outBuf[q + 3] = 255;                                      // A
             }
 
             lock (_lock)
@@ -222,13 +222,6 @@ internal sealed class AiUpscaler : IDisposable
         {
             ClearInferring();
         }
-    }
-
-    private static byte ToByte(float v)
-    {
-        int n = (int)(v * 255f + 0.5f);
-        if (n < 0) n = 0; else if (n > 255) n = 255;
-        return (byte)n;
     }
 
     private void ClearInferring()
