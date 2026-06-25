@@ -655,7 +655,9 @@ internal sealed unsafe class D3DScreen : IDisposable
             MaxLOD = float.MaxValue,
         });
 
-        // cbuffer is 16-byte aligned; FilterParams is 64 bytes (4 registers).
+        // FilterParams is 56 bytes; HLSL rounds the cbuffer up to a 16-byte
+        // boundary (4 registers = 64 bytes). We allocate the rounded 64 and write
+        // the 56 populated bytes — every shader-read field is within them.
         _cbuffer = _device.CreateBuffer(new BufferDescription
         {
             ByteWidth = 64,

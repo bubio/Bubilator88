@@ -56,7 +56,7 @@ public sealed partial class MainWindow
             CloseButtonText = "Close",
             XamlRoot = Root.XamlRoot,
         };
-        await dialog.ShowAsync();
+        await ShowDialogAsync(dialog);
     }
 
     // MARK: - Tab builders

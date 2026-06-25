@@ -45,8 +45,12 @@ internal sealed class AiUpscaler : IDisposable
     private int _generation;                         // bumped on Reset to drop stale results
     private long _completed;
     private int _loadStarted;                        // 0/1 guard for EnsureLoaded
+    private bool _disposed;                           // set in Dispose; checked before Run
 
-    public State CurrentState { get; private set; } = State.Unavailable;
+    // volatile: written on the load worker, read on the UI thread (Submit) without
+    // taking _lock, so the transition must be promptly visible across threads.
+    private volatile State _state = State.Unavailable;
+    public State CurrentState => _state;
     public int OutputWidth => OutW;
     public int OutputHeight => OutH;
 
@@ -69,8 +73,9 @@ internal sealed class AiUpscaler : IDisposable
     /// </summary>
     public void EnsureLoaded()
     {
+        if (_disposed) return;
         if (Interlocked.Exchange(ref _loadStarted, 1) != 0) return;
-        CurrentState = State.Loading;
+        _state = State.Loading;
         Task.Run(LoadModel);
     }
 
@@ -94,7 +99,10 @@ internal sealed class AiUpscaler : IDisposable
             string? path = FindModel();
             if (path is null)
             {
-                CurrentState = State.Unavailable;
+                // Allow a later EnsureLoaded (filter re-entry) to retry — the user
+                // may drop the model in after first selecting the AI filter.
+                _state = State.Unavailable;
+                Interlocked.Exchange(ref _loadStarted, 0);
                 return;
             }
 
@@ -108,16 +116,19 @@ internal sealed class AiUpscaler : IDisposable
             var session = new InferenceSession(path, opts);
             lock (_lock)
             {
+                if (_disposed) { session.Dispose(); return; }
                 _session = session;
                 _inputTensor = new DenseTensor<float>(new[] { 1, 3, InH, InW });
-                CurrentState = State.Ready;
+                _state = State.Ready;
             }
         }
         catch (Exception)
         {
             // DirectML unavailable (e.g. arm64 native missing) or a corrupt model:
-            // degrade gracefully to the Bicubic fallback.
-            CurrentState = State.Unavailable;
+            // degrade gracefully to the Bicubic fallback. Re-arm the load guard so a
+            // later filter re-entry can retry (e.g. after a driver/runtime fix).
+            _state = State.Unavailable;
+            Interlocked.Exchange(ref _loadStarted, 0);
         }
     }
 
@@ -151,6 +162,7 @@ internal sealed class AiUpscaler : IDisposable
             DenseTensor<float>? input;
             lock (_lock)
             {
+                if (_disposed) { _inferring = false; return; }
                 session = _session;
                 input = _inputTensor;
             }
@@ -263,6 +275,13 @@ internal sealed class AiUpscaler : IDisposable
     {
         lock (_lock)
         {
+            // Mark disposed + bump the generation so a worker that hasn't yet taken
+            // the lock bails before touching the session (it re-checks _disposed
+            // under _lock). A worker already past that check runs on the session
+            // we're disposing; InferenceSession.Run throws ObjectDisposedException
+            // in that case, which RunInference's try/catch swallows.
+            _disposed = true;
+            _generation++;
             _session?.Dispose();
             _session = null;
             _inputTensor = null;

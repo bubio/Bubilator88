@@ -43,7 +43,7 @@ public sealed partial class MainWindow : Window
     private bool _running;
     private bool _paused;
     private bool _fullscreen;
-    private int _windowScale = 2;   // ×1/×2/×3, persisted
+    private int _windowScale = 2;   // ×1/×2/×4, persisted
     private int _cpuSpeed = 1;      // fast-forward multiplier: 1/2/4/8/16
     private bool _busy;             // suspends the frame loop during a state load
     private string _videoFilter = "None";   // None/Linear/Bicubic/CRT/xBRZ/Enhanced
@@ -182,18 +182,29 @@ public sealed partial class MainWindow : Window
     /// which no longer exists now the status bar mirrors macOS's layout).
     private async void ShowError(string message)
     {
-        try
+        await ShowDialogAsync(new ContentDialog
         {
-            var dialog = new ContentDialog
-            {
-                Title = "Bubilator88",
-                Content = message,
-                CloseButtonText = "OK",
-                XamlRoot = Root.XamlRoot,
-            };
-            await dialog.ShowAsync();
-        }
-        catch { /* XamlRoot not ready yet — drop the message */ }
+            Title = "Bubilator88",
+            Content = message,
+            CloseButtonText = "OK",
+            XamlRoot = Root.XamlRoot,
+        });
+    }
+
+    private bool _dialogOpen;
+
+    /// Show a <see cref="ContentDialog"/>, serializing presentation: WinUI throws
+    /// ("only a single ContentDialog can be open at any time") if a second is shown
+    /// while one is up, and our callers are <c>async void</c>, so that would be an
+    /// unhandled crash. A request made while one is already open is dropped, and any
+    /// presentation failure (e.g. XamlRoot not ready yet) is swallowed.
+    private async Task<ContentDialogResult> ShowDialogAsync(ContentDialog dialog)
+    {
+        if (_dialogOpen) return ContentDialogResult.None;
+        _dialogOpen = true;
+        try { return await dialog.ShowAsync(); }
+        catch { return ContentDialogResult.None; }
+        finally { _dialogOpen = false; }
     }
 
     // MARK: - Boot configuration
@@ -467,7 +478,7 @@ public sealed partial class MainWindow : Window
             chosen = list.Items.IndexOf(e.ClickedItem);
             dialog.Hide();
         };
-        await dialog.ShowAsync();
+        await ShowDialogAsync(dialog);
         return chosen;
     }
 
@@ -568,6 +579,10 @@ public sealed partial class MainWindow : Window
         var slot = _drives[drive];
         if (_host is null || !slot.Occupied || index < 0 || index >= slot.ImageCount) return;
         if (index == slot.CurrentImage) return;
+        // A display-only slot (source file gone after a state load) carries an
+        // empty byte[] — re-mounting it would hand the core a 0-length blob and
+        // wipe the disk that's actually mounted. Switching is unavailable there.
+        if (slot.Bytes is not { Length: > 0 }) return;
 
         _host.MountDisk(drive, slot.Bytes!, index);
         slot.CurrentImage = index;
@@ -1011,7 +1026,7 @@ public sealed partial class MainWindow : Window
             CloseButtonText = "OK",
             XamlRoot = Root.XamlRoot,
         };
-        await dialog.ShowAsync();
+        await ShowDialogAsync(dialog);
     }
 
     // MARK: - Control menu (CPU speed, screenshot, save states)
@@ -1261,7 +1276,7 @@ public sealed partial class MainWindow : Window
                 else await LoadFromSlotAsync(slot);
             }
         };
-        await dialog.ShowAsync();
+        await ShowDialogAsync(dialog);
     }
 
     private FrameworkElement MakeSlotCell(int slot, bool save)
