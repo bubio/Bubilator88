@@ -479,6 +479,7 @@ internal sealed unsafe class D3DScreen : IDisposable
 
     private ScreenFilter _filter = ScreenFilter.None;
     private bool _scanlineEnabled;
+    private bool _integerScaling;   // pixel-perfect fullscreen viewport (host-controlled)
 
     private int _width;
     private int _height;
@@ -550,6 +551,15 @@ internal sealed unsafe class D3DScreen : IDisposable
         _filter = filter;
         _scanlineEnabled = scanlineEnabled;
     }
+
+    /// <summary>
+    /// Enable pixel-perfect (integer-multiple) letterboxing. Mirrors the macOS
+    /// Settings "Integer Scaling" fullscreen mode: the viewport snaps to the
+    /// largest whole multiple of 640×400 that fits, with black borders, instead
+    /// of filling to the aspect-fit size. The host enables this only in
+    /// fullscreen (the windowed scales are already exact integers).
+    /// </summary>
+    public void SetIntegerScaling(bool on) => _integerScaling = on;
 
     private void CreateRenderTarget()
     {
@@ -1084,6 +1094,21 @@ internal sealed unsafe class D3DScreen : IDisposable
 
     private (float x, float y, float w, float h) LetterboxViewport()
     {
+        // Pixel-perfect mode: snap to the largest whole multiple of 640×400 that
+        // fits, centered (matches the macOS integer-scaling fullscreen option).
+        // If the panel is smaller than native (scale < 1) fall through to the
+        // normal aspect-fit so the frame stays fully visible.
+        if (_integerScaling)
+        {
+            int scale = Math.Min(_width / _srcWidth, _height / _srcHeight);
+            if (scale >= 1)
+            {
+                float iw = _srcWidth * scale;
+                float ih = _srcHeight * scale;
+                return ((_width - iw) * 0.5f, (_height - ih) * 0.5f, iw, ih);
+            }
+        }
+
         // Always use the 640×400 display aspect, even when filtering a 640×200
         // content texture (matches macOS — output aspect is fixed at 16:10).
         float targetAspect = (float)_srcWidth / _srcHeight;

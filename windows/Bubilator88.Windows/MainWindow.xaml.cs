@@ -49,6 +49,17 @@ public sealed partial class MainWindow : Window
     private string _videoFilter = "None";   // None/Linear/Bicubic/CRT/xBRZ/Enhanced
     private bool _scanlineEnabled;           // scanline overlay (None/Linear/Bicubic only)
 
+    // Settings-dialog–backed preferences (mirror the macOS Settings tabs; only
+    // the ones with a working Windows backend are present). Persisted alongside
+    // the menu-driven settings in settings.json.
+    private string _screenshotFormat = "png";        // png/jpeg/heic
+    private bool _fullscreenIntegerScaling;           // pixel-perfect fullscreen letterbox
+    private int _audioBufferMs = 100;                 // adaptive-rate target latency (20–500)
+    private string _keyboardLayout = "auto";          // auto/jis/us
+    private bool _arrowKeysAsNumpad;
+    private bool _numberRowAsNumpad;
+    private bool _wasdAsNumpad;
+
     // Boot configuration (mirrors the former combo/toggle state).
     private int _bootModeIndex;
     private bool _clock8MHz = true;
@@ -92,6 +103,7 @@ public sealed partial class MainWindow : Window
         // Size and lock the window BEFORE App.Activate() shows it, so it doesn't
         // briefly flash at the default size before snapping to the saved scale.
         LoadSettings();
+        ApplyKeyboardConfig();   // push layout + numpad-emulation prefs to KeyMapping
         ConfigureFixedSize();
         uint dpi = GetDpiForWindow(WindowNative.GetWindowHandle(this));
         ResizeWindow(_windowScale, dpi > 0 ? dpi / 96.0 : 1.0);
@@ -106,6 +118,7 @@ public sealed partial class MainWindow : Window
         {
             _host = new EmulatorHost();
             _host.LoadRoms();
+            _host.AudioBufferMs = _audioBufferMs;   // adaptive-rate target latency
 
             LoadRecent();
 
@@ -792,6 +805,13 @@ public sealed partial class MainWindow : Window
         public double Volume { get; set; } = 0.5;    // matches macOS default
         public string VideoFilter { get; set; } = "None";  // None/Linear/Bicubic/CRT/xBRZ/Enhanced
         public bool ScanlineEnabled { get; set; }    // matches macOS default (off)
+        public string ScreenshotFormat { get; set; } = "png";   // png/jpeg/heic
+        public bool FullscreenIntegerScaling { get; set; }       // matches macOS default (off)
+        public int AudioBufferMs { get; set; } = 100;            // matches macOS default
+        public string KeyboardLayout { get; set; } = "auto";     // auto/jis/us
+        public bool ArrowKeysAsNumpad { get; set; }
+        public bool NumberRowAsNumpad { get; set; }
+        public bool WasdAsNumpad { get; set; }
     }
 
     private double _volume = 0.5;
@@ -813,6 +833,13 @@ public sealed partial class MainWindow : Window
             _volume = Math.Clamp(s.Volume, 0.0, 1.0);
             _videoFilter = NormalizeFilter(s.VideoFilter);
             _scanlineEnabled = s.ScanlineEnabled;
+            _screenshotFormat = NormalizeScreenshotFormat(s.ScreenshotFormat);
+            _fullscreenIntegerScaling = s.FullscreenIntegerScaling;
+            _audioBufferMs = Math.Clamp(s.AudioBufferMs, 20, 500);
+            _keyboardLayout = NormalizeKeyboardLayout(s.KeyboardLayout);
+            _arrowKeysAsNumpad = s.ArrowKeysAsNumpad;
+            _numberRowAsNumpad = s.NumberRowAsNumpad;
+            _wasdAsNumpad = s.WasdAsNumpad;
         }
         catch { /* corrupt or unreadable — keep defaults */ }
     }
@@ -831,6 +858,13 @@ public sealed partial class MainWindow : Window
                 Volume = _volume,
                 VideoFilter = _videoFilter,
                 ScanlineEnabled = _scanlineEnabled,
+                ScreenshotFormat = _screenshotFormat,
+                FullscreenIntegerScaling = _fullscreenIntegerScaling,
+                AudioBufferMs = _audioBufferMs,
+                KeyboardLayout = _keyboardLayout,
+                ArrowKeysAsNumpad = _arrowKeysAsNumpad,
+                NumberRowAsNumpad = _numberRowAsNumpad,
+                WasdAsNumpad = _wasdAsNumpad,
             }));
         }
         catch { /* best effort */ }
@@ -892,6 +926,9 @@ public sealed partial class MainWindow : Window
             ConfigureFixedSize();
             ApplyWindowScale(_windowScale, persist: false);
         }
+        // Pixel-perfect letterboxing only applies in fullscreen (windowed scales
+        // are already exact integer multiples).
+        ApplyIntegerScaling();
     }
 
     // MARK: - Video filter (mirrors the macOS VideoFilter / scanline settings)
@@ -901,6 +938,12 @@ public sealed partial class MainWindow : Window
 
     private static string NormalizeFilter(string? s)
         => Array.Exists(FilterTags, t => t == s) ? s! : "None";
+
+    private static string NormalizeScreenshotFormat(string? s)
+        => s is "png" or "jpeg" or "heic" ? s : "png";
+
+    private static string NormalizeKeyboardLayout(string? s)
+        => s is "auto" or "jis" or "us" ? s : "auto";
 
     private static ScreenFilter ParseFilter(string tag) => tag switch
     {
@@ -1003,8 +1046,12 @@ public sealed partial class MainWindow : Window
         if (_host is null) return;
         var (pixels, cw, ch) = CaptureFrame();   // snapshot (filtered) before awaits
 
+        // Honor the screenshot format chosen in Settings (PNG/JPEG/HEIC), matching
+        // the macOS Settings screenshot-format picker.
+        var (_, ext, label) = ImageCodec.FormatInfo(_screenshotFormat);
+
         var picker = new FileSavePicker { SuggestedStartLocation = PickerLocationId.PicturesLibrary };
-        picker.FileTypeChoices.Add("PNG Image", new List<string> { ".png" });
+        picker.FileTypeChoices.Add(label, new List<string> { ext });
         picker.SuggestedFileName = $"Bubilator88-{DateTime.Now:yyyyMMdd-HHmmss}";
         InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
 
@@ -1012,8 +1059,8 @@ public sealed partial class MainWindow : Window
         if (file is null) return;
         try
         {
-            byte[] png = await ImageCodec.EncodePngAsync(pixels, cw, ch);
-            await File.WriteAllBytesAsync(file.Path, png);
+            byte[] data = await ImageCodec.EncodeAsync(pixels, cw, ch, _screenshotFormat);
+            await File.WriteAllBytesAsync(file.Path, data);
             ShowToast("Screenshot saved");
         }
         catch (Exception ex) { ShowError($"Screenshot failed: {ex.Message}"); }

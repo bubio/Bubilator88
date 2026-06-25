@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Windows.System;
 
 namespace Bubilator88.Windows;
@@ -11,11 +12,39 @@ namespace Bubilator88.Windows;
 /// fresh authoring for Windows VirtualKey codes (the macOS Carbon keyCode table
 /// in Input/KeyMapping.swift is a different code space and is NOT reused).
 ///
-/// US-ANSI layout assumed for v1; JIS symbol overrides are a later-phase task.
+/// The base map is US-ANSI. JIS symbol overrides and the numpad-emulation
+/// remaps mirror the macOS <c>KeyMapping.pc88Key</c> resolution order
+/// (numpad overrides → JIS overrides → base map), driven by the Settings dialog.
 /// </summary>
 internal static class KeyMapping
 {
     public readonly record struct MatrixKey(int Row, int Bit);
+
+    /// <summary>Keyboard layout selection (mirrors the macOS KeyboardLayout enum).</summary>
+    public enum KbLayout { Auto, Jis, Us }
+
+    // Live configuration pushed from the Settings dialog (MainWindow.ApplyKeyboardConfig).
+    public static KbLayout Layout { get; set; } = KbLayout.Auto;
+    public static bool ArrowKeysAsNumpad { get; set; }
+    public static bool NumberRowAsNumpad { get; set; }
+    public static bool WasdAsNumpad { get; set; }
+
+    [DllImport("user32.dll")]
+    private static extern int GetKeyboardType(int nTypeFlag);
+
+    /// <summary>
+    /// The layout actually in effect: when <see cref="Layout"/> is
+    /// <see cref="KbLayout.Auto"/>, detect a Japanese (JIS) keyboard via
+    /// <c>GetKeyboardType(0) == 7</c> (the Win32 Japanese-keyboard type), else
+    /// assume US. Mirrors the macOS KeyboardLayoutDetector.effectiveLayout.
+    /// </summary>
+    public static KbLayout EffectiveLayout()
+        => Layout switch
+        {
+            KbLayout.Jis => KbLayout.Jis,
+            KbLayout.Us => KbLayout.Us,
+            _ => GetKeyboardType(0) == 7 ? KbLayout.Jis : KbLayout.Us,
+        };
 
     private static readonly Dictionary<VirtualKey, MatrixKey> Map = new()
     {
@@ -92,6 +121,71 @@ internal static class KeyMapping
         [(VirtualKey)0xC0] = new(2, 0),  // VK_OEM_3      '@' / '`' → PC88 @
     };
 
+    // MARK: - Numpad emulation overrides (mirror macOS arrow/number/WASD → numpad)
+
+    // Arrow keys → numpad direction cluster (kp8/2/4/6).
+    private static readonly Dictionary<VirtualKey, MatrixKey> ArrowToNumpad = new()
+    {
+        [VirtualKey.Up] = new(1, 0),     // ↑ → kp8
+        [VirtualKey.Down] = new(0, 2),   // ↓ → kp2
+        [VirtualKey.Left] = new(0, 4),   // ← → kp4
+        [VirtualKey.Right] = new(0, 6),  // → → kp6
+    };
+
+    // Number row 0-9 → numpad 0-9.
+    private static readonly Dictionary<VirtualKey, MatrixKey> NumberToNumpad = new()
+    {
+        [VirtualKey.Number0] = new(0, 0), [VirtualKey.Number1] = new(0, 1),
+        [VirtualKey.Number2] = new(0, 2), [VirtualKey.Number3] = new(0, 3),
+        [VirtualKey.Number4] = new(0, 4), [VirtualKey.Number5] = new(0, 5),
+        [VirtualKey.Number6] = new(0, 6), [VirtualKey.Number7] = new(0, 7),
+        [VirtualKey.Number8] = new(1, 0), [VirtualKey.Number9] = new(1, 1),
+    };
+
+    // WASD → numpad direction cluster (kp8/4/2/6).
+    private static readonly Dictionary<VirtualKey, MatrixKey> WasdToNumpad = new()
+    {
+        [VirtualKey.W] = new(1, 0),  // W → kp8
+        [VirtualKey.A] = new(0, 4),  // A → kp4
+        [VirtualKey.S] = new(0, 2),  // S → kp2
+        [VirtualKey.D] = new(0, 6),  // D → kp6
+    };
+
+    // MARK: - JIS symbol overrides
+    //
+    // On a Windows JIS (106/109) keyboard a handful of OEM keys carry a different
+    // virtual-key code / keycap than US-ANSI, so the base (US) map would send the
+    // wrong PC-8801 symbol. These overrides make the keycap match what the PC-88
+    // receives (the JIS analogue of macOS jisSymbolOverrides). Keys whose JIS VK
+    // already coincides with the US map (@ [ ] ¥ , . / -) need no override.
+    //
+    //   VK              JIS keycap   PC88 target
+    //   VK_OEM_1  0xBA  ':'          colon      (US sends ';')
+    //   VK_OEM_PLUS 0xBB ';'         semicolon  (US sends '^')
+    //   VK_OEM_7  0xDE  '^'          caret      (US sends ':')
+    //   VK_OEM_102 0xE2 '\' / '_'    underscore (unmapped in US base)
+    private static readonly Dictionary<VirtualKey, MatrixKey> JisOverrides = new()
+    {
+        [(VirtualKey)0xBA] = new(7, 2),  // ':'  → PC88 colon
+        [(VirtualKey)0xBB] = new(7, 3),  // ';'  → PC88 semicolon
+        [(VirtualKey)0xDE] = new(5, 6),  // '^'  → PC88 caret
+        [(VirtualKey)0xE2] = new(7, 7),  // '\_' → PC88 underscore
+    };
+
+    /// <summary>
+    /// Resolve a Windows virtual key to a PC-8801 matrix position. Resolution
+    /// order matches macOS: numpad-emulation overrides (when enabled), then the
+    /// JIS symbol overrides (when the effective layout is JIS), then the US base
+    /// map.
+    /// </summary>
     public static bool TryMap(VirtualKey key, out MatrixKey matrix)
-        => Map.TryGetValue(key, out matrix);
+    {
+        if (ArrowKeysAsNumpad && ArrowToNumpad.TryGetValue(key, out matrix)) return true;
+        if (NumberRowAsNumpad && NumberToNumpad.TryGetValue(key, out matrix)) return true;
+        if (WasdAsNumpad && WasdToNumpad.TryGetValue(key, out matrix)) return true;
+
+        if (EffectiveLayout() == KbLayout.Jis && JisOverrides.TryGetValue(key, out matrix)) return true;
+
+        return Map.TryGetValue(key, out matrix);
+    }
 }

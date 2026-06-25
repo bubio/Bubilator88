@@ -17,6 +17,8 @@
         <muxc:MenuBar Grid.Row="0"
                       Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}">
             <muxc:MenuBarItem Title="Emulator">
+                <MenuFlyoutItem Text="Settings…" Click="OnSettings" />
+                <MenuFlyoutSeparator />
                 <MenuFlyoutItem x:Name="PauseResumeItem" Text="Pause" Click="OnPauseResume">
                     <MenuFlyoutItem.KeyboardAccelerators>
                         <KeyboardAccelerator Modifiers="Control" Key="R" />

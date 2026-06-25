@@ -15,12 +15,18 @@ internal sealed unsafe class EmulatorHost : IDisposable
     public const int ScreenHeight = 400;
     private const int PixelBytes = ScreenWidth * ScreenHeight * 4;
     private const int AudioMaxPairs = 4096;
-    // Target output latency for adaptive rate control (~40 ms = half of this).
-    private const int AudioTargetCapacityPairs = (int)(SampleRate * 0.08);
     private const int SampleRate = 44100;
 
     /// <summary>Peak |sample| of the most recent audio drain (0..1), for a UI level meter.</summary>
     public float LastPeak { get; private set; }
+
+    /// <summary>
+    /// Target output-buffer latency in milliseconds (20–500) for the adaptive
+    /// rate control — the Windows analogue of the macOS audio ring-buffer size
+    /// (Settings.audioBufferMs). Lower values cut latency but risk crackling;
+    /// the default (100 ms) matches macOS. Adjusted live from the Settings dialog.
+    /// </summary>
+    public int AudioBufferMs { get; set; } = 100;
 
     private IntPtr _handle;
 
@@ -278,8 +284,10 @@ internal sealed unsafe class EmulatorHost : IDisposable
             LastPeak *= 0.85f;
         }
 
-        // Keep XAudio2's queued latency near target so producer/consumer don't drift.
-        NativeApi.b88_audio_rate_control(_handle, sink.QueuedPairs, AudioTargetCapacityPairs);
+        // Keep XAudio2's queued latency near the configured target so the
+        // producer (60 Hz frame loop) and consumer (44.1 kHz device) don't drift.
+        int targetPairs = (int)(SampleRate * (Math.Clamp(AudioBufferMs, 20, 500) / 1000.0));
+        NativeApi.b88_audio_rate_control(_handle, sink.QueuedPairs, targetPairs);
         return pairs;
     }
 
