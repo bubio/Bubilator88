@@ -1,3 +1,8 @@
+---
+name: boottest
+description: BootTester でディスクイメージ (D88) の起動テストを実行し、状態サマリとスクリーンショットを報告する。ゲームの起動確認・起動不良の一次調査に使う。
+---
+
 BootTester でディスクイメージを実行して結果を報告せよ。
 
 引数: $ARGUMENTS

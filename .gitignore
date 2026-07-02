@@ -36,9 +36,13 @@ __pycache__/
 .vscode/
 
 # Claude Code (.claude/)
-.claude/skills/
+.claude/skills/swiftui-pro
 .claude/settings.local.json
+.claude/.last-regression-pass
 skills-lock.json
+
+# .claude/skills/build/ collides with the global "build/" rule above
+!.claude/skills/build/
 
 # Codex (.agents/)
 .agents/skills/
