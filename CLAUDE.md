@@ -33,6 +33,7 @@ Refer to @docs/ARCHITECTURE.md for the full design. Summary:
 - **T-state based timing**: Machine orchestrates all progression; devices cannot advance independently.
 - **Bus protocol**: CPU communicates only through memRead/memWrite/ioRead/ioWrite. Unimplemented I/O ports return 0xFF.
 - **Key docs**: @docs/KNOWN_PITFALLS.md (regression lessons), @docs/BOOTTESTER.md (CLI test harness), @docs/PERSISTENCE.md (永続化データ一覧)
+- **人間向け AI 活用ガイド**: docs/AI_WORKFLOW.md
 
 ## Development Rules
 
@@ -43,3 +44,4 @@ Refer to @docs/ARCHITECTURE.md for the full design. Summary:
 - BIOS files are never bundled — loaded from `~/Library/Application Support/Bubilator88/`
 - No additional LSI-level classes unless explicitly justified
 - **Persist reusable scripts** — when creating Python/Shell scripts for analysis, conversion, or debugging, save reusable ones to `scripts/` rather than regenerating each time
+- **EmulatorCore/Sources を変更したら、コミット前に `/regression` (scripts/regression_compare.py) を実行** — true regression があれば ship しない
