@@ -1048,20 +1048,7 @@ public sealed partial class MainWindow : Window
     }
 
     // MARK: - Help menu
-
-    private async void OnAbout(object sender, RoutedEventArgs e)
-    {
-        var dialog = new ContentDialog
-        {
-            Title = "Bubilator88",
-            Content = "NEC PC-8801-FA behavioral emulator\n" +
-                      "Windows native shell (C# + WinUI 3)\n\n" +
-                      "Emulation core: Swift (Bubilator88C.dll)",
-            CloseButtonText = "OK",
-            XamlRoot = Root.XamlRoot,
-        };
-        await ShowDialogAsync(dialog);
-    }
+    // OnAbout lives in MainWindow.AboutDialog.cs (mirrors the Settings dialog split).
 
     // MARK: - Control menu (CPU speed, screenshot, save states)
 
