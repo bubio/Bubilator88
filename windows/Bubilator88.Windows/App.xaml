@@ -2,12 +2,49 @@
 <Application
     x:Class="Bubilator88.Windows.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    RequestedTheme="Dark">
+    <!--
+        RequestedTheme="Dark" at the Application level (not just on the
+        MainWindow.xaml "Root" grid) so ContentDialog popups (About, Settings,
+        Save/Load State) pick up the dark theme too — a ContentDialog attaches
+        to the XamlRoot's popup layer, which is a sibling of "Root" rather than
+        a visual descendant of it, so it doesn't inherit Root's RequestedTheme
+        and would otherwise fall back to the system (light) theme.
+
+        The accent-color overrides below match the macOS app's AccentColor
+        asset (Resources/Assets.xcassets/AccentColor.colorset, #A3C9A6) so the
+        Windows tint (hyperlinks, checked radio/toggle items, dialog default
+        button, slider fill) matches the macOS build. Light/Dark1-3 are the
+        standard +/-15%/30%/45% blend toward white/black that WinUI expects
+        alongside the base SystemAccentColor.
+    -->
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="SystemAccentColor">#FFA3C9A6</Color>
+                    <Color x:Key="SystemAccentColorLight1">#FFB1D1B3</Color>
+                    <Color x:Key="SystemAccentColorLight2">#FFBFD9C1</Color>
+                    <Color x:Key="SystemAccentColorLight3">#FFCCE1CE</Color>
+                    <Color x:Key="SystemAccentColorDark1">#FF8BAB8D</Color>
+                    <Color x:Key="SystemAccentColorDark2">#FF728D74</Color>
+                    <Color x:Key="SystemAccentColorDark3">#FF5A6F5B</Color>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="SystemAccentColor">#FFA3C9A6</Color>
+                    <Color x:Key="SystemAccentColorLight1">#FFB1D1B3</Color>
+                    <Color x:Key="SystemAccentColorLight2">#FFBFD9C1</Color>
+                    <Color x:Key="SystemAccentColorLight3">#FFCCE1CE</Color>
+                    <Color x:Key="SystemAccentColorDark1">#FF8BAB8D</Color>
+                    <Color x:Key="SystemAccentColorDark2">#FF728D74</Color>
+                    <Color x:Key="SystemAccentColorDark3">#FF5A6F5B</Color>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
