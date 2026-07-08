@@ -138,27 +138,56 @@ Swift toolchain を導入して実ビルド。**コア→DLL パイプライン�
 
 - キー入力・`.d88` ゲーム起動の実操作確認、§4 の各機能移植(フィルタ/コントローラ/マウス/セーブステート/AI/OCR)。
 
+### フル機能移植 完了(2026-06-25)
+
+vertical slice 以降、§4 マッピングの大半を実装。シェルは macOS とほぼパリティ
+(残りは §4 で「未実装」とした周辺機能のみ)。実装は `windows/Bubilator88.Windows/`、
+ビルド/チェックアウト/モデル生成の手順は `windows/README.md`。
+
+- **映像**: D3D11 で None/Linear/Bicubic/CRT/xBRZ/Enhanced/**AI** の7フィルタ + スキャンライン。
+  ウィンドウ ×1/×2/×4(固定・永続)、フルスクリーン整数スケーリング、レターボックス。
+- **AI アップスケール**: CoreML の代わりに **ONNX Runtime + DirectML** で Real-ESRGAN x2。
+  非同期ダブルバッファ、`generation` で stale 破棄、未準備/モデル不在/DirectML 不在時は
+  Bicubic フォールバック(`AiUpscaler.cs`、macOS の state machine と同型)。FPS 表示は AI 時に
+  推論スループットを報告(macOS パリティ)。
+- **音声**: XAudio2 リングバッファ + 適応レート制御、既定デバイスフォーマット追従、リズム音源サンプル読込。
+- **ディスク**: マルチイメージ D88、Drive 1/2/1&2、ライトプロテクト、Recent Files、イメージ選択ダイアログ。
+- **入力**: VirtualKey→マトリクス(US/JIS 記号、矢印/数字行/WASD テンキー擬似)。メニューの
+  キーボードショートカット(画面が文字キーを食う問題を `OnKeyDown` で chord ディスパッチして解決)。
+  メニュー閉/音量スライダー操作後にエミュビューへフォーカス復帰。
+- **状態保存**: セーブステート(スロット/クイック+メタ+サムネイル)、スクリーンショット(PNG/JPEG/HEIC)、CPU 早送り ×1〜×16。
+- **設定**: General/Display/Audio/Keyboard タブを持つ設定ダイアログ(`settings.json` 即時永続化)。
+- **テスト基盤**: `windows/Bubilator88.Windows.Tests`(xUnit)。self-contained WinUI exe を
+  ProjectReference できないため、UI 非依存の純ロジック(`KeyMapping`/`PixelMath`)をソースリンクして検証。
+
+#### Git LFS
+
+AI モデル `windows/Bubilator88.Windows/native/RealESRGAN_x2.onnx`(~64MB)はモデル同梱 EXE の
+ビルドに必要なため**追跡対象**だが、git 履歴肥大を避けて **Git LFS** で管理する
+(`.gitattributes`: `*.onnx filter=lfs`)。clone 後は `git lfs pull` で実体化が必要
+(未 pull はポインタ ~133B)。取得・生成手順は `windows/README.md` 参照。
+
 ---
 
 ## 4. 機能ごとの移植マッピング
 
-| 現状 (macOS) | Windows ネイティブ | 難易度 |
+| 現状 (macOS) | Windows ネイティブ | 状況 |
 |---|---|---|
-| EmulatorCore (Swift) | **そのまま**(Swift → DLL, `@_cdecl` C ABI) | ★ 実機 build 検証要 |
-| Metal + `Display.metal` | Direct3D 11 + HLSL(passthrough nearest) | ★ 容易 |
-| AVAudioEngine リングバッファ | WASAPI または XAudio2(リング部のロジックは流用) | ★ 容易 |
-| GameController (GCController) + haptics | XInput / Windows.Gaming.Input(振動含む) | ★★ |
-| KeyEventView + KeyMapping | Win32 `WM_KEYDOWN` / Raw Input ※マッピングテーブル全書き換え | ★★ |
-| マウスロック (`CGAssociateMouseAndMouseCursorPosition`) | `ClipCursor` + RAWINPUT 相対デルタ | ★★ |
-| xBRZ GPU シェーダ | HLSL compute シェーダへ移植 | ★★ |
-| AIUpscaler (CoreML, RealESRGAN/SRVGGNet) | ONNX Runtime + DirectML(モデルを ONNX 変換) | ★★★ |
-| OCR 翻訳 (Vision) | Windows.Media.Ocr | ★★ |
-| セーブステート / D88 | コア内なので**移植不要** | — |
-| Apple Help Book / 空間オーディオ / ヘッドトラッキング | 削るか別実装(任意) | — |
+| EmulatorCore (Swift) | **そのまま**(Swift → DLL, `@_cdecl` C ABI) | ✅ 実機 build + 760 test 検証済 |
+| Metal + `Display.metal` | Direct3D 11 + HLSL | ✅ 7フィルタ + スキャンライン |
+| AVAudioEngine リングバッファ | XAudio2(リング部のロジックは流用) | ✅ 適応レート制御込み |
+| KeyEventView + KeyMapping | WinUI `KeyDown` / VirtualKey ※マッピングテーブル全書き換え | ✅ US/JIS + テンキー擬似 + メニュー chord |
+| xBRZ GPU シェーダ | HLSL シェーダへ移植 | ✅ |
+| AIUpscaler (CoreML, RealESRGAN/SRVGGNet) | ONNX Runtime + DirectML(モデルを ONNX 変換) | ✅ Real-ESRGAN x2(Quality)。Balanced/Fast は将来 |
+| セーブステート / D88 / スクショ / 早送り | コア内 + ホスト I/O | ✅ |
+| GameController (GCController) + haptics | XInput / Windows.Gaming.Input(振動含む) | ⬜ 未実装 |
+| マウスロック (`CGAssociateMouseAndMouseCursorPosition`) | `ClipCursor` + RAWINPUT 相対デルタ | ⬜ 未実装 |
+| OCR 翻訳 (Vision) | Windows.Media.Ocr | ⬜ 未実装 |
+| Apple Help Book / 空間オーディオ / ヘッドトラッキング / FDD音 / 録画 | 削るか別実装(任意) | ⬜ 未実装 |
 
-**「全部は無理でも近いものに」**は妥当な見立て。コア・描画・音・ディスク・セーブステートは
-高再現で移植でき、CoreML アップスケールと OCR 翻訳と空間オーディオが
-「Windows なりの別実装 or 省略」枠になる。
+**「全部は無理でも近いものに」**は妥当な見立てだった。コア・描画・音・ディスク・セーブステート・
+AI アップスケールまで高再現で移植済み。残るは ゲームコントローラ / マウスロック / OCR 翻訳 /
+空間オーディオ等の「Windows なりの別実装 or 省略」枠のみ。
 
 ---
 
