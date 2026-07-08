@@ -111,4 +111,11 @@ internal static unsafe partial class NativeApi
 
     [LibraryImport(Dll)]
     public static partial void b88_disk_access(IntPtr handle, int* out0, int* out1);
+
+    // Distinct seek-step (COUNT, since several steps can land in one sampled
+    // frame) / read-access (0/1 pulse) events per drive, for the two
+    // synthesized FDD sounds (mechanical click vs. buzz) — see b88_disk_access
+    // for the combined flag the status-bar LEDs use instead.
+    [LibraryImport(Dll)]
+    public static partial void b88_fdd_sound_events(IntPtr handle, int* seek0, int* seek1, int* access0, int* access1);
 }

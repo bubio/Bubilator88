@@ -36,6 +36,7 @@ public sealed partial class MainWindow : Window
     private EmulatorHost? _host;
     private D3DScreen? _screen;
     private XAudioSink? _audio;
+    private FddSound? _fddSound;
 
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private double _accumulator;
@@ -59,6 +60,9 @@ public sealed partial class MainWindow : Window
     private bool _arrowKeysAsNumpad;
     private bool _numberRowAsNumpad;
     private bool _wasdAsNumpad;
+    private bool _fddSoundEnabled = true;             // matches macOS Settings.fddSound default
+    private int _fddSoundVolumeLevel = 2;             // 0=small 1=medium 2=large (matches macOS default)
+    private string _fddSoundDeviceId = "";             // "" = System Default; matches macOS fddSoundDeviceUID
 
     // Boot configuration (mirrors the former combo/toggle state).
     private int _bootModeIndex;
@@ -87,7 +91,8 @@ public sealed partial class MainWindow : Window
     private double _fpsAccum;
     private long _aiLastCompleted;   // throughput baseline for the AI-filter FPS path
 
-    private readonly SolidColorBrush _ledOn = new(Microsoft.UI.Colors.LimeGreen);
+    // Matches the macOS status-bar drive LED (Color.red / Color.gray in ContentView.swift).
+    private readonly SolidColorBrush _ledOn = new(Microsoft.UI.Colors.Red);
     private readonly SolidColorBrush _ledOff = new(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF));
     // Run-state LED (mirrors the macOS status-bar dot): green = running, gray = paused.
     private readonly SolidColorBrush _runLed = new(Microsoft.UI.Colors.LimeGreen);
@@ -172,6 +177,10 @@ public sealed partial class MainWindow : Window
             _audio.SetVolume((float)_volume);
             VolumeSlider.Value = _volume * 100.0;
 
+            _fddSound = new FddSound();
+            _fddSound.Volume = FddSound.VolumeForLevel(_fddSoundVolumeLevel);
+            if (_fddSoundEnabled) _fddSound.Start(_fddSoundDeviceId);
+
             _running = true;
             _lastTick = _clock.Elapsed.TotalSeconds;
             CompositionTarget.Rendering += OnRendering;
@@ -203,9 +212,11 @@ public sealed partial class MainWindow : Window
             // native handle / D3D / XAudio resources don't leak.
             _running = false;
             CompositionTarget.Rendering -= OnRendering;
+            _fddSound?.Dispose();
             _audio?.Dispose();
             _screen?.Dispose();
             _host?.Dispose();
+            _fddSound = null;
             _audio = null;
             _screen = null;
             _host = null;
@@ -311,6 +322,7 @@ public sealed partial class MainWindow : Window
             _host.Render(blinkCursor: true);   // render once per draw, not per emulation frame
             _screen.Present(_host.Pixels, _host.Is400Line);
             SampleAndDecayLeds();
+            SampleFddSound();
             _fpsFrames += frames;
         }
         UpdateFps(dt);
@@ -323,6 +335,29 @@ public sealed partial class MainWindow : Window
         if (d1) _drive1Led = LedHoldTicks;
         UpdateLed(Drive0Led, ref _drive0Led);
         UpdateLed(Drive1Led, ref _drive1Led);
+    }
+
+    /// Sample the per-drive FDD seek-step / read-access pulses and play the
+    /// matching synthesized sound (mirrors the macOS FDC callback wiring in
+    /// EmulatorViewModel.init()).
+    // A single sampled (~16.7ms) frame can contain several seek steps (step
+    // rate can be as low as ~2ms — see UPD765A.srtClocks, and OnRendering's
+    // catch-up loop can bundle up to MaxCatchUpFrames logical frames into one
+    // sample). Cap the replay burst at XAudio2's own hard limit
+    // (XAUDIO2_MAX_QUEUED_BUFFERS = 64 per source voice) minus a small margin,
+    // rather than an arbitrary lower number — this is the largest burst the
+    // voice can actually hold, so it only truncates when XAudio2 itself would
+    // have refused the buffer anyway.
+    private const int MaxSeekClicksPerSample = 60;
+
+    private void SampleFddSound()
+    {
+        if (_fddSound is not { IsEnabled: true } sound) return;
+        _host!.SampleFddSoundEvents(out int seek0, out int seek1, out bool access0, out bool access1);
+        for (int i = 0; i < Math.Min(seek0, MaxSeekClicksPerSample); i++) sound.PlaySeekStep(0);
+        for (int i = 0; i < Math.Min(seek1, MaxSeekClicksPerSample); i++) sound.PlaySeekStep(1);
+        if (access0) sound.PlayReadAccess(0);
+        if (access1) sound.PlayReadAccess(1);
     }
 
     private void UpdateLed(Ellipse led, ref int counter)
@@ -366,6 +401,20 @@ public sealed partial class MainWindow : Window
         _paused = !_paused;
         PauseResumeItem.Text = _paused ? "Resume" : "Pause";
         RunStateLed.Fill = _paused ? _pausedLed : _runLed;
+
+        // Mirrors macOS's EmulatorViewModel.stop()/start(), which tear down and
+        // rebuild fddSound on every pause/resume rather than leaving it idling.
+        if (_fddSound is not null)
+        {
+            if (_paused)
+            {
+                _fddSound.Stop();
+            }
+            else if (_fddSoundEnabled)
+            {
+                _fddSound.Start(_fddSoundDeviceId);
+            }
+        }
     }
 
     private void OnReset(object sender, RoutedEventArgs e) => ApplyBootConfig(preserveRam: true);
@@ -861,6 +910,9 @@ public sealed partial class MainWindow : Window
         public bool ArrowKeysAsNumpad { get; set; }
         public bool NumberRowAsNumpad { get; set; }
         public bool WasdAsNumpad { get; set; }
+        public bool FddSoundEnabled { get; set; } = true;   // matches macOS Settings.fddSound default
+        public int FddSoundVolumeLevel { get; set; } = 2;   // 0=small 1=medium 2=large
+        public string FddSoundDeviceId { get; set; } = ""; // "" = System Default; matches macOS fddSoundDeviceUID
     }
 
     private double _volume = 0.5;
@@ -889,6 +941,9 @@ public sealed partial class MainWindow : Window
             _arrowKeysAsNumpad = s.ArrowKeysAsNumpad;
             _numberRowAsNumpad = s.NumberRowAsNumpad;
             _wasdAsNumpad = s.WasdAsNumpad;
+            _fddSoundEnabled = s.FddSoundEnabled;
+            _fddSoundVolumeLevel = Math.Clamp(s.FddSoundVolumeLevel, 0, 2);
+            _fddSoundDeviceId = s.FddSoundDeviceId ?? "";
         }
         catch { /* corrupt or unreadable — keep defaults */ }
     }
@@ -914,6 +969,9 @@ public sealed partial class MainWindow : Window
                 ArrowKeysAsNumpad = _arrowKeysAsNumpad,
                 NumberRowAsNumpad = _numberRowAsNumpad,
                 WasdAsNumpad = _wasdAsNumpad,
+                FddSoundEnabled = _fddSoundEnabled,
+                FddSoundVolumeLevel = _fddSoundVolumeLevel,
+                FddSoundDeviceId = _fddSoundDeviceId,
             }));
         }
         catch { /* best effort */ }
@@ -1501,6 +1559,7 @@ public sealed partial class MainWindow : Window
     {
         _running = false;
         CompositionTarget.Rendering -= OnRendering;
+        _fddSound?.Dispose();
         _audio?.Dispose();
         _screen?.Dispose();
         _host?.Dispose();

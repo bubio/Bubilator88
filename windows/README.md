@@ -131,6 +131,9 @@ dotnet test windows\Bubilator88.Windows.Tests\Bubilator88.Windows.Tests.csproj
 - **AI アップスケール**: ONNX Runtime + DirectML で Real-ESRGAN x2(640×400→1280×800)。
   非同期ダブルバッファ、未準備時は Bicubic フォールバック(macOS パリティ)。
 - **音声**: XAudio2 リングバッファ + 適応レート制御。YM2608 リズム音源サンプル読込。音量・バッファ長設定。
+  **FDD アクセス音**(シーク/リード音を合成、ドライブ別ステレオ定位、ステータスバーの赤アクセスランプ)は
+  メイン音声とは別の専用 XAudio2 エンジンで再生し、出力デバイスを個別に選択可能
+  (`NAudio.CoreAudioApi.MMDeviceEnumerator` でデバイス列挙、macOS の `fddSoundDeviceUID` と同じ設計)。
 - **ディスク**: マルチイメージ D88、Drive 1/2/1&2、ライトプロテクト、Recent Files、イメージ選択ダイアログ。
 - **入力**: VirtualKey→マトリクス(US/JIS 記号、矢印/数字行/WASD のテンキー擬似)、
   メニューのキーボードショートカット(Ctrl+R/E/S/L、Ctrl+Shift+C、Ctrl+1/2/3、F11)。
@@ -143,5 +146,5 @@ dotnet test windows\Bubilator88.Windows.Tests\Bubilator88.Windows.Tests.csproj
 - ゲームコントローラ + 触覚フィードバック(XInput / Windows.Gaming.Input)
 - マウスロック(`ClipCursor` + RAWINPUT 相対デルタ)
 - OCR 翻訳オーバーレイ(Windows.Media.Ocr)
-- 空間オーディオ / ヘッドトラッキング、FDD アクセス音、操作スクリプト記録
+- 空間オーディオ / ヘッドトラッキング、操作スクリプト記録
 - Swift ランタイム DLL の配布同梱

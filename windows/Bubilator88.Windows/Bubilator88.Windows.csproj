@@ -36,6 +36,11 @@
     <PackageReference Include="Vortice.DXGI" Version="3.6.*" />
     <PackageReference Include="Vortice.D3DCompiler" Version="3.6.*" />
     <PackageReference Include="Vortice.XAudio2" Version="3.6.*" />
+    <!-- Output-device enumeration for the FDD Sound "Output Device" picker
+         (mirrors macOS AudioDeviceList.swift, which uses CoreAudio directly).
+         Only NAudio.CoreAudioApi.MMDeviceEnumerator is used — no NAudio audio
+         engine/playback code is pulled into the hot path. -->
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
     <!-- AI upscale (Quality / Real-ESRGAN x2). DirectML EP runs the ONNX model on
          any DX12 GPU; the package brings onnxruntime.dll + DirectML.dll into the
          output. Mirrors the macOS CoreML AI filter. -->

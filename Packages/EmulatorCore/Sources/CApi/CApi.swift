@@ -34,7 +34,38 @@ public final class B88Context {
     /// variable-length: RAM + disk images, so the host can't pre-size a buffer).
     var saveStateBlob: [UInt8] = []
 
-    init() {}
+    /// Per-drive FDD sound event counters, sampled + cleared by
+    /// `b88_fdd_sound_events`. Distinct from `SubSystem.diskAccess` (which the
+    /// LED indicator uses) because the host needs to tell a seek step
+    /// (mechanical click) apart from a read/write access (buzz) to play the
+    /// matching synthesized sound — mirrors the macOS `EmulatorViewModel.init()`
+    /// wrapping of `fdc.onSeekStep`/`onDiskAccess`.
+    ///
+    /// `fddSeekCount` is a COUNT, not a boolean: the host only samples once per
+    /// rendered frame (~16.7ms), but a multi-track seek can fire `onSeekStep`
+    /// several times within that window (step rate is as low as ~2ms — see
+    /// `UPD765A.srtClocks`), and macOS plays one discrete click per step with no
+    /// throttling (real drives audibly "rattle" across multiple tracks). Collapsing
+    /// that to a single bool would silently drop steps and make seeks on Windows
+    /// sound like one dull tock instead of a train of clicks. `fddAccessPulse`
+    /// stays a bool because `FddSound.PlayReadAccess`'s 30ms per-drive throttle
+    /// already exceeds one frame's duration, so multiple accesses within a frame
+    /// can never produce more than one audible hit anyway.
+    var fddSeekCount: [Int32] = [0, 0]
+    var fddAccessPulse: [Bool] = [false, false]
+
+    init() {
+        let originalOnSeekStep = machine.subSystem.fdc.onSeekStep
+        machine.subSystem.fdc.onSeekStep = { [weak self] drive, track in
+            originalOnSeekStep?(drive, track)
+            if let self, drive < 2 { self.fddSeekCount[drive] += 1 }
+        }
+        let originalOnDiskAccess = machine.subSystem.fdc.onDiskAccess
+        machine.subSystem.fdc.onDiskAccess = { [weak self] drive in
+            originalOnDiskAccess?(drive)
+            if let self, drive < 2 { self.fddAccessPulse[drive] = true }
+        }
+    }
 }
 
 @inline(__always)
@@ -416,6 +447,27 @@ public func b88_disk_access(_ handle: UnsafeMutableRawPointer?,
     out0?.pointee = (access.count > 0 && access[0]) ? 1 : 0
     out1?.pointee = (access.count > 1 && access[1]) ? 1 : 0
     c.machine.subSystem.diskAccess = [false, false]
+}
+
+/// Read and clear the per-drive FDD *sound* events: seek-step count (mechanical
+/// head movement — a COUNT, since several steps can land in one sampled frame;
+/// see `B88Context.fddSeekCount`) and read/write access (buzz, a 0/1 pulse),
+/// tracked separately from `b88_disk_access` so the host can play the two
+/// distinct synthesized sounds macOS uses (`FDDSound.playSeekStep` /
+/// `playReadAccess`).
+@_cdecl("b88_fdd_sound_events")
+public func b88_fdd_sound_events(_ handle: UnsafeMutableRawPointer?,
+                                 _ seek0: UnsafeMutablePointer<Int32>?,
+                                 _ seek1: UnsafeMutablePointer<Int32>?,
+                                 _ access0: UnsafeMutablePointer<Int32>?,
+                                 _ access1: UnsafeMutablePointer<Int32>?) {
+    guard let c = context(handle) else { return }
+    seek0?.pointee = c.fddSeekCount[0]
+    seek1?.pointee = c.fddSeekCount[1]
+    access0?.pointee = c.fddAccessPulse[0] ? 1 : 0
+    access1?.pointee = c.fddAccessPulse[1] ? 1 : 0
+    c.fddSeekCount = [0, 0]
+    c.fddAccessPulse = [false, false]
 }
 
 // MARK: - Frame compositing (ported from EmulatorViewModel+Rendering.swift)

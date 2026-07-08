@@ -49,8 +49,13 @@ internal sealed unsafe class XAudioSink : IDisposable
         // Forcing 44.1 kHz/stereo here makes XAudio2 produce silence on devices
         // whose mix format differs (e.g. 48 kHz). The source voice stays at
         // 44.1 kHz stereo (the YM2608 format) and XAudio2 sample-rate-converts.
+        //
+        // The mastering voice's Volume is left at its default (1.0); SetVolume
+        // below scales only this source voice instead, matching macOS's
+        // AudioOutput.setVolume (AudioOutput.swift:266), which scales its own
+        // AVAudioEngine's mainMixerNode.outputVolume — a node-scoped control,
+        // not a device-wide one.
         _master = _xaudio.CreateMasteringVoice(0, 0);
-        _master.Volume = 0.6f;
 
         var format = WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, Channels);
         // MaxFrequencyRatio caps SetFrequencyRatio; raise it to the top CPU-speed
@@ -86,8 +91,8 @@ internal sealed unsafe class XAudioSink : IDisposable
         }
     }
 
-    /// <summary>Master output volume (0.0–1.0).</summary>
-    public void SetVolume(float volume) => _master.Volume = Math.Clamp(volume, 0f, 1f);
+    /// <summary>YM2608 output volume (0.0–1.0). Scales this source voice only.</summary>
+    public void SetVolume(float volume) => _source.Volume = Math.Clamp(volume, 0f, 1f);
 
     /// <summary>
     /// Playback-rate multiplier for CPU fast-forward. At speed N the core

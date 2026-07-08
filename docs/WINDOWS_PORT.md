@@ -183,7 +183,8 @@ AI モデル `windows/Bubilator88.Windows/native/RealESRGAN_x2.onnx`(~64MB)は�
 | GameController (GCController) + haptics | XInput / Windows.Gaming.Input(振動含む) | ⬜ 未実装 |
 | マウスロック (`CGAssociateMouseAndMouseCursorPosition`) | `ClipCursor` + RAWINPUT 相対デルタ | ⬜ 未実装 |
 | OCR 翻訳 (Vision) | Windows.Media.Ocr | ⬜ 未実装 |
-| Apple Help Book / 空間オーディオ / ヘッドトラッキング / FDD音 / 録画 | 削るか別実装(任意) | ⬜ 未実装 |
+| FDDSound (AVAudioEngine 別エンジンでの合成シーク/リード音) | XAudio2 の専用エンジン(メイン音声とは別)、出力デバイス個別選択は `NAudio.CoreAudioApi.MMDeviceEnumerator` で列挙 | ✅ 実装済(出力デバイス選択込み) |
+| Apple Help Book / 空間オーディオ / ヘッドトラッキング / 録画 | 削るか別実装(任意) | ⬜ 未実装 |
 
 **「全部は無理でも近いものに」**は妥当な見立てだった。コア・描画・音・ディスク・セーブステート・
 AI アップスケールまで高再現で移植済み。残るは ゲームコントローラ / マウスロック / OCR 翻訳 /

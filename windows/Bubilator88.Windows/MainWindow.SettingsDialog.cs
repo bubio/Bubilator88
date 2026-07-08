@@ -15,7 +15,7 @@ namespace Bubilator88.Windows;
 /// <para>The macOS window has five tabs (General / Display / Audio / Keyboard /
 /// Controller), but most of those settings drive features the Windows native
 /// host doesn't implement yet (controller, mouse, immersive audio, translation,
-/// FDD sound, recording, …). This dialog therefore mirrors the tab layout but
+/// recording, …). This dialog therefore mirrors the tab layout but
 /// surfaces only the preferences that have a working Windows backend. Each
 /// control applies live and persists to settings.json immediately, matching the
 /// macOS bindings (there is no OK/Cancel — just Close).</para>
@@ -116,6 +116,48 @@ public sealed partial class MainWindow
 
         panel.Children.Add(Section("Audio Buffer", new[] { (FrameworkElement)row },
             "Lower values reduce latency but may cause crackling."));
+
+        var fddToggle = Toggle("Enable FDD Sound", _fddSoundEnabled, isOn =>
+        {
+            _fddSoundEnabled = isOn;
+            if (isOn)
+            {
+                _fddSound?.Start(_fddSoundDeviceId);
+            }
+            else
+            {
+                _fddSound?.Stop();
+            }
+            SaveSettings();
+        });
+        var fddVolume = LabeledCombo("Volume",
+            new[] { ("Low", "0"), ("Medium", "1"), ("High", "2") },
+            _fddSoundVolumeLevel.ToString(),
+            tag =>
+            {
+                _fddSoundVolumeLevel = int.Parse(tag);
+                if (_fddSound is not null) _fddSound.Volume = FddSound.VolumeForLevel(_fddSoundVolumeLevel);
+                SaveSettings();
+            });
+
+        // Output-device picker — mirrors macOS's SettingsView "Output Device"
+        // Picker (fddDeviceBinding), which lets FDD sound target a different
+        // physical device than the main YM2608 audio. Populated live each time
+        // the Settings dialog opens, matching the macOS `.task` device refresh.
+        var devices = AudioDeviceList.OutputDevices();
+        var fddDevice = LabeledCombo("Output Device",
+            devices.ConvertAll(d => (d.Name, d.Id)).ToArray(),
+            _fddSoundDeviceId,
+            deviceId =>
+            {
+                _fddSoundDeviceId = deviceId;
+                _fddSound?.ApplyOutputDevice(deviceId);
+                SaveSettings();
+            });
+
+        panel.Children.Add(Section("FDD Sound", new FrameworkElement[] { fddToggle, fddVolume, fddDevice },
+            "Synthesized floppy disk seek and read sounds with stereo drive separation."));
+
         return panel;
     }
 
@@ -215,14 +257,22 @@ public sealed partial class MainWindow
         return grid;
     }
 
+    /// A checkbox bound to an on/off callback — the shared building block
+    /// behind both <see cref="NumpadToggle"/> and standalone toggles like the
+    /// Audio tab's "Enable FDD Sound" checkbox.
+    private static CheckBox Toggle(string label, bool isOn, Action<bool> onToggle)
+    {
+        var check = new CheckBox { Content = label, IsChecked = isOn };
+        check.Checked += (_, _) => onToggle(true);
+        check.Unchecked += (_, _) => onToggle(false);
+        return check;
+    }
+
     /// A checkbox + caption pair for the numpad-emulation toggles.
     private static StackPanel NumpadToggle(string label, string caption, bool isOn, Action<bool> onToggle)
     {
         var panel = new StackPanel { Spacing = 2 };
-        var check = new CheckBox { Content = label, IsChecked = isOn };
-        check.Checked += (_, _) => onToggle(true);
-        check.Unchecked += (_, _) => onToggle(false);
-        panel.Children.Add(check);
+        panel.Children.Add(Toggle(label, isOn, onToggle));
         panel.Children.Add(Caption(caption));
         return panel;
     }

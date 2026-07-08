@@ -173,6 +173,28 @@ internal sealed unsafe class EmulatorHost : IDisposable
     }
 
     /// <summary>
+    /// Sample and clear the per-drive FDD *sound* events — kept distinct from
+    /// <see cref="SampleDiskAccess"/> so the two synthesized sounds
+    /// (<see cref="FddSound"/>) can be triggered independently, matching macOS.
+    /// <paramref name="seek0"/>/<paramref name="seek1"/> are COUNTS: a
+    /// multi-track seek can step several times within one sampled (~16.7ms)
+    /// frame, and macOS plays one click per step with no throttling, so the
+    /// host must replay that many clicks rather than collapsing to one.
+    /// <paramref name="access0"/>/<paramref name="access1"/> stay booleans —
+    /// <see cref="FddSound"/>'s 30ms per-drive throttle already exceeds one
+    /// frame's duration, so a count would never produce more than one hit.
+    /// </summary>
+    public void SampleFddSoundEvents(out int seek0, out int seek1, out bool access0, out bool access1)
+    {
+        int s0 = 0, s1 = 0, a0 = 0, a1 = 0;
+        NativeApi.b88_fdd_sound_events(_handle, &s0, &s1, &a0, &a1);
+        seek0 = s0;
+        seek1 = s1;
+        access0 = a0 != 0;
+        access1 = a1 != 0;
+    }
+
+    /// <summary>
     /// Configure boot mode and reset. Mount disks BEFORE calling so the boot
     /// strap (DIP SW2 bit 3) picks FDD boot when drive 0 is occupied.
     /// </summary>
