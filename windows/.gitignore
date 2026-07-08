@@ -7,3 +7,8 @@ Bubilator88.Windows.Tests/obj/
 # The Swift core DLL is a build output of the EmulatorCore package, copied here
 # by hand (see README.md). Don't commit it.
 Bubilator88.Windows/native/*.dll
+
+# Codex/Claude agent skill installs + dev-session screenshots (not project
+# source). Root .gitignore's ".agents/skills/" is anchored to the repo root
+# so it doesn't reach these nested dirs — cover them here instead.
+.agents/

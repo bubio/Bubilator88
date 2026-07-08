@@ -23,6 +23,7 @@ playground.xcworkspace
 # Swift Package Manager
 .build/
 .swiftpm/xcode/xcuserdata/
+Packages/EmulatorCore/Package.resolved
 
 # macOS
 *.DS_Store
@@ -52,3 +53,9 @@ skills-lock.json
 
 # SwiftUI source folder (not a build dir — override global [Dd]ebug/ rule)
 !Bubilator88/Views/Debug/
+
+# Stray AI-model conversion output when scripts/convert_realesrgan_onnx.py is
+# run from the repo root instead of windows/Bubilator88.Windows/. The tracked
+# copy lives at windows/Bubilator88.Windows/native/RealESRGAN_x2.onnx (LFS).
+/RealESRGAN_x2.onnx
+/RealESRGAN_x2plus.pth
