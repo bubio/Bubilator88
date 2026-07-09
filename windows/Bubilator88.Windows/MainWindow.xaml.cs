@@ -836,18 +836,22 @@ public sealed partial class MainWindow : Window
         // Drive0Label = Drive 1 (index 0).
         Drive1Label.Text = DriveStatusText(1);
         Drive0Label.Text = DriveStatusText(0);
+        Drive1LockIcon.Visibility = _drives[1].Occupied && _drives[1].WriteProtected
+            ? Visibility.Visible : Visibility.Collapsed;
+        Drive0LockIcon.Visibility = _drives[0].Occupied && _drives[0].WriteProtected
+            ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    /// "D2: <name> (i/n) [WP]" for an occupied drive, or "D2: Empty".
+    /// "2: <name>" for an occupied drive, or "2: Empty". Write-protect is
+    /// shown separately via Drive{0,1}LockIcon, not appended to this text.
     private string DriveStatusText(int drive)
     {
-        string tag = $"D{drive + 1}";
+        string tag = $"{drive + 1}";
         var slot = _drives[drive];
         if (!slot.Occupied) return $"{tag}: Empty";
         string label = slot.ImageCount > 1
-            ? $"{slot.ImageNames[slot.CurrentImage]} ({slot.CurrentImage + 1}/{slot.ImageCount})"
+            ? slot.ImageNames[slot.CurrentImage]
             : slot.FileName;
-        if (slot.WriteProtected) label += " [WP]";
         return $"{tag}: {label}";
     }
 
