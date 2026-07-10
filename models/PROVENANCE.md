@@ -15,7 +15,7 @@ records everything needed to regenerate the models — especially the **Fast** a
 ```
 models/
 ├── SRVGGNet_x2_lite.pth   source-of-truth — Fast     (self-trained)   [LFS]
-├── SRVGGNet_x2.pth        source-of-truth — Balanced (recovered)      [LFS]
+├── SRVGGNet_x2.pth        source-of-truth — Balanced (self-trained)   [LFS]
 ├── PROVENANCE.md          this file
 └── onnx/                  shared cross-platform inference artifacts
     ├── SRVGGNet_x2_lite.onnx   Fast      (from SRVGGNet_x2_lite.pth)   [LFS]
@@ -23,21 +23,27 @@ models/
     └── RealESRGAN_x2.onnx      Quality   (regenerable; public weights) [LFS]
 ```
 
-macOS uses the CoreML `.mlmodelc` bundled under `Bubilator88/Resources/`; Windows
-(and a future Linux shell) use `models/onnx/`. The `.pth → CoreML` and `.pth → ONNX`
-paths are two exports of the *same* weights.
+macOS uses the CoreML `.mlmodelc`; Windows (and a future Linux shell) use
+`models/onnx/`. The `.pth → CoreML` and `.pth → ONNX` paths are two exports of the
+*same* weights.
+
+> **Which CoreML model does macOS load?** `AIUpscaler` searches
+> `~/Library/Application Support/Bubilator88/Models/` **before** the bundled
+> `Bubilator88/Resources/` copy. For Balanced the two differ (the bundled Resources
+> copy is a stale earlier model), so the ONNX parity target is the **user's Models/
+> override**, which is what the app actually displays. See "Known bundled-model
+> discrepancy" below.
 
 ## Model architectures
 
 All are x2 super-resolution: 640×400 → 1280×800, RGB, input/output float[0,1] CHW.
-The **skip-connection upsample mode differs per model** and is NOT stored in the
-checkpoint — it is pinned in the converter (`scripts/convert_srvggnet_onnx.py`'s
-`MODELS` registry) and auto-detected from the MIL during recovery.
+The skip-connection upsample mode is NOT stored in the checkpoint — it is pinned in
+the converter (`scripts/convert_srvggnet_onnx.py`'s `MODELS` registry).
 
 | Filter   | Network          | num_feat | num_conv | Skip mode | Params  | Source |
 |----------|------------------|----------|----------|-----------|---------|--------|
 | Fast     | SRVGGNetCompact  | 32       | 12       | bilinear  | 115,756 | self-distilled |
-| Balanced | SRVGGNetCompact  | 64       | 16       | nearest   | 600,652 | self-distilled |
+| Balanced | SRVGGNetCompact  | 64       | 16       | bilinear  | 600,652 | self-distilled |
 | Quality  | RRDBNet (23 blk) | 64       | —        | (n/a)     | ~16.7 M | Real-ESRGAN x2plus (public) |
 
 `num_feat`/`num_conv` are **inferred from the checkpoint weight shapes**
@@ -46,35 +52,39 @@ hard-code them.
 
 ## Origin of each source-of-truth
 
-- **Fast** — `SRVGGNet_x2_lite.pth` is the training checkpoint
-  `SRVGGNet_x2_pc88_lite_final.pth` from the April distillation run (external drive:
-  `/Volumes/CrucialX6/temp/training/`). It reproduces the shipped
-  `SRVGGNet_x2_lite.mlmodelc` to max|diff| 0.0014.
-- **Balanced** — the shipped `SRVGGNet_x2.mlmodelc` was built from an **earlier**
-  training run (CoreML class name `SRVGGNet_x2`, converted before the April run) whose
-  `.pth` **no longer exists on any disk**. `SRVGGNet_x2.pth` here was **recovered from
-  the compiled CoreML model itself** by parsing its MIL graph + fp16 weight blob
-  (`scripts/recover_srvggnet_from_mlmodelc.py`), reproducing it to max|diff| 0.0029.
-  This is exactly the single-point-of-failure the repo now guards against — the model
-  survived only as the compiled artifact.
+Both self-trained models are the **final** checkpoints of the April knowledge-
+distillation run on the external drive (`/Volumes/CrucialX6/temp/training/`), with a
+bilinear skip:
+
+- **Fast** — `SRVGGNet_x2_lite.pth` = `SRVGGNet_x2_pc88_lite_final.pth`. Reproduces the
+  Fast CoreML model macOS loads (bundled `SRVGGNet_x2_lite.mlmodelc`, no override) to
+  max|diff| 0.0014.
+- **Balanced** — `SRVGGNet_x2.pth` = `SRVGGNet_x2_pc88_final.pth`. Reproduces the
+  Balanced CoreML model macOS actually loads (the `Models/` override) to max|diff|
+  0.0024.
 - **Quality** — Real-ESRGAN x2plus public weights (RRDBNet); nothing self-trained.
 
-## DirectML fp16 conditioning (Balanced)
+## Known bundled-model discrepancy (Balanced)
 
-The recovered Balanced weights are badly scaled (max|weight| ~42, peak intermediate
-activation ~413). This renders correctly on macOS CoreML and on the ONNX CPU EP, but
-on Windows **DirectML executes conv in fp16**, where ~400-magnitude activations lose
-the precision the residual network needs to cancel back down to a [0,1] image — so
-Balanced came out as garbage on Windows while Fast/Quality (small activations) were
-fine.
+`Bubilator88/Resources/SRVGGNet_x2.mlmodelc` is a **stale, different** model (an
+earlier training run; differs from `pc88_final` by ~1.07). macOS installs that have
+the `Models/` override (`pc88_final`) never see it, but a fresh install without the
+override would load this older model and NOT match Windows. To make every platform
+consistent, regenerate the bundled Resources copy from `pc88_final` (CoreML export via
+`train_srvggnet.py`'s `convert_to_coreml`, then `xcrun coremlcompiler compile`).
 
-`convert_srvggnet_onnx.py` therefore runs `equalize_activations()` before export: it
-rescales each conv using PReLU's positive-homogeneity (`PReLU(a·x)=a·PReLU(x)`, a>0)
-so intermediate activations become ~O(1) **without changing the output** (bit-for-bit
-equivalent, fp32 rounding only). After equalization Balanced's max|weight| drops to
-~2.1 and peak activation to ~1.3. It is a no-op for already well-scaled models (Fast).
-The committed `.pth` stays the faithful recovered weights; equalization is applied
-only in the ONNX export path.
+`scripts/recover_srvggnet_from_mlmodelc.py` (which reconstructs a `.pth` from a
+compiled `.mlmodelc`'s MIL + weight blob) remains a useful recovery tool, but is not
+needed for the shipped pipeline now that the matching `pc88_final.pth` is on disk.
+
+## Weight conditioning (defensive)
+
+`convert_srvggnet_onnx.py` runs `equalize_activations()` before export: it rescales
+each conv via PReLU positive-homogeneity (`PReLU(a·x)=a·PReLU(x)`, a>0) so
+intermediate activations stay ~O(1) **without changing the output** (bit-for-bit
+equivalent, fp32 rounding only). Both shipped checkpoints are already well-scaled
+(max|weight| < 1), so it is effectively a no-op — kept only as insurance against a
+future ill-conditioned checkpoint under reduced-precision (fp16) execution.
 
 ## How Fast/Balanced were trained (knowledge distillation)
 
@@ -89,9 +99,8 @@ Data pipeline (scripts, in order):
 4. `scripts/train_srvggnet.py` — L1 distillation, random 128px crops + h-flip,
    Adam lr 2e-4, cosine anneal, ~1000 epochs.
 
-> Note: `train_srvggnet.py`'s `SRVGGNetCompact` uses a **bilinear** skip. The shipped
-> Balanced model predates that and used a **nearest** skip; the recovery script and the
-> converter registry account for this per model.
+Both shipped checkpoints use `train_srvggnet.py`'s `SRVGGNetCompact` with its default
+**bilinear** skip.
 
 Training data + intermediate checkpoints live on the external drive (not committed —
 too large): `/Volumes/CrucialX6/temp/{screenshots_filtered,targets,training}`.
@@ -99,7 +108,7 @@ too large): `/Volumes/CrucialX6/temp/{screenshots_filtered,targets,training}`.
 ## Regeneration
 
 Requires a Python env with `torch` (+ `onnx`, `onnxruntime` for ONNX;
-`coremltools` for CoreML/recovery). The training venv used was
+`coremltools` for CoreML/verification). The training venv used was
 `/Volumes/CrucialX6/temp/venv`.
 
 ```bash
@@ -109,30 +118,32 @@ python scripts/convert_srvggnet_onnx.py              # → models/onnx/SRVGGNet_
 # ONNX — Quality (downloads public weights):
 python scripts/convert_realesrgan_onnx.py            # → models/onnx/RealESRGAN_x2.onnx
 
-# Recover a lost source-of-truth from a compiled CoreML model (how SRVGGNet_x2.pth
-# was reconstructed):
+# (tool) Recover a .pth from a compiled .mlmodelc's MIL + weight blob — not used by
+# the shipped pipeline, but kept for reconstructing a lost source-of-truth:
 python scripts/recover_srvggnet_from_mlmodelc.py \
-    --mlmodelc Bubilator88/Resources/SRVGGNet_x2.mlmodelc --output models/SRVGGNet_x2.pth
+    --mlmodelc <path>.mlmodelc --output <out>.pth
 ```
 
 ## Verification (macOS ↔ Windows parity)
 
 `scripts/verify_onnx_coreml.py` feeds one random image through both the ONNX and the
 CoreML form and reports the max/mean pixel diff. Passing (diff within the float16
-budget) is what guarantees the two shells look identical.
+budget) is what guarantees the two shells look identical. **Verify against the
+`.mlmodelc` macOS actually loads** (the `Models/` override for Balanced, not the stale
+bundled Resources copy):
 
 ```bash
 python scripts/verify_onnx_coreml.py \
     --onnx   models/onnx/SRVGGNet_x2.onnx \
-    --coreml Bubilator88/Resources/SRVGGNet_x2.mlmodelc
+    --coreml "$HOME/Library/Application Support/Bubilator88/Models/SRVGGNet_x2.mlmodelc"
 ```
 
-Reference results (seed 0), ONNX vs the **shipped** `.mlmodelc`:
+Reference results (seed 0), ONNX vs the CoreML model macOS loads:
 
-| Filter   | max\|diff\| | mean\|diff\| |
-|----------|-------------|--------------|
-| Fast     | 0.00142     | 0.000201     |
-| Balanced | 0.00289     | 0.000332     |
-| Quality  | 0.00151     | 0.000211     |
+| Filter   | max\|diff\| | target CoreML model |
+|----------|-------------|---------------------|
+| Fast     | 0.00142     | bundled Resources (no override) |
+| Balanced | 0.00236     | user Models/ override (`pc88_final`) |
+| Quality  | 0.00151     | bundled Resources |
 
 All under ~1/255 — pure float16 rounding.

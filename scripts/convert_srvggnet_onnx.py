@@ -19,9 +19,8 @@ and the macOS MultiArray float path in AIUpscaler.swift.
 Requirements:
     pip install torch
 
-The skip-connection upsample mode is NOT stored in the checkpoint and differs per
-model (Fast=bilinear, Balanced=nearest — verified against the shipped CoreML models),
-so it is pinned in the MODELS registry below / passed via --skip-mode.
+The skip-connection upsample mode is NOT stored in the checkpoint; it is pinned in
+the MODELS registry below (both shipped models use bilinear) / passed via --skip-mode.
 
 Usage:
     # Convert both committed checkpoints with their pinned skip modes:
@@ -30,7 +29,7 @@ Usage:
     # Convert a single checkpoint explicitly:
     python scripts/convert_srvggnet_onnx.py \
         --checkpoint models/SRVGGNet_x2.pth \
-        --output models/onnx/SRVGGNet_x2.onnx --skip-mode nearest
+        --output models/onnx/SRVGGNet_x2.onnx --skip-mode bilinear
 
 Output (committed to the repo via Git LFS — nobody else can regenerate these):
     models/onnx/SRVGGNet_x2.onnx       (Balanced, from models/SRVGGNet_x2.pth)
@@ -138,15 +137,12 @@ def equalize_activations(model, seed=0, num_probes=3):
     """Rescale conv weights so intermediate activations are ~O(1) WITHOUT changing
     the output. PReLU is positive-homogeneous (PReLU(a*x) = a*PReLU(x) for a>0), so a
     per-layer scale on each PReLU output can be pushed into the surrounding convs and
-    cancels exactly. This keeps the model mathematically identical to the shipped
-    CoreML model while removing the catastrophic-cancellation precision loss that
-    large-magnitude weights suffer under DirectML's fp16 execution.
+    cancels exactly. This keeps the model mathematically identical while removing the
+    catastrophic-cancellation precision loss that large-magnitude weights can suffer
+    under reduced-precision (e.g. fp16) execution.
 
-    The recovered Balanced model is the motivating case: max|weight| ~42 and peak
-    activation ~413, which renders correctly on CPU/CoreML but collapses to garbage on
-    DirectML (Windows). After equalization max|weight| drops to ~2 and peak activation
-    to ~1, and the output is bit-for-bit equivalent (fp32 rounding only). It is a
-    harmless no-op for already well-scaled models (e.g. Fast, peak ~2)."""
+    A defensive no-op for the shipped models (both are well-scaled April checkpoints,
+    max|weight| < 1), but cheap insurance for any future checkpoint that isn't."""
     import numpy as _np
     body = model.body
     conv_idx = [i for i in range(len(body))
@@ -242,15 +238,16 @@ def convert_one(checkpoint_path, output_path, skip_mode='bilinear'):
 
 
 # Source-of-truth registry: (checkpoint, output ONNX, skip_mode). The skip mode is
-# NOT stored in the checkpoint, so it is pinned here per model (Fast was trained with
-# a bilinear skip, Balanced with a nearest skip — verified against the shipped
-# CoreML models). Both .pth live in models/ (Git LFS):
-#   SRVGGNet_x2_lite.pth = the Fast training checkpoint (SRVGGNet_x2_pc88_lite_final)
-#   SRVGGNet_x2.pth      = weights recovered from the shipped Balanced .mlmodelc
-#                          (see recover_srvggnet_from_mlmodelc.py)
+# NOT stored in the checkpoint, so it is pinned here per model. Both are April
+# knowledge-distillation checkpoints (bilinear skip) and live in models/ (Git LFS):
+#   SRVGGNet_x2_lite.pth = SRVGGNet_x2_pc88_lite_final  (Fast)
+#   SRVGGNet_x2.pth      = SRVGGNet_x2_pc88_final        (Balanced)
+# Each ONNX is verified to match the CoreML model macOS actually displays (see
+# models/PROVENANCE.md — the Balanced target is the user's Models/ override, which
+# is what the app loads ahead of the bundled Resources copy).
 MODELS = [
     ("models/SRVGGNet_x2_lite.pth", "models/onnx/SRVGGNet_x2_lite.onnx", "bilinear"),
-    ("models/SRVGGNet_x2.pth",      "models/onnx/SRVGGNet_x2.onnx",      "nearest"),
+    ("models/SRVGGNet_x2.pth",      "models/onnx/SRVGGNet_x2.onnx",      "bilinear"),
 ]
 
 
