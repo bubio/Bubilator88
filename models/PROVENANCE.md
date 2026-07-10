@@ -59,6 +59,23 @@ hard-code them.
   survived only as the compiled artifact.
 - **Quality** — Real-ESRGAN x2plus public weights (RRDBNet); nothing self-trained.
 
+## DirectML fp16 conditioning (Balanced)
+
+The recovered Balanced weights are badly scaled (max|weight| ~42, peak intermediate
+activation ~413). This renders correctly on macOS CoreML and on the ONNX CPU EP, but
+on Windows **DirectML executes conv in fp16**, where ~400-magnitude activations lose
+the precision the residual network needs to cancel back down to a [0,1] image — so
+Balanced came out as garbage on Windows while Fast/Quality (small activations) were
+fine.
+
+`convert_srvggnet_onnx.py` therefore runs `equalize_activations()` before export: it
+rescales each conv using PReLU's positive-homogeneity (`PReLU(a·x)=a·PReLU(x)`, a>0)
+so intermediate activations become ~O(1) **without changing the output** (bit-for-bit
+equivalent, fp32 rounding only). After equalization Balanced's max|weight| drops to
+~2.1 and peak activation to ~1.3. It is a no-op for already well-scaled models (Fast).
+The committed `.pth` stays the faithful recovered weights; equalization is applied
+only in the ONNX export path.
+
 ## How Fast/Balanced were trained (knowledge distillation)
 
 Teacher = Real-ESRGAN x2plus (Quality). Student = SRVGGNetCompact. The student learns

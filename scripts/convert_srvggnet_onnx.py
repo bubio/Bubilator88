@@ -134,6 +134,52 @@ def infer_arch(state_dict):
     return num_feat, num_conv
 
 
+def equalize_activations(model, seed=0, num_probes=3):
+    """Rescale conv weights so intermediate activations are ~O(1) WITHOUT changing
+    the output. PReLU is positive-homogeneous (PReLU(a*x) = a*PReLU(x) for a>0), so a
+    per-layer scale on each PReLU output can be pushed into the surrounding convs and
+    cancels exactly. This keeps the model mathematically identical to the shipped
+    CoreML model while removing the catastrophic-cancellation precision loss that
+    large-magnitude weights suffer under DirectML's fp16 execution.
+
+    The recovered Balanced model is the motivating case: max|weight| ~42 and peak
+    activation ~413, which renders correctly on CPU/CoreML but collapses to garbage on
+    DirectML (Windows). After equalization max|weight| drops to ~2 and peak activation
+    to ~1, and the output is bit-for-bit equivalent (fp32 rounding only). It is a
+    harmless no-op for already well-scaled models (e.g. Fast, peak ~2)."""
+    import numpy as _np
+    body = model.body
+    conv_idx = [i for i in range(len(body))
+                if hasattr(body[i], "weight") and body[i].weight.dim() == 4]
+    prelu_idx = [i for i in range(len(body)) if i not in conv_idx]
+
+    # Peak |PReLU output| per prelu, over a few random [0,1] probes (safety margin).
+    rng = _np.random.default_rng(seed)
+    peaks = [0.0] * len(prelu_idx)
+    with torch.no_grad():
+        for _ in range(num_probes):
+            x = torch.from_numpy(rng.random((1, 3, 400, 640), dtype=_np.float32))
+            o, j = x, 0
+            for i, layer in enumerate(body):
+                o = layer(o)
+                if i in prelu_idx:
+                    peaks[j] = max(peaks[j], float(o.abs().max()))
+                    j += 1
+
+    c = [1.0 / max(p, 1e-6) for p in peaks]  # target each PReLU output ~1
+    with torch.no_grad():
+        prev = 1.0
+        # conv_idx[k] feeds prelu k (k = 0..len(prelu)-1); scale W by c_k/c_{k-1},
+        # bias by c_k. The final conv (conv_idx[-1], no following prelu) undoes the
+        # last scale so the body output is unchanged.
+        for k, ci in enumerate(conv_idx[:-1]):
+            body[ci].weight.mul_(c[k] / prev)
+            body[ci].bias.mul_(c[k])
+            prev = c[k]
+        body[conv_idx[-1]].weight.mul_(1.0 / prev)
+    return model
+
+
 def unwrap_state(raw):
     """Accept a bare state_dict (train_srvggnet.py saves this) or a wrapped
     checkpoint ('params_ema' / 'params'), matching the other convert scripts."""
@@ -162,6 +208,12 @@ def convert_one(checkpoint_path, output_path, skip_mode='bilinear'):
     model.load_state_dict(state_dict, strict=True)
     model.eval()
     print(f"    Loaded {sum(p.numel() for p in model.parameters()):,} parameters")
+
+    # Well-condition the weights for DirectML fp16 (exact, output-preserving).
+    wmax = lambda: max(float(p.detach().abs().max()) for p in model.parameters())
+    before = wmax()
+    equalize_activations(model)
+    print(f"    Activation equalization: max|weight| {before:.2f} -> {wmax():.2f}")
 
     print("  Step 2/3: Verify trace (input: 1x3x400x640)")
     input_shape = (1, 3, 400, 640)
