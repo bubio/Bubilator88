@@ -71,8 +71,8 @@ internal sealed class AiUpscaler : IDisposable
     }
 
     /// <summary>
-    /// Kick off model loading once (idempotent, non-blocking). Searches the user
-    /// override folder first, then the app directory (bundled), mirroring macOS.
+    /// Kick off model loading once (idempotent, non-blocking). Loads the bundled
+    /// model next to the exe (no external override lookup), mirroring macOS.
     /// On any failure the upscaler stays <see cref="State.Unavailable"/> so the
     /// renderer keeps using the Bicubic fallback — it never throws to the caller.
     /// </summary>
@@ -86,15 +86,12 @@ internal sealed class AiUpscaler : IDisposable
 
     private string? FindModel()
     {
-        string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string[] candidates =
-        {
-            Path.Combine(local, "Bubilator88", "Models", _modelName + ".onnx"),
-            Path.Combine(AppContext.BaseDirectory, _modelName + ".onnx"),
-        };
-        foreach (var c in candidates)
-            if (File.Exists(c)) return c;
-        return null;
+        // Bundle only (next to the exe, where the csproj copies models/onnx/*.onnx).
+        // An external %LOCALAPPDATA%\Bubilator88\Models\ override lookup was removed to
+        // match macOS: the models are always bundled, and a stale override there would
+        // silently shadow the shipped model.
+        string path = Path.Combine(AppContext.BaseDirectory, _modelName + ".onnx");
+        return File.Exists(path) ? path : null;
     }
 
     private void LoadModel()

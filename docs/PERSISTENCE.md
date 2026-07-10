@@ -183,8 +183,8 @@ ONNX Runtime(`.onnx`)で **同一の重み**を実行する。両形式はリポ
 探索は、stale な override がバンドルを黙って上書きして Windows ONNX と食い違う原因になった
 ため削除)。
 
-**読み込み (Windows):** EXE と同じ出力ディレクトリ(csproj が `models/onnx/*.onnx` をコピー)。
-※ 実装上 `%LOCALAPPDATA%\Bubilator88\Models\` を先に見る override 経路が残っている。
+**読み込み (Windows):** EXE と同じ出力ディレクトリのみ(csproj が `models/onnx/*.onnx` を
+コピー)。macOS と同様、外部 override(`%LOCALAPPDATA%\Bubilator88\Models\`)参照は廃止。
 
 | フィルタ | CoreML (macOS) | ONNX (Windows/Linux) | 素性 |
 |----------|----------------|----------------------|------|
