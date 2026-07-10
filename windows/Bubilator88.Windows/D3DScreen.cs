@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Microsoft.UI.Xaml.Controls;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
@@ -555,10 +556,17 @@ internal sealed unsafe class D3DScreen : IDisposable
             string model = AiModelName(filter);
             if (_ai is null || _ai.ModelName != model)
             {
-                _ai?.Dispose();
+                // Swap in the new model synchronously, then dispose the old one OFF
+                // the UI thread: AiUpscaler.Dispose blocks until its in-flight
+                // inference drains (so it can free the ONNX session without a native
+                // crash), which for the Quality model can take ~100 ms. The render
+                // loop uses the new _ai immediately and falls back to Bicubic until
+                // its first inference lands.
+                var old = _ai;
                 _ai = new AiUpscaler(model);
                 _aiHasUpload = false;
                 _aiUploadedVersion = 0;
+                if (old is not null) Task.Run(() => old.Dispose());
             }
             _ai.EnsureLoaded();
         }

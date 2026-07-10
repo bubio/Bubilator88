@@ -150,7 +150,7 @@ internal sealed class AiUpscaler : IDisposable
         int gen;
         lock (_lock)
         {
-            if (_inferring) return;
+            if (_disposed || _inferring) return;
             _inferring = true;
             gen = _generation;
         }
@@ -265,21 +265,36 @@ internal sealed class AiUpscaler : IDisposable
         {
             _generation++;
             _hasFrame = false;
-            _inferring = false;
+            // NOTE: do NOT clear _inferring here. It must reflect the worker's real
+            // state so Dispose can reliably wait for an in-flight Run() to finish
+            // before freeing the ONNX session. The generation bump already makes the
+            // stale inference discard its result, and the worker clears _inferring
+            // itself when it completes.
         }
     }
 
     public void Dispose()
     {
+        // Mark disposed + bump the generation so no new inference starts (Submit and
+        // the worker's entry both re-check _disposed under _lock).
         lock (_lock)
         {
-            // Mark disposed + bump the generation so a worker that hasn't yet taken
-            // the lock bails before touching the session (it re-checks _disposed
-            // under _lock). A worker already past that check runs on the session
-            // we're disposing; InferenceSession.Run throws ObjectDisposedException
-            // in that case, which RunInference's try/catch swallows.
             _disposed = true;
             _generation++;
+        }
+        // Wait for any in-flight inference to finish before disposing the native
+        // session. Disposing an InferenceSession while its Run() is executing on the
+        // worker thread crashes ONNX Runtime with a native access violation — NOT a
+        // catchable managed exception — which is what crashed the app on AI→AI filter
+        // switches. The worker clears _inferring when it finishes (or bails early on
+        // _disposed), so this spin ends promptly; the cap is just a safety net.
+        for (int i = 0; i < 5000; i++)
+        {
+            lock (_lock) { if (!_inferring) break; }
+            Thread.Sleep(1);
+        }
+        lock (_lock)
+        {
             _session?.Dispose();
             _session = null;
             _inputTensor = null;
