@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Bubilator88.Windows.GameController;
 
 namespace Bubilator88.Windows;
 
@@ -13,12 +15,13 @@ namespace Bubilator88.Windows;
 /// the Emulator menu instead.
 ///
 /// <para>The macOS window has five tabs (General / Display / Audio / Keyboard /
-/// Controller), but most of those settings drive features the Windows native
-/// host doesn't implement yet (controller, mouse, immersive audio, translation,
-/// recording, …). This dialog therefore mirrors the tab layout but
-/// surfaces only the preferences that have a working Windows backend. Each
-/// control applies live and persists to settings.json immediately, matching the
-/// macOS bindings (there is no OK/Cancel — just Close).</para>
+/// Controller). Most of those settings drive features the Windows native
+/// host doesn't implement yet (mouse, immersive audio, translation, recording,
+/// …), so this dialog mirrors the tab layout but surfaces only the preferences
+/// that have a working Windows backend — Controller included, backed by
+/// Windows.Gaming.Input.Gamepad (see GameController/GameControllerManager.cs).
+/// Each control applies live and persists to settings.json immediately,
+/// matching the macOS bindings (there is no OK/Cancel — just Close).</para>
 /// </summary>
 public sealed partial class MainWindow
 {
@@ -48,6 +51,7 @@ public sealed partial class MainWindow
         pivot.Items.Add(new PivotItem { Header = "Display", Content = WrapTab(BuildDisplayTab()) });
         pivot.Items.Add(new PivotItem { Header = "Audio", Content = WrapTab(BuildAudioTab()) });
         pivot.Items.Add(new PivotItem { Header = "Keyboard", Content = WrapTab(BuildKeyboardTab()) });
+        pivot.Items.Add(new PivotItem { Header = "Controller", Content = WrapTab(BuildControllerTab()) });
 
         var dialog = new ContentDialog
         {
@@ -185,6 +189,132 @@ public sealed partial class MainWindow
         panel.Children.Add(Section("Numpad Emulation", new[] { arrows, numbers, wasd }));
         return panel;
     }
+
+    private FrameworkElement BuildControllerTab()
+    {
+        var panel = NewTabPanel();
+
+        var countCaption = Caption(ControllerCountCaption());
+        var enableToggle = Toggle("Enable Game Controller", _gameControllerEnabled, isOn =>
+        {
+            _gameControllerEnabled = isOn;
+            _controller.Enabled = isOn;
+            SaveSettings();
+            countCaption.Text = ControllerCountCaption();
+        });
+        panel.Children.Add(Section("Game Controller", new[] { (FrameworkElement)enableToggle, countCaption },
+            "Xbox/PlayStation/Switch-style pads recognized by Windows as a standard gamepad. " +
+            "Dpad and left stick both drive the same directions."));
+
+        var rows = new StackPanel { Spacing = 8 };
+        var mappingSection = Section("Button Mapping", new FrameworkElement[] { rows });
+        panel.Children.Add(mappingSection);
+
+        List<Action> refreshRow = new();
+        foreach (ControllerButton button in Enum.GetValues<ControllerButton>())
+        {
+            var row = BuildMappingRow(button, out Action refresh);
+            rows.Children.Add(row);
+            refreshRow.Add(refresh);
+        }
+
+        var resetButton = new Button { Content = "Reset to Defaults" };
+        resetButton.Click += (_, _) =>
+        {
+            _controllerMapping = ControllerButtonMapping.Defaults.Clone();
+            _controller.Mapping = _controllerMapping;
+            SaveSettings();
+            foreach (var refresh in refreshRow) refresh();
+        };
+        panel.Children.Add(resetButton);
+
+        return panel;
+    }
+
+    private string ControllerCountCaption()
+    {
+        int n = _controller.ConnectedCount;
+        return n == 0 ? "No controller connected." : $"{n} controller(s) connected.";
+    }
+
+    /// <summary>One "Button  [binding]  [Bind] [Clear]" row. Only Pc88Key
+    /// bindings are user-assignable via the capture flow (matches macOS, where
+    /// pc88Key bindings likewise only exist as hardcoded defaults / are not
+    /// reachable from the "press a key" UI) — Clear always sets None.</summary>
+    private FrameworkElement BuildMappingRow(ControllerButton button, out Action refresh)
+    {
+        var grid = new Grid { ColumnSpacing = 10 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var label = new TextBlock { Text = button.ToString(), VerticalAlignment = VerticalAlignment.Center };
+        var binding = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8 };
+        var bind = new Button { Content = "Bind…", MinWidth = 64 };
+        var clear = new Button { Content = "Clear", MinWidth = 56 };
+
+        void UpdateText() => binding.Text = MappingLabel(_controllerMapping.Action(button));
+        UpdateText();
+        refresh = UpdateText;
+
+        // Capture the next key directly on the Bind button rather than at the
+        // window's Root.KeyDown: a ContentDialog opens in the popup layer, so
+        // keyboard focus (and routed KeyDown bubbling) stays within the dialog's
+        // own visual tree and never reaches Root while the dialog is open.
+        // AddHandler(..., handledEventsToo: true) is required (not plain +=):
+        // a focused Button otherwise consumes Space/Enter itself (re-invoking
+        // Click) and arrow keys for focus navigation before a normal handler
+        // would see them, which would make exactly those keys unbindable.
+        // Escape still closes the dialog (ContentDialog's own accelerator runs
+        // first) — binding to Escape isn't possible from this flow.
+        bind.Click += (_, _) =>
+        {
+            binding.Text = "Press a key…";
+            bind.Focus(FocusState.Programmatic);
+
+            KeyEventHandler? handler = null;
+            handler = (s, e) =>
+            {
+                bind.RemoveHandler(UIElement.KeyDownEvent, handler);
+                if (KeyMapping.TryMap(e.Key, out var matrix))
+                {
+                    _controllerMapping.Buttons[button.ToString()] = ButtonAction.Pc88(new MappedKey(matrix.Row, matrix.Bit));
+                    _controller.Mapping = _controllerMapping;
+                    SaveSettings();
+                }
+                UpdateText();
+                e.Handled = true;
+            };
+            bind.AddHandler(UIElement.KeyDownEvent, handler, handledEventsToo: true);
+        };
+        clear.Click += (_, _) =>
+        {
+            _controllerMapping.Buttons[button.ToString()] = ButtonAction.None;
+            _controller.Mapping = _controllerMapping;
+            SaveSettings();
+            UpdateText();
+        };
+
+        Grid.SetColumn(label, 0);
+        Grid.SetColumn(binding, 1);
+        Grid.SetColumn(bind, 2);
+        Grid.SetColumn(clear, 3);
+        grid.Children.Add(label);
+        grid.Children.Add(binding);
+        grid.Children.Add(bind);
+        grid.Children.Add(clear);
+        return grid;
+    }
+
+    private static string MappingLabel(ButtonAction action) => action.Kind switch
+    {
+        ButtonActionKind.Pc88Key => KeyMapping.TryReverseLookup(new KeyMapping.MatrixKey(action.Key.Row, action.Key.Bit), out var vk)
+            ? vk.ToString()
+            : $"Key({action.Key.Row},{action.Key.Bit})",
+        ButtonActionKind.HostCommand => action.Command.ToString(),
+        _ => "—",
+    };
 
     // MARK: - Dynamic caption text
 

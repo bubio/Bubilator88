@@ -27,6 +27,8 @@
   <ItemGroup>
     <Compile Include="..\Bubilator88.Windows\KeyMapping.cs" Link="Linked\KeyMapping.cs" />
     <Compile Include="..\Bubilator88.Windows\PixelMath.cs" Link="Linked\PixelMath.cs" />
+    <Compile Include="..\Bubilator88.Windows\GameController\ControllerTypes.cs" Link="Linked\ControllerTypes.cs" />
+    <Compile Include="..\Bubilator88.Windows\GameController\GameControllerMath.cs" Link="Linked\GameControllerMath.cs" />
   </ItemGroup>
 
 </Project>

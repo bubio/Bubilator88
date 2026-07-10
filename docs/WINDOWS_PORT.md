@@ -191,7 +191,8 @@ AI モデルは全 OS 共有の `models/onnx/*.onnx` に集約し、Windows cspr
 | xBRZ GPU シェーダ | HLSL シェーダへ移植 | ✅ |
 | AIUpscaler (CoreML, RealESRGAN/SRVGGNet) | ONNX Runtime + DirectML(`.pth`→ONNX 変換、共有 `models/onnx/`) | ✅ 3 モデル対応(Fast/Balanced=SRVGGNet, Quality=RealESRGAN) |
 | セーブステート / D88 / スクショ / 早送り | コア内 + ホスト I/O | ✅ |
-| GameController (GCController) + haptics | XInput / Windows.Gaming.Input(振動含む) | ⬜ 未実装 |
+| GameController (GCController) | Windows.Gaming.Input.Gamepad(ポーリング方式、単一グローバルマッピング) | ✅ 実装済(`windows/Bubilator88.Windows/GameController/`) |
+| ControllerHaptics (CoreHaptics, SSGノイズ検出) | Windows.Gaming.Input.Gamepad.Vibration | ⬜ 未実装(EmulatorCore の CApi 拡張が必要、別PRで対応予定) |
 | マウスロック (`CGAssociateMouseAndMouseCursorPosition`) | `ClipCursor` + RAWINPUT 相対デルタ | ⬜ 未実装 |
 | OCR 翻訳 (Vision) | Windows.Media.Ocr | ⬜ 未実装 |
 | FDDSound (AVAudioEngine 別エンジンでの合成シーク/リード音) | XAudio2 の専用エンジン(メイン音声とは別)、出力デバイス個別選択は `NAudio.CoreAudioApi.MMDeviceEnumerator` で列挙 | ✅ 実装済(出力デバイス選択込み) |

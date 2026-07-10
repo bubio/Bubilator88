@@ -329,6 +329,13 @@ internal sealed unsafe class EmulatorHost : IDisposable
         return true;
     }
 
+    /// <summary>Press a PC-88 matrix cell directly, bypassing VirtualKey mapping.
+    /// Used by the game-controller path, whose inputs aren't Windows VirtualKeys.</summary>
+    public void PressMatrixKey(int row, int bit) => NativeApi.b88_press_key(_handle, row, bit);
+
+    /// <summary>Release a PC-88 matrix cell directly. See <see cref="PressMatrixKey"/>.</summary>
+    public void ReleaseMatrixKey(int row, int bit) => NativeApi.b88_release_key(_handle, row, bit);
+
     public void Dispose()
     {
         if (_handle != IntPtr.Zero)

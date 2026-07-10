@@ -188,4 +188,18 @@ internal static class KeyMapping
 
         return Map.TryGetValue(key, out matrix);
     }
+
+    private static readonly Dictionary<MatrixKey, VirtualKey> ReverseMap = BuildReverseMap();
+
+    private static Dictionary<MatrixKey, VirtualKey> BuildReverseMap()
+    {
+        var reverse = new Dictionary<MatrixKey, VirtualKey>();
+        foreach (var kv in Map) reverse.TryAdd(kv.Value, kv.Key);
+        return reverse;
+    }
+
+    /// <summary>Best-effort reverse lookup (matrix cell → base-map VirtualKey) for
+    /// display purposes, e.g. the controller-mapping "bind a key" UI. Only the
+    /// unmodified US-ANSI base map is searched (not layout/numpad overrides).</summary>
+    public static bool TryReverseLookup(MatrixKey matrix, out VirtualKey key) => ReverseMap.TryGetValue(matrix, out key);
 }

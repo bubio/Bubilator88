@@ -21,6 +21,7 @@ using Windows.Storage.Streams;
 using Windows.System;
 using Windows.UI;
 using WinRT.Interop;
+using Bubilator88.Windows.GameController;
 
 namespace Bubilator88.Windows;
 
@@ -37,6 +38,7 @@ public sealed partial class MainWindow : Window
     private D3DScreen? _screen;
     private XAudioSink? _audio;
     private FddSound? _fddSound;
+    private readonly GameControllerManager _controller = new();
 
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private double _accumulator;
@@ -63,6 +65,8 @@ public sealed partial class MainWindow : Window
     private bool _fddSoundEnabled = true;             // matches macOS Settings.fddSound default
     private int _fddSoundVolumeLevel = 2;             // 0=small 1=medium 2=large (matches macOS default)
     private string _fddSoundDeviceId = "";             // "" = System Default; matches macOS fddSoundDeviceUID
+    private bool _gameControllerEnabled = true;        // matches macOS Settings.gameControllerEnabled default
+    private ControllerButtonMapping _controllerMapping = ControllerButtonMapping.Defaults.Clone();
 
     // Boot configuration (mirrors the former combo/toggle state).
     private int _bootModeIndex;
@@ -181,6 +185,10 @@ public sealed partial class MainWindow : Window
             _fddSound.Volume = FddSound.VolumeForLevel(_fddSoundVolumeLevel);
             if (_fddSoundEnabled) _fddSound.Start(_fddSoundDeviceId);
 
+            _controller.Mapping = _controllerMapping;
+            _controller.Enabled = _gameControllerEnabled;
+            _controller.OnHostCommand = ExecuteHostCommand;
+
             _running = true;
             _lastTick = _clock.Elapsed.TotalSeconds;
             CompositionTarget.Rendering += OnRendering;
@@ -285,6 +293,10 @@ public sealed partial class MainWindow : Window
     private void OnRendering(object? sender, object e)
     {
         if (!_running || _host is null || _screen is null || _busy) return;
+
+        // Polled every tick, including while paused, so a controller-bound
+        // Pause/Resume can un-pause and held buttons don't go stale.
+        _controller.Poll(_host);
 
         double now = _clock.Elapsed.TotalSeconds;
         double dt = now - _lastTick;
@@ -917,6 +929,8 @@ public sealed partial class MainWindow : Window
         public bool FddSoundEnabled { get; set; } = true;   // matches macOS Settings.fddSound default
         public int FddSoundVolumeLevel { get; set; } = 2;   // 0=small 1=medium 2=large
         public string FddSoundDeviceId { get; set; } = ""; // "" = System Default; matches macOS fddSoundDeviceUID
+        public bool GameControllerEnabled { get; set; } = true;   // matches macOS Settings.gameControllerEnabled default
+        public ControllerButtonMapping? ControllerMapping { get; set; }   // null = use defaults
     }
 
     private double _volume = 0.5;
@@ -948,6 +962,8 @@ public sealed partial class MainWindow : Window
             _fddSoundEnabled = s.FddSoundEnabled;
             _fddSoundVolumeLevel = Math.Clamp(s.FddSoundVolumeLevel, 0, 2);
             _fddSoundDeviceId = s.FddSoundDeviceId ?? "";
+            _gameControllerEnabled = s.GameControllerEnabled;
+            _controllerMapping = s.ControllerMapping ?? ControllerButtonMapping.Defaults.Clone();
         }
         catch { /* corrupt or unreadable — keep defaults */ }
     }
@@ -976,6 +992,8 @@ public sealed partial class MainWindow : Window
                 FddSoundEnabled = _fddSoundEnabled,
                 FddSoundVolumeLevel = _fddSoundVolumeLevel,
                 FddSoundDeviceId = _fddSoundDeviceId,
+                GameControllerEnabled = _gameControllerEnabled,
+                ControllerMapping = _controllerMapping,
             }));
         }
         catch { /* best effort */ }
@@ -1571,9 +1589,26 @@ public sealed partial class MainWindow : Window
     {
         _running = false;
         CompositionTarget.Rendering -= OnRendering;
+        if (_host is not null) _controller.ReleaseAll(_host);
         _fddSound?.Dispose();
         _audio?.Dispose();
         _screen?.Dispose();
         _host?.Dispose();
+    }
+
+    /// <summary>Dispatch a controller-bound host command to the corresponding
+    /// existing menu-command handler (fire-and-forget for the async ones).</summary>
+    private void ExecuteHostCommand(HostCommand command)
+    {
+        switch (command)
+        {
+            case HostCommand.PauseResume: OnPauseResume(this, EmptyArgs); break;
+            case HostCommand.Reset: OnReset(this, EmptyArgs); break;
+            case HostCommand.QuickSave: OnQuickSave(this, EmptyArgs); break;
+            case HostCommand.QuickLoad: OnQuickLoad(this, EmptyArgs); break;
+            case HostCommand.ToggleFullscreen: OnToggleFullscreen(this, EmptyArgs); break;
+            case HostCommand.Screenshot: OnSaveScreenshot(this, EmptyArgs); break;
+            case HostCommand.CopyScreen: OnCopyScreen(this, EmptyArgs); break;
+        }
     }
 }

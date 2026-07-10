@@ -144,13 +144,18 @@ dotnet test windows\Bubilator88.Windows.Tests\Bubilator88.Windows.Tests.csproj
 - **ディスク**: マルチイメージ D88、Drive 1/2/1&2、ライトプロテクト、Recent Files、イメージ選択ダイアログ。
 - **入力**: VirtualKey→マトリクス(US/JIS 記号、矢印/数字行/WASD のテンキー擬似)、
   メニューのキーボードショートカット(Ctrl+R/E/S/L、Ctrl+Shift+C、Ctrl+1/2/3、F11)。
+  **ゲームコントローラ**(`Windows.Gaming.Input.Gamepad` ポーリング、Dpad/ABXY/ショルダー/
+  トリガー/スティックをPC-88キーまたはホストコマンドにマッピング、設定ダイアログの
+  Controller タブで「キーを押してバインド」/デフォルト復帰が可能)。
 - **状態保存**: セーブステート(スロット/クイック、メタ・サムネイル)、スクリーンショット(PNG/JPEG/HEIC)、CPU 早送り(×1〜×16)。
-- **設定**: General/Display/Audio/Keyboard タブ(`settings.json` に即時永続化)。
+- **設定**: General/Display/Audio/Keyboard/Controller タブ(`settings.json` に即時永続化)。
 - **テスト基盤**: シェル純ロジックの xUnit プロジェクト。
 
 ## 未実装(後続 / 別実装枠)
 
-- ゲームコントローラ + 触覚フィードバック(XInput / Windows.Gaming.Input)
+- 触覚フィードバック(SSGノイズ検出→振動。EmulatorCore の CApi 拡張が必要なため別PRで対応予定)
+- コントローラーのモデル別マッピング / ブランド別アイコン表示(`Windows.Gaming.Input.Gamepad` は
+  製品識別情報を提供しないため、v1 は単一のグローバルマッピング)
 - マウスロック(`ClipCursor` + RAWINPUT 相対デルタ)
 - OCR 翻訳オーバーレイ(Windows.Media.Ocr)
 - 空間オーディオ / ヘッドトラッキング、操作スクリプト記録
