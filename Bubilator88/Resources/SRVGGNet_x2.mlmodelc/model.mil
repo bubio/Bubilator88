@@ -1,5 +1,5 @@
 program(1.3)
-[buildInfo = dict<string, string>({{"coremlc-component-MIL", "3510.2.1"}, {"coremlc-version", "3500.32.1"}, {"coremltools-component-torch", "2.7.0"}, {"coremltools-source-dialect", "TorchScript"}, {"coremltools-version", "9.0"}})]
+[buildInfo = dict<string, string>({{"coremlc-component-MIL", "3520.4.1"}, {"coremlc-version", "3520.5.1"}, {"coremltools-component-torch", "2.11.0"}, {"coremltools-source-dialect", "TorchScript"}, {"coremltools-version", "9.0"}})]
 {
     func main<ios18>(tensor<fp32, [1, 3, 400, 640]> input) {
             fp32 input__scaled___y_0 = const()[name = string("input__scaled___y_0"), val = fp32(0x1.010102p-8)];
@@ -186,9 +186,10 @@ program(1.3)
             tensor<fp16, [1, 12, 400, 640]> input_cast_fp16 = conv(bias = body_34_bias_to_fp16, dilations = input_dilations_0, groups = input_groups_0, pad = input_pad_0, pad_type = input_pad_type_0, strides = input_strides_0, weight = body_34_weight_to_fp16, x = input_67_cast_fp16)[name = string("input_cast_fp16")];
             int32 var_304 = const()[name = string("op_304"), val = int32(2)];
             tensor<fp16, [1, 3, 800, 1280]> out_cast_fp16 = pixel_shuffle(upscale_factor = var_304, x = input_cast_fp16)[name = string("out_cast_fp16")];
-            fp32 var_310_scale_factor_height_0 = const()[name = string("op_310_scale_factor_height_0"), val = fp32(0x1p+1)];
-            fp32 var_310_scale_factor_width_0 = const()[name = string("op_310_scale_factor_width_0"), val = fp32(0x1p+1)];
-            tensor<fp16, [1, 3, 800, 1280]> var_310_cast_fp16 = upsample_nearest_neighbor(scale_factor_height = var_310_scale_factor_height_0, scale_factor_width = var_310_scale_factor_width_0, x = input_to_fp16)[name = string("op_310_cast_fp16")];
-            tensor<fp16, [1, 3, 800, 1280]> output = add(x = out_cast_fp16, y = var_310_cast_fp16)[name = string("op_312_cast_fp16")];
+            fp32 base_scale_factor_height_0 = const()[name = string("base_scale_factor_height_0"), val = fp32(0x1p+1)];
+            fp32 base_scale_factor_width_0 = const()[name = string("base_scale_factor_width_0"), val = fp32(0x1p+1)];
+            bool base_align_corners_0 = const()[name = string("base_align_corners_0"), val = bool(false)];
+            tensor<fp16, [1, 3, 800, 1280]> base_cast_fp16 = upsample_bilinear(align_corners = base_align_corners_0, scale_factor_height = base_scale_factor_height_0, scale_factor_width = base_scale_factor_width_0, x = input_to_fp16)[name = string("base_cast_fp16")];
+            tensor<fp16, [1, 3, 800, 1280]> output = add(x = base_cast_fp16, y = out_cast_fp16)[name = string("op_313_cast_fp16")];
         } -> (output);
 }

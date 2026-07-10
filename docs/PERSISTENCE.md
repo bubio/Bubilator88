@@ -178,13 +178,13 @@ ONNX Runtime(`.onnx`)で **同一の重み**を実行する。両形式はリポ
 `convert_realesrgan_onnx.py` / `train_srvggnet.py` の CoreML 出力)。詳細と再学習手順は
 `models/PROVENANCE.md`。
 
-**検索順序 (macOS):**
-1. `~/Library/Application Support/Bubilator88/Models/`(ユーザ override)
-2. アプリバンドル内 (Resources/)
+**読み込み (macOS):** アプリバンドル (Resources/) のみ。AI モデルは常に同梱するため、
+外部 override 参照は廃止した(以前あった `~/Library/Application Support/Bubilator88/Models/`
+探索は、stale な override がバンドルを黙って上書きして Windows ONNX と食い違う原因になった
+ため削除)。
 
-**検索順序 (Windows):**
-1. `%LOCALAPPDATA%\Bubilator88\Models\`(ユーザ override)
-2. EXE と同じ出力ディレクトリ(csproj が `models/onnx/*.onnx` をコピー)
+**読み込み (Windows):** EXE と同じ出力ディレクトリ(csproj が `models/onnx/*.onnx` をコピー)。
+※ 実装上 `%LOCALAPPDATA%\Bubilator88\Models\` を先に見る override 経路が残っている。
 
 | フィルタ | CoreML (macOS) | ONNX (Windows/Linux) | 素性 |
 |----------|----------------|----------------------|------|
@@ -201,8 +201,6 @@ ONNX Runtime(`.onnx`)で **同一の重み**を実行する。両形式はリポ
 ├── N88.ROM, N80.ROM, DISK.ROM, ...    ROM ファイル
 ├── KANJI1.ROM, KANJI2.ROM             漢字ROM
 ├── 2608_BD.WAV, ...                   リズム音源
-├── Models/                            AI モデル (オプション)
-│   └── *.mlmodelc
 └── SaveStates/
     ├── quicksave.b88s
     ├── quicksave.meta.json

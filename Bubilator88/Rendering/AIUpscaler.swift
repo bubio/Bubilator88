@@ -59,20 +59,10 @@ final class AIUpscaler {
         releaseResources()
         model = nil
 
-        // 1. Search ~/Library/Application Support/Bubilator88/Models/
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("Bubilator88/Models")
-
-        if let modelsDir = appSupport {
-            for ext in ["mlmodelc", "mlpackage"] {
-                let url = modelsDir.appendingPathComponent("\(modelName).\(ext)")
-                if FileManager.default.fileExists(atPath: url.path) {
-                    if await tryLoadModel(from: url, name: modelName) { return }
-                }
-            }
-        }
-
-        // 2. Search app bundle
+        // Load from the app bundle. The AI models are always bundled, so there is no
+        // external override lookup (an earlier ~/Library/Application Support/Bubilator88/
+        // Models/ search was removed — a stale override there silently shadowed the
+        // bundled model and diverged from the Windows ONNX build).
         for ext in ["mlmodelc", "mlpackage"] {
             if let bundleURL = Bundle.main.url(forResource: modelName, withExtension: ext) {
                 if await tryLoadModel(from: bundleURL, name: modelName) { return }

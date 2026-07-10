@@ -27,12 +27,11 @@ macOS uses the CoreML `.mlmodelc`; Windows (and a future Linux shell) use
 `models/onnx/`. The `.pth → CoreML` and `.pth → ONNX` paths are two exports of the
 *same* weights.
 
-> **Which CoreML model does macOS load?** `AIUpscaler` searches
-> `~/Library/Application Support/Bubilator88/Models/` **before** the bundled
-> `Bubilator88/Resources/` copy. For Balanced the two differ (the bundled Resources
-> copy is a stale earlier model), so the ONNX parity target is the **user's Models/
-> override**, which is what the app actually displays. See "Known bundled-model
-> discrepancy" below.
+> **Which CoreML model does macOS load?** Only the bundled `Bubilator88/Resources/`
+> copy. (An external `~/Library/Application Support/Bubilator88/Models/` override
+> lookup used to run first, but was removed — a stale override there silently shadowed
+> the bundle and diverged from the Windows ONNX. The bundled Balanced `.mlmodelc` was
+> regenerated from `pc88_final` so bundle == ONNX; see below.)
 
 ## Model architectures
 
@@ -57,25 +56,27 @@ distillation run on the external drive (`/Volumes/CrucialX6/temp/training/`), wi
 bilinear skip:
 
 - **Fast** — `SRVGGNet_x2_lite.pth` = `SRVGGNet_x2_pc88_lite_final.pth`. Reproduces the
-  Fast CoreML model macOS loads (bundled `SRVGGNet_x2_lite.mlmodelc`, no override) to
-  max|diff| 0.0014.
-- **Balanced** — `SRVGGNet_x2.pth` = `SRVGGNet_x2_pc88_final.pth`. Reproduces the
-  Balanced CoreML model macOS actually loads (the `Models/` override) to max|diff|
-  0.0024.
+  bundled `SRVGGNet_x2_lite.mlmodelc` to max|diff| 0.0014.
+- **Balanced** — `SRVGGNet_x2.pth` = `SRVGGNet_x2_pc88_final.pth`. The bundled
+  `SRVGGNet_x2.mlmodelc` was **regenerated from this checkpoint**
+  (`scripts/convert_srvggnet_coreml.py`) so bundle == ONNX; max|diff| 0.0024.
 - **Quality** — Real-ESRGAN x2plus public weights (RRDBNet); nothing self-trained.
 
-## Known bundled-model discrepancy (Balanced)
+The bundled `Bubilator88/Resources/SRVGGNet_x2.mlmodelc` had previously been a stale
+earlier model (differing from `pc88_final` by ~1.07) that only the `Models/` override
+was masking; regenerating it from `pc88_final` and removing the override lookup put
+macOS and Windows on the same weights. To regenerate a bundled CoreML model from a
+checkpoint:
 
-`Bubilator88/Resources/SRVGGNet_x2.mlmodelc` is a **stale, different** model (an
-earlier training run; differs from `pc88_final` by ~1.07). macOS installs that have
-the `Models/` override (`pc88_final`) never see it, but a fresh install without the
-override would load this older model and NOT match Windows. To make every platform
-consistent, regenerate the bundled Resources copy from `pc88_final` (CoreML export via
-`train_srvggnet.py`'s `convert_to_coreml`, then `xcrun coremlcompiler compile`).
+```bash
+python scripts/convert_srvggnet_coreml.py \
+    --checkpoint models/SRVGGNet_x2.pth \
+    --out-mlmodelc Bubilator88/Resources/SRVGGNet_x2.mlmodelc
+```
 
-`scripts/recover_srvggnet_from_mlmodelc.py` (which reconstructs a `.pth` from a
-compiled `.mlmodelc`'s MIL + weight blob) remains a useful recovery tool, but is not
-needed for the shipped pipeline now that the matching `pc88_final.pth` is on disk.
+`scripts/recover_srvggnet_from_mlmodelc.py` (reconstructs a `.pth` from a compiled
+`.mlmodelc`'s MIL + weight blob) remains a useful recovery tool, but is not needed for
+the shipped pipeline.
 
 ## Weight conditioning (defensive)
 
@@ -128,22 +129,21 @@ python scripts/recover_srvggnet_from_mlmodelc.py \
 
 `scripts/verify_onnx_coreml.py` feeds one random image through both the ONNX and the
 CoreML form and reports the max/mean pixel diff. Passing (diff within the float16
-budget) is what guarantees the two shells look identical. **Verify against the
-`.mlmodelc` macOS actually loads** (the `Models/` override for Balanced, not the stale
-bundled Resources copy):
+budget) is what guarantees the two shells look identical. Verify against the bundled
+`Bubilator88/Resources/*.mlmodelc` (the only CoreML model macOS loads):
 
 ```bash
 python scripts/verify_onnx_coreml.py \
     --onnx   models/onnx/SRVGGNet_x2.onnx \
-    --coreml "$HOME/Library/Application Support/Bubilator88/Models/SRVGGNet_x2.mlmodelc"
+    --coreml Bubilator88/Resources/SRVGGNet_x2.mlmodelc
 ```
 
-Reference results (seed 0), ONNX vs the CoreML model macOS loads:
+Reference results (seed 0), ONNX vs the bundled `.mlmodelc`:
 
-| Filter   | max\|diff\| | target CoreML model |
-|----------|-------------|---------------------|
-| Fast     | 0.00142     | bundled Resources (no override) |
-| Balanced | 0.00236     | user Models/ override (`pc88_final`) |
-| Quality  | 0.00151     | bundled Resources |
+| Filter   | max\|diff\| |
+|----------|-------------|
+| Fast     | 0.00142     |
+| Balanced | 0.00236     |
+| Quality  | 0.00151     |
 
 All under ~1/255 — pure float16 rounding.
