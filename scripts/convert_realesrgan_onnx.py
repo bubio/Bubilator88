@@ -15,10 +15,12 @@ Usage:
     python scripts/convert_realesrgan_onnx.py
 
 Output:
-    RealESRGAN_x2.onnx
+    models/onnx/RealESRGAN_x2.onnx
 
-Then copy it next to the Windows app so it is bundled into the build output:
-    cp RealESRGAN_x2.onnx windows/Bubilator88.Windows/native/
+This is the shared, cross-platform model location: the Windows csproj (and a future
+Linux shell) copy models/onnx/*.onnx next to the executable. Unlike the self-trained
+SRVGGNet models (which MUST be committed via Git LFS — no public weights exist), this
+Quality model is regenerable from public weights, so committing it is optional.
 """
 
 import sys
@@ -136,7 +138,9 @@ def main():
         print(f"  Output shape: {tuple(out.shape)} (expected: (1, 3, 800, 1280))")
 
     print("Step 4/4: Export to ONNX")
-    output_path = "RealESRGAN_x2.onnx"
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    output_path = os.path.join(repo_root, "models", "onnx", "RealESRGAN_x2.onnx")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     # Fixed input shape (we always feed the full 640x400 frame, even in 200-line
     # mode — matching macOS). No dynamic axes keeps the DirectML graph simplest.
     #
@@ -158,10 +162,9 @@ def main():
     size_mb = os.path.getsize(output_path) / 1024 / 1024
     print(f"\nDone! Saved to {output_path} ({size_mb:.1f} MB)")
     print()
-    print("Next step (bundle it with the Windows app):")
-    print("  cp RealESRGAN_x2.onnx windows/Bubilator88.Windows/native/")
-    print()
-    print("The .onnx is a generated artifact - do NOT commit it to git.")
+    print("The Windows build copies models/onnx/*.onnx next to the exe automatically.")
+    print("Committing this Quality model is optional (regenerable from public weights);")
+    print("the self-trained SRVGGNet models must be committed via Git LFS.")
 
 
 if __name__ == "__main__":

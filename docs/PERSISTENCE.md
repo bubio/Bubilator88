@@ -172,14 +172,25 @@
 
 ## 4. AI アップスケーリングモデル
 
-**検索順序:**
-1. `~/Library/Application Support/Bubilator88/Models/`
+3 モデル(Fast/Balanced/Quality)。macOS は CoreML(`.mlmodelc`)、Windows/Linux は
+ONNX Runtime(`.onnx`)で **同一の重み**を実行する。両形式はリポジトリの単一 source-of-truth
+`.pth`(`models/*.pth`, Git LFS)から生成される(`scripts/convert_srvggnet_onnx.py` /
+`convert_realesrgan_onnx.py` / `train_srvggnet.py` の CoreML 出力)。詳細と再学習手順は
+`models/PROVENANCE.md`。
+
+**検索順序 (macOS):**
+1. `~/Library/Application Support/Bubilator88/Models/`(ユーザ override)
 2. アプリバンドル内 (Resources/)
 
-| モデル | 用途 | バンドル |
-|--------|------|---------|
-| `SRVGGNet_x2.mlmodelc` | 高速 AI アップスケーリング | Yes |
-| `RealESRGAN_x2.mlmodelc` | 高品質 AI アップスケーリング | Yes |
+**検索順序 (Windows):**
+1. `%LOCALAPPDATA%\Bubilator88\Models\`(ユーザ override)
+2. EXE と同じ出力ディレクトリ(csproj が `models/onnx/*.onnx` をコピー)
+
+| フィルタ | CoreML (macOS) | ONNX (Windows/Linux) | 素性 |
+|----------|----------------|----------------------|------|
+| Fast     | `SRVGGNet_x2_lite.mlmodelc` | `SRVGGNet_x2_lite.onnx` | 自前学習(蒸留)。LFS 必須 |
+| Balanced | `SRVGGNet_x2.mlmodelc`      | `SRVGGNet_x2.onnx`      | 自前学習(蒸留)。LFS 必須 |
+| Quality  | `RealESRGAN_x2.mlmodelc`    | `RealESRGAN_x2.onnx`    | 公開重みから再生成可 |
 
 ---
 

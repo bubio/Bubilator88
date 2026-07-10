@@ -58,13 +58,17 @@
     </None>
   </ItemGroup>
 
-  <!-- AI upscale model (generate with scripts/convert_realesrgan_onnx.py and drop
-       into native\). ~34 MB generated artifact — not committed to git; copied to
-       the output root next to the exe, where AiUpscaler discovers it. Optional:
-       absent → the AI filter degrades to its Bicubic fallback. -->
-  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)native\RealESRGAN_x2.onnx')">
-    <None Include="native\RealESRGAN_x2.onnx">
-      <Link>RealESRGAN_x2.onnx</Link>
+  <!-- AI upscale models, shared cross-platform from the repo's models\onnx\ folder
+       (the same canonical location a future Linux shell would use):
+         SRVGGNet_x2_lite.onnx  (Fast)      ] self-trained, committed via Git LFS
+         SRVGGNet_x2.onnx       (Balanced)  ]  (run `git lfs pull`)
+         RealESRGAN_x2.onnx     (Quality)   regenerable from public weights
+       Each is Linked to the output ROOT next to the exe, where AiUpscaler finds it
+       by name. Any missing/LFS-pointer model → that AI filter degrades to Bicubic.
+       Regenerate with scripts\convert_srvggnet_onnx.py / convert_realesrgan_onnx.py. -->
+  <ItemGroup>
+    <None Include="..\..\models\onnx\*.onnx">
+      <Link>%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

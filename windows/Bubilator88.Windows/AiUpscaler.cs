@@ -54,6 +54,11 @@ internal sealed class AiUpscaler : IDisposable
     public int OutputWidth => OutW;
     public int OutputHeight => OutH;
 
+    /// <summary>The ONNX model this upscaler was created for (e.g. "SRVGGNet_x2_lite").
+    /// The renderer compares this when switching AI filters to decide whether the
+    /// existing session can be reused or a new model must be loaded.</summary>
+    public string ModelName => _modelName;
+
     /// <summary>Total inferences completed over this upscaler's lifetime. Monotonic
     /// — never reset (matching macOS <c>AIUpscaler.completedCount</c>), so the render
     /// loop can measure AI throughput as the delta over a sampling window. Frozen

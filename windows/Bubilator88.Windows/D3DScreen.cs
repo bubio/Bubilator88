@@ -13,7 +13,7 @@ namespace Bubilator88.Windows;
 /// <summary>Video filter selection (mirrors the macOS EmulatorViewModel.VideoFilter).
 /// <c>Ai</c> is the Quality tier (Real-ESRGAN x2) run via ONNX Runtime + DirectML;
 /// the macOS Fast/Balanced tiers are not (yet) ported.</summary>
-internal enum ScreenFilter { None, Linear, Bicubic, Crt, Xbrz, Enhanced, Ai }
+internal enum ScreenFilter { None, Linear, Bicubic, Crt, Xbrz, Enhanced, AiFast, AiBalanced, AiQuality }
 
 /// <summary>
 /// Direct3D 11 presenter for the 640×400 emulator frame, composited onto a
@@ -525,6 +525,20 @@ internal sealed unsafe class D3DScreen : IDisposable
         CreatePipeline();
     }
 
+    /// <summary>True for any of the three AI-upscale filters (Fast/Balanced/Quality).</summary>
+    internal static bool IsAi(ScreenFilter f)
+        => f is ScreenFilter.AiFast or ScreenFilter.AiBalanced or ScreenFilter.AiQuality;
+
+    /// <summary>ONNX model name backing each AI filter (mirrors the macOS
+    /// EmulatorViewModel.aiModelName mapping: Fast→SRVGGNet_x2_lite,
+    /// Balanced→SRVGGNet_x2, Quality→RealESRGAN_x2).</summary>
+    private static string AiModelName(ScreenFilter f) => f switch
+    {
+        ScreenFilter.AiFast => "SRVGGNet_x2_lite",
+        ScreenFilter.AiBalanced => "SRVGGNet_x2",
+        _ => "RealESRGAN_x2",   // AiQuality
+    };
+
     /// <summary>Select the active video filter + scanline state (host menu).</summary>
     public void SetFilter(ScreenFilter filter, bool scanlineEnabled)
     {
@@ -533,13 +547,22 @@ internal sealed unsafe class D3DScreen : IDisposable
         if (filter == ScreenFilter.Crt && _filter != ScreenFilter.Crt)
             _persistPrimed = false;
 
-        if (filter == ScreenFilter.Ai && _filter != ScreenFilter.Ai)
+        if (IsAi(filter))
         {
-            // Lazily spin up the upscaler + kick off model load (idempotent).
-            _ai ??= new AiUpscaler();
+            // (Re)create the upscaler when entering AI or switching to a different
+            // model — Fast/Balanced/Quality each back a distinct ONNX. Reuse the
+            // loaded session when the model is unchanged so menu toggling is cheap.
+            string model = AiModelName(filter);
+            if (_ai is null || _ai.ModelName != model)
+            {
+                _ai?.Dispose();
+                _ai = new AiUpscaler(model);
+                _aiHasUpload = false;
+                _aiUploadedVersion = 0;
+            }
             _ai.EnsureLoaded();
         }
-        else if (filter != ScreenFilter.Ai && _filter == ScreenFilter.Ai)
+        else if (IsAi(_filter))
         {
             // Leaving AI: drop pending/completed output so a stale frame can't
             // resurface on re-entry (the session stays loaded for fast re-entry).
@@ -719,7 +742,7 @@ internal sealed unsafe class D3DScreen : IDisposable
 
         // AI upscale always consumes the full 640×400 frame (even in 200-line
         // mode), matching macOS — submit it for asynchronous inference.
-        if (_filter == ScreenFilter.Ai)
+        if (IsAi(_filter))
             _ai?.Submit(rgba, _srcWidth, _srcHeight);
 
         fixed (byte* src = rgba)
@@ -729,7 +752,7 @@ internal sealed unsafe class D3DScreen : IDisposable
             // In 200-line mode, extract even rows → 640×200 content texture so
             // filters operate at real resolution (matches macOS uploadPixelBuffer).
             // AI doesn't use the 200-line content texture (it upscales 640×400).
-            if (!is400Line && useFilter && _filter != ScreenFilter.Ai)
+            if (!is400Line && useFilter && !IsAi(_filter))
             {
                 int rowBytes = _srcWidth * 4;
                 fixed (byte* dst = _src200)
@@ -758,7 +781,9 @@ internal sealed unsafe class D3DScreen : IDisposable
             case ScreenFilter.Enhanced when use200:
                 RenderEnhanced(srcSrv, vx, vy, vw, vh);
                 break;
-            case ScreenFilter.Ai:
+            case ScreenFilter.AiFast:
+            case ScreenFilter.AiBalanced:
+            case ScreenFilter.AiQuality:
                 RenderAi(vx, vy, vw, vh);
                 break;
             default:
@@ -872,7 +897,7 @@ internal sealed unsafe class D3DScreen : IDisposable
     /// normal frame count.</summary>
     public bool TryGetAiInferenceCount(out long completed)
     {
-        if (_filter == ScreenFilter.Ai && _ai is not null)
+        if (IsAi(_filter) && _ai is not null)
         {
             completed = _ai.CompletedCount;
             return true;
@@ -1014,7 +1039,7 @@ internal sealed unsafe class D3DScreen : IDisposable
                 SetCb();
                 _ctx.Draw(3, 0);
             }
-            else if (_filter == ScreenFilter.Ai)
+            else if (IsAi(_filter))
             {
                 // Latest AI output (passthrough) if available, else Bicubic on the
                 // raw 640×400 — exactly what RenderAi shows on screen.

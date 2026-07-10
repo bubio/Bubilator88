@@ -81,8 +81,12 @@
                                               Click="OnVideoFilter" Tag="xBRZ" />
                     <muxc:RadioMenuFlyoutItem x:Name="FilterEnhanced" Text="Enhanced" GroupName="Filter"
                                               Click="OnVideoFilter" Tag="Enhanced" />
-                    <muxc:RadioMenuFlyoutItem x:Name="FilterAI" Text="AI Upscale" GroupName="Filter"
-                                              Click="OnVideoFilter" Tag="AI" />
+                    <muxc:RadioMenuFlyoutItem x:Name="FilterAIFast" Text="AI Upscale (Fast)" GroupName="Filter"
+                                              Click="OnVideoFilter" Tag="AIFast" />
+                    <muxc:RadioMenuFlyoutItem x:Name="FilterAIBalanced" Text="AI Upscale (Balanced)" GroupName="Filter"
+                                              Click="OnVideoFilter" Tag="AIBalanced" />
+                    <muxc:RadioMenuFlyoutItem x:Name="FilterAIQuality" Text="AI Upscale (Quality)" GroupName="Filter"
+                                              Click="OnVideoFilter" Tag="AIQuality" />
                 </MenuFlyoutSubItem>
                 <ToggleMenuFlyoutItem x:Name="ScanlineItem" Text="Scanlines" Click="OnScanlines" />
             </muxc:MenuBarItem>

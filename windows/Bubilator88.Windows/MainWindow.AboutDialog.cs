@@ -28,7 +28,8 @@ public sealed partial class MainWindow
         new("Technical Docs", "PC-8801についてのページ", "youkan", "http://www.maroon.dti.ne.jp/youkan/pc88/"),
         new("Technical Docs", "PC-8801 VRAM情報", null, "http://mydocuments.g2.xrea.com/html/p8/vraminfo.html"),
         new("Scaling", "xBRZ", "Zenju", "https://sourceforge.net/projects/xbrz/"),
-        new("AI Upscale", "Real-ESRGAN", null, "https://github.com/xinntao/Real-ESRGAN"),
+        new("AI Upscale", "Real-ESRGAN x2 (Quality)", null, "https://github.com/xinntao/Real-ESRGAN"),
+        new("AI Upscale", "SRVGGNet x2 (Fast/Balanced, self-distilled)", null, null),
         new("AI Coding", "Claude Code", "Anthropic", "https://claude.ai/code"),
     ];
 

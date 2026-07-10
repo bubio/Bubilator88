@@ -1045,10 +1045,14 @@ public sealed partial class MainWindow : Window
     // MARK: - Video filter (mirrors the macOS VideoFilter / scanline settings)
 
     private static readonly string[] FilterTags =
-        { "None", "Linear", "Bicubic", "CRT", "xBRZ", "Enhanced", "AI" };
+        { "None", "Linear", "Bicubic", "CRT", "xBRZ", "Enhanced", "AIFast", "AIBalanced", "AIQuality" };
 
     private static string NormalizeFilter(string? s)
-        => Array.Exists(FilterTags, t => t == s) ? s! : "None";
+    {
+        // Migrate the legacy single "AI" tag (which was Real-ESRGAN) to Quality.
+        if (s == "AI") return "AIQuality";
+        return Array.Exists(FilterTags, t => t == s) ? s! : "None";
+    }
 
     private static string NormalizeScreenshotFormat(string? s)
         => s is "png" or "jpeg" or "heic" ? s : "png";
@@ -1063,7 +1067,9 @@ public sealed partial class MainWindow : Window
         "CRT" => ScreenFilter.Crt,
         "xBRZ" => ScreenFilter.Xbrz,
         "Enhanced" => ScreenFilter.Enhanced,
-        "AI" => ScreenFilter.Ai,
+        "AIFast" => ScreenFilter.AiFast,
+        "AIBalanced" => ScreenFilter.AiBalanced,
+        "AIQuality" or "AI" => ScreenFilter.AiQuality,   // "AI" = legacy Quality tag
         _ => ScreenFilter.None,
     };
 
@@ -1103,7 +1109,9 @@ public sealed partial class MainWindow : Window
             "CRT" => FilterCRT,
             "xBRZ" => FilterXBRZ,
             "Enhanced" => FilterEnhanced,
-            "AI" => FilterAI,
+            "AIFast" => FilterAIFast,
+            "AIBalanced" => FilterAIBalanced,
+            "AIQuality" or "AI" => FilterAIQuality,
             _ => FilterNone,
         }).IsChecked = true;
         ScanlineItem.IsChecked = _scanlineEnabled;

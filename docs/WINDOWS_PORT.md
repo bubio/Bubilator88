@@ -144,12 +144,16 @@ vertical slice 以降、§4 マッピングの大半を実装。シェルは mac
 (残りは §4 で「未実装」とした周辺機能のみ)。実装は `windows/Bubilator88.Windows/`、
 ビルド/チェックアウト/モデル生成の手順は `windows/README.md`。
 
-- **映像**: D3D11 で None/Linear/Bicubic/CRT/xBRZ/Enhanced/**AI** の7フィルタ + スキャンライン。
-  ウィンドウ ×1/×2/×4(固定・永続)、フルスクリーン整数スケーリング、レターボックス。
-- **AI アップスケール**: CoreML の代わりに **ONNX Runtime + DirectML** で Real-ESRGAN x2。
-  非同期ダブルバッファ、`generation` で stale 破棄、未準備/モデル不在/DirectML 不在時は
-  Bicubic フォールバック(`AiUpscaler.cs`、macOS の state machine と同型)。FPS 表示は AI 時に
-  推論スループットを報告(macOS パリティ)。
+- **映像**: D3D11 で None/Linear/Bicubic/CRT/xBRZ/Enhanced/**AI (Fast/Balanced/Quality)** の
+  フィルタ + スキャンライン。ウィンドウ ×1/×2/×4(固定・永続)、フルスクリーン整数スケーリング、
+  レターボックス。
+- **AI アップスケール**: CoreML の代わりに **ONNX Runtime + DirectML** で、macOS と同じ
+  3 モデル(Fast=`SRVGGNet_x2_lite` / Balanced=`SRVGGNet_x2` / Quality=`RealESRGAN_x2`)を
+  実行。フィルタ切替でモデルを載せ替え(`AiUpscaler` を該当モデル名で再生成)。非同期ダブル
+  バッファ、`generation` で stale 破棄、未準備/モデル不在/DirectML 不在時は Bicubic フォール
+  バック(`AiUpscaler.cs`、macOS の state machine と同型)。FPS 表示は AI 時に推論スループットを
+  報告(macOS パリティ)。**3 モデルとも単一の source-of-truth `.pth`(`models/`, Git LFS)から
+  macOS=CoreML / Windows=ONNX の二形式に生成される**(§4 参照)。
 - **音声**: XAudio2 リングバッファ + 適応レート制御、既定デバイスフォーマット追従、リズム音源サンプル読込。
 - **ディスク**: マルチイメージ D88、Drive 1/2/1&2、ライトプロテクト、Recent Files、イメージ選択ダイアログ。
 - **入力**: VirtualKey→マトリクス(US/JIS 記号、矢印/数字行/WASD テンキー擬似)。メニューの
@@ -162,10 +166,17 @@ vertical slice 以降、§4 マッピングの大半を実装。シェルは mac
 
 #### Git LFS
 
-AI モデル `windows/Bubilator88.Windows/native/RealESRGAN_x2.onnx`(~64MB)はモデル同梱 EXE の
-ビルドに必要なため**追跡対象**だが、git 履歴肥大を避けて **Git LFS** で管理する
-(`.gitattributes`: `*.onnx filter=lfs`)。clone 後は `git lfs pull` で実体化が必要
-(未 pull はポインタ ~133B)。取得・生成手順は `windows/README.md` 参照。
+AI モデルは全 OS 共有の `models/onnx/*.onnx` に集約し、Windows csproj がここから出力直下へ
+コピーする(将来の Linux シェルも同じ場所を使う)。git 履歴肥大を避けるため `.pth` / `.onnx` は
+**Git LFS** で管理(`.gitattributes`: `*.onnx` / `*.pth filter=lfs`)。clone 後は `git lfs pull`
+で実体化が必要(未 pull はポインタ ~133B → 該当 AI フィルタは Bicubic フォールバック)。
+
+- **自前学習の SRVGGNet(Fast/Balanced)は必ず LFS で commit** — 公開重みが無く、`.pth` を失うと
+  誰も再生成できない。source-of-truth の `.pth`(`models/*.pth`)も LFS でリポジトリに取り込み済。
+- **RealESRGAN(Quality)は公開重みから再生成可能**なので commit は任意
+  (`scripts/convert_realesrgan_onnx.py`)。
+
+取得・生成手順は `windows/README.md`、再学習の完全手順は `models/PROVENANCE.md` 参照。
 
 ---
 
@@ -178,7 +189,7 @@ AI モデル `windows/Bubilator88.Windows/native/RealESRGAN_x2.onnx`(~64MB)は�
 | AVAudioEngine リングバッファ | XAudio2(リング部のロジックは流用) | ✅ 適応レート制御込み |
 | KeyEventView + KeyMapping | WinUI `KeyDown` / VirtualKey ※マッピングテーブル全書き換え | ✅ US/JIS + テンキー擬似 + メニュー chord |
 | xBRZ GPU シェーダ | HLSL シェーダへ移植 | ✅ |
-| AIUpscaler (CoreML, RealESRGAN/SRVGGNet) | ONNX Runtime + DirectML(モデルを ONNX 変換) | ✅ Real-ESRGAN x2(Quality)。Balanced/Fast は将来 |
+| AIUpscaler (CoreML, RealESRGAN/SRVGGNet) | ONNX Runtime + DirectML(`.pth`→ONNX 変換、共有 `models/onnx/`) | ✅ 3 モデル対応(Fast/Balanced=SRVGGNet, Quality=RealESRGAN) |
 | セーブステート / D88 / スクショ / 早送り | コア内 + ホスト I/O | ✅ |
 | GameController (GCController) + haptics | XInput / Windows.Gaming.Input(振動含む) | ⬜ 未実装 |
 | マウスロック (`CGAssociateMouseAndMouseCursorPosition`) | `ClipCursor` + RAWINPUT 相対デルタ | ⬜ 未実装 |
