@@ -1,0 +1,102 @@
+name: Release (Windows)
+
+# macOS 版 (release.yml) とは完全に独立したリリース系統。
+#
+# `release: published` は「default branch (main) にあるワークフロー定義」だけを
+# 見て発火する仕様のため、このファイル自体 (と release.yml 側の win- ガード) は
+# main に置く必要がある。一方 Windows 移植本体 (windows/, scripts/) は
+# feature/windows-native-port ブランチにのみ存在し main にはマージしない方針
+# (CLAUDE.md) — これは矛盾しない。実行時の actions/checkout は github.ref
+# (= タグ ref, 例: refs/tags/win-v1.2.3) をチェックアウトするので、ワークフロー
+# の「定義」は main から読まれつつ、実際にビルドするコード一式はタグが打たれた
+# feature/windows-native-port 側のコミットから取得される。ref を明示指定する
+# 必要はない。
+#
+# タグ名 `win-v*` で「これは Windows 版のリリースである」ことを判別する。
+# タグを打つ側の意思だけで macOS だけ/Windows だけ/両方リリース、が独立して
+# 成り立つ (release.yml 側は逆に `win-` で始まるタグを無視する)。
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  SWIFT_VERSION: "6.3.2"
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'win-')
+    runs-on: windows-2022
+    timeout-minutes: 60
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      sha256: ${{ steps.package.outputs.sha256 }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup Swift ${{ env.SWIFT_VERSION }}
+        uses: SwiftyLab/setup-swift@v1
+        with:
+          swift-version: ${{ env.SWIFT_VERSION }}
+
+      - name: Show environment
+        run: |
+          swift --version
+          dotnet --version
+        shell: pwsh
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Derive version
+        id: version
+        shell: pwsh
+        run: |
+          $refName = $env:GITHUB_REF_NAME
+          if ($refName -match '^win-v(\d+\.\d+\.\d+.*)$') {
+            $version = $Matches[1]
+            $ref = $refName
+          } else {
+            # workflow_dispatch (非タグ実行): dev build 扱い
+            $shortSha = $env:GITHUB_SHA.Substring(0, 7)
+            $ref = "win-dev-$shortSha"
+            $version = "0.0.0-$shortSha"
+          }
+          "ref=$ref"         >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build & package
+        id: package
+        shell: pwsh
+        run: |
+          ./scripts/build-windows-package.ps1 `
+            -Version "${{ steps.version.outputs.version }}" `
+            -RunCoreTests
+
+      - name: Upload artifact (for workflow_dispatch runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.package.outputs.zip_name }}
+          path: ${{ steps.package.outputs.zip_path }}
+          retention-days: 14
+
+      - name: Attach zip to Release
+        if: github.event_name != 'workflow_dispatch'
+        uses: softprops/action-gh-release@v3
+        with:
+          files: ${{ steps.package.outputs.zip_path }}
+          tag_name: ${{ steps.version.outputs.ref }}
+          draft: false
+          prerelease: false
+          generate_release_notes: false
