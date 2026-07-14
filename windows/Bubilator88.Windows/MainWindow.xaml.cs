@@ -112,7 +112,6 @@ public sealed partial class MainWindow : Window
     [DllImport("user32.dll")]
     private static extern short GetKeyState(int nVirtKey);
 
-    private const int VkShift = 0x10;
     private const int VkControl = 0x11;
     private static bool KeyHeld(int vk) => (GetKeyState(vk) & 0x8000) != 0;
     private static readonly RoutedEventArgs EmptyArgs = new();
@@ -1646,7 +1645,6 @@ public sealed partial class MainWindow : Window
         if (key == VirtualKey.F11) { OnToggleFullscreen(this, EmptyArgs); return true; }
 
         if (!KeyHeld(VkControl)) return false;
-        bool shift = KeyHeld(VkShift);
 
         switch (key)
         {
@@ -1654,7 +1652,6 @@ public sealed partial class MainWindow : Window
             case VirtualKey.E: OnReset(this, EmptyArgs); return true;
             case VirtualKey.S: OnQuickSave(this, EmptyArgs); return true;
             case VirtualKey.L: OnQuickLoad(this, EmptyArgs); return true;
-            case VirtualKey.C when shift: OnCopyScreen(this, EmptyArgs); return true;
             case VirtualKey.Number1: _ = MountDriveAsync(0); return true;
             case VirtualKey.Number2: _ = MountDriveAsync(1); return true;
             case VirtualKey.Number3: _ = MountBothAsync(); return true;

@@ -102,8 +102,6 @@
                 </MenuFlyoutSubItem>
                 <MenuFlyoutSeparator />
                 <MenuFlyoutItem Text="Save Screenshot…" Click="OnSaveScreenshot" />
-                <MenuFlyoutItem Text="Copy Screen" Click="OnCopyScreen"
-                                KeyboardAcceleratorTextOverride="Ctrl+Shift+C" />
                 <MenuFlyoutSeparator />
                 <MenuFlyoutItem Text="Quick Save" Click="OnQuickSave"
                                 KeyboardAcceleratorTextOverride="Ctrl+S" />
