@@ -60,6 +60,8 @@ public sealed partial class MainWindow : Window
     // the ones with a working Windows backend are present). Persisted alongside
     // the menu-driven settings in settings.json.
     private string _screenshotFormat = "png";        // png/jpeg/heic
+    private bool _screenshotAutoSave = true;          // matches macOS Settings.screenshotAutoSave default
+    private string? _screenshotDirectory;             // null = default (~/Pictures)
     private bool _fullscreenIntegerScaling;           // pixel-perfect fullscreen letterbox
     private int _audioBufferMs = 100;                 // adaptive-rate target latency (20–500)
     private string _keyboardLayout = "auto";          // auto/jis/us
@@ -938,6 +940,8 @@ public sealed partial class MainWindow : Window
         public string VideoFilter { get; set; } = "None";  // None/Linear/Bicubic/CRT/xBRZ/Enhanced
         public bool ScanlineEnabled { get; set; }    // matches macOS default (off)
         public string ScreenshotFormat { get; set; } = "png";   // png/jpeg/heic
+        public bool ScreenshotAutoSave { get; set; } = true;    // matches macOS default (on)
+        public string? ScreenshotDirectory { get; set; }        // null = default (~/Pictures)
         public bool FullscreenIntegerScaling { get; set; }       // matches macOS default (off)
         public int AudioBufferMs { get; set; } = 100;            // matches macOS default
         public string KeyboardLayout { get; set; } = "auto";     // auto/jis/us
@@ -971,6 +975,8 @@ public sealed partial class MainWindow : Window
             _videoFilter = NormalizeFilter(s.VideoFilter);
             _scanlineEnabled = s.ScanlineEnabled;
             _screenshotFormat = NormalizeScreenshotFormat(s.ScreenshotFormat);
+            _screenshotAutoSave = s.ScreenshotAutoSave;
+            _screenshotDirectory = s.ScreenshotDirectory;
             _fullscreenIntegerScaling = s.FullscreenIntegerScaling;
             _audioBufferMs = Math.Clamp(s.AudioBufferMs, 20, 500);
             _keyboardLayout = NormalizeKeyboardLayout(s.KeyboardLayout);
@@ -1001,6 +1007,8 @@ public sealed partial class MainWindow : Window
                 VideoFilter = _videoFilter,
                 ScanlineEnabled = _scanlineEnabled,
                 ScreenshotFormat = _screenshotFormat,
+                ScreenshotAutoSave = _screenshotAutoSave,
+                ScreenshotDirectory = _screenshotDirectory,
                 FullscreenIntegerScaling = _fullscreenIntegerScaling,
                 AudioBufferMs = _audioBufferMs,
                 KeyboardLayout = _keyboardLayout,
@@ -1254,19 +1262,38 @@ public sealed partial class MainWindow : Window
         // Honor the screenshot format chosen in Settings (PNG/JPEG/HEIC), matching
         // the macOS Settings screenshot-format picker.
         var (_, ext, label) = ImageCodec.FormatInfo(_screenshotFormat);
+        string defaultName = $"Bubilator88-{DateTime.Now:yyyyMMdd-HHmmss}";
 
-        var picker = new FileSavePicker { SuggestedStartLocation = PickerLocationId.PicturesLibrary };
-        picker.FileTypeChoices.Add(label, new List<string> { ext });
-        picker.SuggestedFileName = $"Bubilator88-{DateTime.Now:yyyyMMdd-HHmmss}";
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+        // Auto-save mode writes straight to the configured directory (default
+        // ~/Pictures) with no prompt; ask-every-time mode shows a save picker.
+        // Mirrors macOS EmulatorViewModel.saveScreenshot's screenshotAutoSave branch.
+        string path;
+        if (_screenshotAutoSave)
+        {
+            string dir = _screenshotDirectory
+                ?? Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+            Directory.CreateDirectory(dir);
+            path = System.IO.Path.Combine(dir, defaultName + ext);
+        }
+        else
+        {
+            var picker = new FileSavePicker { SuggestedStartLocation = PickerLocationId.PicturesLibrary };
+            picker.FileTypeChoices.Add(label, new List<string> { ext });
+            picker.SuggestedFileName = defaultName;
+            InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
 
-        StorageFile? file = await picker.PickSaveFileAsync();
-        if (file is null) return;
+            StorageFile? file = await picker.PickSaveFileAsync();
+            if (file is null) return;
+            path = file.Path;
+        }
+
         try
         {
             byte[] data = await ImageCodec.EncodeAsync(pixels, cw, ch, _screenshotFormat);
-            await File.WriteAllBytesAsync(file.Path, data);
-            ShowToast("Screenshot saved");
+            await File.WriteAllBytesAsync(path, data);
+            // macOS only toasts in auto-save mode — the picker itself confirms the
+            // save when the user chose the location by hand.
+            if (_screenshotAutoSave) ShowToast("Screenshot saved");
         }
         catch (Exception ex) { ShowError($"Screenshot failed: {ex.Message}"); }
     }

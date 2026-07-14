@@ -4,6 +4,9 @@ using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Windows.Storage;
+using Windows.Storage.Pickers;
+using WinRT.Interop;
 using Bubilator88.Windows.GameController;
 
 namespace Bubilator88.Windows;
@@ -72,12 +75,50 @@ public sealed partial class MainWindow
     private FrameworkElement BuildGeneralTab()
     {
         var panel = NewTabPanel();
+
+        var formatCombo = LabeledCombo("Format",
+            new[] { ("PNG", "png"), ("JPEG", "jpeg"), ("HEIC", "heic") },
+            _screenshotFormat,
+            tag => { _screenshotFormat = tag; SaveSettings(); });
+
+        var askToggle = Toggle("Ask save location every time", !_screenshotAutoSave, askEveryTime =>
+        {
+            _screenshotAutoSave = !askEveryTime;
+            SaveSettings();
+        });
+
+        var dirLabel = new TextBlock
+        {
+            Text = _screenshotDirectory ?? "~\\Pictures",
+            Opacity = 0.6,
+            FontSize = 12,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        var chooseButton = new Button { Content = "Choose..." };
+        chooseButton.Click += async (_, _) =>
+        {
+            var picker = new FolderPicker { SuggestedStartLocation = PickerLocationId.PicturesLibrary };
+            picker.FileTypeFilter.Add("*");
+            InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+            StorageFolder? folder = await picker.PickSingleFolderAsync();
+            if (folder is null) return;
+            _screenshotDirectory = folder.Path;
+            dirLabel.Text = folder.Path;
+            SaveSettings();
+        };
+        var dirRow = new Grid { ColumnSpacing = 10 };
+        dirRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        dirRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(dirLabel, 0);
+        Grid.SetColumn(chooseButton, 1);
+        dirRow.Children.Add(dirLabel);
+        dirRow.Children.Add(chooseButton);
+
         panel.Children.Add(Section("Screenshot",
-            LabeledCombo("Format",
-                new[] { ("PNG", "png"), ("JPEG", "jpeg"), ("HEIC", "heic") },
-                _screenshotFormat,
-                tag => { _screenshotFormat = tag; SaveSettings(); }),
-            "Image format used when saving screenshots."));
+            new FrameworkElement[] { formatCombo, askToggle, dirRow },
+            "Image format used when saving screenshots. When save location isn't " +
+            "asked every time, screenshots are written straight to the folder below."));
         return panel;
     }
 
