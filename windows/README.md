@@ -112,7 +112,8 @@ dotnet run -c Release -r win-x64
 
 > **ランタイム依存**: `Bubilator88C.dll` は Swift ランタイム DLL(`swiftCore.dll` 等)に依存する。
 > 開発機では `...\Swift\Runtimes\6.3.2\usr\bin` が PATH 上なので `dotnet run` で解決するが、
-> 単体配布する場合は同 bin の DLL 群を exe の隣に同梱すること(配布同梱は未対応)。
+> 単体配布する場合は同 bin の DLL 群を exe の隣に同梱する必要がある(手動 `dotnet run` では
+> 未同梱のまま。配布パッケージは §5 の `build-windows-package.ps1` が自動でバンドルする)。
 >
 > **DLL 配置**: `None Include="native\..."` を `<Link>Bubilator88C.dll</Link>` で**出力直下**に
 > 置かないと P/Invoke が `ERROR_MOD_NOT_FOUND (0x8007007E)` で落ちる(native\ サブフォルダは
@@ -128,6 +129,22 @@ dotnet test windows\Bubilator88.Windows.Tests\Bubilator88.Windows.Tests.csproj
 > 載って失敗するため、テストプロジェクトは UI 非依存の純ロジックファイル
 > (`KeyMapping.cs` / `PixelMath.cs`)を**ソースリンク**してヘッドレスに検証する。
 > 対象を増やすときは `.csproj` の `<Compile Include=…>` に純ロジックファイルを足す。
+
+### 5. 配布パッケージ (zip) をビルド
+
+```powershell
+pwsh scripts\build-windows-package.ps1 -Version 1.2.3
+```
+
+コア DLL のビルド → AI モデル (Git LFS) の実体化確認 → `dotnet publish`(win-x64,
+self-contained)→ Swift ランタイム DLL 一式のバンドル → スモークテスト(Swift を
+PATH から外した状態で `Bubilator88C.dll` がロードできるかを検証)→ zip 化 + SHA256
+算出、まで一括で行う。`dist\Bubilator88-Windows-x64-<Version>.zip` に出力され、
+Swift toolchain が入っていないマシンでもそのまま動く(ROM は同梱しない、従来通り
+ユーザが `%LOCALAPPDATA%\Bubilator88\` に配置)。CI (`.github/workflows/release-windows.yml`)
+もこのスクリプトを呼ぶ。主なオプション: `-SkipCoreBuild`(既存 DLL を使い回す)/
+`-RunCoreTests`(`swift test` を先に実行)/ `-SwiftRuntimeBin`(Runtimes ディレクトリの
+自動検出に失敗する場合の明示指定)。
 
 ## 実装済み機能
 
@@ -168,4 +185,3 @@ dotnet test windows\Bubilator88.Windows.Tests\Bubilator88.Windows.Tests.csproj
   メニュー項目とショートカットキーを再度追加するだけで再有効化できる。翻訳バックエンドは
   そもそも未着手(検出精度がこの状態のため着手を見送り)。
 - 空間オーディオ / ヘッドトラッキング、操作スクリプト記録
-- Swift ランタイム DLL の配布同梱

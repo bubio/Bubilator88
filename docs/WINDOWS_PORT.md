@@ -132,7 +132,9 @@ Swift toolchain を導入して実ビルド。**コア→DLL パイプライン�
   4. **DLL 配置**: `None Include="native\..."` を `<Link>Bubilator88C.dll</Link>` で**出力直下**に置かないと
      P/Invoke が `ERROR_MOD_NOT_FOUND (0x8007007E)` で落ちる(native\ サブフォルダは探索対象外)。
 - ランタイム: `Bubilator88C.dll` は Swift ランタイム DLL(`...\Swift\Runtimes\6.3.2\usr\bin`)に依存。
-  開発機は同 bin が PATH 上で解決。**配布時は同梱が要る**(未対応)。
+  開発機は同 bin が PATH 上で解決。配布パッケージでは `scripts/build-windows-package.ps1`
+  が同 DLL 一式を発行フォルダへバンドルし、Swift を PATH から外した状態でロードできるかを
+  スモークテストで検証する(2026-07-14 実装、`windows/README.md` §5)。
 
 #### 残(v1 以降)
 
