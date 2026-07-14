@@ -13,6 +13,7 @@ EXPORTS
     b88_mount_disk
     b88_eject_disk
     b88_set_write_protect
+    b88_set_pseudo_stereo
     b88_d88_probe
     b88_set_dipsw1
     b88_apply_bootstrap

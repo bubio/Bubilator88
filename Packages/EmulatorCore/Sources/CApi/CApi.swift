@@ -249,6 +249,16 @@ public func b88_set_write_protect(_ handle: UnsafeMutableRawPointer?,
     context(handle)?.machine.setWriteProtect(drive: Int(drive), protected: protected != 0)
 }
 
+/// Enable/disable the pseudo-stereo (Haas effect) chorus on mono FM/SSG
+/// output. Mirrors macOS `EmulatorViewModel.pseudoStereo` →
+/// `machine.sound.pseudoStereoEnabled`. Windows has no immersive-audio
+/// mode yet, so unlike macOS there is no mutual-exclusion flag to combine
+/// this with.
+@_cdecl("b88_set_pseudo_stereo")
+public func b88_set_pseudo_stereo(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32) {
+    context(handle)?.machine.sound.pseudoStereoEnabled = enabled != 0
+}
+
 // MARK: - Machine control
 
 /// Set DIP SW1 raw value (e.g. 0xC3 = N88-BASIC, 0xC2 = N-BASIC).

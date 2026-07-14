@@ -169,6 +169,7 @@ public sealed partial class MainWindow : Window
             _host = new EmulatorHost();
             _host.LoadRoms();
             _host.AudioBufferMs = _audioBufferMs;   // adaptive-rate target latency
+            _host.SetPseudoStereo(_pseudoStereo);
 
             LoadRecent();
 
@@ -953,11 +954,13 @@ public sealed partial class MainWindow : Window
         public bool FddSoundEnabled { get; set; } = true;   // matches macOS Settings.fddSound default
         public int FddSoundVolumeLevel { get; set; } = 2;   // 0=small 1=medium 2=large
         public string FddSoundDeviceId { get; set; } = ""; // "" = System Default; matches macOS fddSoundDeviceUID
+        public bool PseudoStereo { get; set; }   // matches macOS Settings.pseudoStereo default (off)
         public bool GameControllerEnabled { get; set; } = true;   // matches macOS Settings.gameControllerEnabled default
         public ControllerButtonMapping? ControllerMapping { get; set; }   // null = use defaults
     }
 
     private double _volume = 0.5;
+    private bool _pseudoStereo;
 
     private static string SettingsPath => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -989,6 +992,7 @@ public sealed partial class MainWindow : Window
             _fddSoundEnabled = s.FddSoundEnabled;
             _fddSoundVolumeLevel = Math.Clamp(s.FddSoundVolumeLevel, 0, 2);
             _fddSoundDeviceId = s.FddSoundDeviceId ?? "";
+            _pseudoStereo = s.PseudoStereo;
             _gameControllerEnabled = s.GameControllerEnabled;
             _controllerMapping = s.ControllerMapping ?? ControllerButtonMapping.Defaults.Clone();
         }
@@ -1022,6 +1026,7 @@ public sealed partial class MainWindow : Window
                 FddSoundEnabled = _fddSoundEnabled,
                 FddSoundVolumeLevel = _fddSoundVolumeLevel,
                 FddSoundDeviceId = _fddSoundDeviceId,
+                PseudoStereo = _pseudoStereo,
                 GameControllerEnabled = _gameControllerEnabled,
                 ControllerMapping = _controllerMapping,
             }));

@@ -175,6 +175,15 @@ public sealed partial class MainWindow
         panel.Children.Add(Section("Audio Buffer", new[] { (FrameworkElement)row },
             "Lower values reduce latency but may cause crackling."));
 
+        var pseudoStereoToggle = Toggle("Enable Pseudo Stereo", _pseudoStereo, isOn =>
+        {
+            _pseudoStereo = isOn;
+            _host?.SetPseudoStereo(isOn);
+            SaveSettings();
+        });
+        panel.Children.Add(Section("Pseudo Stereo", new[] { (FrameworkElement)pseudoStereoToggle },
+            "Widens mono FM/SSG output with a Haas-effect chorus. Has no effect once any FM channel uses hardware panning."));
+
         var fddToggle = Toggle("Enable FDD Sound", _fddSoundEnabled, isOn =>
         {
             _fddSoundEnabled = isOn;

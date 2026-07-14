@@ -159,6 +159,10 @@ internal sealed unsafe class EmulatorHost : IDisposable
     public void SetWriteProtect(int drive, bool protectedFlag)
         => NativeApi.b88_set_write_protect(_handle, drive, protectedFlag ? 1 : 0);
 
+    /// <summary>Enable/disable the pseudo-stereo (Haas effect) chorus on mono FM/SSG. Survives Reset/Configure.</summary>
+    public void SetPseudoStereo(bool enabled)
+        => NativeApi.b88_set_pseudo_stereo(_handle, enabled ? 1 : 0);
+
     /// <summary>
     /// Sample and clear the per-drive disk-access flags (drives 0 and 1).
     /// Each flag pulses true while the FDC touched that drive since the last
