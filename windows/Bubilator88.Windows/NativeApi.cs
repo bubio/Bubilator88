@@ -35,6 +35,11 @@ internal static unsafe partial class NativeApi
     public const int DipSw1_N88 = 0xC3;
     public const int DipSw1_NBasic = 0xC2;
 
+    // Extended RAM capacity, for b88_install_ext_ram (matches Settings.extramCards on macOS).
+    public const int ExtRam_None = 0;
+    public const int ExtRam_128KB = 1;
+    public const int ExtRam_1MB = 8;
+
     [LibraryImport(Dll)]
     public static partial IntPtr b88_create();
 
@@ -68,6 +73,11 @@ internal static unsafe partial class NativeApi
 
     [LibraryImport(Dll)]
     public static partial void b88_reset(IntPtr handle, int preserveRam);
+
+    // cards: 0=none, 1=128KB, 8=1MB. Re-installs a fresh (zeroed) buffer, so
+    // call after b88_reset, matching the macOS reset ordering.
+    [LibraryImport(Dll)]
+    public static partial void b88_install_ext_ram(IntPtr handle, int cards);
 
     [LibraryImport(Dll)]
     public static partial void b88_set_clock_8mhz(IntPtr handle, int on);

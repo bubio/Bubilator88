@@ -198,7 +198,7 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// Configure boot mode and reset. Mount disks BEFORE calling so the boot
     /// strap (DIP SW2 bit 3) picks FDD boot when drive 0 is occupied.
     /// </summary>
-    public void Configure(bool clock8MHz, int dipSw1, int dipSw2Base, bool preserveRam = false)
+    public void Configure(bool clock8MHz, int dipSw1, int dipSw2Base, bool preserveRam = false, int extRamCards = NativeApi.ExtRam_128KB)
     {
         NativeApi.b88_set_dipsw1(_handle, dipSw1);
         NativeApi.b88_apply_bootstrap(_handle, dipSw2Base);
@@ -211,6 +211,10 @@ internal sealed unsafe class EmulatorHost : IDisposable
         // 8 MHz. This mirrors the macOS ordering in EmulatorViewModel (reset,
         // then assign clock8MHz).
         NativeApi.b88_set_clock_8mhz(_handle, clock8MHz ? 1 : 0);
+        // Re-install extended RAM last, fresh (zeroed) every reset — mirrors
+        // macOS's loadROMs() call at the end of performReset, which reinstalls
+        // extRAM from Settings.extramCards on every reset.
+        NativeApi.b88_install_ext_ram(_handle, extRamCards);
     }
 
     public void Reset(bool preserveRam = false) => NativeApi.b88_reset(_handle, preserveRam ? 1 : 0);

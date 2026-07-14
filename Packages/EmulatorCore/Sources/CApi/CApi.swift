@@ -275,6 +275,14 @@ public func b88_reset(_ handle: UnsafeMutableRawPointer?, _ preserveRAM: Int32) 
     context(handle)?.machine.reset(preserveRAM: preserveRAM != 0)
 }
 
+/// Install extended RAM (cards × 4 banks × 32KB). 0=none, 1=128KB, 8=1MB,
+/// matching Settings.extramCards on macOS. Mirrors machine.installExtRAM,
+/// called fresh on every boot/reset so the host doesn't need to track state.
+@_cdecl("b88_install_ext_ram")
+public func b88_install_ext_ram(_ handle: UnsafeMutableRawPointer?, _ cards: Int32) {
+    context(handle)?.machine.installExtRAM(cards: Int(cards), banksPerCard: 4)
+}
+
 @_cdecl("b88_set_clock_8mhz")
 public func b88_set_clock_8mhz(_ handle: UnsafeMutableRawPointer?, _ on: Int32) {
     context(handle)?.machine.clock8MHz = (on != 0)

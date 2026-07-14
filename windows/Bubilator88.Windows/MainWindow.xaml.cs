@@ -77,6 +77,7 @@ public sealed partial class MainWindow : Window
     // Boot configuration (mirrors the former combo/toggle state).
     private int _bootModeIndex;
     private bool _clock8MHz = true;
+    private int _extRamCards = NativeApi.ExtRam_128KB;  // matches macOS Settings.extramCards default
 
     // Per-drive mounted-disk state (bytes kept so images can be switched without
     // re-reading the file; mirrors macOS MountedDiskInfo for multi-image .d88).
@@ -282,7 +283,7 @@ public sealed partial class MainWindow : Window
     {
         if (_host is null) return;
         var (dipSw1, dipSw2Base) = BootSelection();
-        _host.Configure(_clock8MHz, dipSw1, dipSw2Base, preserveRam);
+        _host.Configure(_clock8MHz, dipSw1, dipSw2Base, preserveRam, _extRamCards);
         ModeLabel.Text = _bootModeIndex switch
         {
             1 => "N88-V1H",
@@ -936,6 +937,7 @@ public sealed partial class MainWindow : Window
         public int WindowScale { get; set; } = 2;
         public int BootModeIndex { get; set; }       // 0=N88-V2 1=V1H 2=V1S 3=N-BASIC
         public bool Clock8MHz { get; set; } = true;
+        public int ExtRamCards { get; set; } = NativeApi.ExtRam_128KB;  // 0=none 1=128KB 8=1MB
         public double Volume { get; set; } = 0.5;    // matches macOS default
         public string VideoFilter { get; set; } = "None";  // None/Linear/Bicubic/CRT/xBRZ/Enhanced
         public bool ScanlineEnabled { get; set; }    // matches macOS default (off)
@@ -971,6 +973,7 @@ public sealed partial class MainWindow : Window
             _windowScale = NormalizeScale(s.WindowScale);
             _bootModeIndex = Math.Clamp(s.BootModeIndex, 0, 3);
             _clock8MHz = s.Clock8MHz;
+            _extRamCards = NormalizeExtRamCards(s.ExtRamCards);
             _volume = Math.Clamp(s.Volume, 0.0, 1.0);
             _videoFilter = NormalizeFilter(s.VideoFilter);
             _scanlineEnabled = s.ScanlineEnabled;
@@ -1003,6 +1006,7 @@ public sealed partial class MainWindow : Window
                 WindowScale = _windowScale,
                 BootModeIndex = _bootModeIndex,
                 Clock8MHz = _clock8MHz,
+                ExtRamCards = _extRamCards,
                 Volume = _volume,
                 VideoFilter = _videoFilter,
                 ScanlineEnabled = _scanlineEnabled,
@@ -1039,6 +1043,11 @@ public sealed partial class MainWindow : Window
     // Allowed view scales are ×1/×2/×4 (matches macOS). Map any other value
     // (e.g. a ×3 left over from an older build) to the nearest allowed scale.
     private static int NormalizeScale(int s) => s <= 1 ? 1 : s == 2 ? 2 : 4;
+
+    // Extended RAM capacity is 0 (none), 1 (128KB) or 8 (1MB) — matches
+    // QUASI88's use_extram encoding. Anything else (corrupt json, future value)
+    // falls back to the macOS default of 1 card (128KB).
+    private static int NormalizeExtRamCards(int c) => c is NativeApi.ExtRam_None or NativeApi.ExtRam_1MB ? c : NativeApi.ExtRam_128KB;
 
     private void ApplyWindowScale(int scale, bool persist = true)
     {

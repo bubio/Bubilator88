@@ -119,6 +119,15 @@ public sealed partial class MainWindow
             new FrameworkElement[] { formatCombo, askToggle, dirRow },
             "Image format used when saving screenshots. When save location isn't " +
             "asked every time, screenshots are written straight to the folder below."));
+
+        var extRamCombo = LabeledCombo("Capacity",
+            new[] { ("None", "0"), ("128 KB", "1"), ("1 MB", "8") },
+            _extRamCards.ToString(),
+            tag => { _extRamCards = int.Parse(tag); SaveSettings(); });
+
+        panel.Children.Add(Section("Extended RAM", new[] { (FrameworkElement)extRamCombo },
+            "Applied on next reset."));
+
         return panel;
     }
 

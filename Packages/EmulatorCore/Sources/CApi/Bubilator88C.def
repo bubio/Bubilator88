@@ -17,6 +17,7 @@ EXPORTS
     b88_set_dipsw1
     b88_apply_bootstrap
     b88_reset
+    b88_install_ext_ram
     b88_set_clock_8mhz
     b88_get_clock_8mhz
     b88_is_400line
