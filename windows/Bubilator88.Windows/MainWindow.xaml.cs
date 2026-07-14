@@ -123,6 +123,12 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
 
+        // Unpackaged WinUI3 apps don't pick up the exe's Win32 icon resource for
+        // the titlebar/taskbar automatically (that only covers Explorer/shortcut
+        // icons) — AppWindow.SetIcon must be called explicitly.
+        string iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico");
+        if (File.Exists(iconPath)) AppWindow.SetIcon(iconPath);
+
         // Size and lock the window BEFORE App.Activate() shows it, so it doesn't
         // briefly flash at the default size before snapping to the saved scale.
         LoadSettings();

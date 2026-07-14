@@ -23,6 +23,8 @@ windows/Bubilator88.Windows/
 ├── MainWindow.xaml(.cs)      UI + 60Hz フレームループ + 入力/ディスク/メニュー
 ├── MainWindow.SettingsDialog.cs  設定ダイアログ (General/Display/Audio/Keyboard)
 ├── App.xaml(.cs)
+├── Assets/
+│   └── AppIcon.ico            ← exe リソース (ApplicationIcon) + タイトルバー/タスクバー用
 └── native/
     └── Bubilator88C.dll      ← swift build 成果物を手動配置 (git 管理外)
 
@@ -118,6 +120,16 @@ dotnet run -c Release -r win-x64
 > **DLL 配置**: `None Include="native\..."` を `<Link>Bubilator88C.dll</Link>` で**出力直下**に
 > 置かないと P/Invoke が `ERROR_MOD_NOT_FOUND (0x8007007E)` で落ちる(native\ サブフォルダは
 > 探索対象外)。`models\onnx\*.onnx` も同様に出力直下へ Link コピーされる。
+
+> **アプリアイコン**: `Assets\AppIcon.ico` は `..\..\docs\AppIcon.png` から生成したマルチ
+> 解像度 ico (16〜256px)。`<ApplicationIcon>` で exe の Win32 リソースに焼き込まれる
+> (エクスプローラ/タスクバー/ショートカットの表示に使われる)が、unpackaged WinUI3 では
+> それだけではタイトルバーアイコンにならないため、`MainWindow` コンストラクタで
+> `AppWindow.SetIcon(...)` を明示的に呼んで同じ ico を渡している。元画像を差し替えたら
+> 再生成すること:
+> ```powershell
+> pwsh scripts\convert-png-to-ico.ps1 -SourcePng docs\AppIcon.png -OutputIco windows\Bubilator88.Windows\Assets\AppIcon.ico
+> ```
 
 ### 4. シェルの単体テスト
 

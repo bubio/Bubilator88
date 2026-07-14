@@ -6,6 +6,12 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>Bubilator88.Windows</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Explorer/taskbar/shortcut icon (Win32 resource baked into the exe).
+         The titlebar icon is set separately at runtime via AppWindow.SetIcon
+         (see MainWindow.xaml.cs) since unpackaged WinUI3 apps don't derive it
+         from this resource. Regenerate from docs\AppIcon.png via
+         scripts\convert-png-to-ico.ps1. -->
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <Platforms>x64;arm64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <UseWinUI>true</UseWinUI>
@@ -45,6 +51,15 @@
          any DX12 GPU; the package brings onnxruntime.dll + DirectML.dll into the
          output. Mirrors the macOS CoreML AI filter. -->
     <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.*" />
+  </ItemGroup>
+
+  <!-- Copied to the output root so MainWindow.xaml.cs can find it at runtime
+       (AppWindow.SetIcon needs a loose .ico file, not just the exe's embedded
+       Win32 resource set via ApplicationIcon above). -->
+  <ItemGroup>
+    <Content Include="Assets\AppIcon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <!-- The Swift core DLL is built separately (see windows/README.md). The
