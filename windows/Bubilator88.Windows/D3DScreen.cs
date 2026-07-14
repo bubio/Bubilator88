@@ -1127,38 +1127,14 @@ internal sealed unsafe class D3DScreen : IDisposable
     public static bool FilterSupportsScanlines(ScreenFilter f)
         => f is ScreenFilter.None or ScreenFilter.Linear or ScreenFilter.Bicubic;
 
+    // Pixel-perfect mode: snap to the largest whole multiple of 640×400 that
+    // fits, centered (matches the macOS integer-scaling fullscreen option).
+    // Otherwise, always use the 640×400 display aspect, even when filtering a
+    // 640×200 content texture (matches macOS — output aspect is fixed at
+    // 16:10). The shared PixelMath.ContentRect formula also backs the OCR
+    // overlay's box positioning, so the two stay in sync.
     private (float x, float y, float w, float h) LetterboxViewport()
-    {
-        // Pixel-perfect mode: snap to the largest whole multiple of 640×400 that
-        // fits, centered (matches the macOS integer-scaling fullscreen option).
-        // If the panel is smaller than native (scale < 1) fall through to the
-        // normal aspect-fit so the frame stays fully visible.
-        if (_integerScaling)
-        {
-            int scale = Math.Min(_width / _srcWidth, _height / _srcHeight);
-            if (scale >= 1)
-            {
-                float iw = _srcWidth * scale;
-                float ih = _srcHeight * scale;
-                return ((_width - iw) * 0.5f, (_height - ih) * 0.5f, iw, ih);
-            }
-        }
-
-        // Always use the 640×400 display aspect, even when filtering a 640×200
-        // content texture (matches macOS — output aspect is fixed at 16:10).
-        float targetAspect = (float)_srcWidth / _srcHeight;
-        float panelAspect = (float)_width / _height;
-        if (panelAspect > targetAspect)
-        {
-            float w = _height * targetAspect;
-            return ((_width - w) * 0.5f, 0f, w, _height);
-        }
-        else
-        {
-            float h = _width / targetAspect;
-            return (0f, (_height - h) * 0.5f, _width, h);
-        }
-    }
+        => PixelMath.ContentRect(_width, _height, _srcWidth, _srcHeight, _integerScaling);
 
     public void Dispose()
     {

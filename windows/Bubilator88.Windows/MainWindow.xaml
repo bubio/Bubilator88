@@ -121,6 +121,12 @@
 
         <SwapChainPanel x:Name="ScreenPanel" Grid.Row="1" SizeChanged="OnPanelSizeChanged" />
 
+        <!-- OCR text-detection overlay. Masked: no menu item or shortcut key
+             activates it (see windows/README.md) — recognition accuracy on
+             PC-88 text proved too poor to be usable. Left in place, empty,
+             so the wiring survives for a future revisit. -->
+        <Canvas x:Name="OcrOverlayCanvas" Grid.Row="1" IsHitTestVisible="False" Background="Transparent" />
+
         <!-- Status bar. Layout mirrors macOS left→right: boot mode, clock,
              Drive 2, Drive 1 on the left; volume, fps, run-state LED on the
              right (real-hardware drive order = Drive 2 before Drive 1). -->

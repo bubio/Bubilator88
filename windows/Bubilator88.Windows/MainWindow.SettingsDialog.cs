@@ -42,7 +42,11 @@ public sealed partial class MainWindow
 
     /// <summary>Pixel-perfect letterboxing applies only in fullscreen (the windowed
     /// view scales are already exact integer multiples of 640×400).</summary>
-    private void ApplyIntegerScaling() => _screen?.SetIntegerScaling(_fullscreen && _fullscreenIntegerScaling);
+    private void ApplyIntegerScaling()
+    {
+        _screen?.SetIntegerScaling(_fullscreen && _fullscreenIntegerScaling);
+        RelayoutOcrOverlay(); // letterbox rect changed — reposition existing OCR boxes
+    }
 
     private async void OnSettings(object sender, RoutedEventArgs e)
     {

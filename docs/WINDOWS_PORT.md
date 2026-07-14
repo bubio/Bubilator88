@@ -194,13 +194,16 @@ AI モデルは全 OS 共有の `models/onnx/*.onnx` に集約し、Windows cspr
 | GameController (GCController) | Windows.Gaming.Input.Gamepad(ポーリング方式、単一グローバルマッピング) | ✅ 実装済(`windows/Bubilator88.Windows/GameController/`) |
 | ControllerHaptics (CoreHaptics, SSGノイズ検出) | Windows.Gaming.Input.Gamepad.Vibration | ⬜ 未実装(EmulatorCore の CApi 拡張が必要、別PRで対応予定) |
 | マウスロック (`CGAssociateMouseAndMouseCursorPosition`) | `ClipCursor` + RAWINPUT 相対デルタ | ⬜ 未実装 |
-| OCR 翻訳 (Vision) | Windows.Media.Ocr | ⬜ 未実装 |
+| OCR 検出 (Vision) | Windows.Media.Ocr(日本語) | ⚠️ 実装・実機検証したが認識率が実用に耐えず UI からマスク(`windows/Bubilator88.Windows/Ocr/` にコードは残置。詳細は `windows/README.md` 未実装欄) |
+| 翻訳バックエンド (Translation framework) | オンデバイスAPI未選定 | ⬜ 未着手(OCR検出精度の問題が未解決のため) |
 | FDDSound (AVAudioEngine 別エンジンでの合成シーク/リード音) | XAudio2 の専用エンジン(メイン音声とは別)、出力デバイス個別選択は `NAudio.CoreAudioApi.MMDeviceEnumerator` で列挙 | ✅ 実装済(出力デバイス選択込み) |
 | Apple Help Book / 空間オーディオ / ヘッドトラッキング / 録画 | 削るか別実装(任意) | ⬜ 未実装 |
 
 **「全部は無理でも近いものに」**は妥当な見立てだった。コア・描画・音・ディスク・セーブステート・
-AI アップスケールまで高再現で移植済み。残るは ゲームコントローラ / マウスロック / OCR 翻訳 /
-空間オーディオ等の「Windows なりの別実装 or 省略」枠のみ。
+AI アップスケール・ゲームコントローラまで高再現で移植済み。OCR検出は実装・実機検証まで進めたが
+Windows.Media.Ocr の認識率がPC-8801の小フォントに対して実用にならず、UIから外して保留。残るは
+触覚フィードバック / マウスロック / OCR(検出精度含め再検討) / 空間オーディオ等の
+「Windows なりの別実装 or 省略」枠のみ。
 
 ---
 

@@ -18,10 +18,12 @@ using Windows.Graphics;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
+using Windows.Foundation;
 using Windows.System;
 using Windows.UI;
 using WinRT.Interop;
 using Bubilator88.Windows.GameController;
+using Bubilator88.Windows.Ocr;
 
 namespace Bubilator88.Windows;
 
@@ -39,6 +41,8 @@ public sealed partial class MainWindow : Window
     private XAudioSink? _audio;
     private FddSound? _fddSound;
     private readonly GameControllerManager _controller = new();
+    private readonly OcrManager _ocr = new();
+    private List<OcrDetection> _ocrDetections = new();
 
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private double _accumulator;
@@ -286,6 +290,9 @@ public sealed partial class MainWindow : Window
             _ => "N88-V2",
         };
         ClockLabel.Text = _clock8MHz ? "8MHz" : "4MHz";
+
+        // New screen content makes the last OCR hash/boxes stale.
+        _ocr.Reset();
     }
 
     // MARK: - Frame loop
@@ -297,6 +304,12 @@ public sealed partial class MainWindow : Window
         // Polled every tick, including while paused, so a controller-bound
         // Pause/Resume can un-pause and held buttons don't go stale.
         _controller.Poll(_host);
+
+        // Drain any OCR result that landed since the last tick, including
+        // while paused — otherwise a disable-triggered clear (Toggle(false))
+        // or a pause-triggered TriggerImmediate result would sit unseen until
+        // the emulator resumes.
+        if (_ocr.TryTakeResult(out var ocrDetections)) UpdateOcrOverlay(ocrDetections);
 
         double now = _clock.Elapsed.TotalSeconds;
         double dt = now - _lastTick;
@@ -335,6 +348,7 @@ public sealed partial class MainWindow : Window
             _screen.Present(_host.Pixels, _host.Is400Line);
             SampleAndDecayLeds();
             SampleFddSound();
+            _ocr.Tick(dt, _host.Pixels);
             _fpsFrames += frames;
         }
         UpdateFps(dt);
@@ -427,6 +441,11 @@ public sealed partial class MainWindow : Window
                 _fddSound.Start(_fddSoundDeviceId);
             }
         }
+
+        // Mirrors macOS: pausing forces an immediate OCR pass (rather than
+        // waiting up to ~3s) so the overlay reflects the frozen frame promptly.
+        if (_paused && _ocr.Enabled)
+            _ocr.TriggerImmediate(_host.Pixels);
     }
 
     private void OnReset(object sender, RoutedEventArgs e) => ApplyBootConfig(preserveRam: true);
@@ -1108,6 +1127,69 @@ public sealed partial class MainWindow : Window
         ApplyVideoFilter();
     }
 
+    // MARK: - OCR overlay (masked: no menu entry / shortcut activates this —
+    // see windows/README.md "未実装" for why. Left wired so a future revisit
+    // only needs to re-add an entry point, not re-derive the pipeline.)
+
+    private void OnToggleOcrOverlay(bool enable)
+    {
+        bool wasEnabled = _ocr.Enabled;
+        bool ok = _ocr.Toggle(enable);
+        if (!ok)
+        {
+            ShowToast("Japanese OCR language pack not installed");
+            return;
+        }
+
+        // First activation: kick off a capture immediately rather than
+        // waiting up to ~3s for the next cadence tick (matches macOS
+        // toggleTranslation's first-activation triggerImmediateOCR()).
+        if (_ocr.Enabled && !wasEnabled && _host is not null)
+            _ocr.TriggerImmediate(_host.Pixels);
+    }
+
+    /// <summary>Replace the current OCR detection set and redraw the overlay
+    /// boxes. Called from the OnRendering poll whenever a background OCR pass
+    /// completes (including an empty result on disable/reset, which clears it).</summary>
+    private void UpdateOcrOverlay(IReadOnlyList<OcrDetection> detections)
+    {
+        _ocrDetections = detections as List<OcrDetection> ?? new List<OcrDetection>(detections);
+        RelayoutOcrOverlay();
+    }
+
+    /// <summary>Reposition the existing detection boxes without re-running OCR —
+    /// called on window resize/fullscreen/scale changes, whose new panel size
+    /// shifts the letterboxed content rect the boxes are anchored to.</summary>
+    private void RelayoutOcrOverlay()
+    {
+        OcrOverlayCanvas.Children.Clear();
+        if (_ocrDetections.Count == 0) return;
+
+        // Must match D3DScreen.ApplyIntegerScaling's condition exactly
+        // (pixel-perfect snapping only applies in fullscreen) or the overlay
+        // boxes and the actual rendered content diverge in windowed mode.
+        var (x, y, w, h) = PixelMath.ContentRect(
+            (float)ScreenPanel.ActualWidth, (float)ScreenPanel.ActualHeight,
+            EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight, _fullscreen && _fullscreenIntegerScaling);
+        if (w <= 0 || h <= 0) return;
+
+        foreach (OcrDetection d in _ocrDetections)
+        {
+            Rect r = d.NormalizedRect;
+            var border = new Border
+            {
+                CornerRadius = new CornerRadius(4),
+                BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray) { Opacity = 0.5 },
+                BorderThickness = new Thickness(1),
+                Width = Math.Max(0, r.Width * w),
+                Height = Math.Max(0, r.Height * h),
+            };
+            Canvas.SetLeft(border, x + r.X * w);
+            Canvas.SetTop(border, y + r.Y * h);
+            OcrOverlayCanvas.Children.Add(border);
+        }
+    }
+
     /// Push the current filter + scanline state to the D3D presenter and reflect
     /// the scanline availability in the UI (scanlines apply to None/Linear/Bicubic
     /// only, matching macOS isScanlineAvailable).
@@ -1503,6 +1585,7 @@ public sealed partial class MainWindow : Window
         // so gating the fit on _screen would skip the only chance to correct the
         // initial size.
         FitWindowToContent();
+        RelayoutOcrOverlay();
         if (_screen is null) return;
         int w = (int)(ScreenPanel.ActualWidth * ScreenPanel.CompositionScaleX);
         int h = (int)(ScreenPanel.ActualHeight * ScreenPanel.CompositionScaleY);
@@ -1590,6 +1673,7 @@ public sealed partial class MainWindow : Window
         _running = false;
         CompositionTarget.Rendering -= OnRendering;
         if (_host is not null) _controller.ReleaseAll(_host);
+        _ocr.Dispose();
         _fddSound?.Dispose();
         _audio?.Dispose();
         _screen?.Dispose();

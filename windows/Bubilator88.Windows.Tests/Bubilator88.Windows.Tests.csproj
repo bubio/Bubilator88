@@ -29,6 +29,8 @@
     <Compile Include="..\Bubilator88.Windows\PixelMath.cs" Link="Linked\PixelMath.cs" />
     <Compile Include="..\Bubilator88.Windows\GameController\ControllerTypes.cs" Link="Linked\ControllerTypes.cs" />
     <Compile Include="..\Bubilator88.Windows\GameController\GameControllerMath.cs" Link="Linked\GameControllerMath.cs" />
+    <Compile Include="..\Bubilator88.Windows\Ocr\OcrTypes.cs" Link="Linked\OcrTypes.cs" />
+    <Compile Include="..\Bubilator88.Windows\Ocr\ImagePreprocessor.cs" Link="Linked\ImagePreprocessor.cs" />
   </ItemGroup>
 
 </Project>

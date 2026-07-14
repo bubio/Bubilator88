@@ -157,6 +157,15 @@ dotnet test windows\Bubilator88.Windows.Tests\Bubilator88.Windows.Tests.csproj
 - コントローラーのモデル別マッピング / ブランド別アイコン表示(`Windows.Gaming.Input.Gamepad` は
   製品識別情報を提供しないため、v1 は単一のグローバルマッピング)
 - マウスロック(`ClipCursor` + RAWINPUT 相対デルタ)
-- OCR 翻訳オーバーレイ(Windows.Media.Ocr)
+- **OCR 翻訳オーバーレイ**(`windows/Bubilator88.Windows/Ocr/`)。`Windows.Media.Ocr` で
+  実装・実機検証したが、**PC-8801 の小さいフォント(640×400 中 8px 相当)に対する認識率が
+  実用に耐えないほど低く**(4倍アップスケール+反転+アンシャープマスクのチューニングを行っても
+  ほとんど文字を検出できない)、UI から意図的に隠蔽(マスク)している——View メニュー項目・
+  Ctrl+T ショートカットともに存在しない。パイプライン自体(`OcrManager`/`ImagePreprocessor`/
+  `OcrTypes`)と `MainWindow` 側の配線(`_ocr` フィールド、フレームループでの `Tick`/
+  `TryTakeResult` 呼び出し、`OcrOverlayCanvas`)はコードとして残しているため、認識精度の
+  問題(モデル/前処理/`Windows.Media.Ocr` 自体の限界)を解決できる見込みが立った場合は、
+  メニュー項目とショートカットキーを再度追加するだけで再有効化できる。翻訳バックエンドは
+  そもそも未着手(検出精度がこの状態のため着手を見送り)。
 - 空間オーディオ / ヘッドトラッキング、操作スクリプト記録
 - Swift ランタイム DLL の配布同梱
