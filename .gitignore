@@ -59,3 +59,4 @@ skills-lock.json
 # copy lives at windows/Bubilator88.Windows/native/RealESRGAN_x2.onnx (LFS).
 /RealESRGAN_x2.onnx
 /RealESRGAN_x2plus.pth
+dist/
