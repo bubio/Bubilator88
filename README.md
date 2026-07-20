@@ -4,7 +4,10 @@
   <img src="docs/AppIcon.png" alt="Bubilator88" width="128" height="128">
 </p>
 
-NEC PC-8801 エミュレーター for macOS
+
+NEC PC-8801 エミュレーター for macOS</br>
+
+https://bubio.github.io/Bubilator88/
 
 [![Latest Release](https://img.shields.io/github/v/release/bubio/Bubilator88)](https://github.com/bubio/Bubilator88/releases/latest)
 [![License](https://img.shields.io/github/license/bubio/Bubilator88)](https://github.com/bubio/Bubilator88/blob/main/LICENSE)
@@ -25,6 +28,10 @@ Bubilator88 は、NEC パーソナルコンピュータ PC-8801 の macOS ネイ
 レトロ PC エミュレーターは、未文書化されたハードウェアの挙動再現、T ステート精度のタイミング制御、複数 LSI の協調動作など、深い専門知識と緻密な実装を要求される特殊なソフトウェアです。「AI はこの種のソフトウェアをゼロから構築できるのか？」— の興味から開発しました。
 
 macOSらしいUIと機能を追求しています。
+
+一応、Windows版もあります。
+
+https://github.com/bubio/Bubilator88/releases/tag/win-v1.0.0
 
 ## Features
 
