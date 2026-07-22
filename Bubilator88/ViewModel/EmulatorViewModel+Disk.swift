@@ -524,6 +524,15 @@ extension EmulatorViewModel {
                                imageGroups: groups)
     }
 
+    /// URL scheme 起動 (`bubilator88://boot`) 専用の明示 imageIndex マウント入口。
+    /// `mountDisk(url:drive:)` と違い picker シートを出さない — 呼び出し側
+    /// (`performLaunch`) が検証フェーズで既に `disks`/`imageIndex` の妥当性を
+    /// 確認済みという前提。docs/URL_SCHEME_LAUNCH_PLAN.md §3.6。
+    func mountDiskExplicit(disks: [D88Disk], imageIndex: Int, url: URL, drive: Int) {
+        mountDiskImage(disks[imageIndex], allImages: disks, imageIndex: imageIndex, url: url, drive: drive)
+        Settings.shared.addRecentFile(url: url)
+    }
+
     private func mountDiskImage(_ disk: D88Disk, allImages: [D88Disk], imageIndex: Int,
                                  url: URL?, drive: Int, archiveEntryName: String? = nil,
                                  originArchiveURL: URL? = nil) {
