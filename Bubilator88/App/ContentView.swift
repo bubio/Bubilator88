@@ -112,6 +112,9 @@ struct ContentView: View {
             // A `.b88script` double-clicked to launch the app is held until
             // here, so it plays only after ROMs + run loop are live.
             viewModel.consumePendingScript()
+            // Same deferral for a `bubilator88://boot` URL that arrived
+            // before the run loop was ready (cold launch).
+            viewModel.consumePendingLaunch()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.willEnterFullScreenNotification)) { _ in
             viewModel.isFullScreen = true

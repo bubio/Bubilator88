@@ -33,6 +33,17 @@
 			</dict>
 		</dict>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.bubio.Bubilator88.launch</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>bubilator88</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>

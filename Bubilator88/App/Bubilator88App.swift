@@ -18,8 +18,11 @@ struct Bubilator88App: App {
                 // fire onOpenURL before ROMs load). See AppDelegate for why this
                 // lives in SwiftUI rather than application(_:open:).
                 .onOpenURL { url in
-                    guard url.pathExtension.lowercased() == "b88script" else { return }
-                    viewModel.requestScriptPlayback(url: url)
+                    if url.scheme?.lowercased() == "bubilator88" {
+                        viewModel.requestLaunch(url: url)
+                    } else if url.pathExtension.lowercased() == "b88script" {
+                        viewModel.requestScriptPlayback(url: url)
+                    }
                 }
                 .windowResizeBehavior(.disabled)
                 .windowFullScreenBehavior(.enabled)
