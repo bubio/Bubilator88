@@ -42,6 +42,7 @@ struct ContentView: View {
                     onKeyDown: { viewModel.keyDown($0) },
                     onKeyUp: { viewModel.keyUp($0) },
                     onTurbo: { viewModel.turboMode = $0 },
+                    onRomajiKeyDown: { viewModel.handleRomajiKeyDown($0) },
                     onMouseMove: { viewModel.injectMouseMovement(dx: $0, dy: $1) },
                     onMouseButton: { viewModel.setMouseButton(left: $0, right: $1) },
                     mouseCaptureEnabled: Settings.shared.mouseEnabled,
@@ -72,6 +73,15 @@ struct ContentView: View {
                     }
                     .animation(.easeInOut(duration: 0.15),
                                value: viewModel.rewindSnapshotCount)
+                }
+                if viewModel.romajiInputEnabled && !viewModel.romajiPending.isEmpty {
+                    VStack {
+                        Spacer()
+                        RomajiOverlayView(pending: viewModel.romajiPending)
+                            .padding(.bottom, 16)
+                    }
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
                 }
             }
             .frame(

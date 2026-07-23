@@ -17,6 +17,15 @@ struct PC88KeyCap: Identifiable {
     /// Optional shifted legend printed small in the corner, e.g. "!" on "1".
     /// Cosmetic only — SHIFT is a real, separate matrix key.
     let shiftedLabel: String?
+    /// Half-width katakana this key produces under KANA. When the software
+    /// keyboard's KANA modifier is active, this REPLACES `label` as the primary
+    /// legend (the alphabet is hidden). nil for keys with no kana (TAB, SPACE,
+    /// modifiers, arrows, keypad).
+    let kanaLabel: String?
+    /// Small katakana this key produces under KANA+SHIFT (ｬｭｮ, ｦ, ｧ–ｫ, ｯ).
+    /// Shown as the primary legend when both KANA and SHIFT are active. nil when
+    /// the key has no distinct shifted kana.
+    let kanaShiftedLabel: String?
     /// Top-left position in grid units.
     let x: CGFloat
     let y: CGFloat

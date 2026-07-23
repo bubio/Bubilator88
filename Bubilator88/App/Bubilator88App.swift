@@ -460,6 +460,16 @@ struct ControlCommands: Commands {
 
             Divider()
 
+            Toggle(isOn: Binding(
+                get: { viewModel.romajiInputEnabled },
+                set: { viewModel.romajiInputEnabled = $0 }
+            )) {
+                Text("Romaji Kana Input")
+            }
+            .keyboardShortcut("k", modifiers: [.command, .option])
+
+            Divider()
+
             Picker("CPU Speed", selection: Binding(
                 get: { viewModel.cpuSpeed },
                 set: { viewModel.cpuSpeed = $0 }

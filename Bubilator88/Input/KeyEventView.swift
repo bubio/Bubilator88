@@ -9,6 +9,12 @@ struct KeyEventView: NSViewRepresentable {
     let onKeyUp: (UInt16) -> Void
     var onTurbo: ((Bool) -> Void)?
 
+    /// Romaji-input hook. When set, each keyDown is offered here first; if the
+    /// handler returns true it consumed the keystroke (routed to the kana IME)
+    /// and the key must NOT reach the emulator matrix. The matching keyUp is
+    /// suppressed automatically.
+    var onRomajiKeyDown: ((NSEvent) -> Bool)?
+
     /// Relative mouse movement (dx, dy) in emulator units.
     var onMouseMove: ((Int, Int) -> Void)?
     /// Left/right button state.
@@ -25,6 +31,7 @@ struct KeyEventView: NSViewRepresentable {
         view.onKeyDown = onKeyDown
         view.onKeyUp = onKeyUp
         view.onTurbo = onTurbo
+        view.onRomajiKeyDown = onRomajiKeyDown
         view.onMouseMove = onMouseMove
         view.onMouseButton = onMouseButton
         view.onCaptureChange = onCaptureChange
@@ -37,6 +44,7 @@ struct KeyEventView: NSViewRepresentable {
         nsView.onKeyDown = onKeyDown
         nsView.onKeyUp = onKeyUp
         nsView.onTurbo = onTurbo
+        nsView.onRomajiKeyDown = onRomajiKeyDown
         nsView.onMouseMove = onMouseMove
         nsView.onMouseButton = onMouseButton
         nsView.onCaptureChange = onCaptureChange
@@ -49,6 +57,11 @@ class KeyCaptureNSView: NSView {
     var onKeyDown: ((UInt16) -> Void)?
     var onKeyUp: ((UInt16) -> Void)?
     var onTurbo: ((Bool) -> Void)?
+    var onRomajiKeyDown: ((NSEvent) -> Bool)?
+
+    /// keyCodes consumed by the romaji IME on keyDown, so their keyUp can be
+    /// swallowed too (the emulator never saw the press).
+    private var romajiConsumed: Set<UInt16> = []
     var onMouseMove: ((Int, Int) -> Void)?
     var onMouseButton: ((Bool, Bool) -> Void)?
     var onCaptureChange: ((Bool) -> Void)?
@@ -171,6 +184,13 @@ class KeyCaptureNSView: NSView {
                 self.onTurbo?(true)
                 return event
             }
+            // Romaji IME: offer the keystroke to the converter. If consumed, it
+            // is routed to kana (via the paste queue) and must not reach the
+            // matrix — remember the keyCode so its keyUp is swallowed too.
+            if let romaji = self.onRomajiKeyDown, romaji(event) {
+                self.romajiConsumed.insert(event.keyCode)
+                return nil
+            }
             self.onKeyDown?(event.keyCode)
             return event
         } as Any)
@@ -182,6 +202,10 @@ class KeyCaptureNSView: NSView {
                 self.turboActive = false
                 self.onTurbo?(false)
                 return event
+            }
+            // Swallow the keyUp for a key the romaji IME consumed on keyDown.
+            if self.romajiConsumed.remove(event.keyCode) != nil {
+                return nil
             }
             self.onKeyUp?(event.keyCode)
             return event

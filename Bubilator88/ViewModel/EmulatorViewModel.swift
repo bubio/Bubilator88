@@ -581,6 +581,20 @@ final class EmulatorViewModel {
     @ObservationIgnored let pasteQueue = TextPasteQueue()
     @ObservationIgnored let pasteQueueLock = NSLock()
 
+    /// Romaji → half-width katakana input mode (host-side IME). When on, typed
+    /// letters are converted to kana and injected via `pasteQueue` instead of
+    /// reaching the matrix directly. Intentionally NOT persisted — always starts
+    /// OFF each launch (a session-only toggle).
+    var romajiInputEnabled: Bool = false {
+        didSet {
+            if !romajiInputEnabled { flushRomajiPending() }
+        }
+    }
+    /// Uncommitted romaji shown by the IME-style overlay ("ky" while typing).
+    var romajiPending: String = ""
+    /// The incremental converter; mutated only on the main thread (key monitor).
+    @ObservationIgnored var romajiConverter = RomajiKanaConverter()
+
     /// Active timeline-script player (live mode). Driven once per machine
     /// frame from `runFrameForMetal()`, same thread as `tickPasteQueue`.
     @ObservationIgnored var scriptPlayer: ScriptPlayer?
