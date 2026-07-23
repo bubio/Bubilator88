@@ -11,6 +11,12 @@ struct KeyCapButton: View {
     let notchHeight: CGFloat
     let isPressed: Bool
     let isLocked: Bool
+    /// KANA modifier held on the software keyboard → keys with a `kanaLabel`
+    /// show that kana as their primary legend instead of `label`.
+    let kanaActive: Bool
+    /// SHIFT modifier held → keys show what SHIFT produces (`shiftedLabel`, or
+    /// the small kana under KANA+SHIFT) as the primary legend.
+    let shiftActive: Bool
     let onNormalDown: () -> Void
     let onNormalUp: () -> Void
     let onModifierTap: () -> Void
@@ -32,10 +38,11 @@ struct KeyCapButton: View {
         NotchedKeyShape(notchWidth: notchWidth, notchHeight: notchHeight, cornerRadius: 5)
     }
 
-    /// VoiceOver label — the visible legend is always populated (even for
-    /// symbol keys, e.g. "RETURN"/"実行"), so it doubles as the accessible name.
+    /// VoiceOver label — follows `displayLabel` so it announces what pressing
+    /// the key now produces (kana / shifted symbol under an active modifier),
+    /// matching the visible legend instead of the plain base label.
     private var accessibilityName: String {
-        cap.label.replacing("\n", with: " ")
+        displayLabel.replacing("\n", with: " ")
     }
 
     // Modifier keys use tap/double-tap (toggle), not press-and-hold.
@@ -74,13 +81,30 @@ struct KeyCapButton: View {
             .accessibilityAddTraits(.isButton)
     }
 
+    /// The primary legend to render, reflecting the active modifiers so the
+    /// keycap shows what pressing it now produces. Priority: KANA+SHIFT small
+    /// kana → KANA kana → SHIFT symbol → plain label.
+    private var displayLabel: String {
+        if kanaActive {
+            if shiftActive, let smallKana = cap.kanaShiftedLabel { return smallKana }
+            if let kana = cap.kanaLabel { return kana }
+        }
+        if shiftActive, let shifted = cap.shiftedLabel { return shifted }
+        return cap.label
+    }
+
+    /// True when a modifier legend is being shown instead of the plain label.
+    private var showingModified: Bool { displayLabel != cap.label }
+
     private var keyLabel: some View {
         ZStack(alignment: .topTrailing) {
             keyShape
                 .fill(fillColor)
                 .stroke(borderColor, lineWidth: isLocked ? 2 : 1)
 
-            if let shifted = cap.shiftedLabel {
+            // Hide the small shifted corner legend while a modifier legend is
+            // the primary, to avoid mixing (e.g. "!" corner over a kana).
+            if let shifted = cap.shiftedLabel, !showingModified {
                 Text(shifted)
                     .font(.system(size: 8, weight: .regular))
                     .foregroundStyle(.secondary)
@@ -98,7 +122,7 @@ struct KeyCapButton: View {
                     .offset(x: notchWidth > 0 ? notchWidth / 2 : 0,
                             y: notchHeight > 0 ? (height - notchHeight) / 2 - 10 : 0)
             } else {
-                Text(cap.label)
+                Text(displayLabel)
                     .font(.system(size: labelFontSize, weight: .medium))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
@@ -112,7 +136,7 @@ struct KeyCapButton: View {
     }
 
     private var labelFontSize: CGFloat {
-        cap.label.count > 3 || cap.label.contains("\n") ? 9 : 13
+        displayLabel.count > 3 || displayLabel.contains("\n") ? 9 : 13
     }
 
     private var fillColor: Color {

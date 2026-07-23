@@ -36,6 +36,15 @@ struct SoftwareKeyboardView: View {
         PC88KeyboardLayout.rows * PositionedKeyView.pitch - PositionedKeyView.gap
     }
 
+    /// A modifier is active when latched (sticky) or locked.
+    private func modifierActive(_ key: Keyboard.Key) -> Bool {
+        latchedModifiers.contains(key) || lockedModifiers.contains(key)
+    }
+    /// KANA active → keycaps show their kana legend.
+    private var kanaActive: Bool { modifierActive(Keyboard.kana) }
+    /// SHIFT active → keycaps show their shifted (or small-kana) legend.
+    private var shiftActive: Bool { modifierActive(Keyboard.shift) }
+
     var body: some View {
         ZStack {
             ForEach(PC88KeyboardLayout.keys) { cap in
@@ -43,6 +52,8 @@ struct SoftwareKeyboardView: View {
                     cap: cap,
                     isPressed: isHighlighted(cap),
                     isLocked: cap.key.map { lockedModifiers.contains($0) } ?? false,
+                    kanaActive: kanaActive,
+                    shiftActive: shiftActive,
                     onNormalDown: { handleNormalDown(cap) },
                     onNormalUp: { handleNormalUp(cap) },
                     onModifierTap: { handleModifierTap(cap) },

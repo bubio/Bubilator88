@@ -7,6 +7,8 @@ struct PositionedKeyView: View {
     let cap: PC88KeyCap
     let isPressed: Bool
     let isLocked: Bool
+    let kanaActive: Bool
+    let shiftActive: Bool
     let onNormalDown: () -> Void
     let onNormalUp: () -> Void
     let onModifierTap: () -> Void
@@ -36,6 +38,8 @@ struct PositionedKeyView: View {
             notchHeight: cap.notchHeight * Self.pitch,
             isPressed: isPressed,
             isLocked: isLocked,
+            kanaActive: kanaActive,
+            shiftActive: shiftActive,
             onNormalDown: onNormalDown,
             onNormalUp: onNormalUp,
             onModifierTap: onModifierTap,

@@ -179,10 +179,15 @@ enum PC88KeyboardLayout {
         Spec(key: Keyboard.kpReturn, label: "実行", symbol: "return", x: 22.0, y: 5),
     ]
 
-    /// All keys with stable IDs, ready for rendering.
+    /// All keys with stable IDs, ready for rendering. Each key's kana legend is
+    /// looked up from `TextPasteQueue.kanaLegend` (the inverse of the paste
+    /// table) so the printed kana always matches what the emulator types.
     static let keys: [PC88KeyCap] = specs.enumerated().map { idx, s in
         PC88KeyCap(id: idx, key: s.key, label: s.label, symbolName: s.symbol,
-                   shiftedLabel: s.shifted, x: s.x, y: s.y, w: s.w, h: s.h,
+                   shiftedLabel: s.shifted,
+                   kanaLabel: TextPasteQueue.kanaLegend[s.key]?.base,
+                   kanaShiftedLabel: TextPasteQueue.kanaLegend[s.key]?.shifted,
+                   x: s.x, y: s.y, w: s.w, h: s.h,
                    isModifier: s.modifier, notchWidth: s.notchWidth,
                    notchHeight: s.notchHeight)
     }
