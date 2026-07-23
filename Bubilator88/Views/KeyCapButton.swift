@@ -17,6 +17,14 @@ struct KeyCapButton: View {
     /// SHIFT modifier held → keys show what SHIFT produces (`shiftedLabel`, or
     /// the small kana under KANA+SHIFT) as the primary legend.
     let shiftActive: Bool
+    /// GRPH modifier held → keys with a graphic character show its glyph
+    /// (resolved from FontROM into these 8 rows) as the primary legend. nil when
+    /// GRPH is inactive or the key has no GRPH graphic.
+    let graphGlyph: [UInt8]?
+    /// GRPH modifier active (latched/locked). Used to blank the character keys
+    /// that produce nothing under GRPH (digits/brackets/underscore) so the GRPH
+    /// layer shows only keys that actually emit a graphic character.
+    let graphActive: Bool
     let onNormalDown: () -> Void
     let onNormalUp: () -> Void
     let onModifierTap: () -> Void
@@ -40,9 +48,13 @@ struct KeyCapButton: View {
 
     /// VoiceOver label — follows `displayLabel` so it announces what pressing
     /// the key now produces (kana / shifted symbol under an active modifier),
-    /// matching the visible legend instead of the plain base label.
+    /// matching the visible legend instead of the plain base label. Graphic
+    /// characters have no readable name, so they announce as "<key> graphic".
     private var accessibilityName: String {
-        displayLabel.replacing("\n", with: " ")
+        if showingGraph { return "\(cap.label.replacing("\n", with: " ")) graphic" }
+        // Keep the key identifiable to VoiceOver even when visually blanked.
+        if blankedUnderGraph { return cap.label.replacing("\n", with: " ") }
+        return displayLabel.replacing("\n", with: " ")
     }
 
     // Modifier keys use tap/double-tap (toggle), not press-and-hold.
@@ -93,8 +105,20 @@ struct KeyCapButton: View {
         return cap.label
     }
 
+    /// True when the GRPH graphic glyph is being shown instead of a text label.
+    private var showingGraph: Bool { graphGlyph != nil }
+
+    /// True when GRPH is active and this key emits nothing under GRPH — a
+    /// character key (has a shifted symbol, or the underscore) with no graphic.
+    /// Such keys render blank so the GRPH layer only shows real graphic keys.
+    /// Command keys (TAB, INS, arrows…) and modifiers keep their labels.
+    private var blankedUnderGraph: Bool {
+        graphActive && graphGlyph == nil && !cap.isModifier
+            && (cap.shiftedLabel != nil || cap.label == "_")
+    }
+
     /// True when a modifier legend is being shown instead of the plain label.
-    private var showingModified: Bool { displayLabel != cap.label }
+    private var showingModified: Bool { showingGraph || displayLabel != cap.label }
 
     private var keyLabel: some View {
         ZStack(alignment: .topTrailing) {
@@ -104,7 +128,7 @@ struct KeyCapButton: View {
 
             // Hide the small shifted corner legend while a modifier legend is
             // the primary, to avoid mixing (e.g. "!" corner over a kana).
-            if let shifted = cap.shiftedLabel, !showingModified {
+            if let shifted = cap.shiftedLabel, !showingModified, !blankedUnderGraph {
                 Text(shifted)
                     .font(.system(size: 8, weight: .regular))
                     .foregroundStyle(.secondary)
@@ -112,7 +136,14 @@ struct KeyCapButton: View {
                     .padding(.trailing, 4)
             }
 
-            if let symbolName = cap.symbolName {
+            if blankedUnderGraph {
+                // GRPH produces nothing on this key → blank keycap.
+                EmptyView()
+            } else if let glyph = graphGlyph {
+                FontGlyphView(rows: glyph, color: textColor)
+                    .frame(width: 18, height: 18)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let symbolName = cap.symbolName {
                 Image(systemName: symbolName)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(textColor)
