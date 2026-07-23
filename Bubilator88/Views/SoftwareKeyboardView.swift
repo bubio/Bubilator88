@@ -44,6 +44,17 @@ struct SoftwareKeyboardView: View {
     private var kanaActive: Bool { modifierActive(Keyboard.kana) }
     /// SHIFT active → keycaps show their shifted (or small-kana) legend.
     private var shiftActive: Bool { modifierActive(Keyboard.shift) }
+    /// GRPH active → keycaps show their graphic-character glyph.
+    private var graphActive: Bool { modifierActive(Keyboard.grph) }
+
+    /// Resolve a key's GRPH graphic glyph from the loaded FontROM, but only when
+    /// GRPH is active and the key has a graphic character. Returns nil otherwise
+    /// (including when no font ROM is loaded and the glyph would be blank).
+    private func graphGlyph(for cap: PC88KeyCap) -> [UInt8]? {
+        guard graphActive, let code = cap.graphCode else { return nil }
+        let glyph = viewModel.machine.fontROM.glyph(for: code)
+        return glyph.contains(where: { $0 != 0 }) ? glyph : nil
+    }
 
     var body: some View {
         ZStack {
@@ -54,6 +65,8 @@ struct SoftwareKeyboardView: View {
                     isLocked: cap.key.map { lockedModifiers.contains($0) } ?? false,
                     kanaActive: kanaActive,
                     shiftActive: shiftActive,
+                    graphGlyph: graphGlyph(for: cap),
+                    graphActive: graphActive,
                     onNormalDown: { handleNormalDown(cap) },
                     onNormalUp: { handleNormalUp(cap) },
                     onModifierTap: { handleModifierTap(cap) },

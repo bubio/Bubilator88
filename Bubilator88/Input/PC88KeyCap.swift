@@ -26,6 +26,11 @@ struct PC88KeyCap: Identifiable {
     /// Shown as the primary legend when both KANA and SHIFT are active. nil when
     /// the key has no distinct shifted kana.
     let kanaShiftedLabel: String?
+    /// Graphic-character code this key produces under GRPH. When the software
+    /// keyboard's GRPH modifier is active, the keycap prints this character's
+    /// glyph (resolved through the loaded FontROM) instead of `label`. nil for
+    /// keys with no GRPH graphic.
+    let graphCode: UInt8?
     /// Top-left position in grid units.
     let x: CGFloat
     let y: CGFloat

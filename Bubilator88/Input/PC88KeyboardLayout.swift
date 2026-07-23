@@ -187,6 +187,7 @@ enum PC88KeyboardLayout {
                    shiftedLabel: s.shifted,
                    kanaLabel: TextPasteQueue.kanaLegend[s.key]?.base,
                    kanaShiftedLabel: TextPasteQueue.kanaLegend[s.key]?.shifted,
+                   graphCode: PC88GraphLegend.codes[s.key],
                    x: s.x, y: s.y, w: s.w, h: s.h,
                    isModifier: s.modifier, notchWidth: s.notchWidth,
                    notchHeight: s.notchHeight)

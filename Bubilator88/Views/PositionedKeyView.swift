@@ -9,6 +9,11 @@ struct PositionedKeyView: View {
     let isLocked: Bool
     let kanaActive: Bool
     let shiftActive: Bool
+    /// GRPH glyph rows resolved from FontROM, or nil when GRPH is inactive or
+    /// the key has no graphic character.
+    let graphGlyph: [UInt8]?
+    /// GRPH modifier active — lets non-graphic character keys blank out.
+    let graphActive: Bool
     let onNormalDown: () -> Void
     let onNormalUp: () -> Void
     let onModifierTap: () -> Void
@@ -40,6 +45,8 @@ struct PositionedKeyView: View {
             isLocked: isLocked,
             kanaActive: kanaActive,
             shiftActive: shiftActive,
+            graphGlyph: graphGlyph,
+            graphActive: graphActive,
             onNormalDown: onNormalDown,
             onNormalUp: onNormalUp,
             onModifierTap: onModifierTap,
