@@ -310,3 +310,22 @@
 "Image number %1$ld is out of range (1-%2$ld)." = "イメージ番号 %1$ld は範囲外です (1-%2$ld)。";
 "\"%@\" is a relative path. URLs must use absolute paths." = "\"%@\" は相対パスです。URL には絶対パスを指定してください。";
 "An m3u/m3u8 playlist must be the only image file (it cannot be combined with .d88 files or with another playlist)." = "m3u/m3u8 プレイリストは単独で指定してください (d88 との混在や複数指定はできません)。";
+
+/* ===== EmulatorViewModel+Script.swift — Timeline script playback ===== */
+"Choose a timeline script to play" = "再生するタイムラインスクリプトを選択";
+"Cannot Open Script" = "スクリプトを開けません";
+"Script Parse Error" = "スクリプト解析エラー";
+"%1$@ line %2$ld: %3$@" = "%1$@ %2$ld 行目: %3$@";
+"Script Playback Error" = "スクリプト再生エラー";
+"Script playback started" = "スクリプト再生開始";
+"Script playback finished" = "スクリプト再生終了";
+
+/* ===== EmulatorViewModel+ScriptRecord.swift — Operation recording ===== */
+"Cannot Record" = "記録できません";
+"Recording cannot start while a script is playing." = "スクリプト再生中は記録を開始できません。";
+"Operation recording cannot start while audio or video is being recorded (starting a recording resets the machine)." = "録画中は操作記録を開始できません (記録開始はマシンをリセットします)。";
+"Recording started" = "記録開始";
+"Recording cancelled" = "記録を中断しました";
+"Save Script" = "スクリプトを保存";
+"Script saved" = "スクリプトを保存しました";
+"Save Failed" = "保存に失敗しました";

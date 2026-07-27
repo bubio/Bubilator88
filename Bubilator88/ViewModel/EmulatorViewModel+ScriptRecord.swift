@@ -17,13 +17,18 @@ extension EmulatorViewModel {
     func startScriptRecording() {
         guard scriptRecorder == nil else { return }
         if isPlayingScript {
-            showAlert(title: NSLocalizedString("記録できません", comment: ""),
-                      message: NSLocalizedString("スクリプト再生中は記録を開始できません。", comment: ""))
+            showAlert(title: NSLocalizedString("Cannot Record",
+                                              comment: "Alert title: operation recording could not be started"),
+                      message: NSLocalizedString("Recording cannot start while a script is playing.",
+                                                 comment: "Alert message: script playback is in progress"))
             return
         }
         if audioRecorder.isRecording || videoRecorder.isRecording {
-            showAlert(title: NSLocalizedString("記録できません", comment: ""),
-                      message: NSLocalizedString("録画中は操作記録を開始できません(記録開始はマシンをリセットします)。", comment: ""))
+            showAlert(title: NSLocalizedString("Cannot Record",
+                                              comment: "Alert title: operation recording could not be started"),
+                      message: NSLocalizedString(
+                        "Operation recording cannot start while audio or video is being recorded (starting a recording resets the machine).",
+                        comment: "Alert message: an audio/video recording is in progress"))
             return
         }
 
@@ -52,7 +57,8 @@ extension EmulatorViewModel {
         scriptRecorder = recorder
         isRecordingScript = true
         renderScreen()
-        showToast(NSLocalizedString("記録開始", comment: ""))
+        showToast(NSLocalizedString("Recording started",
+                                   comment: "Toast shown when operation recording begins"))
         start()
     }
 
@@ -70,7 +76,8 @@ extension EmulatorViewModel {
         guard scriptRecorder != nil else { return }
         scriptRecorder = nil
         isRecordingScript = false
-        showToast(NSLocalizedString("記録を中断しました", comment: ""))
+        showToast(NSLocalizedString("Recording cancelled",
+                                   comment: "Toast shown when operation recording is discarded by a reset or state load"))
     }
 
     /// アプリ終了時に記録中なら自動保存する(終了中は保存パネルを出せないので、
@@ -138,7 +145,8 @@ extension EmulatorViewModel {
             url = dirURL.appendingPathComponent(defaultName)
         } else {
             let panel = NSSavePanel()
-            panel.title = NSLocalizedString("スクリプトを保存", comment: "")
+            panel.title = NSLocalizedString("Save Script",
+                                            comment: "Title of the save panel for a recorded .b88script")
             panel.nameFieldStringValue = defaultName
             if let type = UTType("com.bubio.bubilator88.timeline-script") {
                 panel.allowedContentTypes = [type]
@@ -150,9 +158,11 @@ extension EmulatorViewModel {
 
         do {
             try text.write(to: url, atomically: true, encoding: .utf8)
-            showToast(NSLocalizedString("スクリプトを保存しました", comment: ""))
+            showToast(NSLocalizedString("Script saved",
+                                       comment: "Toast shown after a recorded .b88script is written to disk"))
         } catch {
-            showAlert(title: NSLocalizedString("保存に失敗しました", comment: ""),
+            showAlert(title: NSLocalizedString("Save Failed",
+                                              comment: "Alert title: writing the recorded .b88script failed"),
                       message: error.localizedDescription)
         }
     }
