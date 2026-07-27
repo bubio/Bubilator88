@@ -167,6 +167,20 @@ open -n -a Bubilator88 --args -v2 /x/x.d88 2 4   # -n で強制的に新イン�
   `consumePendingLaunch()` / `performLaunch(_:)`)。URL も CLI も
   `LaunchRequest` に正規化してから同一の検証 → 適用パスを通る
 - Info.plist: `CFBundleURLTypes` に scheme `bubilator88` を登録
-- FlipDisk 側: `lib/services/launcher.dart` の `buildBubilator88LaunchUri` /
-  `isBubilator88Executable`。**本仕様変更で旧 `disk0`/`bank0`/`disk1`/`bank1`/
-  `system`/`clock` クエリは廃止**されたので、`arg` 繰り返し形式へ更新が必要
+- FlipDisk 側: **Bubilator88 固有のコードは持たない**。URL テンプレートは
+  エミュレータ登録データ (`Emulator.arguments`) で、`lib/services/placeholder.dart`
+  の `buildLaunchUrl` が汎用に展開する (`?` 以降を `&` で分割し、各要素内の
+  プレースホルダー値だけを `Uri.encodeComponent` でエンコード。空に展開された
+  要素は丸ごと省略)。本仕様に対応する登録内容 (対応済み, 2026-07-28):
+
+  ```
+  Arguments: bubilator88://boot?arg=-{system}&arg=-{clock}mhz&arg={rom}
+  paramDefs: system = choice V1S|V1H|V2|N (default V2)
+             clock  = choice 4|8          (default 4)
+  ```
+
+  イメージ番号を省略すると本エミュレータ側が自動割り当てするので、FlipDisk
+  側に bank パラメータは持たせない。特定の面を指定したい場合は
+  `arg={image0}&arg={image1}` のような text 型パラメータを `{rom}` の直後に
+  足す (**1 始まり**。FlipDisk の `bank` 型が扱う 0 始まりのバンク番号とは
+  基準が違う)。詳細は FlipDisk の `docs/dev/FlipDisk_Specification_v3.md` §8.2
