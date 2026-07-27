@@ -1,0 +1,84 @@
+# SwiftLint configuration for Bubilator88.
+#
+# Deliberately lenient. The point is to catch genuine mistakes, not to relitigate
+# the style of 57,000 lines of working emulator code. Everything here is a
+# warning; nothing fails the build.
+#
+# Whitespace and indentation are SwiftFormat's job (.swiftformat), not
+# SwiftLint's — see scripts/format_all.sh.
+#
+# Linting runs from scripts/lint.sh, not from the build. A SwiftLint build tool
+# plugin was tried and reverted: plugin approval cannot be recorded in the repo,
+# so every `xcodebuild` invocation — CI, scripts, and anyone typing the command
+# by hand — would have needed -skipPackagePluginValidation forever.
+
+included:
+  - Bubilator88
+  - Bubilator88Tests
+  - Bubilator88UITests
+  - Packages/EmulatorCore/Sources
+  - Packages/EmulatorCore/Tests
+
+excluded:
+  - .build
+  - DerivedData
+  - Packages/EmulatorCore/.build
+  - Bubilator88/Resources
+
+disabled_rules:
+  # Size metrics. The emulator core is intrinsically large: opcode dispatch
+  # tables, register files and I/O port maps do not decompose usefully.
+  - line_length
+  - file_length
+  - type_body_length
+  - function_body_length
+  - function_parameter_count
+  - cyclomatic_complexity
+  - large_tuple
+  - nesting
+
+  # Hardware-derived names are short on purpose (`us` = unit select,
+  # `pc`/`sp`/`hl`/`af` = Z80 registers, `r`/`n`/`c`/`h` = FDC CHRN fields).
+  - identifier_name
+  - type_name
+
+  # TODOs are how docs/KNOWN_PITFALLS.md entries get seeded. Do not nag.
+  - todo
+
+  # Whitespace belongs to SwiftFormat, not SwiftLint.
+  - trailing_whitespace
+  - opening_brace
+
+  # These fight deliberate column alignment, which this codebase uses heavily to
+  # make bit manipulation and register tables readable. For example:
+  #
+  #   if newUp   != stickState.up   { handleButton(m.action(for: .dpadUp),   …) }
+  #   if newDown != stickState.down { handleButton(m.action(for: .dpadDown), …) }
+  #
+  # Enforcing single-space-after-comma/colon here would destroy the alignment
+  # without making anything clearer.
+  - comma
+  - colon
+  - trailing_comma
+  - vertical_whitespace
+
+  # Flags the 2nd and 3rd `case` on lines that pack several onto one line, which
+  # is how the compact keycode/opcode lookup tables are written:
+  #
+  #   case 0x00: return "a"; case 0x0B: return "b"; case 0x08: return "c"
+  - switch_case_alignment
+
+  # Too noisy against existing SwiftUI view bodies and test suites.
+  - multiple_closures_with_trailing_closure
+  - for_where
+  - redundant_string_enum_value
+
+analyzer_rules:
+  - unused_import
+
+# Nothing here should ever fail a build. `shorthand_operator` defaults to error
+# severity, but it is a style preference, not a correctness issue.
+shorthand_operator:
+  severity: warning
+
+reporter: xcode

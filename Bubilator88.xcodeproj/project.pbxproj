@@ -100,7 +100,9 @@
 				B62EED692F4BE8160011A29B /* Products */,
 				B64DDE5B2F4BE8CB002BAE55 /* Bubilator88.entitlements */,
 			);
+			indentWidth = 2;
 			sourceTree = "<group>";
+			tabWidth = 2;
 		};
 		B62EED692F4BE8160011A29B /* Products */ = {
 			isa = PBXGroup;
