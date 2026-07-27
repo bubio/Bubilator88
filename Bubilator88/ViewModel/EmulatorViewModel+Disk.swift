@@ -185,7 +185,7 @@ extension EmulatorViewModel {
     /// 役割はファイル読込と「archive / direct」ディスパッチのみ。
     /// 具体的なマウント処理は `mountArchive` / `mountDirectD88` に委譲する。
     func mountDisk(url: URL, target: MountTarget) {
-        if M3UPlaylist.isPlaylist(url.path) {
+        if M3UPlaylist.isPlaylist(url) {
             mountM3U(url: url, target: target)
             return
         }

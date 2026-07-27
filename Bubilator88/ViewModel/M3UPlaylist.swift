@@ -12,6 +12,11 @@ enum M3UPlaylist {
         fileExtensions.contains((path as NSString).pathExtension.lowercased())
     }
 
+    /// `URL` 版。`url.path` へ落とさずに拡張子を見る。
+    static func isPlaylist(_ url: URL) -> Bool {
+        fileExtensions.contains(url.pathExtension.lowercased())
+    }
+
     /// プレイリスト本文を行ごとに解析してディスクイメージの URL 配列にする。
     ///
     /// 空行と `#` で始まるコメント行は無視する。各エントリは絶対パス、
@@ -29,9 +34,15 @@ enum M3UPlaylist {
     }
 
     /// プレイリストファイルを読んでエントリ URL を返す。読めなければ nil。
-    /// `.m3u8` に限らず UTF-8 で読む (既存の `.m3u` 実装と同じ挙動)。
+    ///
+    /// `.m3u8` は定義上 UTF-8 だが、**`.m3u` は歴史的にシステムエンコーディング**。
+    /// PC-88 のディスクは日本語ファイル名が常態で、他ツールが書き出した
+    /// Shift-JIS の `.m3u` が普通に存在するため、UTF-8 で読めなければ
+    /// Shift-JIS にフォールバックする。
     static func entryURLs(contentsOf url: URL) -> [URL]? {
-        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        let text = (try? String(contentsOf: url, encoding: .utf8))
+            ?? (try? String(contentsOf: url, encoding: .shiftJIS))
+        guard let text else { return nil }
         return entryURLs(text: text, baseDirectory: url.deletingLastPathComponent())
     }
 }

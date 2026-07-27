@@ -202,8 +202,8 @@ struct LaunchRequest: Equatable {
 
         if specs.count == 1 {
             let spec = specs[0]
-            guard spec.imageIndex == nil else {
-                return [Mount(drive: 0, path: spec.path, imageIndex: spec.imageIndex!)]
+            if let imageIndex = spec.imageIndex {
+                return [Mount(drive: 0, path: spec.path, imageIndex: imageIndex)]
             }
             var mounts = [Mount(drive: 0, path: spec.path, imageIndex: 0)]
             if imageCount(0) >= 2 {

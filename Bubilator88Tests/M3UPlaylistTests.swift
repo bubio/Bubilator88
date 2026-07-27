@@ -48,4 +48,23 @@ struct M3UPlaylistTests {
     func unreadableFile() {
         #expect(M3UPlaylist.entryURLs(contentsOf: URL(fileURLWithPath: "/nonexistent/x.m3u")) == nil)
     }
+
+    @Test("UTF-8 と Shift-JIS のどちらのプレイリストも読める", arguments: [
+        String.Encoding.utf8, .shiftJIS,
+    ])
+    func readsBothEncodings(encoding: String.Encoding) throws {
+        // PC-88 のディスクは日本語ファイル名が常態で、他ツールが書き出した
+        // .m3u は Shift-JIS のことがある。
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("M3UPlaylistTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let file = dir.appendingPathComponent("プレイリスト.m3u")
+        let body = "# コメント\nイース A面.d88\nイース B面.d88\n"
+        try #require(body.data(using: encoding)).write(to: file)
+
+        let entries = try #require(M3UPlaylist.entryURLs(contentsOf: file))
+        #expect(entries.map(\.lastPathComponent) == ["イース A面.d88", "イース B面.d88"])
+    }
 }

@@ -18,7 +18,7 @@ extension EmulatorViewModel {
         } catch {
             showAlert(title: NSLocalizedString("Launch URL Error",
                                               comment: "Alert title: a bubilator88:// URL could not be parsed"),
-                      message: "\(url.absoluteString): \(errorMessage(error))")
+                      message: "\(url.absoluteString): \(error.localizedDescription)")
         }
     }
 
@@ -33,7 +33,7 @@ extension EmulatorViewModel {
         } catch {
             showAlert(title: NSLocalizedString("Launch Argument Error",
                                               comment: "Alert title: the command-line arguments could not be parsed"),
-                      message: errorMessage(error))
+                      message: error.localizedDescription)
         }
     }
 
@@ -53,10 +53,6 @@ extension EmulatorViewModel {
         guard let request = pendingLaunchRequest else { return }
         pendingLaunchRequest = nil
         performLaunch(request)
-    }
-
-    private func errorMessage(_ error: Error) -> String {
-        (error as? LocalizedError)?.errorDescription ?? "\(error)"
     }
 
     /// 全ディスクを検証してから単一インスタンスを差し替える。
@@ -176,7 +172,7 @@ extension EmulatorViewModel {
 
         var parsed: [String: [D88Disk]] = [:]
         for spec in req.disks where parsed[spec.path] == nil {
-            switch validateLaunchDisk(spec.path) {
+            switch validateLaunchDisk(URL(fileURLWithPath: spec.path)) {
             case .failure(let message): return .failure(message)
             case .success(let disks): parsed[spec.path] = disks
             }
@@ -241,7 +237,7 @@ extension EmulatorViewModel {
                     playlistPath, mount.imageIndex + 1, entries.count))
             }
             let entryURL = entries[mount.imageIndex]
-            switch validateLaunchDisk(entryURL.path) {
+            switch validateLaunchDisk(entryURL) {
             case .failure(let message): return .failure(message)
             case .success(let images):
                 resolved.append(ResolvedLaunchMount(drive: mount.drive, url: entryURL,
@@ -254,20 +250,19 @@ extension EmulatorViewModel {
     /// 1 ディスクの検証: 読める & D88 としてパースできる。
     /// machine には触れない (validation のみ)。イメージ番号の範囲チェックは
     /// 自動割り当ての解決後 (`resolveMounts` の出力) に呼び出し側で行う。
-    private func validateLaunchDisk(_ path: String) -> LaunchDiskValidationResult {
-        let url = URL(fileURLWithPath: path)
+    private func validateLaunchDisk(_ url: URL) -> LaunchDiskValidationResult {
         guard let data = try? Data(contentsOf: url) else {
             return .failure(String(format: NSLocalizedString(
                 "Cannot read \"%@\". The file does not exist or is not accessible.",
                 comment: "Error: a file named in the launch arguments could not be read. %@ is the file path"),
-                path))
+                url.path))
         }
         let disks = D88Disk.parseAll(data: Array(data))
         guard !disks.isEmpty else {
             return .failure(String(format: NSLocalizedString(
                 "\"%@\" is not a valid D88 disk image.",
                 comment: "Error: a file named in the launch arguments is readable but is not a D88 image. %@ is the file path"),
-                path))
+                url.path))
         }
         return .success(disks)
     }
