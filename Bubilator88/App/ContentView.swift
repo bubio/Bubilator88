@@ -15,11 +15,12 @@ extension UTType {
     static let cab  = UTType(filenameExtension: "cab")!
     static let rar  = UTType(filenameExtension: "rar")!
     static let m3u  = UTType(filenameExtension: "m3u")!
+    static let m3u8 = UTType(filenameExtension: "m3u8")!
 }
 
 private let diskFileTypes: [UTType] = [
     .d88, .d77, .disk2d, .disk2hd,   // disk images
-    .m3u,                            // multi-disk playlist
+    .m3u, .m3u8,                     // multi-disk playlist
     .zip, .lzh, .lha, .cab, .rar     // archives
 ]
 
@@ -221,7 +222,7 @@ struct ContentView: View {
         guard providers.count == 1, let provider = providers.first else { return false }
         let acceptedExts: Set<String> = [
             "d88", "d77", "2d", "2hd",
-            "m3u",
+            "m3u", "m3u8",
             "zip", "lzh", "lha", "cab", "rar"
         ]
         _ = provider.loadObject(ofClass: URL.self) { url, _ in

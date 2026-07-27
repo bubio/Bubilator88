@@ -64,35 +64,13 @@ extension EmulatorViewModel {
 
         // MARK: 検証フェーズ — machine を一切触らない。
         // 1件でも失敗したら return し、現在の状態を保つ (xm8 semantics)。
-        //
-        // イメージ番号省略時のドライブ割り当ては実イメージ数に依存する
-        // (QUASI88: 複数面ファイルを 1 個だけ指定 → drive 1 に 2 面目) ため、
-        // まず全ファイルを読んで面数を確定させてから `resolveMounts` に渡す。
-        var parsed: [String: [D88Disk]] = [:]
-        for spec in req.disks where parsed[spec.path] == nil {
-            switch validateLaunchDisk(spec.path) {
-            case .failure(let message):
-                showAlert(title: NSLocalizedString("ディスクを読み込めません", comment: ""), message: message)
-                return
-            case .success(let disks):
-                parsed[spec.path] = disks
-            }
-        }
-
-        let mounts = LaunchRequest.resolveMounts(req.disks) { parsed[req.disks[$0].path]?.count ?? 0 }
-
-        // 明示指定されたイメージ番号が実在するかを、適用前に全件チェック。
-        // 丸め込み禁止 (xm8 semantics) — `mountDiskImage` 側のクランプはあくまで
-        // 安全側のフォールバック。
-        for mount in mounts {
-            let images = parsed[mount.path] ?? []
-            guard mount.imageIndex < images.count else {
-                showAlert(title: NSLocalizedString("ディスクを読み込めません", comment: ""),
-                          message: String(format: NSLocalizedString(
-                            "\"%@\" にイメージ %d は存在しません (全 %d 面)。", comment: ""),
-                            mount.path, mount.imageIndex + 1, images.count))
-                return
-            }
+        let resolved: [ResolvedLaunchMount]
+        switch resolveLaunchMounts(req) {
+        case .failure(let message):
+            showAlert(title: NSLocalizedString("ディスクを読み込めません", comment: ""), message: message)
+            return
+        case .success(let mounts):
+            resolved = mounts
         }
 
         // MARK: 適用フェーズ — ここから状態変更。
@@ -111,9 +89,9 @@ extension EmulatorViewModel {
         }
 
         for drive in 0..<LaunchRequest.driveCount {
-            if let mount = mounts.first(where: { $0.drive == drive }), let images = parsed[mount.path] {
-                mountDiskExplicit(disks: images, imageIndex: mount.imageIndex,
-                                  url: URL(fileURLWithPath: mount.path), drive: drive)
+            if let mount = resolved.first(where: { $0.drive == drive }) {
+                mountDiskExplicit(disks: mount.images, imageIndex: mount.imageIndex,
+                                  url: mount.url, drive: drive)
             } else {
                 ejectDisk(drive: drive)
             }
@@ -177,6 +155,93 @@ extension EmulatorViewModel {
         showToast("\(NSLocalizedString("起動", comment: "")): \(drive0Name)")
     }
 
+    /// 起動リクエストを「どのドライブに、どのファイルの何面目を載せるか」まで
+    /// 確定させる。ファイル読込と D88 パースを伴うが、`machine` には触れない。
+    ///
+    /// イメージ番号省略時の割り当ては**実イメージ数に依存する** (QUASI88:
+    /// 複数面ファイルを 1 個だけ指定 → drive 1 に 2 面目) ため、先に面数を
+    /// 確定させてから `LaunchRequest.resolveMounts` に渡す。プレイリスト
+    /// 指定時は「面数 = エントリ数」として同じ規則を適用する。
+    private func resolveLaunchMounts(_ req: LaunchRequest)
+        -> LaunchMountResolution {
+        guard !req.disks.isEmpty else { return .success([]) }
+
+        if req.isPlaylistLaunch {
+            return resolvePlaylistMounts(req)
+        }
+
+        var parsed: [String: [D88Disk]] = [:]
+        for spec in req.disks where parsed[spec.path] == nil {
+            switch validateLaunchDisk(spec.path) {
+            case .failure(let message): return .failure(message)
+            case .success(let disks): parsed[spec.path] = disks
+            }
+        }
+
+        let mounts = LaunchRequest.resolveMounts(req.disks) { parsed[req.disks[$0].path]?.count ?? 0 }
+
+        // 明示指定されたイメージ番号が実在するかを、適用前に全件チェック。
+        // 丸め込み禁止 (xm8 semantics) — `mountDiskImage` 側のクランプはあくまで
+        // 安全側のフォールバック。
+        var resolved: [ResolvedLaunchMount] = []
+        for mount in mounts {
+            let images = parsed[mount.path] ?? []
+            guard mount.imageIndex < images.count else {
+                return .failure(String(format: NSLocalizedString(
+                    "\"%@\" にイメージ %d は存在しません (全 %d 面)。", comment: ""),
+                    mount.path, mount.imageIndex + 1, images.count))
+            }
+            resolved.append(ResolvedLaunchMount(drive: mount.drive,
+                                                url: URL(fileURLWithPath: mount.path),
+                                                images: images,
+                                                imageIndex: mount.imageIndex))
+        }
+        return .success(resolved)
+    }
+
+    /// `.m3u` / `.m3u8` 指定の解決。プレイリストの**エントリ**を d88 の「面」と
+    /// 同じものとして扱う (イメージ番号 = エントリ番号, 1 始まり):
+    ///
+    /// - `p.m3u` → エントリ1 を drive 0、エントリ2 を drive 1 (2 件以上あれば)
+    /// - `p.m3u 3` → エントリ3 を drive 0、drive 1 は空
+    /// - `p.m3u 2 4` → エントリ2 を drive 0、エントリ4 を drive 1
+    ///
+    /// 各エントリは**独立したソースファイル**として、その 1 面目をマウントする
+    /// (GUI の `mountM3U` と同じ規則)。ディスク書き戻しがエントリ自身のファイルに
+    /// 向くようにするため、複数面をフラット化した共有イメージリストにはしない。
+    private func resolvePlaylistMounts(_ req: LaunchRequest)
+        -> LaunchMountResolution {
+        let playlistPath = req.disks[0].path
+        let playlistURL = URL(fileURLWithPath: playlistPath)
+        guard let entries = M3UPlaylist.entryURLs(contentsOf: playlistURL) else {
+            return .failure(String(format: NSLocalizedString(
+                "\"%@\" を読み込めません。ファイルが存在しないか、アクセスできません。", comment: ""),
+                playlistPath))
+        }
+        guard !entries.isEmpty else {
+            return .failure(String(format: NSLocalizedString(
+                "\"%@\" にディスクイメージのエントリがありません。", comment: ""), playlistPath))
+        }
+
+        let mounts = LaunchRequest.resolveMounts(req.disks) { _ in entries.count }
+        var resolved: [ResolvedLaunchMount] = []
+        for mount in mounts {
+            guard mount.imageIndex < entries.count else {
+                return .failure(String(format: NSLocalizedString(
+                    "\"%@\" にエントリ %d は存在しません (全 %d 件)。", comment: ""),
+                    playlistPath, mount.imageIndex + 1, entries.count))
+            }
+            let entryURL = entries[mount.imageIndex]
+            switch validateLaunchDisk(entryURL.path) {
+            case .failure(let message): return .failure(message)
+            case .success(let images):
+                resolved.append(ResolvedLaunchMount(drive: mount.drive, url: entryURL,
+                                                    images: images, imageIndex: 0))
+            }
+        }
+        return .success(resolved)
+    }
+
     /// 1 ディスクの検証: 読める & D88 としてパースできる。
     /// machine には触れない (validation のみ)。イメージ番号の範囲チェックは
     /// 自動割り当ての解決後 (`resolveMounts` の出力) に呼び出し側で行う。
@@ -201,4 +266,22 @@ extension EmulatorViewModel {
 private enum LaunchDiskValidationResult {
     case success([D88Disk])
     case failure(String)
+}
+
+/// `resolveLaunchMounts` の戻り値。`LaunchDiskValidationResult` と同じく、
+/// エラーはユーザ表示用メッセージそのもの (`String` は `Error` 非適合なので
+/// `Result` は使えない)。
+private enum LaunchMountResolution {
+    case success([ResolvedLaunchMount])
+    case failure(String)
+}
+
+/// 検証済みの 1 ドライブ分のマウント指示。d88 直接指定なら `url` はその d88、
+/// プレイリスト指定なら `url` は**エントリのファイル**を指す (プレイリスト
+/// 自身ではない) — 書き戻し先を実ファイルに向けるため。
+private struct ResolvedLaunchMount {
+    let drive: Int
+    let url: URL
+    let images: [D88Disk]
+    let imageIndex: Int
 }

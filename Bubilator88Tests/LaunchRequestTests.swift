@@ -112,6 +112,62 @@ struct LaunchRequestTests {
                            Mount(drive: 1, path: "/d/x.d88", imageIndex: 1)])
     }
 
+    // MARK: - m3u / m3u8 プレイリスト
+    //
+    // プレイリストの「エントリ」を d88 の「面」と同じものとして扱うので、
+    // parse 側の形は d88 と完全に同じ。エントリ数を見た最終的な割り当ては
+    // resolveMounts が行う (実ファイル読込を伴う経路は EmulatorViewModel 側)。
+
+    @Test("プレイリスト単独指定", arguments: ["/d/games.m3u", "/d/games.m3u8", "/d/GAMES.M3U"])
+    func playlistAlone(path: String) throws {
+        let req = try parse([path])
+        #expect(req.disks == [DiskSpec(path: path, imageIndex: nil)])
+        #expect(req.isPlaylistLaunch)
+    }
+
+    @Test("プレイリスト + エントリ番号は d88 の面指定と同じ形")
+    func playlistWithEntryNumbers() throws {
+        #expect(try parse(["/d/g.m3u", "3"]).disks == [DiskSpec(path: "/d/g.m3u", imageIndex: 2)])
+        #expect(try parse(["/d/g.m3u", "2", "4"]).disks
+                == [DiskSpec(path: "/d/g.m3u", imageIndex: 1),
+                    DiskSpec(path: "/d/g.m3u", imageIndex: 3)])
+    }
+
+    @Test("番号省略のプレイリストは エントリ1→drive0 / エントリ2→drive1")
+    func playlistAutoAssignsTwoDrives() throws {
+        let req = try parse(["/d/g.m3u"])
+        #expect(LaunchRequest.resolveMounts(req.disks) { _ in 3 }
+                == [Mount(drive: 0, path: "/d/g.m3u", imageIndex: 0),
+                    Mount(drive: 1, path: "/d/g.m3u", imageIndex: 1)])
+        // エントリが 1 件しかなければ drive 1 は空のまま
+        #expect(LaunchRequest.resolveMounts(req.disks) { _ in 1 }
+                == [Mount(drive: 0, path: "/d/g.m3u", imageIndex: 0)])
+    }
+
+    @Test("d88 との混在は不可", arguments: [
+        ["/d/g.m3u", "/d/a.d88"], ["/d/a.d88", "/d/g.m3u"],
+        ["/d/g.m3u", "2", "/d/a.d88"], ["/d/a.d88", "2", "/d/g.m3u8"],
+        ["/d/a.d88", "/d/b.d88", "/d/g.m3u"],
+    ])
+    func playlistMixedWithD88Rejected(argv: [String]) {
+        #expect(throws: LaunchParseError.playlistMustBeAlone) {
+            try LaunchRequest.parse(argv: argv, baseDirectory: "/cwd")
+        }
+    }
+
+    @Test("プレイリストの複数指定は不可")
+    func multiplePlaylistsRejected() {
+        #expect(throws: LaunchParseError.playlistMustBeAlone) {
+            try LaunchRequest.parse(argv: ["/d/g.m3u", "/d/h.m3u8"], baseDirectory: "/cwd")
+        }
+    }
+
+    @Test("d88 のみなら isPlaylistLaunch は false")
+    func d88IsNotPlaylist() throws {
+        #expect(try parse(["/d/a.d88"]).isPlaylistLaunch == false)
+        #expect(try parse([]).isPlaylistLaunch == false)
+    }
+
     // MARK: - オプション
 
     @Test("起動モードオプション", arguments: [

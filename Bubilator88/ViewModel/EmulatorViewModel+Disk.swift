@@ -185,7 +185,7 @@ extension EmulatorViewModel {
     /// 役割はファイル読込と「archive / direct」ディスパッチのみ。
     /// 具体的なマウント処理は `mountArchive` / `mountDirectD88` に委譲する。
     func mountDisk(url: URL, target: MountTarget) {
-        if url.pathExtension.lowercased() == "m3u" {
+        if M3UPlaylist.isPlaylist(url.path) {
             mountM3U(url: url, target: target)
             return
         }
@@ -335,21 +335,10 @@ extension EmulatorViewModel {
     private func mountM3U(url: URL, target: MountTarget) {
         let accessing = url.startAccessingSecurityScopedResource()
         defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-        guard let text = try? String(contentsOf: url, encoding: .utf8) else {
+        guard let entryURLs = M3UPlaylist.entryURLs(contentsOf: url) else {
             presentDiskLoadErrorAlert(fileName: url.lastPathComponent, reason: .unreadable)
             return
         }
-        let baseDir = url.deletingLastPathComponent()
-        let entryURLs: [URL] = text
-            .split(whereSeparator: \.isNewline)
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty && !$0.hasPrefix("#") }
-            .map { line -> URL in
-                let expanded = (line as NSString).expandingTildeInPath
-                return (expanded as NSString).isAbsolutePath
-                    ? URL(fileURLWithPath: expanded)
-                    : baseDir.appendingPathComponent(expanded)
-            }
         guard !entryURLs.isEmpty else {
             presentDiskLoadErrorAlert(fileName: url.lastPathComponent, reason: .emptyArchive)
             return

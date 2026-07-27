@@ -41,6 +41,13 @@ struct LaunchRequest: Equatable {
     /// 起動ストラップ (`-romboot`/`-diskboot`)。省略時 nil = 自動。
     var bootStrap: BootStrap?
 
+    /// 指定されたイメージファイルが `.m3u` / `.m3u8` プレイリストか。
+    /// パーサが単独指定を保証しているので、先頭を見れば足りる。
+    var isPlaylistLaunch: Bool {
+        guard let first = disks.first else { return false }
+        return M3UPlaylist.isPlaylist(first.path)
+    }
+
     /// QUASI88 の 1 ファイルあたり最大イメージ数 (`MAX_NR_IMAGE`)。
     static let maxImageNumber = 32
     /// エミュレートするドライブ数 (`NR_DRIVE`)。
@@ -73,6 +80,10 @@ struct LaunchRequest: Equatable {
     /// - Parameter baseDirectory: 相対パスの解決基準。nil のとき相対パスはエラー。
     static func parse(argv: [String], baseDirectory: String?) throws -> LaunchRequest {
         var req = LaunchRequest()
+        /// `-` で始まらない引数 (= イメージファイル) の個数。プレイリストの
+        /// 「1 個だけ」制約はドライブ数ではなくファイル引数の数で判定する
+        /// (`p.m3u 2 4` はファイル引数 1 個で `disks` は 2 要素になるため)。
+        var fileArgCount = 0
         var i = 0
         while i < argv.count {
             let arg = argv[i]
@@ -93,6 +104,15 @@ struct LaunchRequest: Equatable {
             }
 
             let path = try resolvePath(arg, baseDirectory: baseDirectory)
+            fileArgCount += 1
+            // プレイリストは単独指定のみ。d88 との混在も、プレイリスト同士の
+            // 複数指定も、この 1 つの判定で弾ける (ファイル引数が 2 個以上
+            // ある状態でプレイリストが 1 つでも混ざっていればエラー)。
+            if fileArgCount > 1, M3UPlaylist.isPlaylist(path) || req.disks.contains(where: {
+                M3UPlaylist.isPlaylist($0.path)
+            }) {
+                throw LaunchParseError.playlistMustBeAlone
+            }
             if numbers.isEmpty {
                 req.appendDisk(DiskSpec(path: path, imageIndex: nil))
             } else {
@@ -247,6 +267,7 @@ enum LaunchParseError: Error, Equatable {
     case unknownOption(String)
     case badImageNumber(Int)
     case relativePathNotAllowed(String)
+    case playlistMustBeAlone
 }
 
 extension LaunchParseError: LocalizedError {
@@ -268,6 +289,10 @@ extension LaunchParseError: LocalizedError {
         case .relativePathNotAllowed(let path):
             return String(format: NSLocalizedString(
                 "\"%@\" は相対パスです。URL には絶対パスを指定してください。", comment: ""), path)
+        case .playlistMustBeAlone:
+            return NSLocalizedString(
+                "m3u/m3u8 プレイリストは単独で指定してください (d88 との混在・複数指定は不可)。",
+                comment: "")
         }
     }
 }
