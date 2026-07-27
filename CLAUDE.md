@@ -32,7 +32,7 @@ Refer to @docs/ARCHITECTURE.md for the full design. Summary:
 - **App layer subdirectories**: `App/` (entry point), `ViewModel/`, `Views/`, `Rendering/` (Metal), `Input/` (keyboard/controller), `Audio/`, `Utilities/`, `Resources/`
 - **T-state based timing**: Machine orchestrates all progression; devices cannot advance independently.
 - **Bus protocol**: CPU communicates only through memRead/memWrite/ioRead/ioWrite. Unimplemented I/O ports return 0xFF.
-- **Key docs**: @docs/KNOWN_PITFALLS.md (regression lessons), @docs/BOOTTESTER.md (CLI test harness), @docs/PERSISTENCE.md (永続化データ一覧), @docs/URL_SCHEME.md (`bubilator88://` URL スキーム起動、FlipDisk 連携)
+- **Key docs**: @docs/KNOWN_PITFALLS.md (regression lessons), @docs/BOOTTESTER.md (CLI test harness), @docs/PERSISTENCE.md (永続化データ一覧), @docs/URL_SCHEME.md (`bubilator88://` URL スキーム + CLI 起動引数。書式は QUASI88 互換、FlipDisk 連携)
 - **人間向け AI 活用ガイド**: docs/AI_WORKFLOW.md
 
 ## Development Rules
