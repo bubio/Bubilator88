@@ -291,3 +291,22 @@
 "Quit" = "終了";
 "Close" = "閉じる";
 "Cancel" = "キャンセル";
+
+/* ===== EmulatorViewModel+Launch.swift / LaunchRequest.swift — Launch arguments (URL scheme & CLI) ===== */
+"Launch URL Error" = "起動 URL エラー";
+"Launch Argument Error" = "起動引数エラー";
+"Cannot Load Disk" = "ディスクを読み込めません";
+"Launched" = "起動";
+"Cannot read \"%@\". The file does not exist or is not accessible." = "\"%@\" を読み込めません。ファイルが存在しないか、アクセスできません。";
+"\"%@\" is not a valid D88 disk image." = "\"%@\" は有効な D88 ディスクイメージではありません。";
+"\"%1$@\" has no image %2$ld (it contains %3$ld image(s))." = "\"%1$@\" にイメージ %2$ld は存在しません (全 %3$ld 面)。";
+"\"%@\" contains no disk image entries." = "\"%@\" にディスクイメージのエントリがありません。";
+"\"%1$@\" has no entry %2$ld (it contains %3$ld entries)." = "\"%1$@\" にエントリ %2$ld は存在しません (全 %3$ld 件)。";
+"Not a bubilator88:// URL." = "bubilator88:// スキームの URL ではありません。";
+"The URL host must be \"boot\"." = "URL の host は \"boot\" である必要があります。";
+"The URL has no \"arg\" query items." = "URL に \"arg\" クエリ項目がありません。";
+"The arguments contain an empty value." = "空の引数が含まれています。";
+"Unknown option \"%@\"." = "不明なオプション \"%@\" です。";
+"Image number %1$ld is out of range (1-%2$ld)." = "イメージ番号 %1$ld は範囲外です (1-%2$ld)。";
+"\"%@\" is a relative path. URLs must use absolute paths." = "\"%@\" は相対パスです。URL には絶対パスを指定してください。";
+"An m3u/m3u8 playlist must be the only image file (it cannot be combined with .d88 files or with another playlist)." = "m3u/m3u8 プレイリストは単独で指定してください (d88 との混在や複数指定はできません)。";

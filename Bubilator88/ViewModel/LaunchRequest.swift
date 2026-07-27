@@ -274,25 +274,40 @@ extension LaunchParseError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notBubilatorScheme:
-            return NSLocalizedString("bubilator88:// スキームではありません。", comment: "")
+            return NSLocalizedString(
+                "Not a bubilator88:// URL.",
+                comment: "Launch URL error: the URL scheme is not bubilator88")
         case .badHost:
-            return NSLocalizedString("URL の host が boot ではありません。", comment: "")
+            return NSLocalizedString(
+                "The URL host must be \"boot\".",
+                comment: "Launch URL error: the only supported host is bubilator88://boot")
         case .missingArguments:
-            return NSLocalizedString("arg クエリ項目がありません。", comment: "")
+            return NSLocalizedString(
+                "The URL has no \"arg\" query items.",
+                comment: "Launch URL error: arguments are passed as repeated arg= query items")
         case .emptyArgument:
-            return NSLocalizedString("空の引数が含まれています。", comment: "")
+            return NSLocalizedString(
+                "The arguments contain an empty value.",
+                comment: "Launch argument error: one of the arguments is an empty string")
         case .unknownOption(let opt):
-            return String(format: NSLocalizedString("不明なオプション \"%@\" です。", comment: ""), opt)
+            return String(format: NSLocalizedString(
+                "Unknown option \"%@\".",
+                comment: "Launch argument error: an option starting with - is not recognized. %@ is the option as written"),
+                opt)
         case .badImageNumber(let n):
             return String(format: NSLocalizedString(
-                "イメージ番号 %d は範囲外です (1-%d)。", comment: ""), n, LaunchRequest.maxImageNumber)
+                "Image number %1$ld is out of range (1-%2$ld).",
+                comment: "Launch argument error: the image/entry number following a file name is out of range. %1 given number, %2 maximum"),
+                n, LaunchRequest.maxImageNumber)
         case .relativePathNotAllowed(let path):
             return String(format: NSLocalizedString(
-                "\"%@\" は相対パスです。URL には絶対パスを指定してください。", comment: ""), path)
+                "\"%@\" is a relative path. URLs must use absolute paths.",
+                comment: "Launch URL error: URLs have no working directory to resolve against. %@ is the path as written"),
+                path)
         case .playlistMustBeAlone:
             return NSLocalizedString(
-                "m3u/m3u8 プレイリストは単独で指定してください (d88 との混在・複数指定は不可)。",
-                comment: "")
+                "An m3u/m3u8 playlist must be the only image file (it cannot be combined with .d88 files or with another playlist).",
+                comment: "Launch argument error: a playlist was given together with another image file")
         }
     }
 }
