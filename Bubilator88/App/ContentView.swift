@@ -122,6 +122,10 @@ struct ContentView: View {
             // A `.b88script` double-clicked to launch the app is held until
             // here, so it plays only after ROMs + run loop are live.
             viewModel.consumePendingScript()
+            // QUASI88 互換のコマンドライン引数 (`Bubilator88 -v2 game.d88 2`)。
+            // 起動時に一度だけ評価する。`bubilator88://` URL より先に処理する
+            // ので、両方与えられたときは URL 側が勝つ。
+            viewModel.requestLaunchFromCommandLine()
             // Same deferral for a `bubilator88://boot` URL that arrived
             // before the run loop was ready (cold launch).
             viewModel.consumePendingLaunch()

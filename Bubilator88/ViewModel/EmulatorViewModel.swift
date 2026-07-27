@@ -604,12 +604,19 @@ final class EmulatorViewModel {
     /// `ContentView.onAppear`, right after the run loop is started.
     @ObservationIgnored var pendingScriptURL: URL?
 
-    /// A `bubilator88://boot` URL opened (FlipDisk launch) before the
-    /// emulator was ready to act on it. Consumed by `consumePendingLaunch()`
-    /// from `ContentView.onAppear`, right after the run loop is started.
-    /// Kept separate from `pendingScriptURL` (different transport, different
-    /// consumer) — see docs/URL_SCHEME_LAUNCH_PLAN.md §3.3.
-    @ObservationIgnored var pendingLaunchURL: URL?
+    /// A launch request (`bubilator88://boot` URL from FlipDisk, or the
+    /// process's own command line) parsed before the emulator was ready to act
+    /// on it. Consumed by `consumePendingLaunch()` from `ContentView.onAppear`,
+    /// right after the run loop is started. Kept separate from
+    /// `pendingScriptURL` (different transport, different consumer) — see
+    /// docs/URL_SCHEME.md. Stores the *parsed* request, not the URL, so the
+    /// command-line entry point shares the same deferral and apply path.
+    @ObservationIgnored var pendingLaunchRequest: LaunchRequest?
+
+    /// Command-line arguments are honored exactly once, at startup
+    /// (`ContentView.onAppear`), so a window re-creation never re-boots the
+    /// game the user launched with.
+    @ObservationIgnored var didConsumeCommandLine = false
 
     /// 再生中スクリプトのディレクトリ。再生後に各ドライブの `MountedDiskInfo`
     /// を再構築する際、スクリプト内の相対ディスクパスを解決するために保持する。

@@ -1,66 +1,97 @@
 import AppKit
 import EmulatorCore
 
-// MARK: - URL scheme launch (FlipDisk 連携, xm8 CLI 相当)
+// MARK: - 起動引数 (URL スキーム / CLI, QUASI88 互換)
 //
-// docs/URL_SCHEME_LAUNCH_PLAN.md の実装。`bubilator88://boot?...` を単一
-// インスタンスへ配送し、ディスク/機種/クロックを差し替えて cold boot する。
-// `.b88script` の `pendingScriptURL` と同型の deferral (`pendingLaunchURL`)
-// を使うが、transport (kAEGetURL) と消費者が別なので専用に保つ。
+// docs/URL_SCHEME.md の実装。`bubilator88://boot?arg=...` および起動時の
+// コマンドライン引数を単一インスタンスへ配送し、ディスク/機種/クロックを
+// 差し替えて cold boot する。引数書式は QUASI88 と同じ (`LaunchRequest`)。
+// `.b88script` の `pendingScriptURL` と同型の deferral
+// (`pendingLaunchRequest`) を使うが、transport と消費者が別なので専用に保つ。
 extension EmulatorViewModel {
 
-    /// `.onOpenURL` からの入口。準備済み (描画ループ稼働中) なら即実行、
-    /// まだなら保留して `ContentView.onAppear` の `consumePendingLaunch()` に委ねる。
+    /// `.onOpenURL` からの入口。パースに失敗した時点でアラートを出し、
+    /// machine には一切触れない。
     func requestLaunch(url: URL) {
-        if isRunning && metalView != nil {
-            performLaunch(url: url)
-        } else {
-            pendingLaunchURL = url
-        }
-    }
-
-    /// `ContentView.onAppear` が `start()` の直後に呼ぶ。コールド起動オープンで
-    /// 保留された起動 URL を、UI が完全に準備できた状態で処理する。
-    func consumePendingLaunch() {
-        guard let url = pendingLaunchURL else { return }
-        pendingLaunchURL = nil
-        performLaunch(url: url)
-    }
-
-    /// URL をパースし、全ディスクを検証してから単一インスタンスを差し替える。
-    /// xm8 と同じセマンティクス: 1件でも検証・mount 失敗なら現状を一切変えない。
-    func performLaunch(url: URL) {
-        let req: LaunchRequest
         do {
-            req = try LaunchRequest.parse(url)
+            requestLaunch(request: try LaunchRequest.parse(url))
         } catch {
             showAlert(title: NSLocalizedString("起動 URL エラー", comment: ""),
-                      message: "\(url.absoluteString): \(error)")
-            return
+                      message: "\(url.absoluteString): \(errorMessage(error))")
         }
+    }
 
+    /// 起動時コマンドライン引数からの入口 (`AppDelegate` が一度だけ呼ぶ)。
+    /// 引数が無ければ何もしない (Finder からの通常起動)。
+    func requestLaunchFromCommandLine() {
+        guard !didConsumeCommandLine else { return }
+        didConsumeCommandLine = true
+        do {
+            guard let request = try LaunchRequest.fromCommandLine() else { return }
+            requestLaunch(request: request)
+        } catch {
+            showAlert(title: NSLocalizedString("起動引数エラー", comment: ""),
+                      message: errorMessage(error))
+        }
+    }
+
+    /// 準備済み (描画ループ稼働中) なら即実行、まだなら保留して
+    /// `ContentView.onAppear` の `consumePendingLaunch()` に委ねる。
+    func requestLaunch(request: LaunchRequest) {
+        if isRunning && metalView != nil {
+            performLaunch(request)
+        } else {
+            pendingLaunchRequest = request
+        }
+    }
+
+    /// `ContentView.onAppear` が `start()` の直後に呼ぶ。コールド起動で
+    /// 保留された起動リクエストを、UI が完全に準備できた状態で処理する。
+    func consumePendingLaunch() {
+        guard let request = pendingLaunchRequest else { return }
+        pendingLaunchRequest = nil
+        performLaunch(request)
+    }
+
+    private func errorMessage(_ error: Error) -> String {
+        (error as? LocalizedError)?.errorDescription ?? "\(error)"
+    }
+
+    /// 全ディスクを検証してから単一インスタンスを差し替える。
+    /// xm8 と同じセマンティクス: 1件でも検証・mount 失敗なら現状を一切変えない。
+    func performLaunch(_ req: LaunchRequest) {
         if !romLoaded { loadROMs() }
 
         // MARK: 検証フェーズ — machine を一切触らない。
         // 1件でも失敗したら return し、現在の状態を保つ (xm8 semantics)。
-        let disk0Result = validateLaunchDisk(req.disk0)
-        let disk0Disks: [D88Disk]
-        switch disk0Result {
-        case .failure(let message):
-            showAlert(title: NSLocalizedString("ディスクを読み込めません", comment: ""), message: message)
-            return
-        case .success(let disks):
-            disk0Disks = disks
-        }
-
-        var disk1Disks: [D88Disk]?
-        if let disk1 = req.disk1 {
-            switch validateLaunchDisk(disk1) {
+        //
+        // イメージ番号省略時のドライブ割り当ては実イメージ数に依存する
+        // (QUASI88: 複数面ファイルを 1 個だけ指定 → drive 1 に 2 面目) ため、
+        // まず全ファイルを読んで面数を確定させてから `resolveMounts` に渡す。
+        var parsed: [String: [D88Disk]] = [:]
+        for spec in req.disks where parsed[spec.path] == nil {
+            switch validateLaunchDisk(spec.path) {
             case .failure(let message):
                 showAlert(title: NSLocalizedString("ディスクを読み込めません", comment: ""), message: message)
                 return
             case .success(let disks):
-                disk1Disks = disks
+                parsed[spec.path] = disks
+            }
+        }
+
+        let mounts = LaunchRequest.resolveMounts(req.disks) { parsed[req.disks[$0].path]?.count ?? 0 }
+
+        // 明示指定されたイメージ番号が実在するかを、適用前に全件チェック。
+        // 丸め込み禁止 (xm8 semantics) — `mountDiskImage` 側のクランプはあくまで
+        // 安全側のフォールバック。
+        for mount in mounts {
+            let images = parsed[mount.path] ?? []
+            guard mount.imageIndex < images.count else {
+                showAlert(title: NSLocalizedString("ディスクを読み込めません", comment: ""),
+                          message: String(format: NSLocalizedString(
+                            "\"%@\" にイメージ %d は存在しません (全 %d 面)。", comment: ""),
+                            mount.path, mount.imageIndex + 1, images.count))
+                return
             }
         }
 
@@ -79,13 +110,13 @@ extension EmulatorViewModel {
             Settings.shared.clock8MHz = clock
         }
 
-        let disk0URL = URL(fileURLWithPath: req.disk0.path)
-        mountDiskExplicit(disks: disk0Disks, imageIndex: req.disk0.bank, url: disk0URL, drive: 0)
-        if let disk1 = req.disk1, let disk1Disks {
-            let disk1URL = URL(fileURLWithPath: disk1.path)
-            mountDiskExplicit(disks: disk1Disks, imageIndex: disk1.bank, url: disk1URL, drive: 1)
-        } else {
-            ejectDisk(drive: 1)
+        for drive in 0..<LaunchRequest.driveCount {
+            if let mount = mounts.first(where: { $0.drive == drive }), let images = parsed[mount.path] {
+                mountDiskExplicit(disks: images, imageIndex: mount.imageIndex,
+                                  url: URL(fileURLWithPath: mount.path), drive: drive)
+            } else {
+                ejectDisk(drive: drive)
+            }
         }
 
         // 単発リセット: 現在の `_bootModeStorage`/Settings から DIP SW を
@@ -111,10 +142,20 @@ extension EmulatorViewModel {
         let sw1 = mode.dipSw1
         let sw2Base = mode.dipSw2
         let use8MHz = clock8MHz
+        // `-romboot` / `-diskboot` は自動判定を上書きする (QUASI88 同様、
+        // 省略時はディスクの有無による自動判定)。
+        let forcedBootStrap = req.bootStrap
         emuQueue.sync {
             machine.bus.dipSw1 = sw1
             machine.reset(preserveRAM: true)
-            machine.applyBootStrap(base: sw2Base)
+            switch forcedBootStrap {
+            case .rom:
+                machine.bus.dipSw2 = Machine.resolvedBootStrap(base: sw2Base, hasDiskInDrive0: false)
+            case .disk:
+                machine.bus.dipSw2 = Machine.resolvedBootStrap(base: sw2Base, hasDiskInDrive0: true)
+            case nil:
+                machine.applyBootStrap(base: sw2Base)
+            }
             machine.clock8MHz = use8MHz
             machine.cpuOverclock = cpuOverclock
         }
@@ -136,26 +177,20 @@ extension EmulatorViewModel {
         showToast("\(NSLocalizedString("起動", comment: "")): \(drive0Name)")
     }
 
-    /// 1 ディスクの検証: 読める & D88 としてパースできる & bank が範囲内。
-    /// machine には触れない (validation のみ)。丸め込み禁止 (xm8 semantics) —
-    /// `mountDiskImage` 側のクランプはあくまで安全側のフォールバックで、
-    /// 「存在しない bank はエラー」の判定はここで行う。
-    private func validateLaunchDisk(_ disk: LaunchRequest.Disk) -> LaunchDiskValidationResult {
-        let url = URL(fileURLWithPath: disk.path)
+    /// 1 ディスクの検証: 読める & D88 としてパースできる。
+    /// machine には触れない (validation のみ)。イメージ番号の範囲チェックは
+    /// 自動割り当ての解決後 (`resolveMounts` の出力) に呼び出し側で行う。
+    private func validateLaunchDisk(_ path: String) -> LaunchDiskValidationResult {
+        let url = URL(fileURLWithPath: path)
         guard let data = try? Data(contentsOf: url) else {
             return .failure(String(format: NSLocalizedString(
                 "\"%@\" を読み込めません。ファイルが存在しないか、アクセスできません。", comment: ""),
-                disk.path))
+                path))
         }
         let disks = D88Disk.parseAll(data: Array(data))
         guard !disks.isEmpty else {
             return .failure(String(format: NSLocalizedString(
-                "\"%@\" は有効な D88 ディスクイメージではありません。", comment: ""), disk.path))
-        }
-        guard disk.bank < disks.count else {
-            return .failure(String(format: NSLocalizedString(
-                "\"%@\" に bank %d は存在しません (全 %d 面)。", comment: ""),
-                disk.path, disk.bank, disks.count))
+                "\"%@\" は有効な D88 ディスクイメージではありません。", comment: ""), path))
         }
         return .success(disks)
     }
