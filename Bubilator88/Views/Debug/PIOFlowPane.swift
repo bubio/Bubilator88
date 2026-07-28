@@ -26,29 +26,29 @@ struct PIOFlowPane: View {
 
       if cachedDisplay.isEmpty {
         ContentUnavailableView(
-          "PIOアクティビティなし",
+          "No PIO activity",
           systemImage: "arrow.left.arrow.right",
-          description: Text("デバッガを接続した状態でエミュレータを実行するとクロスCPUポートアクセスがキャプチャされます。")
+          description: Text("Run the emulator with the debugger attached to capture cross-CPU port accesses.")
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
         Table(cachedDisplay) {
           TableColumn("#") { row in
             Text("\(row.index)").foregroundStyle(.secondary)
-              .help("リングバッファインデックス (0 = 最古のイベント)")
+              .help("Ring buffer index; 0 is the oldest event")
           }
           .width(min: 40, ideal: 50, max: 70)
 
           TableColumn("Side") { row in
             Text(row.entry.side.rawValue.capitalized)
               .foregroundStyle(row.entry.side == .main ? .primary : Color.orange)
-              .help("アクセスを起こしたCPU")
+              .help("The CPU that made the access")
           }
           .width(min: 40, ideal: 50, max: 60)
 
           TableColumn("Port") { row in
             Text(row.entry.port.rawValue)
-              .help("PIOポート A/B/C。FFはコントロールレジスタへの書き込み (モード/BSR設定)。")
+              .help("PIO port A/B/C. FF is a write to the control register, setting the mode or BSR.")
           }
           .width(min: 34, ideal: 40, max: 50)
 
@@ -61,19 +61,19 @@ struct PIOFlowPane: View {
 
           TableColumn("Val") { row in
             Text(String(format: "%02X", row.entry.value))
-              .help("データバス上のバイト値 (16進数)")
+              .help("Byte value on the data bus, in hex")
           }
           .width(min: 38, ideal: 44, max: 60)
 
           TableColumn("Main PC") { row in
             Text(String(format: "%04X", row.entry.mainPC))
-              .help("アクセス時のメインCPU PC")
+              .help("Main CPU PC at the time of the access")
           }
           .width(min: 50, ideal: 56, max: 70)
 
           TableColumn("Sub PC") { row in
             Text(String(format: "%04X", row.entry.subPC))
-              .help("アクセス時のサブCPU PC")
+              .help("Sub CPU PC at the time of the access")
           }
           .width(min: 50, ideal: 56, max: 70)
         }
@@ -108,7 +108,7 @@ struct PIOFlowPane: View {
       }
       .labelsHidden()
       .frame(width: 70)
-      .help("アクセスを起こしたCPUでフィルタ")
+      .help("Filter by the CPU that made the access")
 
       Picker("Port", selection: Bindable(session.settings).pioPortFilter) {
         ForEach(DebugSettings.PIOPortFilter.allCases) { f in
@@ -117,12 +117,12 @@ struct PIOFlowPane: View {
       }
       .labelsHidden()
       .frame(width: 60)
-      .help("8255ポートでフィルタ。A/B = データポート (クロス配線)、C = ハンドシェークステータス。")
+      .help("Filter by 8255 port. A/B are the data ports (cross-wired), C is handshake status.")
 
       Toggle("Auto", isOn: Bindable(session.settings).pioAutoFollow)
         .toggleStyle(.switch)
         .controlSize(.mini)
-        .help("一時停止時に自動更新")
+        .help("Refresh automatically when paused")
 
       Button {
         refresh()
@@ -130,7 +130,7 @@ struct PIOFlowPane: View {
         Image(systemName: "arrow.clockwise")
       }
       .buttonStyle(.borderless)
-      .help("PIOフロースナップショットを取得")
+      .help("Capture a PIO flow snapshot")
 
       Button {
         exportJSONL()
@@ -139,12 +139,15 @@ struct PIOFlowPane: View {
       }
       .buttonStyle(.borderless)
       .disabled(entries.isEmpty)
-      .help("スナップショットをJSONLとしてエクスポート (クロスエミュレータ比較用)")
+      .help("Export the snapshot as JSONL, for cross-emulator comparison")
 
       Button {
         if session.debugger.isStreamingPIOFlow {
           session.debugger.stopPIOFlowStream()
-          session.viewModel.showToast("PIOフローのストリーミングを停止しました")
+          session.viewModel.showToast(
+            String(
+              localized: "Stopped streaming PIO flow",
+              comment: "Toast when the debugger stops streaming PIO flow to a file"))
         } else {
           startStreaming()
         }
@@ -156,8 +159,8 @@ struct PIOFlowPane: View {
       .buttonStyle(.borderless)
       .foregroundStyle(session.debugger.isStreamingPIOFlow ? Color.red : Color.primary)
       .help(session.debugger.isStreamingPIOFlow
-        ? "PIOフローのストリーミングを停止"
-        : "全PIOイベントをファイルにストリーミング (リングバッファ上限なし)")
+        ? "Stop streaming PIO flow"
+        : "Stream every PIO event to a file, with no ring buffer limit")
 
       Button(role: .destructive) {
         session.debugger.clearPIOFlow()
@@ -168,7 +171,7 @@ struct PIOFlowPane: View {
         Image(systemName: "trash")
       }
       .buttonStyle(.borderless)
-      .help("PIOフローバッファをクリア")
+      .help("Clear the PIO flow buffer")
     }
     .padding(.horizontal, 10)
     .padding(.vertical, 6)
@@ -227,7 +230,9 @@ struct PIOFlowPane: View {
   /// from other emulators can be `diff`ed directly.
   private func exportJSONL() {
     let panel = NSSavePanel()
-    panel.title = "PIOフローをエクスポート"
+    panel.title = String(
+      localized: "Export PIO Flow",
+      comment: "Save panel title for the debugger's PIO flow export")
     panel.nameFieldStringValue = "bubilator88-pioflow.jsonl"
     panel.allowedContentTypes = [UTType(filenameExtension: "jsonl") ?? .json]
     panel.canCreateDirectories = true
@@ -237,7 +242,12 @@ struct PIOFlowPane: View {
       let text = PIOFlowJSONL.render(entries)
       do {
         try text.write(to: url, atomically: true, encoding: .utf8)
-        session.viewModel.showToast("\(entries.count)件のPIOイベントをエクスポートしました")
+        session.viewModel.showToast(
+          String(
+            format: String(
+              localized: "Exported %lld PIO events",
+              comment: "Toast after exporting PIO flow. %lld is the event count"),
+            entries.count))
       } catch {
         session.viewModel.showAlert(
           title: "Export Failed",
@@ -257,7 +267,9 @@ struct PIOFlowPane: View {
   /// capture the full byte stream for cross-emulator comparison.
   private func startStreaming() {
     let panel = NSSavePanel()
-    panel.title = "PIOフローをファイルにストリーミング"
+    panel.title = String(
+      localized: "Stream PIO Flow to a File",
+      comment: "Save panel title for the debugger's PIO flow streaming")
     panel.nameFieldStringValue = "bubilator88-pioflow-stream.jsonl"
     panel.allowedContentTypes = [UTType(filenameExtension: "jsonl") ?? .json]
     panel.canCreateDirectories = true

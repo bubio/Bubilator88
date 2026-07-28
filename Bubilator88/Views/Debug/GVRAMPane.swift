@@ -96,8 +96,8 @@ struct GVRAMPane: View {
       .labelsHidden()
       .frame(width: 105)
       .help(session.gvram400LineMode
-        ? "Mono = 上下200ライン結合 (640×400)。Upper/Lower = 各半面。"
-        : "Composite = デジタル8色 (R/G/Bプレーン合成)。Blue/Red/Green = 単色個別プレーン表示。")
+        ? "Mono = the two 200-line halves combined (640×400). Upper/Lower = one half each."
+        : "Composite = the digital 8 colours, R/G/B planes combined. Blue/Red/Green = one plane on its own.")
 
       Picker("Zoom", selection: Bindable(session.settings).gvramZoom) {
         ForEach(DebugSettings.ZoomLevel.allCases) { z in
@@ -106,12 +106,12 @@ struct GVRAMPane: View {
       }
       .labelsHidden()
       .frame(width: 58)
-      .help("キャンバスズーム。×1=原寸、×4=最大。")
+      .help("Canvas zoom. ×1 is actual size, ×4 the maximum.")
 
       Toggle("Auto", isOn: Bindable(session.settings).gvramAutoFollow)
         .toggleStyle(.switch)
         .controlSize(.mini)
-        .help("実行中は2Hzで自動更新。停止時はキャプチャを停止。")
+        .help("Refreshes at 2 Hz while running, and stops capturing when the emulator is paused.")
 
       Button {
         session.captureGVRAM()
@@ -119,7 +119,7 @@ struct GVRAMPane: View {
         Image(systemName: "arrow.clockwise")
       }
       .buttonStyle(.borderless)
-      .help("GVRAMスナップショットを今すぐ取得")
+      .help("Capture a GVRAM snapshot now")
 
       Button {
         exportPPM()
@@ -128,7 +128,7 @@ struct GVRAMPane: View {
       }
       .buttonStyle(.borderless)
       .disabled(image == nil)
-      .help("現在のGVRAMフレームをバイナリPPMファイル (P6形式) でエクスポート")
+      .help("Export the current GVRAM frame as a binary PPM file (P6)")
     }
     .padding(.horizontal, 10)
     .padding(.vertical, 6)
@@ -155,10 +155,10 @@ struct GVRAMPane: View {
           .padding(8)
       } else {
         ContentUnavailableView(
-          "GVRAMデータなし",
+          "No GVRAM data",
           systemImage: "photo.on.rectangle",
           description: Text(
-            "更新ボタンを押すか、エミュレータを一時停止するとGVRAMをキャプチャできます。"
+            "Press Refresh, or pause the emulator, to capture GVRAM."
           )
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -350,7 +350,7 @@ struct GVRAMPane: View {
     guard blue.count >= 16000, red.count >= 16000 else { return }
 
     let panel = NSSavePanel()
-    panel.title = "GVRAMをエクスポート"
+    panel.title = String(localized: "Export GVRAM", comment: "Save panel title for the debugger's GVRAM export")
     panel.nameFieldStringValue = "bubilator88-gvram.ppm"
     panel.allowedContentTypes = [UTType(filenameExtension: "ppm") ?? .data]
     panel.canCreateDirectories = true
@@ -365,10 +365,15 @@ struct GVRAMPane: View {
       : Self.buildPPM200(blue: blue, red: red, green: green, palette: palette, mode: mode)
     do {
       try data.write(to: url, options: .atomic)
-      session.viewModel.showToast("GVRAMを \(url.lastPathComponent) にエクスポートしました")
+      session.viewModel.showToast(
+        String(
+          format: String(
+            localized: "Exported GVRAM to %@",
+            comment: "Toast after the debugger exports GVRAM. %@ is the file name"),
+          url.lastPathComponent))
     } catch {
       session.viewModel.showAlert(
-        title: "エクスポート失敗",
+        title: String(localized: "Export Failed", comment: "Alert title when a debugger export fails"),
         message: error.localizedDescription
       )
     }

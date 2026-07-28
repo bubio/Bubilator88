@@ -63,7 +63,7 @@ struct DebugView: View {
         Label("Run", systemImage: "play.fill")
       }
       .disabled(!session.debugger.isPaused)
-      .help("実行を再開")
+      .help("Resume execution")
 
       Button {
         session.pause()
@@ -71,7 +71,7 @@ struct DebugView: View {
         Label("Pause", systemImage: "pause.fill")
       }
       .disabled(session.debugger.isPaused)
-      .help("一時停止")
+      .help("Pause execution")
 
       Button {
         session.stepMain()
@@ -79,7 +79,7 @@ struct DebugView: View {
         Label("Step", systemImage: "forward.frame.fill")
       }
       .disabled(!session.debugger.isPaused)
-      .help("メインCPU を1命令ステップ実行")
+      .help("Step the main CPU by one instruction")
 
       Button {
         session.stepSub()
@@ -87,12 +87,12 @@ struct DebugView: View {
         Label("Step Sub", systemImage: "forward.frame")
       }
       .disabled(!session.debugger.isPaused)
-      .help("サブCPU を1命令ステップ実行")
+      .help("Step the sub CPU by one instruction")
     }
 
     ToolbarItem(placement: .principal) {
       runStateBadge
-        .help("エミュレータの実行状態 (緑=実行中、オレンジ=停止中)")
+        .help("Emulator run state (green = running, orange = stopped)")
     }
 
     ToolbarItem(placement: .primaryAction) {
@@ -101,7 +101,7 @@ struct DebugView: View {
       } label: {
         Label("Refresh", systemImage: "arrow.clockwise")
       }
-      .help("マシン状態スナップショットを即時更新")
+      .help("Refresh the machine state snapshot now")
     }
   }
 

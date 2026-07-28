@@ -58,7 +58,7 @@ Bubilator88/
 │   ├── Resources/                  Assets & bundled data
 │   │   ├── Assets.xcassets         App icon, colors, images
 │   │   ├── Bubilator88.help        Apple Help Book (en/ja)
-│   │   ├── Localizable.xcstrings   String Catalog (260 keys, en source + ja)
+│   │   ├── Localizable.xcstrings   String Catalog (490 keys, en source + ja)
 │   │   ├── InfoPlist.xcstrings     String Catalog for Info.plist
 │   │   ├── RealESRGAN_x2.mlmodelc CoreML model
 │   │   └── SRVGGNet_x2.mlmodelc   CoreML model

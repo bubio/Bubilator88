@@ -59,52 +59,52 @@ struct RegisterPane: View {
       Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 2) {
         GridRow {
           regCell("PC", word: pc)
-            .help("プログラムカウンタ — 次の命令アドレス")
+            .help("Program counter — address of the next instruction")
           regCell("SP", word: sp)
-            .help("スタックポインタ (下方向に伸びる)")
+            .help("Stack pointer; the stack grows downwards")
         }
         GridRow {
           regCell("AF", word: af, byteHigh: "A", byteLow: "F")
-            .help("アキュムレータ(A)＋フラグ(F)。ALU演算結果はAに格納される。")
+            .help("Accumulator (A) and flags (F). ALU results land in A.")
           regCell("BC", word: bc, byteHigh: "B", byteLow: "C")
-            .help("レジスタペアBC。CはIN/OUTのポート番号によく使われる。")
+            .help("Register pair BC. C commonly holds the port number for IN/OUT.")
         }
         GridRow {
           regCell("DE", word: de, byteHigh: "D", byteLow: "E")
-            .help("レジスタペアDE。ブロック転送命令の送り元ポインタによく使われる。")
+            .help("Register pair DE. Commonly the source pointer for block transfer instructions.")
           regCell("HL", word: hl, byteHigh: "H", byteLow: "L")
-            .help("レジスタペアHL。汎用の16ビットアドレスレジスタ。")
+            .help("Register pair HL. The general-purpose 16-bit address register.")
         }
         if let ix, let iy {
           GridRow {
             regCell("IX", word: ix)
-              .help("インデックスレジスタIX — (IX+d)アドレッシングで使用")
+              .help("Index register IX — used by (IX+d) addressing")
             regCell("IY", word: iy)
-              .help("インデックスレジスタIY — (IY+d)アドレッシングで使用")
+              .help("Index register IY — used by (IY+d) addressing")
           }
         }
         if let af2, let bc2 {
           GridRow {
             regCell("AF'", word: af2)
-              .help("シャドウAF — EX AF,AF' で交換")
+              .help("Shadow AF — exchanged by EX AF,AF'")
             regCell("BC'", word: bc2)
-              .help("シャドウBC — EXX で交換")
+              .help("Shadow BC — exchanged by EXX")
           }
         }
         if let de2, let hl2 {
           GridRow {
             regCell("DE'", word: de2)
-              .help("シャドウDE — EXX で交換")
+              .help("Shadow DE — exchanged by EXX")
             regCell("HL'", word: hl2)
-              .help("シャドウHL — EXX で交換")
+              .help("Shadow HL — exchanged by EXX")
           }
         }
         if let i, let r {
           GridRow {
             regCell("I", byte: i)
-              .help("割り込みベクタページレジスタ。IM 2ではベクタテーブルアドレスの上位バイトを形成。")
+              .help("Interrupt vector page register. In IM 2 it forms the high byte of the vector table address.")
             regCell("R", byte: r)
-              .help("メモリリフレッシュカウンタ。命令フェッチごとに自動インクリメント。擬似乱数として使うゲームもある (LD A,R)。")
+              .help("Memory refresh counter, incremented on every instruction fetch. Some games use it as a pseudo-random source (LD A,R).")
           }
         }
       }
@@ -114,22 +114,22 @@ struct RegisterPane: View {
         Text(flagsString(f: UInt8(af & 0xFF)))
           .font(.system(.body, design: .monospaced))
       }
-      .help("フラグレジスタ: S=符号, Z=ゼロ, H=半桁キャリ, P=パリティ/オーバーフロー, N=減算, C=キャリ。大文字=セット、·=クリア。")
+      .help("Flag register: S = sign, Z = zero, H = half carry, P = parity/overflow, N = subtract, C = carry. Uppercase means set, · means clear.")
 
       HStack(spacing: 12) {
         if let im {
           Text("IM \(im)")
-            .help("割り込みモード。PC-8801のゲームはIM 2を使用し、割り込みベクタはIレジスタ+バスバイトで決まる。")
+            .help("Interrupt mode. PC-8801 games use IM 2, where the vector comes from the I register plus a byte from the bus.")
         }
         Text("IFF1=\(iff1 ? "1" : "0")")
-          .help("割り込みフリップフロップ1 — 1のとき可マスク割り込みを受け付ける。DIでクリア、EIでセット。")
+          .help("Interrupt flip-flop 1 — maskable interrupts are accepted when set. DI clears it, EI sets it.")
         if let iff2 {
           Text("IFF2=\(iff2 ? "1" : "0")")
-            .help("割り込みフリップフロップ2 — IFF1のコピー。LD A,I / LD A,R およびNMI処理で参照。")
+            .help("Interrupt flip-flop 2 — a copy of IFF1, read by LD A,I / LD A,R and during NMI handling.")
         }
         if halted {
           Text("HALTED").foregroundStyle(.orange)
-            .help("HALT状態 — 割り込み待ち")
+            .help("Halted — waiting for an interrupt")
         }
       }
       .font(.system(.callout, design: .monospaced))

@@ -113,6 +113,56 @@
         }
       }
     },
+    "%@: muted": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: ミュート中"
+          }
+        }
+      }
+    },
+    "%@: not muted": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: ミュートなし"
+          }
+        }
+      }
+    },
+    "%lld characters": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 文字"
+          }
+        }
+      }
+    },
+    "%lld entries": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 件"
+          }
+        }
+      }
+    },
+    "%lld ms": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ms"
+          }
+        }
+      }
+    },
     "(unnamed)": {
       "localizations": {
         "ja": {
@@ -123,12 +173,52 @@
         }
       }
     },
+    "16 bytes from this address, read through the main Z80 bus": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアドレスから 16 バイト。メイン Z80 のバス経由で読み出す"
+          }
+        }
+      }
+    },
+    "16-bit address to display, in hex. Accepts 1234, 0x1234 and 1234H.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示する 16 ビットアドレス (16 進)。1234 / 0x1234 / 1234H のいずれの書式でも可。"
+          }
+        }
+      }
+    },
+    "1× (Real)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1×(実機)"
+          }
+        }
+      }
+    },
     "4 MHz": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "4 MHz"
+          }
+        }
+      }
+    },
+    "400-line Mono": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "400 ライン モノクロ"
           }
         }
       }
@@ -155,6 +245,36 @@
         }
       }
     },
+    "ADPCM: muted": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ADPCM: ミュート中"
+          }
+        }
+      }
+    },
+    "ADPCM: not muted": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ADPCM: ミュートなし"
+          }
+        }
+      }
+    },
+    "AF before the instruction ran. Cells that changed are highlighted in orange.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令実行前の AF。変化したセルは橙色で強調される。"
+          }
+        }
+      }
+    },
     "AI Coding": {
       "localizations": {
         "ja": {
@@ -175,12 +295,42 @@
         }
       }
     },
+    "ASCII preview; unprintable bytes show as '.'": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ASCII プレビュー。表示できないバイトは '.' になる"
+          }
+        }
+      }
+    },
     "About Bubilator88": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "Bubilator88 について"
+          }
+        }
+      }
+    },
+    "Accumulator (A) and flags (F). ALU results land in A.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アキュムレータ (A) とフラグ (F)。ALU の演算結果は A に入る。"
+          }
+        }
+      }
+    },
+    "Active": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効"
           }
         }
       }
@@ -195,12 +345,102 @@
         }
       }
     },
+    "Activity": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクティビティ"
+          }
+        }
+      }
+    },
     "Actual Size (x1)": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "等倍 (x1)"
+          }
+        }
+      }
+    },
+    "Add": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加"
+          }
+        }
+      }
+    },
+    "Add Main CPU PC Breakpoint": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メイン CPU の PC ブレークポイントを追加"
+          }
+        }
+      }
+    },
+    "Add Sub CPU PC Breakpoint": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブ CPU の PC ブレークポイントを追加"
+          }
+        }
+      }
+    },
+    "Add a breakpoint with the current settings": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在の設定でブレークポイントを追加"
+          }
+        }
+      }
+    },
+    "Address at the start of the row": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その行の先頭アドレス"
+          }
+        }
+      }
+    },
+    "Address:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アドレス:"
+          }
+        }
+      }
+    },
+    "All Off": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてオフ"
+          }
+        }
+      }
+    },
+    "All On": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてオン"
           }
         }
       }
@@ -265,6 +505,26 @@
         }
       }
     },
+    "Attr": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "属性"
+          }
+        }
+      }
+    },
+    "Attribute Decode": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アトリビュート解析"
+          }
+        }
+      }
+    },
     "Audio": {
       "localizations": {
         "ja": {
@@ -285,6 +545,16 @@
         }
       }
     },
+    "Auto": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動"
+          }
+        }
+      }
+    },
     "Auto-detect": {
       "localizations": {
         "ja": {
@@ -295,12 +565,52 @@
         }
       }
     },
+    "BC before the instruction ran": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令実行前の BC"
+          }
+        }
+      }
+    },
     "Boot Mode": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "ブートモード"
+          }
+        }
+      }
+    },
+    "Breakpoint address, in hex. Only the low byte is significant for IO ports.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブレークポイントのアドレス (16 進)。IO ポートでは下位バイトのみが有効。"
+          }
+        }
+      }
+    },
+    "Breakpoints": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブレークポイント"
+          }
+        }
+      }
+    },
+    "Bubilator88 Help": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bubilator88 ヘルプ"
           }
         }
       }
@@ -325,6 +635,26 @@
         }
       }
     },
+    "Byte value on the data bus, in hex": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "データバス上のバイト値 (16 進)"
+          }
+        }
+      }
+    },
+    "CPU": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU"
+          }
+        }
+      }
+    },
     "CPU Clock": {
       "localizations": {
         "ja": {
@@ -335,12 +665,32 @@
         }
       }
     },
+    "CPU Overclock": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU オーバークロック"
+          }
+        }
+      }
+    },
     "CPU Speed": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "CPU速度"
+          }
+        }
+      }
+    },
+    "CRTC cursor position (column, row)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CRTC のカーソル位置 (桁, 行)"
           }
         }
       }
@@ -405,6 +755,26 @@
         }
       }
     },
+    "Canvas zoom level": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンバスのズーム倍率"
+          }
+        }
+      }
+    },
+    "Canvas zoom. ×1 is actual size, ×4 the maximum.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンバスのズーム倍率。×1 が実寸で、×4 が最大。"
+          }
+        }
+      }
+    },
     "Capacity": {
       "localizations": {
         "ja": {
@@ -415,12 +785,82 @@
         }
       }
     },
+    "Capture a GVRAM snapshot now": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GVRAM のスナップショットを今すぐ取得"
+          }
+        }
+      }
+    },
+    "Capture a PIO flow snapshot": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIO フローのスナップショットを取得"
+          }
+        }
+      }
+    },
+    "Capture a text VRAM snapshot now": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキスト VRAM のスナップショットを今すぐ取得"
+          }
+        }
+      }
+    },
+    "Capture a trace snapshot": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トレースのスナップショットを取得"
+          }
+        }
+      }
+    },
     "Channels": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "チャンネル"
+          }
+        }
+      }
+    },
+    "Character code in hex, with an ASCII preview": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文字コード (16 進) と ASCII プレビュー"
+          }
+        }
+      }
+    },
+    "Character column, 0-based": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文字の桁番号 (0 始まり)"
+          }
+        }
+      }
+    },
+    "Character row, 0-based": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文字の行番号 (0 始まり)"
           }
         }
       }
@@ -505,6 +945,26 @@
         }
       }
     },
+    "Clear the PIO flow buffer": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIO フローのバッファをクリア"
+          }
+        }
+      }
+    },
+    "Clear the trace buffer": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トレースバッファをクリア"
+          }
+        }
+      }
+    },
     "Click the emulation screen to capture the pointer; press Control+Esc to release.": {
       "localizations": {
         "ja": {
@@ -535,12 +995,52 @@
         }
       }
     },
+    "Code": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コード"
+          }
+        }
+      }
+    },
+    "Col": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桁"
+          }
+        }
+      }
+    },
+    "Colour index (bits 7-5): GRB palette 0-7": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "色インデックス (bit 7-5): GRB パレット 0-7"
+          }
+        }
+      }
+    },
     "Compact files that are easy to share (~45 MB per minute). Thin lines and single-pixel colors may look slightly washed out.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "ファイルサイズが小さく共有しやすいです (1分あたり約 45MB)。細い線や1ドットの色が少し薄く見えることがあります。"
+          }
+        }
+      }
+    },
+    "Composite = the digital 8 colours, R/G/B planes combined. Blue/Red/Green = one plane on its own.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Composite = デジタル 8 色 (R/G/B プレーン合成)。Blue/Red/Green = 各プレーン単独。"
           }
         }
       }
@@ -615,12 +1115,82 @@
         }
       }
     },
+    "Cur: %lld,%lld": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カーソル: %lld,%lld"
+          }
+        }
+      }
+    },
+    "Current text resolution (columns × rows)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在のテキスト解像度 (桁 × 行)"
+          }
+        }
+      }
+    },
+    "DE before the instruction ran": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令実行前の DE"
+          }
+        }
+      }
+    },
+    "Debugger": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバッガ"
+          }
+        }
+      }
+    },
+    "Debugger…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバッガ…"
+          }
+        }
+      }
+    },
     "Decrease Volume": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "音量を下げる"
+          }
+        }
+      }
+    },
+    "Delete every breakpoint": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのブレークポイントを削除"
+          }
+        }
+      }
+    },
+    "Delete this breakpoint": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このブレークポイントを削除"
           }
         }
       }
@@ -645,12 +1215,32 @@
         }
       }
     },
+    "Disassembly is off": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "逆アセンブルはオフです"
+          }
+        }
+      }
+    },
     "Disk": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "ディスク"
+          }
+        }
+      }
+    },
+    "Disk Cache Unavailable": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスクキャッシュを利用できません"
           }
         }
       }
@@ -671,6 +1261,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ディスクタイプ:"
+          }
+        }
+      }
+    },
+    "Disk Write Failed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスクの書き込みに失敗しました"
           }
         }
       }
@@ -787,6 +1387,16 @@
         }
       }
     },
+    "Emulator run state (green = running, orange = stopped)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エミュレータの実行状態 (緑 = 実行中、橙 = 停止中)"
+          }
+        }
+      }
+    },
     "Enable FDD Sound": {
       "localizations": {
         "ja": {
@@ -847,6 +1457,36 @@
         }
       }
     },
+    "Enable or disable every breakpoint at once.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのブレークポイントを一括で有効/無効にする。"
+          }
+        }
+      }
+    },
+    "Enable or disable this breakpoint without deleting it": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除せずにこのブレークポイントを有効/無効にする"
+          }
+        }
+      }
+    },
+    "Every user preference returns to its default. This cannot be undone, and the app must be restarted for all of the changes to take effect.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのユーザ設定が既定値に戻ります。この操作は取り消せません。また、すべての変更を反映するにはアプリの再起動が必要です。"
+          }
+        }
+      }
+    },
     "Expected the image keyword: %@": {
       "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState": "manual",
@@ -899,12 +1539,112 @@
         }
       }
     },
+    "Export GVRAM": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GVRAM を書き出す"
+          }
+        }
+      }
+    },
+    "Export PIO Flow": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIO フローを書き出す"
+          }
+        }
+      }
+    },
+    "Export Text VRAM": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキスト VRAM を書き出す"
+          }
+        }
+      }
+    },
+    "Export the current GVRAM frame as a binary PPM file (P6)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在の GVRAM フレームをバイナリ PPM (P6) として書き出す"
+          }
+        }
+      }
+    },
+    "Export the current text frame as a binary PPM file (P6)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在のテキストフレームをバイナリ PPM (P6) として書き出す"
+          }
+        }
+      }
+    },
+    "Export the snapshot as JSONL, for cross-emulator comparison": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スナップショットを JSONL で書き出す (エミュレータ間の比較用)"
+          }
+        }
+      }
+    },
+    "Export the trace as JSONL, for cross-emulator comparison": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トレースを JSONL で書き出す (エミュレータ間の比較用)"
+          }
+        }
+      }
+    },
     "Exported %d disk(s).": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "%d 件のディスクを書き出しました。"
+          }
+        }
+      }
+    },
+    "Exported %lld PIO events": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 件の PIO イベントを書き出しました"
+          }
+        }
+      }
+    },
+    "Exported GVRAM to %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GVRAM を %@ に書き出しました"
+          }
+        }
+      }
+    },
+    "Exported text VRAM to %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキスト VRAM を %@ に書き出しました"
           }
         }
       }
@@ -925,6 +1665,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "FDDサウンド"
+          }
+        }
+      }
+    },
+    "FM %lld: muted": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FM %lld: ミュート中"
+          }
+        }
+      }
+    },
+    "FM %lld: not muted": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FM %lld: ミュートなし"
           }
         }
       }
@@ -1009,12 +1769,62 @@
         }
       }
     },
+    "Filter by 8255 port. A/B are the data ports (cross-wired), C is handshake status.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "8255 のポートで絞り込む。A/B はデータポート (たすき掛け)、C はハンドシェイク状態。"
+          }
+        }
+      }
+    },
+    "Filter by the CPU that made the access": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクセス元の CPU で絞り込む"
+          }
+        }
+      }
+    },
+    "Fires only when the written value matches this byte": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書き込まれた値がこのバイトと一致したときだけ発火する"
+          }
+        }
+      }
+    },
     "Fit to Screen": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "画面に合わせる"
+          }
+        }
+      }
+    },
+    "Flag register: S = sign, Z = zero, H = half carry, P = parity/overflow, N = subtract, C = carry. Uppercase means set, · means clear.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フラグレジスタ: S = 符号、Z = ゼロ、H = ハーフキャリー、P = パリティ/オーバーフロー、N = 減算、C = キャリー。大文字がセット、· がクリア。"
+          }
+        }
+      }
+    },
+    "Follow the PC. On pins the view to the current PC and tracks it; off keeps the view fixed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PC に追従する。オンで現在の PC を追いかけ、オフで表示位置を固定する。"
           }
         }
       }
@@ -1039,6 +1849,16 @@
         }
       }
     },
+    "Force YM2203 (OPN)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YM2203 (OPN) を強制"
+          }
+        }
+      }
+    },
     "Format": {
       "localizations": {
         "ja": {
@@ -1055,6 +1875,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "フルスクリーン"
+          }
+        }
+      }
+    },
+    "GRB": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GRB"
           }
         }
       }
@@ -1079,6 +1909,36 @@
         }
       }
     },
+    "Go": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移動"
+          }
+        }
+      }
+    },
+    "Graphic character set (bit 4)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "図形文字セット (bit 4)"
+          }
+        }
+      }
+    },
+    "Grph": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "図形"
+          }
+        }
+      }
+    },
     "H.264 (.mp4)": {
       "localizations": {
         "ja": {
@@ -1089,12 +1949,62 @@
         }
       }
     },
+    "HALTED": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HALT 中"
+          }
+        }
+      }
+    },
+    "HL before the instruction ran": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令実行前の HL"
+          }
+        }
+      }
+    },
+    "Halted — waiting for an interrupt": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HALT 中 — 割り込み待ち"
+          }
+        }
+      }
+    },
     "Haptic Feedback": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "触覚フィードバック"
+          }
+        }
+      }
+    },
+    "IX before the instruction ran": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令実行前の IX"
+          }
+        }
+      }
+    },
+    "IY before the instruction ran": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令実行前の IY"
           }
         }
       }
@@ -1153,6 +2063,26 @@
         }
       }
     },
+    "Index register IX — used by (IX+d) addressing": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インデックスレジスタ IX — (IX+d) アドレッシングで使う"
+          }
+        }
+      }
+    },
+    "Index register IY — used by (IY+d) addressing": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インデックスレジスタ IY — (IY+d) アドレッシングで使う"
+          }
+        }
+      }
+    },
     "Initialize as N88-BASIC disk": {
       "localizations": {
         "ja": {
@@ -1163,12 +2093,62 @@
         }
       }
     },
+    "Instruction address, in hex": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令のアドレス (16 進)"
+          }
+        }
+      }
+    },
     "Integer Scaling": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "整数倍スケーリング"
+          }
+        }
+      }
+    },
+    "Interrupt flip-flop 1 — maskable interrupts are accepted when set. DI clears it, EI sets it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "割り込みフリップフロップ 1 — セット時にマスカブル割り込みを受け付ける。DI でクリア、EI でセット。"
+          }
+        }
+      }
+    },
+    "Interrupt flip-flop 2 — a copy of IFF1, read by LD A,I / LD A,R and during NMI handling.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "割り込みフリップフロップ 2 — IFF1 のコピー。LD A,I / LD A,R と NMI 処理で参照される。"
+          }
+        }
+      }
+    },
+    "Interrupt mode. PC-8801 games use IM 2, where the vector comes from the I register plus a byte from the bus.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "割り込みモード。PC-8801 のゲームは IM 2 を使い、ベクタは I レジスタとバス上のバイトから決まる。"
+          }
+        }
+      }
+    },
+    "Interrupt vector page register. In IM 2 it forms the high byte of the vector table address.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "割り込みベクタページレジスタ。IM 2 ではベクタテーブルアドレスの上位バイトになる。"
           }
         }
       }
@@ -1227,6 +2207,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ジョイスティック (マウス→ジョイ)"
+          }
+        }
+      }
+    },
+    "Jump to the entered address": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力したアドレスへ移動"
           }
         }
       }
@@ -1351,12 +2341,42 @@
         }
       }
     },
+    "Locked": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロック中"
+          }
+        }
+      }
+    },
     "Lower values reduce latency but may cause crackling.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "値を小さくするとレイテンシが減少しますが、音割れが発生する場合があります。"
+          }
+        }
+      }
+    },
+    "Main CPU PC at the time of the access": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクセス時点のメイン CPU の PC"
+          }
+        }
+      }
+    },
+    "Main PC": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メイン PC"
           }
         }
       }
@@ -1371,12 +2391,42 @@
         }
       }
     },
+    "Memory": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリ"
+          }
+        }
+      }
+    },
+    "Memory refresh counter, incremented on every instruction fetch. Some games use it as a pseudo-random source (LD A,R).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリリフレッシュカウンタ。命令フェッチのたびに増加する。擬似乱数源として使うゲームもある (LD A,R)。"
+          }
+        }
+      }
+    },
     "Mode": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "モード"
+          }
+        }
+      }
+    },
+    "Mono = the two 200-line halves combined (640×400). Upper/Lower = one half each.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mono = 200 ライン 2 面を合成 (640×400)。Upper/Lower = それぞれの片面。"
           }
         }
       }
@@ -1421,6 +2471,16 @@
         }
       }
     },
+    "Mute every channel": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのチャネルをミュート"
+          }
+        }
+      }
+    },
     "NEC PC-8801mkIISR Emulator for macOS": {
       "localizations": {
         "ja": {
@@ -1437,6 +2497,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "書き出すディスクなし"
+          }
+        }
+      }
+    },
+    "No GVRAM data": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GVRAM データがありません"
+          }
+        }
+      }
+    },
+    "No PIO activity": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIO のアクセスがありません"
           }
         }
       }
@@ -1479,6 +2559,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "孤児のキャッシュは見つかりませんでした (すべて元アーカイブが存在しています)。"
+          }
+        }
+      }
+    },
+    "No text VRAM data": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキスト VRAM データがありません"
+          }
+        }
+      }
+    },
+    "No trace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トレースがありません"
           }
         }
       }
@@ -1535,6 +2635,16 @@
         }
       }
     },
+    "Number of 16-byte rows to show": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示する 16 バイト行の数"
+          }
+        }
+      }
+    },
     "Numpad Emulation": {
       "localizations": {
         "ja": {
@@ -1551,6 +2661,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "元のアーカイブファイルが存在しないものだけ"
+          }
+        }
+      }
+    },
+    "Op": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "種別"
+          }
+        }
+      }
+    },
+    "Opcode bytes": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オペコードのバイト列"
+          }
+        }
+      }
+    },
+    "Open BIOS ROM Folder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BIOS ROM フォルダを開く"
           }
         }
       }
@@ -1575,6 +2715,16 @@
         }
       }
     },
+    "Optional byte filter. When set, the breakpoint only fires if the written value matches; leave it empty to fire on any write.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任意のバイトフィルタ。設定すると書き込み値が一致したときだけ発火し、空にすると任意の書き込みで発火する。"
+          }
+        }
+      }
+    },
     "Output Device": {
       "localizations": {
         "ja": {
@@ -1585,12 +2735,42 @@
         }
       }
     },
+    "PC at the time the instruction ran. Selecting a row pins the disassembly pane here.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令が実行された時点の PC。行を選ぶと逆アセンブルペインがそこに固定される。"
+          }
+        }
+      }
+    },
     "PC-8801 keys not found on modern keyboards. Click to reassign.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "現代のキーボードにないPC-8801のキーです。クリックして再割り当てできます。"
+          }
+        }
+      }
+    },
+    "PIO Flow": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIO フロー"
+          }
+        }
+      }
+    },
+    "PIO port A/B/C. FF is a write to the control register, setting the mode or BSR.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIO のポート A/B/C。FF はコントロールレジスタへの書き込みで、モードまたは BSR を設定する。"
           }
         }
       }
@@ -1615,6 +2795,16 @@
         }
       }
     },
+    "Pause execution": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行を一時停止"
+          }
+        }
+      }
+    },
     "Pixel-perfect display with black borders. No scaling artifacts.": {
       "localizations": {
         "ja": {
@@ -1635,6 +2825,16 @@
         }
       }
     },
+    "Play Script…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スクリプトを再生…"
+          }
+        }
+      }
+    },
     "Play dissolve animation on reset": {
       "localizations": {
         "ja": {
@@ -1645,12 +2845,52 @@
         }
       }
     },
+    "Port": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポート"
+          }
+        }
+      }
+    },
+    "Press Refresh, or pause the emulator, to capture GVRAM.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「更新」を押すか、エミュレータを停止すると GVRAM を取得します。"
+          }
+        }
+      }
+    },
+    "Press Refresh, or pause the emulator, to capture the text layer.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「更新」を押すか、エミュレータを停止するとテキスト層を取得します。"
+          }
+        }
+      }
+    },
     "Press a key...": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "キーを押してください..."
+          }
+        }
+      }
+    },
+    "Program counter — address of the next instruction": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラムカウンタ — 次に実行する命令のアドレス"
           }
         }
       }
@@ -1725,12 +2965,42 @@
         }
       }
     },
+    "Raw attribute byte, in hex": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アトリビュートバイトの生値 (16 進)"
+          }
+        }
+      }
+    },
+    "Read or Write": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み出しか書き込みか"
+          }
+        }
+      }
+    },
     "Recent Files": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "最近使ったファイル"
+          }
+        }
+      }
+    },
+    "Record Script…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スクリプトを記録…"
           }
         }
       }
@@ -1825,6 +3095,96 @@
         }
       }
     },
+    "Refresh": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新"
+          }
+        }
+      }
+    },
+    "Refresh automatically when paused": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止時に自動で更新する"
+          }
+        }
+      }
+    },
+    "Refresh the machine state snapshot now": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マシン状態のスナップショットを今すぐ取得"
+          }
+        }
+      }
+    },
+    "Refreshes at 2 Hz while running, and captures automatically when paused.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行中は 2 Hz で更新し、停止時は自動的に取得する。"
+          }
+        }
+      }
+    },
+    "Refreshes at 2 Hz while running, and stops capturing when the emulator is paused.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行中は 2 Hz で更新し、エミュレータ停止中は取得を止める。"
+          }
+        }
+      }
+    },
+    "Register pair BC. C commonly holds the port number for IN/OUT.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レジスタペア BC。C は IN/OUT のポート番号によく使われる。"
+          }
+        }
+      }
+    },
+    "Register pair DE. Commonly the source pointer for block transfer instructions.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レジスタペア DE。ブロック転送命令の転送元ポインタによく使われる。"
+          }
+        }
+      }
+    },
+    "Register pair HL. The general-purpose 16-bit address register.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レジスタペア HL。汎用の 16 ビットアドレスレジスタ。"
+          }
+        }
+      }
+    },
+    "Registers that changed since the previous instruction (old → new)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直前の命令から変化したレジスタ (変更前 → 変更後)"
+          }
+        }
+      }
+    },
     "Reset": {
       "localizations": {
         "ja": {
@@ -1841,6 +3201,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "位置をリセット"
+          }
+        }
+      }
+    },
+    "Reset Settings": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定をリセット"
+          }
+        }
+      }
+    },
+    "Reset all settings?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての設定をリセットしますか？"
           }
         }
       }
@@ -1871,6 +3251,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "再開"
+          }
+        }
+      }
+    },
+    "Resume execution": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行を再開"
+          }
+        }
+      }
+    },
+    "Rev": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "反転"
+          }
+        }
+      }
+    },
+    "Reverse video (bit 0)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "反転表示 (bit 0)"
           }
         }
       }
@@ -1925,12 +3335,142 @@
         }
       }
     },
+    "Rhythm": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リズム"
+          }
+        }
+      }
+    },
+    "Right-click to set a PC breakpoint": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右クリックで PC ブレークポイントを設定"
+          }
+        }
+      }
+    },
+    "Ring buffer index; 0 is the oldest event": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リングバッファの番号。0 が最も古いイベント"
+          }
+        }
+      }
+    },
+    "Ring buffer index; 0 is the oldest instruction": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リングバッファの番号。0 が最も古い命令"
+          }
+        }
+      }
+    },
     "Romaji Kana Input": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "ローマ字カナ入力"
+          }
+        }
+      }
+    },
+    "Romaji input: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ローマ字入力: %@"
+          }
+        }
+      }
+    },
+    "Row": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行"
+          }
+        }
+      }
+    },
+    "Rows: %lld": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行数: %lld"
+          }
+        }
+      }
+    },
+    "Run": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行"
+          }
+        }
+      }
+    },
+    "Run the emulator with the debugger attached to capture cross-CPU port accesses.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバッガを開いたままエミュレータを実行すると、CPU 間のポートアクセスを取得します。"
+          }
+        }
+      }
+    },
+    "Run the emulator with the debugger attached to capture instruction history.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバッガを開いたままエミュレータを実行すると、命令履歴を取得します。"
+          }
+        }
+      }
+    },
+    "SP before the instruction ran": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令実行前の SP"
+          }
+        }
+      }
+    },
+    "SSG %@: muted": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSG %@: ミュート中"
+          }
+        }
+      }
+    },
+    "SSG %@: not muted": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSG %@: ミュートなし"
           }
         }
       }
@@ -2001,6 +3541,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ステートファイルが見つかりません"
+          }
+        }
+      }
+    },
+    "Scaling": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケーリング"
           }
         }
       }
@@ -2135,6 +3685,26 @@
         }
       }
     },
+    "Sec": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "秘匿"
+          }
+        }
+      }
+    },
+    "Secret / hidden character (bit 1)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シークレット (非表示) 文字 (bit 1)"
+          }
+        }
+      }
+    },
     "Select Disk Image": {
       "localizations": {
         "ja": {
@@ -2195,6 +3765,46 @@
         }
       }
     },
+    "Shadow AF — exchanged by EX AF,AF'": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "裏レジスタ AF — EX AF,AF' で交換される"
+          }
+        }
+      }
+    },
+    "Shadow BC — exchanged by EXX": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "裏レジスタ BC — EXX で交換される"
+          }
+        }
+      }
+    },
+    "Shadow DE — exchanged by EXX": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "裏レジスタ DE — EXX で交換される"
+          }
+        }
+      }
+    },
+    "Shadow HL — exchanged by EXX": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "裏レジスタ HL — EXX で交換される"
+          }
+        }
+      }
+    },
     "Show DEBUG Menu": {
       "localizations": {
         "ja": {
@@ -2221,6 +3831,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "テキストレイヤー表示"
+          }
+        }
+      }
+    },
+    "Show or hide the attribute decode panel": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アトリビュート解析パネルの表示/非表示"
+          }
+        }
+      }
+    },
+    "Side": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "側"
           }
         }
       }
@@ -2261,6 +3891,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "特殊キー割り当て"
+          }
+        }
+      }
+    },
+    "Spectrum": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スペクトラム"
+          }
+        }
+      }
+    },
+    "Stack pointer; the stack grows downwards": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スタックポインタ。スタックは下方向に伸びる"
           }
         }
       }
@@ -2355,6 +4005,46 @@
         }
       }
     },
+    "Step": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ステップ"
+          }
+        }
+      }
+    },
+    "Step Sub": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブをステップ"
+          }
+        }
+      }
+    },
+    "Step the main CPU by one instruction": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メイン CPU を 1 命令ステップ実行"
+          }
+        }
+      }
+    },
+    "Step the sub CPU by one instruction": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブ CPU を 1 命令ステップ実行"
+          }
+        }
+      }
+    },
     "Stereo (2ch)": {
       "localizations": {
         "ja": {
@@ -2391,6 +4081,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "録音を停止"
+          }
+        }
+      }
+    },
+    "Stop Recording and Save…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録を停止して保存…"
+          }
+        }
+      }
+    },
+    "Stop Script Playback": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スクリプトの再生を停止"
           }
         }
       }
@@ -2445,6 +4155,36 @@
         }
       }
     },
+    "Stop streaming PIO flow": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIO フローのストリーム出力を停止"
+          }
+        }
+      }
+    },
+    "Stop the main CPU when its PC reaches this address": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メイン CPU の PC がこのアドレスに達したら停止する"
+          }
+        }
+      }
+    },
+    "Stop the sub CPU when its PC reaches this address": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブ CPU の PC がこのアドレスに達したら停止する"
+          }
+        }
+      }
+    },
     "Stop video recording (CPU locked at 1×)": {
       "localizations": {
         "ja": {
@@ -2461,6 +4201,56 @@
           "stringUnit": {
             "state": "translated",
             "value": "先に録画を停止してください"
+          }
+        }
+      }
+    },
+    "Stopped streaming PIO flow": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIO フローのストリーム出力を停止しました"
+          }
+        }
+      }
+    },
+    "Stream PIO Flow to a File": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PIO フローをファイルへストリーム出力"
+          }
+        }
+      }
+    },
+    "Stream every PIO event to a file, with no ring buffer limit": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リングバッファの上限なしに、すべての PIO イベントをファイルへ出力する"
+          }
+        }
+      }
+    },
+    "Sub CPU PC at the time of the access": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクセス時点のサブ CPU の PC"
+          }
+        }
+      }
+    },
+    "Sub PC": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブ PC"
           }
         }
       }
@@ -2505,6 +4295,16 @@
         }
       }
     },
+    "Tape: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テープ: %@"
+          }
+        }
+      }
+    },
     "Target Language": {
       "localizations": {
         "ja": {
@@ -2521,6 +4321,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "技術資料"
+          }
+        }
+      }
+    },
+    "Text": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキスト"
+          }
+        }
+      }
+    },
+    "Text VRAM": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキスト VRAM"
+          }
+        }
+      }
+    },
+    "The CPU that made the access": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクセスを行った CPU"
           }
         }
       }
@@ -2567,12 +4397,32 @@
         }
       }
     },
+    "The next instruction to run, at the current PC": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在の PC にある、次に実行される命令"
+          }
+        }
+      }
+    },
     "There are no cached disks to export.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "書き出せるキャッシュがありません。"
+          }
+        }
+      }
+    },
+    "Trace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トレース"
           }
         }
       }
@@ -2607,6 +4457,26 @@
         }
       }
     },
+    "Turn disassembly on or off. Off skips the memory reads and instruction decoding, which lowers the load.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "逆アセンブルの有効/無効。オフにするとメモリ読み出しと命令デコードを省略し負荷が下がる。"
+          }
+        }
+      }
+    },
+    "Uln": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下線"
+          }
+        }
+      }
+    },
     "Unclosed quote.": {
       "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState": "manual",
@@ -2615,6 +4485,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "クォートが閉じていません。"
+          }
+        }
+      }
+    },
+    "Underline (bit 3)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下線 (bit 3)"
           }
         }
       }
@@ -2677,12 +4557,42 @@
         }
       }
     },
+    "Unmute every channel": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのチャネルのミュートを解除"
+          }
+        }
+      }
+    },
     "Unsaved emulator state will be lost.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "セーブしていないエミュレータの状態は失われます。"
+          }
+        }
+      }
+    },
+    "Use the toggle in the header to resume": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ヘッダのトグルで再開できます"
+          }
+        }
+      }
+    },
+    "Val": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "値"
           }
         }
       }
@@ -2777,6 +4687,46 @@
         }
       }
     },
+    "What this breakpoint watches. The emulator stops the moment such an access happens.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このブレークポイントが監視する対象。該当するアクセスが起きた瞬間にエミュレータが停止する。"
+          }
+        }
+      }
+    },
+    "What to watch. Main/Sub PC = an instruction fetch at the address, Mem R/W = a bus access, IO R/W = a port access.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "監視対象。Main/Sub PC = そのアドレスの命令フェッチ、Mem R/W = バスアクセス、IO R/W = ポートアクセス。"
+          }
+        }
+      }
+    },
+    "Which CPU to disassemble. Main is the Z80 running the game, Sub is the sub board Z80 running DISK.ROM.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "逆アセンブルする CPU。Main はゲームを実行する Z80、Sub は DISK.ROM を実行するサブボードの Z80。"
+          }
+        }
+      }
+    },
+    "Which CPU's instruction history to show. Main and Sub each have a 1024-entry ring buffer.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示する命令履歴の CPU。Main と Sub はそれぞれ 1024 件のリングバッファを持つ。"
+          }
+        }
+      }
+    },
     "Write Protect": {
       "localizations": {
         "ja": {
@@ -2797,6 +4747,26 @@
         }
       }
     },
+    "Zoom": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ズーム"
+          }
+        }
+      }
+    },
+    "addr (hex)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アドレス (16 進)"
+          }
+        }
+      }
+    },
     "boot <mode> (N88-V2 / N88-V1H / N88-V1S / N-BASIC)": {
       "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState": "manual",
@@ -2805,6 +4775,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "boot <mode> (N88-V2 / N88-V1H / N88-V1S / N-BASIC)"
+          }
+        }
+      }
+    },
+    "by %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作者: %@"
           }
         }
       }
@@ -2937,6 +4917,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "tap の hold は 1 以上です: %@"
+          }
+        }
+      }
+    },
+    "val": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "値"
           }
         }
       }

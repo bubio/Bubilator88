@@ -45,13 +45,13 @@ struct AudioPane: View {
               viewModel.applyDebugChannelMask(muteMask)
             }
             .controlSize(.mini)
-            .help("全チャンネルのミュートを解除")
+            .help("Unmute every channel")
             Button("All Off") {
               muteMask = YM2608.DebugChannelMask(fm: 0, ssg: 0, rhythm: 0, adpcm: false)
               viewModel.applyDebugChannelMask(muteMask)
             }
             .controlSize(.mini)
-            .help("全チャンネルをミュート")
+            .help("Mute every channel")
           }
 
           // Row 1: FM | SSG
@@ -67,7 +67,7 @@ struct AudioPane: View {
                     else     { muteMask.fm &= ~UInt8(1 << ch) }
                     viewModel.applyDebugChannelMask(muteMask)
                   }
-                  .help(muted ? "FM \(ch+1): ミュート中" : "FM \(ch+1): ミュート解除")
+                  .help(muted ? "FM \(ch+1): muted" : "FM \(ch+1): not muted")
                 }
               }
               .padding(.vertical, 2)
@@ -89,7 +89,7 @@ struct AudioPane: View {
                     else     { muteMask.ssg &= ~UInt8(1 << ch) }
                     viewModel.applyDebugChannelMask(muteMask)
                   }
-                  .help(muted ? "SSG \(lbl): ミュート中" : "SSG \(lbl): ミュート解除")
+                  .help(muted ? "SSG \(lbl): muted" : "SSG \(lbl): not muted")
                 }
               }
               .padding(.vertical, 2)
@@ -110,7 +110,7 @@ struct AudioPane: View {
                     else     { muteMask.rhythm &= ~UInt8(1 << i) }
                     viewModel.applyDebugChannelMask(muteMask)
                   }
-                  .help(muted ? "\(names[i]): ミュート中" : "\(names[i]): ミュート解除")
+                  .help(muted ? "\(names[i]): muted" : "\(names[i]): not muted")
                 }
               }
               .padding(.vertical, 2)
@@ -123,7 +123,7 @@ struct AudioPane: View {
                 muteMask.adpcm.toggle()
                 viewModel.applyDebugChannelMask(muteMask)
               }
-              .help(muted ? "ADPCM: ミュート中" : "ADPCM: ミュート解除")
+              .help(muted ? "ADPCM: muted" : "ADPCM: not muted")
               .padding(.vertical, 2)
             }
           }

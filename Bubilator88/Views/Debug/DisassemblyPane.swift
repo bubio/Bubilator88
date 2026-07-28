@@ -109,10 +109,10 @@ struct DisassemblyPane: View {
       Image(systemName: "pause.rectangle")
         .font(.system(size: 32))
         .foregroundStyle(.secondary)
-      Text("逆アセンブル停止中")
+      Text("Disassembly is off")
         .font(.callout)
         .foregroundStyle(.secondary)
-      Text("ヘッダのトグルで再開")
+      Text("Use the toggle in the header to resume")
         .font(.caption)
         .foregroundStyle(.tertiary)
     }
@@ -125,7 +125,7 @@ struct DisassemblyPane: View {
         Image(systemName: session.settings.disasmEnabled ? "pause.fill" : "play.fill")
       }
       .toggleStyle(.button)
-      .help("逆アセンブルON/OFF。OFF時はメモリ読込と命令デコードをスキップして負荷を下げる。")
+      .help("Turn disassembly on or off. Off skips the memory reads and instruction decoding, which lowers the load.")
 
       Picker("CPU", selection: $session.focusedCPU) {
         ForEach(DebugSettings.FocusedCPU.allCases) { cpu in
@@ -136,7 +136,7 @@ struct DisassemblyPane: View {
       .labelsHidden()
       .frame(width: 110)
       .disabled(!session.settings.disasmEnabled)
-      .help("逆アセンブル対象のCPU。Main = ゲーム実行Z80、Sub = サブボードのDISK.ROM Z80。")
+      .help("Which CPU to disassemble. Main is the Z80 running the game, Sub is the sub board Z80 running DISK.ROM.")
 
       Button {
         if session.disasmFollowsPC {
@@ -158,7 +158,7 @@ struct DisassemblyPane: View {
       }
       .buttonStyle(.plain)
       .disabled(!session.settings.disasmEnabled)
-      .help("PC追従 ON/OFF。ONで現在PCにピン留めして追従、OFFで固定表示。")
+      .help("Follow the PC. On pins the view to the current PC and tracks it; off keeps the view fixed.")
 
       Spacer()
 
@@ -177,19 +177,19 @@ struct DisassemblyPane: View {
       Text(isPC ? "▶" : " ")
         .frame(width: 12)
         .foregroundStyle(isPC ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(HierarchicalShapeStyle.secondary))
-        .help(isPC ? "次に実行される命令 (現在のPC)" : "")
+        .help(isPC ? "The next instruction to run, at the current PC" : "")
 
       Text(String(format: "%04X", inst.address))
         .frame(width: 44, alignment: .trailing)
-        .help("命令アドレス (16進数)")
+        .help("Instruction address, in hex")
 
       Text(byteString(inst.bytes))
         .frame(width: 92, alignment: .leading)
         .foregroundStyle(.secondary)
-        .help("オペコードバイト列")
+        .help("Opcode bytes")
 
       Text(inst.mnemonic)
-        .help("右クリックでPCブレークポイントを設定")
+        .help("Right-click to set a PC breakpoint")
 
       Spacer(minLength: 0)
     }
@@ -198,14 +198,14 @@ struct DisassemblyPane: View {
     .padding(.vertical, 1)
     .background(isPC ? Color.accentColor.opacity(0.18) : .clear)
     .contextMenu {
-      Button("メインCPU PC ブレークポイントを追加") {
+      Button("Add Main CPU PC Breakpoint") {
         session.debugger.add(Breakpoint(kind: .mainPC(inst.address)))
       }
-      .help("PCがこのアドレスに達したときメインCPUを停止")
-      Button("サブCPU PC ブレークポイントを追加") {
+      .help("Stop the main CPU when its PC reaches this address")
+      Button("Add Sub CPU PC Breakpoint") {
         session.debugger.add(Breakpoint(kind: .subPC(inst.address)))
       }
-      .help("PCがこのアドレスに達したときサブCPUを停止")
+      .help("Stop the sub CPU when its PC reaches this address")
     }
   }
 
