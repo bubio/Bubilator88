@@ -153,6 +153,7 @@ extension EmulatorViewModel {
       ongoing = try player.liveTick()
     } catch {
       scriptPlayer = nil
+      syncScriptMountsIfChanged(player: player)
       DispatchQueue.main.async { [weak self] in
         self?.isPlayingScript = false
         self?.showAlert(title: String(localized: "Script Playback Error",
@@ -161,6 +162,10 @@ extension EmulatorViewModel {
       }
       return
     }
+    // A `disk swap` / `disk select` / `disk eject` executed by this tick has to
+    // reach the UI now, not when playback ends — hence before the `ongoing`
+    // guard below.
+    syncScriptMountsIfChanged(player: player)
     guard !ongoing else { return }
     // Playback finished. Reflect state on main; capture the player so
     // `driveMount` can still be queried.
@@ -242,6 +247,48 @@ extension EmulatorViewModel {
       : scriptDir.appending(component: path)
   }
 
+  /// Builds the `DriveState` a script mount corresponds to — the same shape a
+  /// manual mount (`mountDiskImage`) produces, so image selection from the Disk
+  /// menu keeps working. Pure ViewModel state: it touches neither `machine` nor
+  /// `emuQueue`, so it is safe to call from the draw thread.
+  func makeScriptDriveState(_ mount: ScriptPlayer.DriveMount, scriptDir: URL) -> DriveState {
+    let url = resolveScriptDiskURL(mount.path, scriptDir: scriptDir)
+    let fileName = url.deletingPathExtension().lastPathComponent
+    let info = makeDirectDiskInfo(allImages: mount.images, fileName: fileName,
+                                  imageIndex: mount.imageIndex, sourceURL: url)
+    let index = info.currentImageIndex
+    return DriveState(name: info.imageNames[index], fileName: fileName, info: info,
+                      writeProtected: mount.images[index].writeProtected)
+  }
+
+  /// Reflects a mid-playback `disk swap` / `disk select` / `disk eject` in the UI.
+  ///
+  /// Called every frame from `tickScriptPlayer` on the draw thread: the drive
+  /// mounts are read and the `DriveState` built here (both are pure, and the
+  /// player is only touched from this thread), while the `@Observable`
+  /// assignment is dispatched to main. Drives the script never touched are left
+  /// alone — unlike `rebuildDriveInfoFromScript` this never consults
+  /// `machine.subSystem.drives`, which would race `machine.runFrame()`.
+  func syncScriptMountsIfChanged(player: ScriptPlayer) {
+    var updates: [(drive: Int, state: DriveState)] = []
+    for drive in 0..<2 {
+      let mount = player.driveMount(drive)
+      let key = mount.map { ScriptMountKey(path: $0.path, imageIndex: $0.imageIndex) }
+      guard key != scriptMountSnapshot[drive] else { continue }
+      scriptMountSnapshot[drive] = key
+      if let mount, let scriptDir {
+        updates.append((drive, makeScriptDriveState(mount, scriptDir: scriptDir)))
+      } else {
+        updates.append((drive, .empty))
+      }
+    }
+    guard !updates.isEmpty else { return }
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      for update in updates { self.applyDriveState(update.state, drive: update.drive) }
+    }
+  }
+
   /// Rebuilds `MountedDiskInfo` for each drive from the mount details, after
   /// playback finishes or is cancelled.
   ///
@@ -257,17 +304,11 @@ extension EmulatorViewModel {
       // but pendingMount is always committed eventually — so rebuild from
       // driveMount rather than from the machine's instantaneous state.
       if let mount = player.driveMount(drive), let scriptDir {
-        let url = resolveScriptDiskURL(mount.path, scriptDir: scriptDir)
-        let fileName = url.deletingPathExtension().lastPathComponent
-        let info = makeDirectDiskInfo(allImages: mount.images, fileName: fileName,
-                                      imageIndex: mount.imageIndex, sourceURL: url)
-        let index = info.currentImageIndex
-        applyDriveState(
-          DriveState(name: info.imageNames[index], fileName: fileName, info: info,
-                     writeProtected: mount.images[index].writeProtected),
-          drive: drive)
+        scriptMountSnapshot[drive] = ScriptMountKey(path: mount.path, imageIndex: mount.imageIndex)
+        applyDriveState(makeScriptDriveState(mount, scriptDir: scriptDir), drive: drive)
         continue
       }
+      scriptMountSnapshot[drive] = nil
       // Drives the script never touched follow the machine's actual state.
       if machine.subSystem.drives[drive] != nil {
         // An existing disk, e.g. a manual mount: update the name only and keep

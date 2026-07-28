@@ -625,6 +625,19 @@ final class EmulatorViewModel {
   /// after playback.
   @ObservationIgnored var scriptDir: URL?
 
+  /// What each drive's `MountedDiskInfo` was last rebuilt from during live
+  /// script playback: the mounted path and image index, or nil for an empty
+  /// drive. `tickScriptPlayer()` compares the player's mounts against this every
+  /// frame so a mid-script `disk swap` / `disk select` / `disk eject` shows up in
+  /// the status bar and the Disk menu right away, not only when playback ends.
+  @ObservationIgnored var scriptMountSnapshot: [ScriptMountKey?] = [nil, nil]
+
+  /// Identity of one drive's script mount, for change detection only.
+  struct ScriptMountKey: Equatable {
+    let path: String
+    let imageIndex: Int
+  }
+
   /// Active operation recorder. Fed real key/disk events; its `frameIndex`
   /// is advanced once per machine frame from `runFrameForMetal()`.
   @ObservationIgnored var scriptRecorder: ScriptRecorder?

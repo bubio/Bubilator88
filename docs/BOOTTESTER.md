@@ -38,15 +38,15 @@ BOOTTEST_SCREENSHOT_PATH=/tmp/shot.ppm \
 ```
 boot n88-v2
 clock 8
-disk 0 Ys.d88 0
+disk 0 Ys.d88 image 0
 wait 600
 key RETURN tap
-disk swap 0 Ys-B.d88 0
+disk swap 0 Ys-B.d88 image 0
 reset warm
 ```
 
 動詞: `boot` (`n88-v2`/`n88-v1h`/`n88-v1s`/`n-basic`) / `clock` / `dipsw1` /
-`dipsw2` / `disk <drive> <path> <image>` / `disk swap` / `disk select` /
+`dipsw2` / `disk <drive> <path> [image <index>]` / `disk swap` / `disk select` /
 `disk eject` / `wait <frames>` / `key <name> <down|up|tap>` / `reset <warm|cold>`。
 キー名テーブルは `BOOTTEST_KEY_EVENTS` と共通 (ScriptParser)。
 
