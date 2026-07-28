@@ -1,0 +1,16 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSMotionUsageDescription": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イマーシブオーディオのヘッドトラッキングに使用します。"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
