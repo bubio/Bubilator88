@@ -101,6 +101,18 @@
         }
       }
     },
+    "%@ <byte>": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ <byte>"
+          }
+        }
+      }
+    },
     "(unnamed)": {
       "localizations": {
         "ja": {
@@ -127,6 +139,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "8 MHz"
+          }
+        }
+      }
+    },
+    "<drive> <path> [image <index>]": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<drive> <path> [image <index>]"
           }
         }
       }
@@ -691,6 +715,18 @@
         }
       }
     },
+    "Drive must be 0 or 1: %@": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドライブは 0 か 1 です: %@"
+          }
+        }
+      }
+    },
     "Dump Error": {
       "localizations": {
         "ja": {
@@ -807,6 +843,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "疑似ステレオを有効にする"
+          }
+        }
+      }
+    },
+    "Expected the image keyword: %@": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "image キーワードが必要です: %@"
           }
         }
       }
@@ -1051,6 +1099,30 @@
         }
       }
     },
+    "Image index %1$@ is out of range (%2$@ has %3$@ image(s)).": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イメージ番号 %1$@ は範囲外です (%2$@ は %3$@ 面)。"
+          }
+        }
+      }
+    },
+    "Image index %1$@ is out of range (drive %2$@ has %3$@ image(s)).": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イメージ番号 %1$@ は範囲外です (ドライブ %2$@ は %3$@ 面)。"
+          }
+        }
+      }
+    },
     "Image number %1$ld is out of range (1-%2$ld).": {
       "localizations": {
         "ja": {
@@ -1097,6 +1169,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "整数倍スケーリング"
+          }
+        }
+      }
+    },
+    "Invalid duration in seconds: %@": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不正な秒指定です: %@"
+          }
+        }
+      }
+    },
+    "Invalid frame count: %@": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不正なフレーム指定です: %@"
+          }
+        }
+      }
+    },
+    "Invalid image index: %@": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イメージ番号が不正です: %@"
+          }
+        }
+      }
+    },
+    "Invalid value for %1$@ (0x00-0xFF): %2$@": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ の値が不正です (0x00-0xFF): %2$@"
           }
         }
       }
@@ -1341,6 +1461,18 @@
         }
       }
     },
+    "No file is mounted in drive %@ (disk select).": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドライブ %@ にマウント済みファイルがありません (disk select)。"
+          }
+        }
+      }
+    },
     "No orphan disks were found (all cached disks still have their original archive).": {
       "localizations": {
         "ja": {
@@ -1367,6 +1499,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "bubilator88:// スキームの URL ではありません。"
+          }
+        }
+      }
+    },
+    "Not a valid D88 image: %@": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D88 として解釈できません: %@"
           }
         }
       }
@@ -2411,6 +2555,18 @@
         }
       }
     },
+    "The disk path is empty.": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスクパスが空です。"
+          }
+        }
+      }
+    },
     "There are no cached disks to export.": {
       "localizations": {
         "ja": {
@@ -2451,12 +2607,72 @@
         }
       }
     },
+    "Unclosed quote.": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クォートが閉じていません。"
+          }
+        }
+      }
+    },
+    "Unknown boot mode: %@": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未知のブートモード: %@"
+          }
+        }
+      }
+    },
+    "Unknown key action: %@": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不明な key アクション: %@"
+          }
+        }
+      }
+    },
+    "Unknown key name: %@": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未知のキー名です: %@"
+          }
+        }
+      }
+    },
     "Unknown option \"%@\".": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "不明なオプション \"%@\" です。"
+          }
+        }
+      }
+    },
+    "Unknown verb: %@": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未知の動詞: %@"
           }
         }
       }
@@ -2577,6 +2793,162 @@
           "stringUnit": {
             "state": "translated",
             "value": "書き込み禁止 ✓"
+          }
+        }
+      }
+    },
+    "boot <mode> (N88-V2 / N88-V1H / N88-V1S / N-BASIC)": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "boot <mode> (N88-V2 / N88-V1H / N88-V1S / N-BASIC)"
+          }
+        }
+      }
+    },
+    "clock must be 4 or 8.": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "clock は 4 か 8 です。"
+          }
+        }
+      }
+    },
+    "disk eject <drive>": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "disk eject <drive>"
+          }
+        }
+      }
+    },
+    "disk is missing arguments.": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "disk の引数が不足しています。"
+          }
+        }
+      }
+    },
+    "disk select <drive> <index>": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "disk select <drive> <index>"
+          }
+        }
+      }
+    },
+    "key <name> <down|up|tap [hold]>": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "key <name> <down|up|tap [hold]>"
+          }
+        }
+      }
+    },
+    "key down takes no extra arguments.": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "key down に余分な引数があります。"
+          }
+        }
+      }
+    },
+    "key tap [hold]": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "key tap [hold]"
+          }
+        }
+      }
+    },
+    "key up takes no extra arguments.": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "key up に余分な引数があります。"
+          }
+        }
+      }
+    },
+    "reset [cold|warm]": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "reset [cold|warm]"
+          }
+        }
+      }
+    },
+    "reset must be cold or warm: %@": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "reset は cold か warm です: %@"
+          }
+        }
+      }
+    },
+    "tap hold must be at least 1: %@": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tap の hold は 1 以上です: %@"
+          }
+        }
+      }
+    },
+    "wait takes exactly one argument (e.g. wait 90, wait 1.5s).": {
+      "comment": "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "wait は引数 1 個です (例: wait 90 / wait 1.5s)。"
           }
         }
       }

@@ -66,7 +66,7 @@ extension EmulatorViewModel {
     } catch {
       showAlert(title: String(localized: "Cannot Open Script",
                               comment: "Alert title: a .b88script file could not be read"),
-                message: error.localizedDescription)
+                message: ScriptErrorLocalization.message(for: error))
       return
     }
 
@@ -79,7 +79,7 @@ extension EmulatorViewModel {
                 message: String(format: String(
                   localized:                   "%1$@ line %2$ld: %3$@",
                   comment: "Script parse error detail. %1 file name, %2 line number, %3 parser message"),
-                url.lastPathComponent, e.line, e.message))
+                url.lastPathComponent, e.line, ScriptErrorLocalization.message(for: e)))
       return
     } catch {
       showAlert(title: String(localized: "Script Parse Error",
@@ -125,7 +125,7 @@ extension EmulatorViewModel {
       renderScreen()
       showAlert(title: String(localized: "Script Playback Error",
                               comment: "Alert title: playing a .b88script failed"),
-                message: "\(setupError)")
+                message: ScriptErrorLocalization.message(for: setupError))
       return
     }
 
@@ -157,7 +157,7 @@ extension EmulatorViewModel {
         self?.isPlayingScript = false
         self?.showAlert(title: String(localized: "Script Playback Error",
                                       comment: "Alert title: playing a .b88script failed"),
-                        message: "\(error)")
+                        message: ScriptErrorLocalization.message(for: error))
       }
       return
     }
