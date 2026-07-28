@@ -24,7 +24,7 @@ struct M3UPlaylistTests {
     # trailing comment
     """
     let entries = M3UPlaylist.entryURLs(text: text,
-                                        baseDirectory: URL(fileURLWithPath: "/games/ys"))
+                                        baseDirectory: URL(filePath: "/games/ys"))
     #expect(entries.map(\.path) == ["/games/ys/DiskA.d88",
                                     "/games/ys/DiskB.d88",
                                     "/abs/DiskC.d88"])
@@ -33,20 +33,20 @@ struct M3UPlaylistTests {
   @Test("~ は展開される")
   func tildeEntry() {
     let entries = M3UPlaylist.entryURLs(text: "~/disks/a.d88",
-                                        baseDirectory: URL(fileURLWithPath: "/games"))
+                                        baseDirectory: URL(filePath: "/games"))
     #expect(entries.map(\.path) == [NSHomeDirectory() + "/disks/a.d88"])
   }
 
   @Test("エントリが 1 件も無ければ空配列")
   func emptyPlaylist() {
     let entries = M3UPlaylist.entryURLs(text: "# comment only\n\n",
-                                        baseDirectory: URL(fileURLWithPath: "/games"))
+                                        baseDirectory: URL(filePath: "/games"))
     #expect(entries.isEmpty)
   }
 
   @Test("存在しないファイルは nil")
   func unreadableFile() {
-    #expect(M3UPlaylist.entryURLs(contentsOf: URL(fileURLWithPath: "/nonexistent/x.m3u")) == nil)
+    #expect(M3UPlaylist.entryURLs(contentsOf: URL(filePath: "/nonexistent/x.m3u")) == nil)
   }
 
   @Test("UTF-8 と Shift-JIS のどちらのプレイリストも読める", arguments: [
@@ -55,12 +55,12 @@ struct M3UPlaylistTests {
   func readsBothEncodings(encoding: String.Encoding) throws {
     // Japanese filenames are the norm for PC-88 disks, and an .m3u written by
     // another tool is often Shift-JIS.
-    let dir = URL(fileURLWithPath: NSTemporaryDirectory())
-      .appendingPathComponent("M3UPlaylistTests-\(UUID().uuidString)")
+    let dir = URL(filePath: NSTemporaryDirectory())
+      .appending(component: "M3UPlaylistTests-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: dir) }
 
-    let file = dir.appendingPathComponent("プレイリスト.m3u")
+    let file = dir.appending(component: "プレイリスト.m3u")
     let body = "# コメント\nイース A面.d88\nイース B面.d88\n"
     try #require(body.data(using: encoding)).write(to: file)
 

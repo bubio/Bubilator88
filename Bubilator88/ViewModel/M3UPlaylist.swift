@@ -31,8 +31,8 @@ enum M3UPlaylist {
       .map { line -> URL in
         let expanded = (line as NSString).expandingTildeInPath
         return (expanded as NSString).isAbsolutePath
-          ? URL(fileURLWithPath: expanded)
-          : baseDirectory.appendingPathComponent(expanded)
+          ? URL(filePath: expanded)
+          : baseDirectory.appending(component: expanded)
       }
   }
 

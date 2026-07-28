@@ -190,7 +190,7 @@ struct GVRAMPane: View {
     let green   = session.gvramGreen
     let palette = session.gvramPalette
     let is400   = session.gvram400LineMode
-    imageTask = Task { @MainActor in
+    imageTask = Task {
       // Run the pixel loop on a background thread.
       let result: ([UInt8], Int, Int)? = await Task.detached(priority: .userInitiated) {
         if is400 {

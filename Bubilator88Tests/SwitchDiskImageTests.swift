@@ -34,8 +34,8 @@ struct SwitchDiskImageTests {
       }
       concatenated.append(contentsOf: bytes)
     }
-    let url = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-      .appendingPathComponent("SwitchDiskImageTests-\(UUID().uuidString).d88")
+    let url = URL(filePath: NSTemporaryDirectory(), directoryHint: .isDirectory)
+      .appending(component: "SwitchDiskImageTests-\(UUID().uuidString).d88")
     try Data(concatenated).write(to: url)
     return url
   }

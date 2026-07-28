@@ -345,12 +345,12 @@ extension EmulatorViewModel {
     if Settings.shared.screenshotAutoSave {
       let dir = Settings.shared.screenshotDirectory
         ?? NSHomeDirectory() + "/Pictures"
-      let dirURL = URL(fileURLWithPath: dir, isDirectory: true)
+      let dirURL = URL(filePath: dir, directoryHint: .isDirectory)
       try? FileManager.default.createDirectory(at: dirURL, withIntermediateDirectories: true)
-      url = dirURL.appendingPathComponent(defaultName)
+      url = dirURL.appending(component: defaultName)
     } else {
       let panel = NSSavePanel()
-      panel.title = NSLocalizedString("Save Screenshot", comment: "")
+      panel.title = String(localized: "Save Screenshot", comment: "")
       panel.nameFieldStringValue = defaultName
       switch format {
       case "jpeg": panel.allowedContentTypes = [.jpeg]
@@ -364,8 +364,8 @@ extension EmulatorViewModel {
 
     guard let data = renderScreenshotData(format: format) else {
       showAlert(
-        title: NSLocalizedString("Screenshot Error", comment: ""),
-        message: NSLocalizedString("Screenshot failed", comment: "")
+        title: String(localized: "Screenshot Error", comment: ""),
+        message: String(localized: "Screenshot failed", comment: "")
       )
       return
     }
@@ -373,11 +373,11 @@ extension EmulatorViewModel {
     do {
       try data.write(to: url, options: .atomic)
       if Settings.shared.screenshotAutoSave {
-        showToast(NSLocalizedString("Screenshot saved", comment: ""))
+        showToast(String(localized: "Screenshot saved", comment: ""))
       }
     } catch {
       showAlert(
-        title: NSLocalizedString("Screenshot Error", comment: ""),
+        title: String(localized: "Screenshot Error", comment: ""),
         message: error.localizedDescription
       )
     }
@@ -387,15 +387,15 @@ extension EmulatorViewModel {
   func copyScreenshotToClipboard() {
     guard let data = renderScreenshotData(format: "png") else {
       showAlert(
-        title: NSLocalizedString("Screenshot Error", comment: ""),
-        message: NSLocalizedString("Screenshot failed", comment: "")
+        title: String(localized: "Screenshot Error", comment: ""),
+        message: String(localized: "Screenshot failed", comment: "")
       )
       return
     }
     let pb = NSPasteboard.general
     pb.clearContents()
     pb.setData(data, forType: .png)
-    showToast(NSLocalizedString("Screenshot copied to clipboard", comment: ""))
+    showToast(String(localized: "Screenshot copied to clipboard", comment: ""))
   }
 
   private func renderScreenshotData(format: String) -> Data? {
@@ -444,7 +444,7 @@ extension EmulatorViewModel {
   /// docs/MEMORY_DUMP_FORMAT.md.
   func dumpMemoryViaSavePanel() {
     let panel = NSSavePanel()
-    panel.title = NSLocalizedString("Dump Memory…", comment: "Debug menu memory dump title")
+    panel.title = String(localized: "Dump Memory…", comment: "Debug menu memory dump title")
     let stamp = ISO8601DateFormatter().string(from: .now)
       .replacingOccurrences(of: ":", with: "-")
     panel.nameFieldStringValue = "Bubilator88-memdump-\(stamp)"
@@ -465,7 +465,7 @@ extension EmulatorViewModel {
       _ = files
     } catch {
       showAlert(
-        title: NSLocalizedString("Dump Error", comment: ""),
+        title: String(localized: "Dump Error", comment: ""),
         message: error.localizedDescription
       )
     }
@@ -485,7 +485,7 @@ extension EmulatorViewModel {
       showToast("Text DMA snapshot: \(textDMASnapshotDumpPath)")
     } catch {
       showAlert(
-        title: NSLocalizedString("Snapshot Error", comment: ""),
+        title: String(localized: "Snapshot Error", comment: ""),
         message: error.localizedDescription
       )
     }

@@ -21,17 +21,17 @@ extension EmulatorViewModel {
   func startScriptRecording() {
     guard scriptRecorder == nil else { return }
     if isPlayingScript {
-      showAlert(title: NSLocalizedString("Cannot Record",
-                                         comment: "Alert title: operation recording could not be started"),
-                message: NSLocalizedString("Recording cannot start while a script is playing.",
-                                           comment: "Alert message: script playback is in progress"))
+      showAlert(title: String(localized: "Cannot Record",
+                              comment: "Alert title: operation recording could not be started"),
+                message: String(localized: "Recording cannot start while a script is playing.",
+                                comment: "Alert message: script playback is in progress"))
       return
     }
     if audioRecorder.isRecording || videoRecorder.isRecording {
-      showAlert(title: NSLocalizedString("Cannot Record",
-                                         comment: "Alert title: operation recording could not be started"),
-                message: NSLocalizedString(
-                  "Operation recording cannot start while audio or video is being recorded (starting a recording resets the machine).",
+      showAlert(title: String(localized: "Cannot Record",
+                              comment: "Alert title: operation recording could not be started"),
+                message: String(
+                  localized:                   "Operation recording cannot start while audio or video is being recorded (starting a recording resets the machine).",
                   comment: "Alert message: an audio/video recording is in progress"))
       return
     }
@@ -62,8 +62,8 @@ extension EmulatorViewModel {
     scriptRecorder = recorder
     isRecordingScript = true
     renderScreen()
-    showToast(NSLocalizedString("Recording started",
-                                comment: "Toast shown when operation recording begins"))
+    showToast(String(localized: "Recording started",
+                     comment: "Toast shown when operation recording begins"))
     start()
   }
 
@@ -81,8 +81,8 @@ extension EmulatorViewModel {
     guard scriptRecorder != nil else { return }
     scriptRecorder = nil
     isRecordingScript = false
-    showToast(NSLocalizedString("Recording cancelled",
-                                comment: "Toast shown when operation recording is discarded by a reset or state load"))
+    showToast(String(localized: "Recording cancelled",
+                     comment: "Toast shown when operation recording is discarded by a reset or state load"))
   }
 
   /// Auto-saves a recording still in progress when the app quits.
@@ -96,9 +96,9 @@ extension EmulatorViewModel {
     isRecordingScript = false
     let text = ScriptWriter.write(recorder.finish())
     let dir = Settings.shared.scriptRecordingDirectory ?? (NSHomeDirectory() + "/Documents")
-    let dirURL = URL(fileURLWithPath: dir, isDirectory: true)
+    let dirURL = URL(filePath: dir, directoryHint: .isDirectory)
     try? FileManager.default.createDirectory(at: dirURL, withIntermediateDirectories: true)
-    try? text.write(to: dirURL.appendingPathComponent(recordingDefaultName()),
+    try? text.write(to: dirURL.appending(component: recordingDefaultName()),
                     atomically: true, encoding: .utf8)
   }
 
@@ -150,13 +150,13 @@ extension EmulatorViewModel {
     let url: URL
     if Settings.shared.scriptRecordingAutoSave {
       let dir = Settings.shared.scriptRecordingDirectory ?? (NSHomeDirectory() + "/Documents")
-      let dirURL = URL(fileURLWithPath: dir, isDirectory: true)
+      let dirURL = URL(filePath: dir, directoryHint: .isDirectory)
       try? FileManager.default.createDirectory(at: dirURL, withIntermediateDirectories: true)
-      url = dirURL.appendingPathComponent(defaultName)
+      url = dirURL.appending(component: defaultName)
     } else {
       let panel = NSSavePanel()
-      panel.title = NSLocalizedString("Save Script",
-                                      comment: "Title of the save panel for a recorded .b88script")
+      panel.title = String(localized: "Save Script",
+                           comment: "Title of the save panel for a recorded .b88script")
       panel.nameFieldStringValue = defaultName
       if let type = UTType("com.bubio.bubilator88.timeline-script") {
         panel.allowedContentTypes = [type]
@@ -168,11 +168,11 @@ extension EmulatorViewModel {
 
     do {
       try text.write(to: url, atomically: true, encoding: .utf8)
-      showToast(NSLocalizedString("Script saved",
-                                  comment: "Toast shown after a recorded .b88script is written to disk"))
+      showToast(String(localized: "Script saved",
+                       comment: "Toast shown after a recorded .b88script is written to disk"))
     } catch {
-      showAlert(title: NSLocalizedString("Save Failed",
-                                         comment: "Alert title: writing the recorded .b88script failed"),
+      showAlert(title: String(localized: "Save Failed",
+                              comment: "Alert title: writing the recorded .b88script failed"),
                 message: error.localizedDescription)
     }
   }

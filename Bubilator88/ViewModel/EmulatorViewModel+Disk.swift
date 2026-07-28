@@ -12,56 +12,56 @@ extension EmulatorViewModel {
   func loadROMs() {
     let appSupport = FileManager.default.urls(
       for: .applicationSupportDirectory, in: .userDomainMask
-    ).first!.appendingPathComponent("Bubilator88")
+    ).first!.appending(component: "Bubilator88")
 
     // Create directory if needed
     try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
 
     // N88-BASIC ROM
-    let n88Path = appSupport.appendingPathComponent("N88.ROM")
+    let n88Path = appSupport.appending(component: "N88.ROM")
     if let data = try? Data(contentsOf: n88Path) {
       machine.loadN88BasicROM(Array(data))
       romLoaded = true
     } else {
       showAlert(
-        title: NSLocalizedString("ROM Not Found", comment: ""),
+        title: String(localized: "ROM Not Found", comment: ""),
         message: "N88.ROM not found in \(appSupport.path)"
       )
     }
 
     // N-BASIC ROM (optional — needed for N88-BASIC boot sequence)
-    if let data = try? Data(contentsOf: appSupport.appendingPathComponent("N80.ROM")) {
+    if let data = try? Data(contentsOf: appSupport.appending(component: "N80.ROM")) {
       machine.loadNBasicROM(Array(data))
     }
 
     // Font ROM (optional — built-in ASCII font used as fallback)
-    let fontPath = appSupport.appendingPathComponent("FONT.ROM")
+    let fontPath = appSupport.appending(component: "FONT.ROM")
     if let data = try? Data(contentsOf: fontPath) {
       machine.loadFontROM(Array(data))
     }
 
     // Kanji ROM Level 1 (optional)
-    let kanji1Path = appSupport.appendingPathComponent("KANJI1.ROM")
+    let kanji1Path = appSupport.appending(component: "KANJI1.ROM")
     if let data = try? Data(contentsOf: kanji1Path) {
       machine.loadKanjiROM1(Array(data))
     }
 
     // Kanji ROM Level 2 (optional)
-    let kanji2Path = appSupport.appendingPathComponent("KANJI2.ROM")
+    let kanji2Path = appSupport.appending(component: "KANJI2.ROM")
     if let data = try? Data(contentsOf: kanji2Path) {
       machine.loadKanjiROM2(Array(data))
     }
 
     // DISK.ROM (sub-CPU firmware, 8KB)
-    let diskROMPath = appSupport.appendingPathComponent("DISK.ROM")
+    let diskROMPath = appSupport.appending(component: "DISK.ROM")
     if let data = try? Data(contentsOf: diskROMPath) {
       machine.loadDiskROM(Array(data))
     }
 
     // N88 Extended ROM banks (0-3, 8KB each)
     for bank in 0..<4 {
-      let primary = appSupport.appendingPathComponent("N88_\(bank).ROM")
-      let alt = appSupport.appendingPathComponent("N88EXT\(bank).ROM")
+      let primary = appSupport.appending(component: "N88_\(bank).ROM")
+      let alt = appSupport.appending(component: "N88EXT\(bank).ROM")
       if let data = try? Data(contentsOf: primary) {
         machine.loadN88ExtROM(bank: bank, data: Array(data))
       } else if let data = try? Data(contentsOf: alt) {
@@ -76,7 +76,7 @@ extension EmulatorViewModel {
     let rhythmFiles = ["2608_BD.WAV", "2608_SD.WAV", "2608_TOP.WAV",
                        "2608_HH.WAV", "2608_TOM.WAV", "2608_RIM.WAV"]
     for (index, filename) in rhythmFiles.enumerated() {
-      let path = appSupport.appendingPathComponent(filename)
+      let path = appSupport.appending(component: filename)
       if let wavData = try? Data(contentsOf: path),
          let (samples, sampleRate) = parseWAV(wavData) {
         machine.loadRhythmSample(index: index, data: samples, sampleRate: sampleRate)
@@ -221,7 +221,7 @@ extension EmulatorViewModel {
     } catch {
       cacheDir = nil
       showAlert(
-        title: NSLocalizedString("Disk Cache Unavailable", comment: ""),
+        title: String(localized: "Disk Cache Unavailable", comment: ""),
         message: error.localizedDescription
       )
     }
@@ -609,9 +609,9 @@ extension EmulatorViewModel {
     guard let url = entry.resolveBookmark() else {
       Settings.shared.removeRecentFile(entry)
       showAlert(
-        title: NSLocalizedString("File Error", comment: ""),
-        message: NSLocalizedString(
-          "File no longer accessible. If this disk had written-back save data, you can recover it via Disk > Export Cached Disks...",
+        title: String(localized: "File Error", comment: ""),
+        message: String(
+          localized:           "File no longer accessible. If this disk had written-back save data, you can recover it via Disk > Export Cached Disks...",
           comment: ""
         )
       )
@@ -636,24 +636,24 @@ extension EmulatorViewModel {
       let title: String
       let message: String
       if exported == 0 {
-        title = NSLocalizedString("No Disks Exported", comment: "")
+        title = String(localized: "No Disks Exported", comment: "")
         if result.orphansOnly && skipped > 0 {
-          message = NSLocalizedString(
-            "No orphan disks were found (all cached disks still have their original archive).",
+          message = String(
+            localized:             "No orphan disks were found (all cached disks still have their original archive).",
             comment: ""
           )
         } else {
-          message = NSLocalizedString("There are no cached disks to export.", comment: "")
+          message = String(localized: "There are no cached disks to export.", comment: "")
         }
       } else {
-        title = NSLocalizedString("Export Complete", comment: "")
-        let fmt = NSLocalizedString("Exported %d disk(s).", comment: "")
+        title = String(localized: "Export Complete", comment: "")
+        let fmt = String(localized: "Exported %d disk(s).", comment: "")
         message = String(format: fmt, exported)
       }
       showAlert(title: title, message: message)
     } catch {
       showAlert(
-        title: NSLocalizedString("Export Failed", comment: ""),
+        title: String(localized: "Export Failed", comment: ""),
         message: error.localizedDescription
       )
     }
@@ -664,22 +664,24 @@ extension EmulatorViewModel {
   /// Show save panel and create a formatted blank D88 disk image.
   func createBlankDisk() {
     let panel = NSSavePanel()
-    panel.title = NSLocalizedString("Create Blank Disk", comment: "Save panel title")
+    panel.title = String(localized: "Create Blank Disk", comment: "Save panel title")
     panel.nameFieldStringValue = "Blank.d88"
-    panel.allowedContentTypes = [.init(filenameExtension: "d88")!]
+    // There is no system UTType for D88, so fall back to plain data rather than
+    // force-unwrapping. Matches how PIOFlowPane guards its own UTType lookup.
+    panel.allowedContentTypes = [UTType(filenameExtension: "d88") ?? .data]
 
     // Disk type picker + BASIC FAT init checkbox as accessory view
     let typePopup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 200, height: 26), pullsDown: false)
     typePopup.addItems(withTitles: ["2D (320KB)", "2DD (640KB)", "2HD (1.2MB)"])
     typePopup.selectItem(at: 1)  // default: 2DD
 
-    let label = NSTextField(labelWithString: NSLocalizedString("Disk Type:", comment: "Blank disk type label"))
+    let label = NSTextField(labelWithString: String(localized: "Disk Type:", comment: "Blank disk type label"))
     label.sizeToFit()
     let labelWidth = max(70, label.frame.width)
 
     let fatCheckbox = NSButton(
-      checkboxWithTitle: NSLocalizedString(
-        "Initialize as N88-BASIC disk",
+      checkboxWithTitle: String(
+        localized:         "Initialize as N88-BASIC disk",
         comment: "Blank disk FAT init checkbox"
       ),
       target: nil,
@@ -712,8 +714,8 @@ extension EmulatorViewModel {
       let disk = D88Disk.createFormatted(type: diskType, name: diskName, initBasicFAT: initFAT)
       guard let data = disk.serialize() else {
         self?.showAlert(
-          title: NSLocalizedString("Disk Error", comment: ""),
-          message: NSLocalizedString("Failed to create blank disk", comment: "")
+          title: String(localized: "Disk Error", comment: ""),
+          message: String(localized: "Failed to create blank disk", comment: "")
         )
         return
       }
@@ -730,7 +732,7 @@ extension EmulatorViewModel {
         self?.mountDisk(url: url, drive: targetDrive)
       } catch {
         self?.showAlert(
-          title: NSLocalizedString("Disk Error", comment: ""),
+          title: String(localized: "Disk Error", comment: ""),
           message: error.localizedDescription
         )
       }
@@ -768,27 +770,27 @@ extension EmulatorViewModel {
 
   /// Show a disk-load failure alert via the unified notification system.
   private func presentDiskLoadErrorAlert(fileName: String, reason: DiskLoadFailureReason) {
-    let title = NSLocalizedString("Can't Load Disk Image", comment: "Disk load failure alert title")
+    let title = String(localized: "Can't Load Disk Image", comment: "Disk load failure alert title")
     let bodyFormat: String
     switch reason {
     case .unreadable:
-      bodyFormat = NSLocalizedString(
-        "\"%@\" could not be read. The file may be missing, unreadable, or on a disconnected volume.",
+      bodyFormat = String(
+        localized:         "\"%@\" could not be read. The file may be missing, unreadable, or on a disconnected volume.",
         comment: "Disk load failure: file unreadable"
       )
     case .emptyArchive:
-      bodyFormat = NSLocalizedString(
-        "\"%@\" is an archive, but it does not contain any D88 disk images.",
+      bodyFormat = String(
+        localized:         "\"%@\" is an archive, but it does not contain any D88 disk images.",
         comment: "Disk load failure: archive contains no D88"
       )
     case .t88TapeImage:
-      bodyFormat = NSLocalizedString(
-        "\"%@\" is a PC-8801 tape image (T88), not a D88 disk image. Bubilator88 does not support T88 files.",
+      bodyFormat = String(
+        localized:         "\"%@\" is a PC-8801 tape image (T88), not a D88 disk image. Bubilator88 does not support T88 files.",
         comment: "Disk load failure: file is a T88 tape image"
       )
     case .notD88:
-      bodyFormat = NSLocalizedString(
-        "\"%@\" is not a valid D88 disk image. The header is missing or the file is corrupted.",
+      bodyFormat = String(
+        localized:         "\"%@\" is not a valid D88 disk image. The header is missing or the file is corrupted.",
         comment: "Disk load failure: file is not a D88"
       )
     }
@@ -862,7 +864,7 @@ extension EmulatorViewModel {
         recoveryDir: DiskWriteBackIO.defaultRecoveryDirectory
       )
       showAlert(
-        title: NSLocalizedString("Disk Write Failed", comment: ""),
+        title: String(localized: "Disk Write Failed", comment: ""),
         message: error.localizedDescription
       )
     }

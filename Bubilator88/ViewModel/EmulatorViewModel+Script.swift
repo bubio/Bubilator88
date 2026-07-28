@@ -22,8 +22,8 @@ extension EmulatorViewModel {
     // compatibility.
     let scriptType = UTType("com.bubio.bubilator88.timeline-script")
     panel.allowedContentTypes = [scriptType, .plainText, .text].compactMap { $0 }
-    panel.message = NSLocalizedString("Choose a timeline script to play",
-                                      comment: "Prompt in the open panel for picking a .b88script file")
+    panel.message = String(localized: "Choose a timeline script to play",
+                           comment: "Prompt in the open panel for picking a .b88script file")
     guard panel.runModal() == .OK, let url = panel.url else { return }
     playScript(url: url)
   }
@@ -64,8 +64,8 @@ extension EmulatorViewModel {
     do {
       text = try String(contentsOf: url, encoding: .utf8)
     } catch {
-      showAlert(title: NSLocalizedString("Cannot Open Script",
-                                         comment: "Alert title: a .b88script file could not be read"),
+      showAlert(title: String(localized: "Cannot Open Script",
+                              comment: "Alert title: a .b88script file could not be read"),
                 message: error.localizedDescription)
       return
     }
@@ -74,16 +74,16 @@ extension EmulatorViewModel {
     do {
       steps = try ScriptParser.parse(text)
     } catch let e as ScriptError {
-      showAlert(title: NSLocalizedString("Script Parse Error",
-                                         comment: "Alert title: a .b88script file is malformed"),
-                message: String(format: NSLocalizedString(
-                  "%1$@ line %2$ld: %3$@",
+      showAlert(title: String(localized: "Script Parse Error",
+                              comment: "Alert title: a .b88script file is malformed"),
+                message: String(format: String(
+                  localized:                   "%1$@ line %2$ld: %3$@",
                   comment: "Script parse error detail. %1 file name, %2 line number, %3 parser message"),
                 url.lastPathComponent, e.line, e.message))
       return
     } catch {
-      showAlert(title: NSLocalizedString("Script Parse Error",
-                                         comment: "Alert title: a .b88script file is malformed"),
+      showAlert(title: String(localized: "Script Parse Error",
+                              comment: "Alert title: a .b88script file is malformed"),
                 message: error.localizedDescription)
       return
     }
@@ -94,7 +94,7 @@ extension EmulatorViewModel {
     let scriptDir = url.deletingLastPathComponent()
     let loader: ScriptPlayer.FileLoader = { [weak self] path in
       let fileURL = self?.resolveScriptDiskURL(path, scriptDir: scriptDir)
-        ?? URL(fileURLWithPath: path)
+        ?? URL(filePath: path)
       return [UInt8](try Data(contentsOf: fileURL))
     }
 
@@ -123,8 +123,8 @@ extension EmulatorViewModel {
     if let setupError {
       emuQueue.sync { player.cancelLive() }
       renderScreen()
-      showAlert(title: NSLocalizedString("Script Playback Error",
-                                         comment: "Alert title: playing a .b88script failed"),
+      showAlert(title: String(localized: "Script Playback Error",
+                              comment: "Alert title: playing a .b88script failed"),
                 message: "\(setupError)")
       return
     }
@@ -138,8 +138,8 @@ extension EmulatorViewModel {
     // mount produces, so image selection stays available from the Disk menu
     // during playback.
     rebuildDriveInfoFromScript(player: player)
-    showToast(NSLocalizedString("Script playback started",
-                                comment: "Toast shown when .b88script playback begins"))
+    showToast(String(localized: "Script playback started",
+                     comment: "Toast shown when .b88script playback begins"))
     start()
   }
 
@@ -155,8 +155,8 @@ extension EmulatorViewModel {
       scriptPlayer = nil
       DispatchQueue.main.async { [weak self] in
         self?.isPlayingScript = false
-        self?.showAlert(title: NSLocalizedString("Script Playback Error",
-                                                 comment: "Alert title: playing a .b88script failed"),
+        self?.showAlert(title: String(localized: "Script Playback Error",
+                                      comment: "Alert title: playing a .b88script failed"),
                         message: "\(error)")
       }
       return
@@ -169,8 +169,8 @@ extension EmulatorViewModel {
       guard let self else { return }
       self.isPlayingScript = false
       self.rebuildDriveInfoFromScript(player: player)
-      self.showToast(NSLocalizedString("Script playback finished",
-                                       comment: "Toast shown when .b88script playback ends"))
+      self.showToast(String(localized: "Script playback finished",
+                            comment: "Toast shown when .b88script playback ends"))
     }
   }
 
@@ -238,8 +238,8 @@ extension EmulatorViewModel {
   /// ones against the script's own directory. Same rule as `playScript`'s loader.
   func resolveScriptDiskURL(_ path: String, scriptDir: URL) -> URL {
     (path as NSString).isAbsolutePath
-      ? URL(fileURLWithPath: path)
-      : scriptDir.appendingPathComponent(path)
+      ? URL(filePath: path)
+      : scriptDir.appending(component: path)
   }
 
   /// Rebuilds `MountedDiskInfo` for each drive from the mount details, after

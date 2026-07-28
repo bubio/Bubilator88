@@ -1050,11 +1050,11 @@ final class EmulatorViewModel {
 
   private static let saveStateDir: URL = {
     let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-    return appSupport.appendingPathComponent("Bubilator88/SaveStates", isDirectory: true)
+    return appSupport.appending(component: "Bubilator88/SaveStates", directoryHint: .isDirectory)
   }()
 
   private func saveStatePath(slot: Int) -> URL {
-    Self.saveStateDir.appendingPathComponent("slot_\(slot).b88s")
+    Self.saveStateDir.appending(component: "slot_\(slot).b88s")
   }
 
   /// Public accessor for sheet view.
@@ -1063,7 +1063,7 @@ final class EmulatorViewModel {
   }
 
   private var quickSavePath: URL {
-    Self.saveStateDir.appendingPathComponent("quicksave.b88s")
+    Self.saveStateDir.appending(component: "quicksave.b88s")
   }
 
   /// App-level metadata saved alongside the machine state.
@@ -1154,12 +1154,12 @@ final class EmulatorViewModel {
     }
     saveStateRevision += 1
     if wasRunning { start() }
-    showToast(NSLocalizedString("State saved", comment: ""))
+    showToast(String(localized: "State saved", comment: ""))
   }
 
   private func performLoad(from path: URL) {
     guard let fileData = try? Data(contentsOf: path) else {
-      showToast(NSLocalizedString("Save state not found", comment: ""))
+      showToast(String(localized: "Save state not found", comment: ""))
       return
     }
     // Loading replaces the whole machine state, so a live script player /
@@ -1230,22 +1230,22 @@ final class EmulatorViewModel {
     renderScreen()
     clearRewindBuffer()
     if wasRunning { start() }
-    showToast(NSLocalizedString("State loaded", comment: ""))
+    showToast(String(localized: "State loaded", comment: ""))
   }
 
   private func saveStateLoadErrorMessage(_ error: Error) -> String {
     if let err = error as? SaveStateError {
       switch err {
       case .invalidMagic:
-        return NSLocalizedString("Load failed: not a save state file", comment: "")
+        return String(localized: "Load failed: not a save state file", comment: "")
       case .unsupportedVersion(let v):
-        let fmt = NSLocalizedString("Load failed: incompatible save state (v%u)", comment: "")
+        let fmt = String(localized: "Load failed: incompatible save state (v%u)", comment: "")
         return String(format: fmt, v)
       case .missingSections, .sectionTooSmall, .invalidData, .endOfData:
-        return NSLocalizedString("Load failed: save state is corrupt", comment: "")
+        return String(localized: "Load failed: save state is corrupt", comment: "")
       }
     }
-    return NSLocalizedString("Load failed", comment: "")
+    return String(localized: "Load failed", comment: "")
   }
 
   /// Reconstruct MountedDiskInfo for a drive after loading a save state.

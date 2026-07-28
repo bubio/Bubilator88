@@ -604,7 +604,11 @@ final class GameControllerManager {
         .map { ConnectedControllerInfo(controller: $0) }
       self.activeControllerInfo = self.activeController.map { ConnectedControllerInfo(controller: $0) }
     }
-    if Thread.isMainThread { update() } else { DispatchQueue.main.async(execute: update) }
+    if Thread.isMainThread {
+      MainActor.assumeIsolated(update)
+    } else {
+      Task { update() }
+    }
   }
 
   // MARK: - Controller Configuration
@@ -777,7 +781,11 @@ final class GameControllerManager {
       )
       if let event { NSApp.postEvent(event, atStart: false) }
     }
-    if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
+    if Thread.isMainThread {
+      MainActor.assumeIsolated(work)
+    } else {
+      Task { work() }
+    }
   }
 
   /// Map a macOS virtual keyCode to the `characters` string that AppKit produces for it.

@@ -152,12 +152,12 @@ extension EmulatorViewModel {
   func rewind() {
     if isRewinding { return }  // hold mode is already driving the timeline
     if videoRecorder.isRecording || audioRecorder.isRecording {
-      showToast(NSLocalizedString("Rewind unavailable while recording",
-                                  comment: ""))
+      showToast(String(localized: "Rewind unavailable while recording",
+                       comment: ""))
       return
     }
     guard let oldest = rewindSnapshots.first else {
-      showToast(NSLocalizedString("Nothing to rewind", comment: ""))
+      showToast(String(localized: "Nothing to rewind", comment: ""))
       return
     }
 
@@ -175,14 +175,14 @@ extension EmulatorViewModel {
     }
     audio.setVolume(savedVolume)
     if loadError != nil {
-      showToast(NSLocalizedString("Rewind failed", comment: ""))
+      showToast(String(localized: "Rewind failed", comment: ""))
       return
     }
     clearRewindBuffer()
     machine.keyboard.releaseAll()
     if !isRunning { renderScreen() }
 
-    let fmt = NSLocalizedString("Rewound %.1fs", comment: "")
+    let fmt = String(localized: "Rewound %.1fs", comment: "")
     showToast(String(format: fmt, secondsBack))
   }
 

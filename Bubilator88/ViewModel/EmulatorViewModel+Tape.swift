@@ -15,7 +15,7 @@ extension EmulatorViewModel {
     defer { if accessing { url.stopAccessingSecurityScopedResource() } }
     guard let data = try? Data(contentsOf: url) else {
       showAlert(
-        title: NSLocalizedString("Tape Load Error", comment: ""),
+        title: String(localized: "Tape Load Error", comment: ""),
         message: "Could not read \(url.lastPathComponent)"
       )
       return
@@ -25,7 +25,7 @@ extension EmulatorViewModel {
     if let entries = ArchiveExtractor.extractTapeImages(data) {
       guard let first = entries.first else {
         showAlert(
-          title: NSLocalizedString("Tape Load Error", comment: ""),
+          title: String(localized: "Tape Load Error", comment: ""),
           message: "No .cmt or .t88 found in \(url.lastPathComponent)"
         )
         return
@@ -47,7 +47,7 @@ extension EmulatorViewModel {
     guard let url = entry.resolveBookmark() else {
       Settings.shared.removeRecentTapeFile(entry)
       showAlert(
-        title: NSLocalizedString("Tape Load Error", comment: ""),
+        title: String(localized: "Tape Load Error", comment: ""),
         message: "Could not resolve \(entry.displayName)"
       )
       return

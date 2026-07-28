@@ -61,11 +61,11 @@ final class AIUpscaler {
 
     // 1. Search ~/Library/Application Support/Bubilator88/Models/
     let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-      .appendingPathComponent("Bubilator88/Models")
+      .appending(component: "Bubilator88/Models")
 
     if let modelsDir = appSupport {
       for ext in ["mlmodelc", "mlpackage"] {
-        let url = modelsDir.appendingPathComponent("\(modelName).\(ext)")
+        let url = modelsDir.appending(component: "\(modelName).\(ext)")
         if FileManager.default.fileExists(atPath: url.path) {
           if await tryLoadModel(from: url, name: modelName) { return }
         }

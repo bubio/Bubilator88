@@ -6,9 +6,8 @@ struct DiskCacheManagerTests {
 
   /// Gives each test its own temporary directory as the cache root.
   private func makeTempCache() -> (cache: DiskCacheManager, root: URL) {
-    let root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-      .appendingPathComponent("DiskCacheManagerTests-\(UUID().uuidString)",
-                              isDirectory: true)
+    let root = URL(filePath: NSTemporaryDirectory(), directoryHint: .isDirectory)
+      .appending(component: "DiskCacheManagerTests-\(UUID().uuidString)", directoryHint: .isDirectory)
     return (DiskCacheManager(root: root), root)
   }
 
@@ -77,12 +76,12 @@ struct DiskCacheManagerTests {
     let (cache, root) = makeTempCache()
     defer { try? FileManager.default.removeItem(at: root) }
 
-    let url = URL(fileURLWithPath: "/tmp/dummy.zip")
+    let url = URL(filePath: "/tmp/dummy.zip")
     let data = Data(repeating: 0x42, count: 256)
     let entry = makeEntry("foo.d88", bytes: [0x01, 0x02, 0x03])
 
     let dir1 = try cache.ensureCached(archiveURL: url, archiveData: data, entries: [entry])
-    let entryURL = dir1.appendingPathComponent("foo.d88")
+    let entryURL = dir1.appending(component: "foo.d88")
     // Between the two calls, inject an overwrite standing in for a write-back
     try Data([0x99]).write(to: entryURL, options: .atomic)
     let modifiedMTime = try FileManager.default.attributesOfItem(atPath: entryURL.path)[.modificationDate] as? Date
@@ -102,7 +101,7 @@ struct DiskCacheManagerTests {
     let (cache, root) = makeTempCache()
     defer { try? FileManager.default.removeItem(at: root) }
 
-    let url = URL(fileURLWithPath: "/tmp/dummy.zip")
+    let url = URL(filePath: "/tmp/dummy.zip")
     let data = Data(repeating: 1, count: 512)
     let entries = [
       makeEntry("diskA/wizardry.d88", bytes: [0xA1]),
@@ -110,8 +109,8 @@ struct DiskCacheManagerTests {
     ]
     let dir = try cache.ensureCached(archiveURL: url, archiveData: data, entries: entries)
 
-    let a = try Data(contentsOf: dir.appendingPathComponent("diskA_wizardry.d88"))
-    let b = try Data(contentsOf: dir.appendingPathComponent("diskB_wizardry.d88"))
+    let a = try Data(contentsOf: dir.appending(component: "diskA_wizardry.d88"))
+    let b = try Data(contentsOf: dir.appending(component: "diskB_wizardry.d88"))
     #expect(a == Data([0xA1]))
     #expect(b == Data([0xB1]))
   }
@@ -121,11 +120,11 @@ struct DiskCacheManagerTests {
     let (cache, root) = makeTempCache()
     defer { try? FileManager.default.removeItem(at: root) }
 
-    let url = URL(fileURLWithPath: "/tmp/x.zip")
+    let url = URL(filePath: "/tmp/x.zip")
     let data = Data(repeating: 7, count: 99)
     let dir = try cache.ensureCached(archiveURL: url, archiveData: data,
                                      entries: [makeEntry("a.d88")])
-    let json = try Data(contentsOf: dir.appendingPathComponent("source.json"))
+    let json = try Data(contentsOf: dir.appending(component: "source.json"))
     let decoder = JSONDecoder()
     decoder.dateDecodingStrategy = .iso8601
     let meta = try decoder.decode(DiskCacheManager.SourceMeta.self, from: json)
@@ -142,12 +141,12 @@ struct DiskCacheManagerTests {
     defer { try? FileManager.default.removeItem(at: root) }
 
     let entry = makeEntry("foo.d88", bytes: [0x10, 0x20])
-    let url = URL(fileURLWithPath: "/tmp/x.zip")
+    let url = URL(filePath: "/tmp/x.zip")
     let archiveData = Data(repeating: 0, count: 64)
     let dir = try cache.ensureCached(archiveURL: url, archiveData: archiveData, entries: [entry])
 
     // Replace the cached file with bytes representing a completed write-back
-    let entryURL = dir.appendingPathComponent("foo.d88")
+    let entryURL = dir.appending(component: "foo.d88")
     try Data([0xFF]).write(to: entryURL, options: .atomic)
 
     let resolved = cache.resolvedData(for: entry, in: dir)
@@ -171,7 +170,7 @@ struct DiskCacheManagerTests {
     defer { try? FileManager.default.removeItem(at: root) }
 
     // An archive that exists
-    let existingArchive = root.appendingPathComponent("present.zip")
+    let existingArchive = root.appending(component: "present.zip")
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     try Data([0x50, 0x4B]).write(to: existingArchive)
     _ = try cache.ensureCached(archiveURL: existingArchive,
@@ -179,7 +178,7 @@ struct DiskCacheManagerTests {
                                entries: [makeEntry("a.d88"), makeEntry("b.d88")])
 
     // An archive that does not exist: only the path is recorded, no file created
-    let missingArchive = URL(fileURLWithPath: "/tmp/nonexistent-\(UUID().uuidString).zip")
+    let missingArchive = URL(filePath: "/tmp/nonexistent-\(UUID().uuidString).zip")
     _ = try cache.ensureCached(archiveURL: missingArchive,
                                archiveData: Data(repeating: 2, count: 64),
                                entries: [makeEntry("c.d88")])
@@ -198,12 +197,12 @@ struct DiskCacheManagerTests {
     let (cache, root) = makeTempCache()
     defer { try? FileManager.default.removeItem(at: root) }
 
-    let dest = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-      .appendingPathComponent("export-dest-\(UUID().uuidString)", isDirectory: true)
+    let dest = URL(filePath: NSTemporaryDirectory(), directoryHint: .isDirectory)
+      .appending(component: "export-dest-\(UUID().uuidString)", directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: dest) }
 
-    let archive = URL(fileURLWithPath: "/tmp/nonexistent-\(UUID().uuidString).zip")
+    let archive = URL(filePath: "/tmp/nonexistent-\(UUID().uuidString).zip")
     _ = try cache.ensureCached(archiveURL: archive,
                                archiveData: Data(repeating: 3, count: 32),
                                entries: [makeEntry("x.d88", bytes: [0x11]),
@@ -212,8 +211,8 @@ struct DiskCacheManagerTests {
     let result = try cache.exportCachedDisks(to: dest, orphansOnly: false)
     #expect(result.exported == 2)
     #expect(result.skipped == 0)
-    #expect(FileManager.default.fileExists(atPath: dest.appendingPathComponent("x.d88").path))
-    #expect(FileManager.default.fileExists(atPath: dest.appendingPathComponent("y.d88").path))
+    #expect(FileManager.default.fileExists(atPath: dest.appending(component: "x.d88").path))
+    #expect(FileManager.default.fileExists(atPath: dest.appending(component: "y.d88").path))
   }
 
   @Test("export: orphansOnly skips disks whose archive still exists")
@@ -221,19 +220,19 @@ struct DiskCacheManagerTests {
     let (cache, root) = makeTempCache()
     defer { try? FileManager.default.removeItem(at: root) }
 
-    let dest = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-      .appendingPathComponent("export-dest-\(UUID().uuidString)", isDirectory: true)
+    let dest = URL(filePath: NSTemporaryDirectory(), directoryHint: .isDirectory)
+      .appending(component: "export-dest-\(UUID().uuidString)", directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: dest) }
 
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-    let present = root.appendingPathComponent("p.zip")
+    let present = root.appending(component: "p.zip")
     try Data([0]).write(to: present)
     _ = try cache.ensureCached(archiveURL: present,
                                archiveData: Data(repeating: 4, count: 16),
                                entries: [makeEntry("present.d88")])
 
-    let missing = URL(fileURLWithPath: "/tmp/missing-\(UUID().uuidString).zip")
+    let missing = URL(filePath: "/tmp/missing-\(UUID().uuidString).zip")
     _ = try cache.ensureCached(archiveURL: missing,
                                archiveData: Data(repeating: 5, count: 16),
                                entries: [makeEntry("orphan.d88")])
@@ -241,8 +240,8 @@ struct DiskCacheManagerTests {
     let result = try cache.exportCachedDisks(to: dest, orphansOnly: true)
     #expect(result.exported == 1)
     #expect(result.skipped == 1)
-    #expect(FileManager.default.fileExists(atPath: dest.appendingPathComponent("orphan.d88").path))
-    #expect(!FileManager.default.fileExists(atPath: dest.appendingPathComponent("present.d88").path))
+    #expect(FileManager.default.fileExists(atPath: dest.appending(component: "orphan.d88").path))
+    #expect(!FileManager.default.fileExists(atPath: dest.appending(component: "present.d88").path))
   }
 
   @Test("export: name collisions get -2, -3 suffix")
@@ -250,19 +249,19 @@ struct DiskCacheManagerTests {
     let (cache, root) = makeTempCache()
     defer { try? FileManager.default.removeItem(at: root) }
 
-    let dest = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-      .appendingPathComponent("export-dest-\(UUID().uuidString)", isDirectory: true)
+    let dest = URL(filePath: NSTemporaryDirectory(), directoryHint: .isDirectory)
+      .appending(component: "export-dest-\(UUID().uuidString)", directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: dest) }
     // Put a file of the same name there first
-    try Data([0xAA]).write(to: dest.appendingPathComponent("dup.d88"))
+    try Data([0xAA]).write(to: dest.appending(component: "dup.d88"))
 
     // Extract two dup.d88 files from different archives
-    let a = URL(fileURLWithPath: "/tmp/a-\(UUID().uuidString).zip")
+    let a = URL(filePath: "/tmp/a-\(UUID().uuidString).zip")
     _ = try cache.ensureCached(archiveURL: a,
                                archiveData: Data(repeating: 6, count: 8),
                                entries: [makeEntry("dup.d88", bytes: [0x01])])
-    let b = URL(fileURLWithPath: "/tmp/b-\(UUID().uuidString).zip")
+    let b = URL(filePath: "/tmp/b-\(UUID().uuidString).zip")
     _ = try cache.ensureCached(archiveURL: b,
                                archiveData: Data(repeating: 7, count: 8),
                                entries: [makeEntry("dup.d88", bytes: [0x02])])
@@ -270,9 +269,9 @@ struct DiskCacheManagerTests {
     let result = try cache.exportCachedDisks(to: dest, orphansOnly: false)
     #expect(result.exported == 2)
     let fm = FileManager.default
-    #expect(fm.fileExists(atPath: dest.appendingPathComponent("dup.d88").path))   // pre-existing
-    #expect(fm.fileExists(atPath: dest.appendingPathComponent("dup-2.d88").path)) // first
-    #expect(fm.fileExists(atPath: dest.appendingPathComponent("dup-3.d88").path)) // second
+    #expect(fm.fileExists(atPath: dest.appending(component: "dup.d88").path))   // pre-existing
+    #expect(fm.fileExists(atPath: dest.appending(component: "dup-2.d88").path)) // first
+    #expect(fm.fileExists(atPath: dest.appending(component: "dup-3.d88").path)) // second
   }
 
   // MARK: - Archive update (item 6)
@@ -282,14 +281,14 @@ struct DiskCacheManagerTests {
     let (cache, root) = makeTempCache()
     defer { try? FileManager.default.removeItem(at: root) }
 
-    let url = URL(fileURLWithPath: "/tmp/game.zip")
+    let url = URL(filePath: "/tmp/game.zip")
     let v1Data = Data(repeating: 0x01, count: 1024)
     let v2Data = Data(repeating: 0x02, count: 1024)
 
     // Extract v1, then inject a write-back standing in for an in-game save
     let dirV1 = try cache.ensureCached(archiveURL: url, archiveData: v1Data,
                                        entries: [makeEntry("save.d88", bytes: [0x11])])
-    let entryV1 = dirV1.appendingPathComponent("save.d88")
+    let entryV1 = dirV1.appending(component: "save.d88")
     try Data([0xAA, 0xBB]).write(to: entryV1, options: .atomic)
 
     // Updating the archive changes the content and so the hash, creating a new cache
@@ -303,7 +302,7 @@ struct DiskCacheManagerTests {
     #expect(preservedV1 == Data([0xAA, 0xBB]))
 
     // The new cache holds the new content
-    let entryV2 = try Data(contentsOf: dirV2.appendingPathComponent("save.d88"))
+    let entryV2 = try Data(contentsOf: dirV2.appending(component: "save.d88"))
     #expect(entryV2 == Data([0x22]))
 
     // Both cache directories follow the hash naming convention
@@ -315,8 +314,8 @@ struct DiskCacheManagerTests {
 
   @Test("uniqueDestinationURL: handles files without extension")
   func uniqueNoExtension() throws {
-    let dir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-      .appendingPathComponent("UDU-\(UUID().uuidString)", isDirectory: true)
+    let dir = URL(filePath: NSTemporaryDirectory(), directoryHint: .isDirectory)
+      .appending(component: "UDU-\(UUID().uuidString)", directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: dir) }
 

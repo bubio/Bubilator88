@@ -21,15 +21,15 @@ enum CacheExportPanel {
     panel.canChooseDirectories = true
     panel.canCreateDirectories = true
     panel.allowsMultipleSelection = false
-    panel.prompt = NSLocalizedString("Export", comment: "")
-    panel.message = NSLocalizedString(
-      "Choose a folder to export cached disk images into.",
+    panel.prompt = String(localized: "Export", comment: "")
+    panel.message = String(
+      localized:       "Choose a folder to export cached disk images into.",
       comment: ""
     )
 
     let checkbox = NSButton(
-      checkboxWithTitle: NSLocalizedString(
-        "Only disks whose original archive is missing",
+      checkboxWithTitle: String(
+        localized:         "Only disks whose original archive is missing",
         comment: ""
       ),
       target: nil,
