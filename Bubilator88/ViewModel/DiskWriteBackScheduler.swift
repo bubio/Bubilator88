@@ -20,48 +20,48 @@ import Foundation
 @MainActor
 final class DiskWriteBackScheduler {
 
-    /// drive 番号 → 実書込クロージャ。ViewModel から注入する。
-    var writeBack: ((Int) -> Void)?
+  /// drive 番号 → 実書込クロージャ。ViewModel から注入する。
+  var writeBack: ((Int) -> Void)?
 
-    private let debounceInterval: TimeInterval
+  private let debounceInterval: TimeInterval
 
-    private var pending: [Int: Timer] = [:]
+  private var pending: [Int: Timer] = [:]
 
-    init(debounceInterval: TimeInterval = 0.1) {
-        self.debounceInterval = debounceInterval
+  init(debounceInterval: TimeInterval = 0.1) {
+    self.debounceInterval = debounceInterval
+  }
+
+  /// ディスク書込発生をスケジュールする。既に予約済みなら debounce タイマを
+  /// 再起動 (連続書込中は永遠に延長される)。
+  func schedule(drive: Int) {
+    pending[drive]?.invalidate()
+    // Timer のクロージャは Swift Concurrency 的には nonisolated だが、
+    // メインスレッド RunLoop で実行されるので MainActor.assumeIsolated で
+    // ランタイム保証する。
+    let timer = Timer.scheduledTimer(withTimeInterval: debounceInterval, repeats: false) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.fire(drive: drive)
+      }
     }
+    pending[drive] = timer
+  }
 
-    /// ディスク書込発生をスケジュールする。既に予約済みなら debounce タイマを
-    /// 再起動 (連続書込中は永遠に延長される)。
-    func schedule(drive: Int) {
-        pending[drive]?.invalidate()
-        // Timer のクロージャは Swift Concurrency 的には nonisolated だが、
-        // メインスレッド RunLoop で実行されるので MainActor.assumeIsolated で
-        // ランタイム保証する。
-        let timer = Timer.scheduledTimer(withTimeInterval: debounceInterval, repeats: false) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.fire(drive: drive)
-            }
-        }
-        pending[drive] = timer
-    }
+  /// 指定ドライブの予約中タイマを即発火する。タイマ未予約なら no-op。
+  func flushNow(drive: Int) {
+    guard let timer = pending.removeValue(forKey: drive) else { return }
+    timer.invalidate()
+    writeBack?(drive)
+  }
 
-    /// 指定ドライブの予約中タイマを即発火する。タイマ未予約なら no-op。
-    func flushNow(drive: Int) {
-        guard let timer = pending.removeValue(forKey: drive) else { return }
-        timer.invalidate()
-        writeBack?(drive)
-    }
+  /// 全ドライブの予約中タイマを即発火する。
+  func flushAll() {
+    let drives = Array(pending.keys)
+    for d in drives { flushNow(drive: d) }
+  }
 
-    /// 全ドライブの予約中タイマを即発火する。
-    func flushAll() {
-        let drives = Array(pending.keys)
-        for d in drives { flushNow(drive: d) }
-    }
-
-    /// 内部: タイマ満了による発火。
-    private func fire(drive: Int) {
-        pending.removeValue(forKey: drive)
-        writeBack?(drive)
-    }
+  /// 内部: タイマ満了による発火。
+  private func fire(drive: Int) {
+    pending.removeValue(forKey: drive)
+    writeBack?(drive)
+  }
 }

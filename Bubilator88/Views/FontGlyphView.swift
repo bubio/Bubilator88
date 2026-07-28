@@ -10,27 +10,27 @@ import SwiftUI
 /// (and is blank when no font ROM is loaded, since the built-in fallback font
 /// has no graphics characters).
 struct FontGlyphView: View {
-    /// Eight rows of 8 pixels. MSB (bit 7) is the leftmost pixel.
-    let rows: [UInt8]
-    var color: Color = .primary
+  /// Eight rows of 8 pixels. MSB (bit 7) is the leftmost pixel.
+  let rows: [UInt8]
+  var color: Color = .primary
 
-    var body: some View {
-        Canvas { context, size in
-            let cell = min(size.width, size.height) / 8
-            // Center the 8×8 block within the frame.
-            let originX = (size.width - cell * 8) / 2
-            let originY = (size.height - cell * 8) / 2
-            let paint = GraphicsContext.Shading.color(color)
-            for (r, bits) in rows.prefix(8).enumerated() {
-                for c in 0..<8 where (bits & (0x80 >> c)) != 0 {
-                    let rect = CGRect(x: originX + CGFloat(c) * cell,
-                                      y: originY + CGFloat(r) * cell,
-                                      width: cell + 0.5,   // +0.5 avoids hairline
-                                      height: cell + 0.5)  // gaps between cells
-                    context.fill(Path(rect), with: paint)
-                }
-            }
+  var body: some View {
+    Canvas { context, size in
+      let cell = min(size.width, size.height) / 8
+      // Center the 8×8 block within the frame.
+      let originX = (size.width - cell * 8) / 2
+      let originY = (size.height - cell * 8) / 2
+      let paint = GraphicsContext.Shading.color(color)
+      for (r, bits) in rows.prefix(8).enumerated() {
+        for c in 0..<8 where (bits & (0x80 >> c)) != 0 {
+          let rect = CGRect(x: originX + CGFloat(c) * cell,
+                            y: originY + CGFloat(r) * cell,
+                            width: cell + 0.5,   // +0.5 avoids hairline
+                            height: cell + 0.5)  // gaps between cells
+          context.fill(Path(rect), with: paint)
         }
-        .allowsHitTesting(false)
+      }
     }
+    .allowsHitTesting(false)
+  }
 }
