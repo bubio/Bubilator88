@@ -50,7 +50,9 @@ fi
 
 if [ "$mode" = "check" ]; then
   echo "Checking Swift formatting in: ${targets[*]}"
-  swiftformat --lint "${targets[@]}"
+  # Paths must precede --lint; SwiftFormat otherwise reads the next path as a
+  # value for the flag.
+  swiftformat "${targets[@]}" --lint
   echo "Formatting OK."
 else
   echo "Formatting: ${targets[*]}"

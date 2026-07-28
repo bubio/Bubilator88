@@ -26,6 +26,15 @@ import AppKit
 /// - Closing the main window cascades to the supplementary windows (Debugger)
 ///   via `NSWindow.willCloseNotification` — a notification, so again no delegate.
 final class AppDelegate: NSObject, NSApplicationDelegate {
+  override init() {
+    super.init()
+    // Earliest hook in the process: `@NSApplicationDelegateAdaptor` is the
+    // first stored property of `Bubilator88App`, so this runs before the view
+    // model — and therefore before EmulatorCore builds its loggers. See
+    // bootstrapLogging() for why that ordering matters.
+    bootstrapLogging()
+  }
+
   /// Set by the root SwiftUI scene so terminate hooks can reach the
   /// recorder. Weak to avoid a retain cycle; the view model outlives
   /// the delegate in practice.

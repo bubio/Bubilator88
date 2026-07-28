@@ -3,6 +3,8 @@ import AppKit
 import UniformTypeIdentifiers
 import EmulatorCore
 
+private let renderLog = Logger(label: "App.Rendering")
+
 // MARK: - Rendering
 
 extension EmulatorViewModel {
@@ -254,7 +256,7 @@ extension EmulatorViewModel {
         let volC = noiseC ? (snd.ssgVolume[2] & 0x1F) : 0
         let maxVol = max(volA, max(volB, volC))
         let envMode = (snd.ssgVolume[0] & 0x10) != 0 || (snd.ssgVolume[1] & 0x10) != 0 || (snd.ssgVolume[2] & 0x10) != 0
-        print("[SSG] noise: A=\(noiseA ? "ON" : "  ") B=\(noiseB ? "ON" : "  ") C=\(noiseC ? "ON" : "  ") | period=\(snd.ssgNoisePeriod) | vol=\(volA)/\(volB)/\(volC) max=\(maxVol) | envShape=\(String(format:"%02X",snd.ssgEnvShape)) envPeriod=\(snd.ssgEnvPeriod) envMode=\(envMode)")
+        renderLog.debug("[SSG] noise: A=\(noiseA ? "ON" : "  ") B=\(noiseB ? "ON" : "  ") C=\(noiseC ? "ON" : "  ") | period=\(snd.ssgNoisePeriod) | vol=\(volA)/\(volB)/\(volC) max=\(maxVol) | envShape=\(String(format:"%02X",snd.ssgEnvShape)) envPeriod=\(snd.ssgEnvPeriod) envMode=\(envMode)")
       }
     }
     #endif
@@ -507,9 +509,9 @@ extension EmulatorViewModel {
     """
     do {
       try payload.write(toFile: textDMASnapshotDumpPath, atomically: true, encoding: .utf8)
-      print("TEXT DMA: Snapshot written to \(textDMASnapshotDumpPath) [\(triggerReason)]")
+      renderLog.debug("TEXT DMA: snapshot written to \(textDMASnapshotDumpPath) [\(triggerReason)]")
     } catch {
-      print("TEXT DMA: Failed to write snapshot to \(textDMASnapshotDumpPath): \(error)")
+      renderLog.error("TEXT DMA: failed to write snapshot to \(textDMASnapshotDumpPath): \(error)")
     }
   }
   #endif
