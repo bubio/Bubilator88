@@ -2,20 +2,21 @@ import Testing
 import Foundation
 @testable import Bubilator88
 
-/// docs/DISK_WRITEBACK_PLAN.md §5 Phase 4 の互換テストのうち、
-/// アプリ全体を起動せず純関数で検証できる項目 (4, 5) をカバーする。
+/// Covers items 4 and 5 of the Phase 4 compatibility tests in
+/// docs/DISK_WRITEBACK_PLAN.md §5 — the ones that can be checked against pure
+/// functions without launching the whole app.
 struct DiskWriteBackIOTests {
 
   // MARK: - test helpers
 
-  /// 個別バンクのバイト列を作る。先頭 32 バイトの header に
-  /// `[0x1C..0x20)` のバンク総サイズだけ書き、残りは指定 fill バイトで埋める。
-  /// D88 の実フォーマットを完全に再現しているわけではないが、
-  /// `writeBank` が header からバンク境界を辿るので splice ロジックの
-  /// 検証には十分。
+  /// Builds the bytes of one bank: a 32-byte header carrying only the total bank
+  /// size at `[0x1C..0x20)`, with the rest filled with the given byte.
+  ///
+  /// This is not a faithful D88, but `writeBank` finds bank boundaries from the
+  /// header, which is enough to exercise the splice logic.
   private func makeBank(size: Int, fill: UInt8) -> [UInt8] {
     var bank = [UInt8](repeating: fill, count: size)
-    // size を offset 0x1C に LE で書く
+    // Write the size at offset 0x1C, little-endian
     bank[0x1C] = UInt8(size & 0xFF)
     bank[0x1D] = UInt8((size >> 8) & 0xFF)
     bank[0x1E] = UInt8((size >> 16) & 0xFF)
@@ -29,7 +30,7 @@ struct DiskWriteBackIOTests {
       .appendingPathComponent(name)
   }
 
-  // MARK: - 項目4: マルチバンク splice
+  // MARK: - Item 4: multi-bank splice
 
   @Test("writeBank: 新規ファイル (存在しない URL) は単一バンクを書く")
   func writeBankCreatesNewFile() throws {
@@ -136,7 +137,7 @@ struct DiskWriteBackIOTests {
     let bank2 = makeBank(size: 192, fill: 0x30)
     try Data(bank0 + bank1 + bank2).write(to: url)
 
-    // bank 1 を 256 → 320 にリサイズして書き戻し
+    // Resize bank 1 from 256 to 320 and write it back
     let newBank1 = makeBank(size: 320, fill: 0xB1)
     try DiskWriteBackIO.writeBank(bankBytes: newBank1, imageIndex: 1, url: url)
 
@@ -162,7 +163,7 @@ struct DiskWriteBackIOTests {
     }
   }
 
-  // MARK: - 項目5: read-only fallback
+  // MARK: - Item 5: read-only fallback
 
   @Test("writeBank: read-only ファイルへの書込は throw する (呼出側が recovery にフォールバック)")
   func writeBankFailsOnReadOnlyFile() throws {
@@ -170,7 +171,7 @@ struct DiskWriteBackIOTests {
     try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
                                             withIntermediateDirectories: true)
     defer {
-      // 後片付け前に書込権限を戻しておかないと rm できない
+      // Restore write permission before cleanup, or rm cannot remove it
       try? FileManager.default.setAttributes([.posixPermissions: 0o644],
                                              ofItemAtPath: url.path)
       try? FileManager.default.setAttributes([.posixPermissions: 0o755],
@@ -179,8 +180,8 @@ struct DiskWriteBackIOTests {
     }
 
     try Data(makeBank(size: 128, fill: 0x10)).write(to: url)
-    // 親ディレクトリを read+exec のみ (書込不可) にして atomic write を失敗させる。
-    // .atomic は親ディレクトリに一時ファイルを作るので、これで NSError が出る。
+    // Make the parent directory read+exec only, so the atomic write fails:
+    // .atomic creates a temporary file in the parent, which now raises NSError.
     try FileManager.default.setAttributes([.posixPermissions: 0o555],
                                           ofItemAtPath: url.deletingLastPathComponent().path)
 

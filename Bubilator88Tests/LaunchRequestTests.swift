@@ -16,11 +16,12 @@ struct LaunchRequestTests {
     URL(string: string)!
   }
 
-  // MARK: - QUASI88 manual.txt の書式例 (doc/manual.txt:44-71)
+  // MARK: - Syntax examples from QUASI88's manual (doc/manual.txt:44-71)
   //
-  // a.d88 / b.d88 は単一イメージ、x.d88 / y.d88 は複数イメージのファイル。
-  // parse 段階ではイメージ数を知り得ないので、ここでは「番号省略 = nil」
-  // までを検証し、ドライブ割り当ての最終形は resolveMounts 側で検証する。
+  // a.d88 and b.d88 are single-image files; x.d88 and y.d88 hold several.
+  // `parse` cannot know the image count, so these tests only check that an
+  // omitted index comes through as nil. The final drive assignment is verified
+  // against resolveMounts.
 
   @Test("quasi88 a.d88 → drive 1 のみ")
   func manualSingleFile() throws {
@@ -112,11 +113,11 @@ struct LaunchRequestTests {
                        Mount(drive: 1, path: "/d/x.d88", imageIndex: 1)])
   }
 
-  // MARK: - m3u / m3u8 プレイリスト
+  // MARK: - m3u / m3u8 playlists
   //
-  // プレイリストの「エントリ」を d88 の「面」と同じものとして扱うので、
-  // parse 側の形は d88 と完全に同じ。エントリ数を見た最終的な割り当ては
-  // resolveMounts が行う (実ファイル読込を伴う経路は EmulatorViewModel 側)。
+  // A playlist entry is treated exactly like a d88 image, so the parsed shape is
+  // identical to the d88 case. resolveMounts makes the final assignment from the
+  // entry count; the path that actually reads files lives in EmulatorViewModel.
 
   @Test("プレイリスト単独指定", arguments: ["/d/games.m3u", "/d/games.m3u8", "/d/GAMES.M3U"])
   func playlistAlone(path: String) throws {
@@ -139,7 +140,7 @@ struct LaunchRequestTests {
     #expect(LaunchRequest.resolveMounts(req.disks) { _ in 3 }
       == [Mount(drive: 0, path: "/d/g.m3u", imageIndex: 0),
           Mount(drive: 1, path: "/d/g.m3u", imageIndex: 1)])
-    // エントリが 1 件しかなければ drive 1 は空のまま
+    // With only one entry, drive 1 stays empty
     #expect(LaunchRequest.resolveMounts(req.disks) { _ in 1 }
       == [Mount(drive: 0, path: "/d/g.m3u", imageIndex: 0)])
   }
@@ -168,7 +169,7 @@ struct LaunchRequestTests {
     #expect(try parse([]).isPlaylistLaunch == false)
   }
 
-  // MARK: - オプション
+  // MARK: - Options
 
   @Test("起動モードオプション", arguments: [
     ("-v2", BootMode.n88v2), ("-v1h", BootMode.n88v1h),
@@ -220,7 +221,7 @@ struct LaunchRequestTests {
     #expect(req.system == nil)
   }
 
-  // MARK: - イメージ番号のパース
+  // MARK: - Parsing image indices
 
   @Test("イメージ番号は 16進/8進も受け付ける (strtol base 0 相当)")
   func imageNumberRadix() throws {
@@ -242,7 +243,7 @@ struct LaunchRequestTests {
                           DiskSpec(path: "/cwd/2abc", imageIndex: nil)])
   }
 
-  // MARK: - パス解決
+  // MARK: - Path resolution
 
   @Test("CLI の相対パスは作業ディレクトリ基準で解決される")
   func relativePathResolvedAgainstCwd() throws {
@@ -290,7 +291,7 @@ struct LaunchRequestTests {
     #expect(req.disks == [DiskSpec(path: path, imageIndex: nil)])
   }
 
-  // MARK: - エラー
+  // MARK: - Errors
 
   @Test("スキーム違いは notBubilatorScheme")
   func wrongScheme() {

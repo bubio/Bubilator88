@@ -53,8 +53,8 @@ struct M3UPlaylistTests {
     String.Encoding.utf8, .shiftJIS,
   ])
   func readsBothEncodings(encoding: String.Encoding) throws {
-    // PC-88 のディスクは日本語ファイル名が常態で、他ツールが書き出した
-    // .m3u は Shift-JIS のことがある。
+    // Japanese filenames are the norm for PC-88 disks, and an .m3u written by
+    // another tool is often Shift-JIS.
     let dir = URL(fileURLWithPath: NSTemporaryDirectory())
       .appendingPathComponent("M3UPlaylistTests-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

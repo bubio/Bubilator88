@@ -4,7 +4,7 @@ import Foundation
 
 struct DiskCacheManagerTests {
 
-  /// 各テストで独立した tmp ディレクトリを cache root に使う。
+  /// Gives each test its own temporary directory as the cache root.
   private func makeTempCache() -> (cache: DiskCacheManager, root: URL) {
     let root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
       .appendingPathComponent("DiskCacheManagerTests-\(UUID().uuidString)",
@@ -30,7 +30,7 @@ struct DiskCacheManagerTests {
     let a = Data(repeating: 0, count: 100)
     let b = Data(repeating: 0, count: 200)
     #expect(DiskCacheManager.computeHash(a) != DiskCacheManager.computeHash(b))
-    // サイズはハッシュ末尾に "-N" として現れる
+    // The size appears as a trailing "-N" on the hash
     #expect(DiskCacheManager.computeHash(a).hasSuffix("-100"))
     #expect(DiskCacheManager.computeHash(b).hasSuffix("-200"))
   }
@@ -39,8 +39,8 @@ struct DiskCacheManagerTests {
 
   @Test("sanitizedFileName: directory hierarchy is preserved (no collision)")
   func sanitizePreservesHierarchy() {
-    // R1 のリグレッション: lastPathComponent で basename だけ取ると、
-    // diskA/foo.d88 と diskB/foo.d88 が同じファイル名に潰れて衝突する。
+    // Regression from R1: taking only the basename via lastPathComponent
+    // collapses diskA/foo.d88 and diskB/foo.d88 into the same filename.
     let a = DiskCacheManager.sanitizedFileName("diskA/foo.d88")
     let b = DiskCacheManager.sanitizedFileName("diskB/foo.d88")
     #expect(a != b)
@@ -57,9 +57,9 @@ struct DiskCacheManagerTests {
 
   @Test("sanitizedFileName: NFC normalization of composed/decomposed forms")
   func sanitizeNFCNormalization() {
-    // "が" を合成済み (U+304C) と分解形 (U+304B U+3099) で書く
+    // Write "が" both precomposed (U+304C) and decomposed (U+304B U+3099)
     let composed = "\u{304C}"            // が (precomposed)
-    let decomposed = "\u{304B}\u{3099}"  // か + dakuten
+    let decomposed = "\u{304B}\u{3099}"  // か + dakuten combining mark
     let s1 = DiskCacheManager.sanitizedFileName(composed + ".d88")
     let s2 = DiskCacheManager.sanitizedFileName(decomposed + ".d88")
     #expect(s1 == s2)
@@ -83,14 +83,14 @@ struct DiskCacheManagerTests {
 
     let dir1 = try cache.ensureCached(archiveURL: url, archiveData: data, entries: [entry])
     let entryURL = dir1.appendingPathComponent("foo.d88")
-    // 2 回目の呼出までに、書き戻し相当の上書きを差し込んでみる
+    // Between the two calls, inject an overwrite standing in for a write-back
     try Data([0x99]).write(to: entryURL, options: .atomic)
     let modifiedMTime = try FileManager.default.attributesOfItem(atPath: entryURL.path)[.modificationDate] as? Date
 
     let dir2 = try cache.ensureCached(archiveURL: url, archiveData: data, entries: [entry])
     #expect(dir1 == dir2)
 
-    // 既存 entry は上書きされない (書き戻された内容が保護される)
+    // The existing entry is not overwritten, so written-back content is preserved
     let bytes = try Data(contentsOf: entryURL)
     #expect(bytes == Data([0x99]))
     let afterMTime = try FileManager.default.attributesOfItem(atPath: entryURL.path)[.modificationDate] as? Date
@@ -146,7 +146,7 @@ struct DiskCacheManagerTests {
     let archiveData = Data(repeating: 0, count: 64)
     let dir = try cache.ensureCached(archiveURL: url, archiveData: archiveData, entries: [entry])
 
-    // cache 内のファイルを「書き戻し済み」のバイト列に置換
+    // Replace the cached file with bytes representing a completed write-back
     let entryURL = dir.appendingPathComponent("foo.d88")
     try Data([0xFF]).write(to: entryURL, options: .atomic)
 
@@ -170,7 +170,7 @@ struct DiskCacheManagerTests {
     let (cache, root) = makeTempCache()
     defer { try? FileManager.default.removeItem(at: root) }
 
-    // 存在するアーカイブ
+    // An archive that exists
     let existingArchive = root.appendingPathComponent("present.zip")
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     try Data([0x50, 0x4B]).write(to: existingArchive)
@@ -178,7 +178,7 @@ struct DiskCacheManagerTests {
                                archiveData: Data(repeating: 1, count: 64),
                                entries: [makeEntry("a.d88"), makeEntry("b.d88")])
 
-    // 存在しないアーカイブ (path だけ記録、ファイルは作らない)
+    // An archive that does not exist: only the path is recorded, no file created
     let missingArchive = URL(fileURLWithPath: "/tmp/nonexistent-\(UUID().uuidString).zip")
     _ = try cache.ensureCached(archiveURL: missingArchive,
                                archiveData: Data(repeating: 2, count: 64),
@@ -254,10 +254,10 @@ struct DiskCacheManagerTests {
       .appendingPathComponent("export-dest-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: dest) }
-    // 先に同名ファイルを置いておく
+    // Put a file of the same name there first
     try Data([0xAA]).write(to: dest.appendingPathComponent("dup.d88"))
 
-    // 別アーカイブから dup.d88 を 2 つ展開
+    // Extract two dup.d88 files from different archives
     let a = URL(fileURLWithPath: "/tmp/a-\(UUID().uuidString).zip")
     _ = try cache.ensureCached(archiveURL: a,
                                archiveData: Data(repeating: 6, count: 8),
@@ -270,12 +270,12 @@ struct DiskCacheManagerTests {
     let result = try cache.exportCachedDisks(to: dest, orphansOnly: false)
     #expect(result.exported == 2)
     let fm = FileManager.default
-    #expect(fm.fileExists(atPath: dest.appendingPathComponent("dup.d88").path))   // 既存
-    #expect(fm.fileExists(atPath: dest.appendingPathComponent("dup-2.d88").path)) // 1 件目
-    #expect(fm.fileExists(atPath: dest.appendingPathComponent("dup-3.d88").path)) // 2 件目
+    #expect(fm.fileExists(atPath: dest.appendingPathComponent("dup.d88").path))   // pre-existing
+    #expect(fm.fileExists(atPath: dest.appendingPathComponent("dup-2.d88").path)) // first
+    #expect(fm.fileExists(atPath: dest.appendingPathComponent("dup-3.d88").path)) // second
   }
 
-  // MARK: - アーカイブ更新 (項目 6)
+  // MARK: - Archive update (item 6)
 
   @Test("ensureCached: アーカイブ内容が変わると別キャッシュディレクトリ + 旧キャッシュ保持")
   func ensureCachedHashChangePreservesOldCache() throws {
@@ -286,27 +286,27 @@ struct DiskCacheManagerTests {
     let v1Data = Data(repeating: 0x01, count: 1024)
     let v2Data = Data(repeating: 0x02, count: 1024)
 
-    // v1 を展開し、ユーザがゲーム内セーブ相当の書き戻しを差し込む
+    // Extract v1, then inject a write-back standing in for an in-game save
     let dirV1 = try cache.ensureCached(archiveURL: url, archiveData: v1Data,
                                        entries: [makeEntry("save.d88", bytes: [0x11])])
     let entryV1 = dirV1.appendingPathComponent("save.d88")
     try Data([0xAA, 0xBB]).write(to: entryV1, options: .atomic)
 
-    // アーカイブ更新 (内容が違うので hash が変わる) → 新キャッシュが作られる
+    // Updating the archive changes the content and so the hash, creating a new cache
     let dirV2 = try cache.ensureCached(archiveURL: url, archiveData: v2Data,
                                        entries: [makeEntry("save.d88", bytes: [0x22])])
     #expect(dirV1 != dirV2)
 
-    // 旧キャッシュは消えていない (ユーザのセーブが守られる)
+    // The old cache is still there, so the user's save is safe
     #expect(FileManager.default.fileExists(atPath: dirV1.path))
     let preservedV1 = try Data(contentsOf: entryV1)
     #expect(preservedV1 == Data([0xAA, 0xBB]))
 
-    // 新キャッシュは新内容で展開されている
+    // The new cache holds the new content
     let entryV2 = try Data(contentsOf: dirV2.appendingPathComponent("save.d88"))
     #expect(entryV2 == Data([0x22]))
 
-    // どちらの cache directory もハッシュ命名規約を満たす
+    // Both cache directories follow the hash naming convention
     #expect(DiskCacheManager.isCacheDirectoryName(dirV1.lastPathComponent))
     #expect(DiskCacheManager.isCacheDirectoryName(dirV2.lastPathComponent))
   }
