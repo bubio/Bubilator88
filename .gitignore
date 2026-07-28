@@ -56,3 +56,7 @@ skills-lock.json
 
 # SwiftUI source folder (not a build dir — override global [Dd]ebug/ rule)
 !Bubilator88/Views/Debug/
+
+# Code-coverage artifacts left behind by test runs
+*.profraw
+*.profdata
