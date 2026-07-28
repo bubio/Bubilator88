@@ -29,12 +29,12 @@ final class FDDSound {
     (l: 0.8, r: 0.3),  // drive 1: left-leaning
   ]
 
-  /// 音量レベル (0=小/1=中/2=大) を実際の音量値に変換する。
+  /// Maps a volume level (0=low, 1=medium, 2=high) to an actual gain.
   static func volume(for level: Int) -> Float {
     switch level {
-    case 0:  return 0.06   // 小: 30%
-    case 1:  return 0.12   // 中: 60%
-    default: return 0.2    // 大: 100%
+    case 0:  return 0.06   // low: 30%
+    case 1:  return 0.12   // medium: 60%
+    default: return 0.2    // high: 100%
     }
   }
 
@@ -48,7 +48,8 @@ final class FDDSound {
   }
 
   private var stereoFormat: AVAudioFormat?
-  /// 直近に適用した出力デバイス UID。再起動時に再適用するため保持。
+  /// UID of the most recently applied output device, kept so it can be
+  /// reapplied when the engine restarts.
   private var currentOutputDeviceUID: String = ""
 
   init() {
@@ -134,9 +135,9 @@ final class FDDSound {
     let engine = AVAudioEngine()
     currentOutputDeviceUID = outputDeviceUID
 
-    // 重要: mainMixerNode へ connect すると内部で outputNode の AU が
-    // デフォルトデバイスでネゴシエートされ、format が固定されてしまう。
-    // デバイスを先に確定させてから mixer をアタッチする。
+    // Important: connecting to mainMixerNode makes the outputNode's audio unit
+    // negotiate with the default device internally, which pins the format. Fix
+    // the device first, then attach the mixer.
     setOutputDevice(uid: outputDeviceUID, on: engine)
 
     var nodes: [AVAudioPlayerNode] = []
@@ -159,9 +160,10 @@ final class FDDSound {
     }
   }
 
-  /// 出力先デバイスを切り替える。空文字列 = システムデフォルト。
-  /// 動作中の AVAudioEngine の出力デバイスは安全に差し替えられないため、
-  /// エンジンを停止→再構築して切り替える。
+  /// Switches the output device; an empty string means the system default.
+  ///
+  /// A running AVAudioEngine's output device cannot be swapped safely, so the
+  /// engine is stopped and rebuilt instead.
   func applyOutputDeviceUID(_ uid: String) {
     currentOutputDeviceUID = uid
     guard isEnabled else { return }
@@ -169,7 +171,8 @@ final class FDDSound {
     start(outputDeviceUID: uid)
   }
 
-  /// 指定エンジンの outputNode に CoreAudio デバイスを割り当てる。エンジン起動前に呼ぶこと。
+  /// Assigns a CoreAudio device to an engine's outputNode. Call before starting
+  /// the engine.
   private func setOutputDevice(uid: String, on engine: AVAudioEngine) {
     guard let au = engine.outputNode.audioUnit else { return }
 
@@ -190,7 +193,8 @@ final class FDDSound {
     }
 
     var id = targetID
-    // 失敗時はデフォルト出力のまま継続（デバイスが切断済み等）
+    // On failure keep using the default output — the device may have been
+    // disconnected.
     _ = AudioUnitSetProperty(au, kAudioOutputUnitProperty_CurrentDevice,
                              kAudioUnitScope_Global, 0,
                              &id, UInt32(MemoryLayout<AudioDeviceID>.size))

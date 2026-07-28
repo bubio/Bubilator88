@@ -6,7 +6,7 @@ import SwiftUI
 /// game controller uses), so no EmulatorCore changes are required.
 ///
 /// Layout is coordinate-based (see `PC88KeyboardLayout`) so it can reproduce the
-/// 初代 PC-8801 keyboard's L-shaped RETURN, dual SHIFT, long SPACE bar, center
+/// The original PC-8801 keyboard's L-shaped RETURN, dual SHIFT, long SPACE bar, center
 /// arrow cluster and 4-column keypad. The canvas is a fixed size — the hosting
 /// window is non-resizable.
 ///

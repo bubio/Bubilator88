@@ -25,12 +25,12 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   private let viewModel: EmulatorViewModel
   private var commandQueue: MTLCommandQueue?
   private var pipelineStates: [EmulatorViewModel.VideoFilter: MTLRenderPipelineState] = [:]
-  private var enhancedPass1Pipeline: MTLRenderPipelineState?  // 高画質 pass for Enhanced (rgba8Unorm target)
+  private var enhancedPass1Pipeline: MTLRenderPipelineState?  // high-quality pass for Enhanced (rgba8Unorm target)
   private var crtAccumulatePipeline: MTLRenderPipelineState?  // CRT phosphor pass 1 (rgba8Unorm target)
   private var crtCompositePipeline: MTLRenderPipelineState?   // CRT phosphor pass 2 (screen)
   private var texture: MTLTexture?       // 640x400 (standard)
   private var texture200: MTLTexture?    // 640x200 (content-only, for all filters in 200-line mode)
-  private var textureIntermediate: MTLTexture?  // 640x200 render target for 2-pass (高画質→xBRZ)
+  private var textureIntermediate: MTLTexture?  // 640x200 render target for 2-pass (high-quality → xBRZ)
   private var texturePersistA: MTLTexture?       // CRT phosphor ping-pong A
   private var texturePersistB: MTLTexture?       // CRT phosphor ping-pong B
   private var persistenceFlip: Bool = false       // false = A is previous, B is target
@@ -135,7 +135,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
       }
     }
 
-    // Build Enhanced pass 1 pipeline (高画質 shader → rgba8Unorm render target)
+    // Build Enhanced pass 1 pipeline (high-quality shader → rgba8Unorm render target)
     if let hqFunc = library.makeFunction(name: "fragmentHighQuality") {
       let desc = MTLRenderPipelineDescriptor()
       desc.vertexFunction = vertexFunction
@@ -230,7 +230,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
     ensureTex(&texture, w: width, h: height)          // 640x400
     ensureTex(&texture200, w: width, h: h200)          // 640x200
 
-    // Intermediate render target for 2-pass filters (高画質+xBRZ)
+    // Intermediate render target for 2-pass filters (high-quality + xBRZ)
     if textureIntermediate == nil || textureIntermediate!.width != width || textureIntermediate!.height != h200 {
       let desc = MTLTextureDescriptor.texture2DDescriptor(
         pixelFormat: .rgba8Unorm, width: width, height: h200, mipmapped: false)
@@ -491,7 +491,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
       }
     }
 
-    // --- Pass 1: for Enhanced, render 高画質 (de-dithering) to intermediate texture ---
+    // --- Pass 1: for Enhanced, render high-quality (de-dithering) to intermediate texture ---
     let pass2Texture: MTLTexture
     if currentFilter == .enhanced && !is400,
        let hqPipeline = enhancedPass1Pipeline,
@@ -658,7 +658,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
 
     guard let commandBuffer = commandQueue.makeCommandBuffer() else { return nil }
 
-    // Pass 1 (Enhanced in 200-line mode only): 高画質 de-dithering → intermediate
+    // Pass 1 (Enhanced in 200-line mode only): high-quality de-dithering → intermediate
     let pass2Texture: MTLTexture
     if currentFilter == .enhanced && !is400,
        let hqPipeline = enhancedPass1Pipeline,

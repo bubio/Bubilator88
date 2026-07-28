@@ -1,11 +1,11 @@
 import AppKit
 
-/// 「キャッシュをエクスポート…」メニューから呼び出すフォルダ選択ダイアログ。
+/// Folder chooser presented by the "Export Cache…" menu item.
 ///
-/// `NSOpenPanel` 自体には標準でチェックボックスが無いので、`accessoryView`
-/// に NSButton を 1 つ載せて「孤児のみ」フィルタを表現する。
+/// `NSOpenPanel` has no built-in checkbox, so the "orphans only" filter is a
+/// single NSButton placed in the panel's `accessoryView`.
 ///
-/// 結果は `(destination, orphansOnly)` の組で返す。キャンセル時は nil。
+/// Returns a `(destination, orphansOnly)` pair, or nil if cancelled.
 enum CacheExportPanel {
 
   struct Result {
@@ -13,7 +13,7 @@ enum CacheExportPanel {
     let orphansOnly: Bool
   }
 
-  /// パネルを同期的に開く。呼び出しは MainActor 上から。
+  /// Opens the panel synchronously. Must be called on the MainActor.
   @MainActor
   static func run(suggestedName: String = "Bubilator88 Cached Disks") -> Result? {
     let panel = NSOpenPanel()
@@ -35,7 +35,7 @@ enum CacheExportPanel {
       target: nil,
       action: nil
     )
-    checkbox.state = .on   // デフォルト: 孤児のみ
+    checkbox.state = .on  // default: orphans only
     checkbox.translatesAutoresizingMaskIntoConstraints = false
 
     let container = NSView()

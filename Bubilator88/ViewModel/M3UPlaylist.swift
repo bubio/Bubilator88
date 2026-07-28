@@ -1,26 +1,29 @@
 import Foundation
 
-/// `.m3u` / `.m3u8` プレイリストの解析。ファイル読込と行解釈だけを持つ純粋な
-/// ヘルパで、マウント処理には関与しない (GUI の `mountM3U` と起動引数の
-/// `performLaunch` の両方から使う)。
+/// Parsing for `.m3u` / `.m3u8` playlists. A pure helper that only reads files
+/// and interprets lines; it takes no part in mounting. Used by both the GUI's
+/// `mountM3U` and `performLaunch` for launch arguments.
 enum M3UPlaylist {
-  /// プレイリストとして扱う拡張子。`.m3u8` は UTF-8 を明示した同形式。
+  /// Extensions treated as playlists. `.m3u8` is the same format with UTF-8
+  /// made explicit.
   static let fileExtensions: Set<String> = ["m3u", "m3u8"]
 
-  /// パスがプレイリストかどうか (拡張子だけで判定。中身は見ない)。
+  /// Whether a path is a playlist, judged from the extension alone — the
+  /// contents are never inspected.
   static func isPlaylist(_ path: String) -> Bool {
     fileExtensions.contains((path as NSString).pathExtension.lowercased())
   }
 
-  /// `URL` 版。`url.path` へ落とさずに拡張子を見る。
+  /// `URL` variant, which inspects the extension without going through `url.path`.
   static func isPlaylist(_ url: URL) -> Bool {
     fileExtensions.contains(url.pathExtension.lowercased())
   }
 
-  /// プレイリスト本文を行ごとに解析してディスクイメージの URL 配列にする。
+  /// Parses playlist text line by line into an array of disk image URLs.
   ///
-  /// 空行と `#` で始まるコメント行は無視する。各エントリは絶対パス、
-  /// `~` 相対、またはプレイリスト自身のディレクトリからの相対パス。
+  /// Blank lines and comment lines starting with `#` are ignored. Each entry is
+  /// an absolute path, a `~`-relative path, or a path relative to the playlist's
+  /// own directory.
   static func entryURLs(text: String, baseDirectory: URL) -> [URL] {
     text.split(whereSeparator: \.isNewline)
       .map { $0.trimmingCharacters(in: .whitespaces) }
@@ -33,12 +36,12 @@ enum M3UPlaylist {
       }
   }
 
-  /// プレイリストファイルを読んでエントリ URL を返す。読めなければ nil。
+  /// Reads a playlist file and returns its entry URLs, or nil if it cannot be read.
   ///
-  /// `.m3u8` は定義上 UTF-8 だが、**`.m3u` は歴史的にシステムエンコーディング**。
-  /// PC-88 のディスクは日本語ファイル名が常態で、他ツールが書き出した
-  /// Shift-JIS の `.m3u` が普通に存在するため、UTF-8 で読めなければ
-  /// Shift-JIS にフォールバックする。
+  /// `.m3u8` is UTF-8 by definition, but **`.m3u` historically uses the system
+  /// encoding**. Japanese filenames are the norm for PC-88 disks and Shift-JIS
+  /// `.m3u` files written by other tools are common, so a file that does not
+  /// decode as UTF-8 falls back to Shift-JIS.
   static func entryURLs(contentsOf url: URL) -> [URL]? {
     let text = (try? String(contentsOf: url, encoding: .utf8))
       ?? (try? String(contentsOf: url, encoding: .shiftJIS))

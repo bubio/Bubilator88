@@ -2,28 +2,29 @@ import Foundation
 import CryptoKit
 import EmulatorCore  // re-exports Logging (swift-log)
 
-/// アーカイブ (ZIP/LZH/CAB/RAR) から展開した D88 ファイルをディスクキャッシュ
-/// として保持し、ライトスルー書き戻し先として再利用できるようにする。
+/// Keeps D88 files extracted from an archive (ZIP/LZH/CAB/RAR) in a disk cache,
+/// so they can be reused as the destination for write-through write-back.
 ///
-/// キャッシュ場所:
+/// Cache layout:
 /// ```
 /// <root>/<hash>/
-///   ├── source.json         元アーカイブのメタデータ
-///   ├── <entry1>.d88        展開済み D88 (NFC 正規化されたエントリ名)
+///   ├── source.json         metadata about the original archive
+///   ├── <entry1>.d88        extracted D88, entry name normalized to NFC
 ///   └── <entry2>.d88
 /// ```
 ///
-/// hash は `SHA256(archiveData) の先頭 16 桁 (hex) + "-" + ファイルサイズ`。
-/// 衝突回避とサイズによる早期スクリーニングを両立する。
+/// The hash is the first 16 hex digits of `SHA256(archiveData)`, a `-`, and the
+/// file size — collision resistance plus cheap screening by size.
 ///
-/// 初回マウント時のみ展開し、以降は cache 内ファイルを直接 mount する。
-/// 書き戻しはこの cache 内ファイルに対して行われ、元アーカイブは触らない。
+/// Extraction happens only on the first mount; later mounts use the cached files
+/// directly. Write-back targets those cached files and never touches the
+/// original archive.
 ///
-/// `root` を切り替えられる struct として実装することで、ユニットテストでは
-/// tmp ディレクトリを指す instance を差し込める。
+/// Implemented as a struct with a swappable `root` so unit tests can inject an
+/// instance pointing at a temporary directory.
 nonisolated struct DiskCacheManager {
 
-  /// `source.json` の構造体。
+  /// Contents of `source.json`.
   struct SourceMeta: Codable {
     let originalPath: String
     let originalFileSize: Int
@@ -48,13 +49,13 @@ nonisolated struct DiskCacheManager {
     }
   }
 
-  /// キャッシュルート。デフォルトは
+  /// Cache root. Defaults to
   /// `~/Library/Application Support/Bubilator88/disks/`。
   var root: URL
 
   static let shared = DiskCacheManager(root: Self.defaultRoot)
 
-  /// 共有 JSONEncoder。`Date` を ISO8601 で出力。
+  /// Shared JSONEncoder, writing `Date` as ISO8601.
   private static let encoder: JSONEncoder = {
     let e = JSONEncoder()
     e.dateEncodingStrategy = .iso8601
@@ -78,17 +79,19 @@ nonisolated struct DiskCacheManager {
 
   // MARK: - Public API
 
-  /// アーカイブをキャッシュに展開 (初回のみ)。展開済みなら lastAccessedAt を
-  /// 更新するだけ。
+  /// Extracts an archive into the cache, on first use only. If it is already
+  /// extracted this just updates lastAccessedAt.
   ///
   /// - Parameters:
-  ///   - archiveURL: 元アーカイブの URL (メタ情報として記録)
-  ///   - archiveData: アーカイブ全体のバイト列 (ハッシュ計算に使用)
-  ///   - entries: 展開済みエントリ (`ArchiveExtractor.extractDiskImages` の結果)
-  /// - Returns: キャッシュディレクトリの URL。
-  /// - Throws: `CacheError` (ディレクトリ作成失敗 / エントリ書込失敗)。
-  ///   メタデータ書込失敗は `Logger` 警告のみで成功扱い (本体ファイルは
-  ///   無事なので書き戻し機能は使える)。
+  ///   - archiveURL: URL of the original archive, recorded as metadata.
+  ///   - archiveData: The whole archive as bytes, used to compute the hash.
+  ///   - entries: The extracted entries, as returned by
+  ///     `ArchiveExtractor.extractDiskImages`.
+  /// - Returns: URL of the cache directory.
+  /// - Throws: `CacheError` if the directory cannot be created or an entry
+  ///   cannot be written. A failed metadata write only logs a warning and still
+  ///   counts as success: the disk files themselves are intact, so write-back
+  ///   remains usable.
   func ensureCached(archiveURL: URL,
                     archiveData: Data,
                     entries: [ArchiveEntry]) throws -> URL {
@@ -127,8 +130,8 @@ nonisolated struct DiskCacheManager {
     return dir
   }
 
-  /// `ensureCached` のバックグラウンド実行版。
-  /// SHA256 計算と数 MB のファイル書込でメインスレッドを止めたくない場合に使う。
+  /// Background variant of `ensureCached`, for when the SHA256 computation and
+  /// writing several megabytes should not block the main thread.
   func ensureCachedDetached(archiveURL: URL,
                             archiveData: Data,
                             entries: [ArchiveEntry]) async throws -> URL {
@@ -139,16 +142,16 @@ nonisolated struct DiskCacheManager {
     }.value
   }
 
-  /// 既存キャッシュディレクトリ内の指定エントリ URL を返す。
+  /// Returns the URL of a given entry inside an existing cache directory.
   func cachedEntryURL(in cacheDir: URL, entryName: String) -> URL? {
     let normalized = Self.sanitizedFileName(entryName)
     let url = cacheDir.appendingPathComponent(normalized)
     return FileManager.default.fileExists(atPath: url.path) ? url : nil
   }
 
-  /// マウント時に使うバイト列を解決する共通ヘルパ。
-  /// cache 内に同名ファイルがあれば cache から読み (前回の書き戻しが
-  /// 反映される)、なければ in-memory の `entry.data` を返す。
+  /// Resolves the bytes to mount. Reads from the cache when a file of the same
+  /// name is there, so a previous write-back is picked up; otherwise falls back
+  /// to the in-memory `entry.data`.
   func resolvedData(for entry: ArchiveEntry, in cacheDir: URL?) -> Data {
     if let dir = cacheDir,
        let entryURL = cachedEntryURL(in: dir, entryName: entry.filename),
@@ -158,23 +161,26 @@ nonisolated struct DiskCacheManager {
     return entry.data
   }
 
-  /// キャッシュディレクトリ URL を算出 (作成はしない)。
+  /// Computes the cache directory URL without creating it.
   func cacheDirectoryURL(for archiveData: Data) -> URL {
     root.appendingPathComponent(Self.computeHash(archiveData), isDirectory: true)
   }
 
-  /// キャッシュ内に保持されている個別ディスクファイル 1 件分の情報。
+  /// Information about a single disk file held in the cache.
   struct CachedDisk {
-    /// キャッシュ内の `.d88` の URL。
+    /// URL of the `.d88` inside the cache.
     let diskURL: URL
-    /// `source.json` に記録された元アーカイブのパス (記録なしなら nil)。
+    /// Path of the original archive as recorded in `source.json`, or nil if
+    /// none was recorded.
     let originalArchivePath: String?
-    /// 元アーカイブが現在も存在するか (`originalArchivePath` が nil なら false)。
+    /// Whether the original archive still exists. False when
+    /// `originalArchivePath` is nil.
     let originalExists: Bool
   }
 
-  /// `root` 直下の全キャッシュディレクトリを走査し、含まれる全 `.d88` を返す。
-  /// `source.json` が読めないディレクトリは skip。エクスポート機能から使う。
+  /// Walks every cache directory under `root` and returns all the `.d88` files
+  /// they contain, skipping directories whose `source.json` cannot be read.
+  /// Used by the export feature.
   func enumerateCachedDisks() -> [CachedDisk] {
     let fm = FileManager.default
     guard let entries = try? fm.contentsOfDirectory(at: root,
@@ -187,8 +193,8 @@ nonisolated struct DiskCacheManager {
       var isDir: ObjCBool = false
       guard fm.fileExists(atPath: cacheDir.path, isDirectory: &isDir), isDir.boolValue
       else { continue }
-      // 厳密化: `<16hex>-<digits>` 形式のディレクトリのみ cache 扱い。
-      // ユーザがうっかり root 直下に置いた他のフォルダを誤検出しない。
+      // Only directories matching `<16hex>-<digits>` count as caches, so a
+      // folder the user happens to have put under root is not mistaken for one.
       guard Self.isCacheDirectoryName(cacheDir.lastPathComponent) else { continue }
 
       let originalPath: String? = {
@@ -212,12 +218,12 @@ nonisolated struct DiskCacheManager {
     return result
   }
 
-  /// 列挙したキャッシュディスクを指定フォルダにコピーする。
+  /// Copies the enumerated cache disks into a folder.
   /// - Parameters:
-  ///   - destination: 出力先フォルダ (存在前提)
-  ///   - orphansOnly: true なら元アーカイブが存在しないものだけコピー
-  /// - Returns: (実際に書き出した件数, フィルタで除外された件数)
-  /// - Throws: コピー失敗時。途中まで成功した分はそのまま残る
+  ///   - destination: Destination folder, assumed to exist.
+  ///   - orphansOnly: When true, copies only those whose original archive is gone.
+  /// - Returns: The number actually written, and the number the filter excluded.
+  /// - Throws: If a copy fails. Anything already copied is left in place.
   func exportCachedDisks(to destination: URL, orphansOnly: Bool) throws -> (exported: Int, skipped: Int) {
     let fm = FileManager.default
     var exported = 0
@@ -236,7 +242,7 @@ nonisolated struct DiskCacheManager {
     return (exported, skipped)
   }
 
-  /// `computeHash` が生成する形式 (`<16hex>-<size>`) に一致するか判定。
+  /// Whether a name matches the `<16hex>-<size>` form `computeHash` produces.
   static func isCacheDirectoryName(_ name: String) -> Bool {
     let parts = name.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: false)
     guard parts.count == 2 else { return false }
@@ -246,8 +252,8 @@ nonisolated struct DiskCacheManager {
     return !size.isEmpty && size.allSatisfy({ $0.isASCII && $0.isNumber })
   }
 
-  /// 既存ファイルと衝突しない出力先 URL を返す。
-  /// `foo.d88` が衝突したら `foo-2.d88`, `foo-3.d88` ... と試す。
+  /// Returns a destination URL that does not collide with an existing file. If
+  /// `foo.d88` is taken it tries `foo-2.d88`, `foo-3.d88`, and so on.
   static func uniqueDestinationURL(in directory: URL, baseName: String) -> URL {
     let fm = FileManager.default
     let url = directory.appendingPathComponent(baseName)
@@ -267,18 +273,19 @@ nonisolated struct DiskCacheManager {
 
   // MARK: - Internal helpers (static, pure functions)
 
-  /// SHA256 の先頭 16 桁 + "-" + バイト数。
+  /// The first 16 hex digits of the SHA256, a `-`, and the byte count.
   static func computeHash(_ data: Data) -> String {
     let digest = SHA256.hash(data: data)
     let hex = digest.map { String(format: "%02x", $0) }.joined()
     return "\(hex.prefix(16))-\(data.count)"
   }
 
-  /// エントリ名をファイル名として安全な形に整える。
-  /// - NFC 正規化
-  /// - ディレクトリ区切り (`/`, `\`) を `_` に置換 (階層情報は保持して衝突回避)
-  /// - コロンを `_` に
-  /// - path traversal を防ぐため `..` は `__` に
+  /// Makes an entry name safe to use as a filename.
+  /// - Normalizes to NFC
+  /// - Replaces directory separators (`/`, `\`) with `_`, keeping the hierarchy
+  ///   visible so names stay distinct
+  /// - Replaces colons with `_`
+  /// - Rewrites `..` as `__` to prevent path traversal
   static func sanitizedFileName(_ raw: String) -> String {
     let normalized = raw.precomposedStringWithCanonicalMapping
     return normalized

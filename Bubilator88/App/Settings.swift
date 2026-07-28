@@ -205,12 +205,14 @@ final class Settings {
     didSet { UserDefaults.standard.set(fddSound, forKey: "fddSound") }
   }
 
-  /// FDD アクセス音の出力先デバイス UID。空文字列 = システムデフォルト。
+  /// Output device UID for the FDD access sound. An empty string means the
+  /// system default.
   var fddSoundDeviceUID: String = "" {
     didSet { UserDefaults.standard.set(fddSoundDeviceUID, forKey: "fddSoundDeviceUID") }
   }
 
-  /// FDD アクセス音の音量レベル。0=小(30%), 1=中(60%), 2=大(100%)。デフォルトは大。
+  /// Volume level for the FDD access sound: 0=low (30%), 1=medium (60%),
+  /// 2=high (100%). Defaults to high.
   var fddSoundVolumeLevel: Int = 2 {
     didSet { UserDefaults.standard.set(fddSoundVolumeLevel, forKey: "fddSoundVolumeLevel") }
   }
@@ -644,10 +646,10 @@ struct RecentDiskEntry: Codable, Identifiable, Hashable {
 
   /// Resolve the bookmark back to a URL, granting sandbox access.
   ///
-  /// stale=true でも URL 自体は使えるので破棄しない (writeback の atomic
-  /// 書込で inode が変わると常に stale 化するため、捨てると履歴から開けな
-  /// くなる)。bookmark 解決が完全失敗した場合は filePath で直接アクセス
-  /// を試みる。
+  /// A stale bookmark is kept rather than discarded, because the URL still
+  /// works: write-back's atomic writes change the inode, which makes every
+  /// bookmark stale, and discarding them would make recents unopenable. If
+  /// resolving the bookmark fails outright, the filePath is tried directly.
   func resolveBookmark() -> URL? {
     var stale = false
     if let url = try? URL(resolvingBookmarkData: bookmark,

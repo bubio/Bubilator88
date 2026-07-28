@@ -2,29 +2,30 @@ import Testing
 import Foundation
 @testable import Bubilator88
 
-/// docs/DISK_WRITEBACK_PLAN.md §5 Phase 4 項目 7:
-/// 連続セクタ書込が 1 回の書き戻しにまとまることを検証する。
+/// Item 7 of Phase 4 in docs/DISK_WRITEBACK_PLAN.md §5: verifies that a run of
+/// consecutive sector writes coalesces into a single write-back.
 ///
-/// `DiskWriteBackScheduler` は `Timer.scheduledTimer` を使うため
-/// MainActor + main run loop が必要。Swift Testing の `@MainActor` テストで
-/// `Task.sleep` すると run loop も進む。
+/// `DiskWriteBackScheduler` uses `Timer.scheduledTimer`, so it needs the
+/// MainActor and a running main run loop. In a Swift Testing `@MainActor` test,
+/// `Task.sleep` lets the run loop advance too.
 @MainActor
 struct DiskWriteBackSchedulerTests {
 
-  /// 短い debounce で連続 schedule が 1 回の書き戻しにまとまることを確認。
+  /// With a short debounce, checks that repeated schedules coalesce into one
+  /// write-back.
   @Test("schedule: バースト書込は 1 回にまとまる")
   func debounceCoalescesBurst() async throws {
     let scheduler = DiskWriteBackScheduler(debounceInterval: 0.05)
     var fired: [Int] = []
     scheduler.writeBack = { drive in fired.append(drive) }
 
-    // バースト: 10 回連続 schedule (debounce より十分短い間隔で)
+    // A burst of 10 schedules, spaced well within the debounce interval
     for _ in 0..<10 {
       scheduler.schedule(drive: 0)
       try await Task.sleep(nanoseconds: 5_000_000)  // 5ms
     }
 
-    // debounce + 余白を待って fire させる
+    // Wait out the debounce plus some slack so it fires
     try await Task.sleep(nanoseconds: 150_000_000)  // 150ms
 
     #expect(fired == [0])
@@ -46,7 +47,7 @@ struct DiskWriteBackSchedulerTests {
 
   @Test("flushNow: 予約中タイマを即発火する")
   func flushNowFiresImmediately() async throws {
-    let scheduler = DiskWriteBackScheduler(debounceInterval: 10.0)  // 通常は発火しない
+    let scheduler = DiskWriteBackScheduler(debounceInterval: 10.0)  // long enough that it never fires on its own
     var fired: [Int] = []
     scheduler.writeBack = { drive in fired.append(drive) }
 

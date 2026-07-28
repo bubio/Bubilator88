@@ -1,10 +1,10 @@
 import Foundation
 
-/// D88 ライトスルー書き戻しのファイル I/O ヘルパ (純関数のみ)。
+/// File I/O helpers for D88 write-through write-back. Pure functions only.
 ///
-/// `EmulatorViewModel` から呼ばれる書き戻し処理のうち、ViewModel 状態に
-/// 依存しないバンク splice / リカバリ保存ロジックをここに切り出し、
-/// テスト可能にする。
+/// The bank splice and recovery-save logic of the write-back path, factored out
+/// of `EmulatorViewModel` because it does not depend on ViewModel state — which
+/// makes it testable.
 enum DiskWriteBackIO {
 
   enum WriteError: Error, LocalizedError {
@@ -23,10 +23,12 @@ enum DiskWriteBackIO {
     }
   }
 
-  /// 指定 `imageIndex` のバンクを `url` の D88 ファイル内に splice 書込する。
-  /// ファイルが存在しない場合のみ単一バンクの新規作成として扱う。
-  /// 既存ファイルの読込に失敗した場合は throw する (multibank ディスクの
-  /// 他バンクを失う事故を防ぐため、上書きにフォールバックしない)。
+  /// Splices the bank at `imageIndex` into the D88 file at `url`.
+  ///
+  /// A missing file — and only a missing file — is treated as creating a new
+  /// single-bank image. If an existing file cannot be read this throws rather
+  /// than falling back to overwriting it, which would lose the other banks of a
+  /// multi-bank disk.
   static func writeBank(bankBytes: [UInt8], imageIndex: Int, url: URL) throws {
     if !FileManager.default.fileExists(atPath: url.path) {
       try Data(bankBytes).write(to: url, options: .atomic)
@@ -59,8 +61,10 @@ enum DiskWriteBackIO {
     try merged.write(to: url, options: .atomic)
   }
 
-  /// 通常の書込先が無い / 書込失敗時のフォールバック保存先 (リカバリ)。
-  /// 保存に成功した URL を返す。
+  /// Recovery fallback for when there is no normal destination, or writing to it
+  /// failed.
+  ///
+  /// - Returns: The URL that was successfully written.
   @discardableResult
   static func writeBankToRecovery(bankBytes: [UInt8],
                                   fileName: String,
@@ -88,7 +92,7 @@ enum DiskWriteBackIO {
     }
   }
 
-  /// デフォルトのリカバリディレクトリ
+  /// Default recovery directory.
   /// `~/Library/Application Support/Bubilator88/ModifiedDisks/`.
   static var defaultRecoveryDirectory: URL {
     URL.applicationSupportDirectory

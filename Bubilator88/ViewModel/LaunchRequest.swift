@@ -1,63 +1,71 @@
 import Foundation
 
-/// 起動引数 (URL スキーム / CLI 共通) の解析結果。
+/// The parsed form of a launch argument list, shared by the URL scheme and the CLI.
 ///
-/// 引数の書式は **QUASI88 と同じ** (`doc/manual.txt` の「書式」「オプション」):
+/// The argument format is **identical to QUASI88's**, per the 書式 (syntax) and
+/// オプション (options) sections of its `doc/manual.txt`:
 ///
 /// ```
 /// [-option ...] image-file [image-No] [image-file [image-No]]
 /// ```
 ///
-/// `-` で始まらない引数がイメージファイル、その直後に続く数値がイメージ番号
-/// (**1 始まり**)。URL 経由では argv 相当を `arg` クエリ項目の繰り返しで渡す
+/// An argument not starting with `-` is an image file, and any number directly
+/// following it is an image index (**1-based**). Over the URL scheme the argv
+/// equivalent is passed as repeated `arg` query items
 /// (`bubilator88://boot?arg=-v2&arg=%2Fx%2Fys.d88&arg=2`)。
 ///
-/// `parse` は純粋関数で、ファイルシステムにも `Machine`/`EmulatorViewModel`
-/// の状態にも触れない。「ファイル 1 個・イメージ番号なし」のとき drive 1 に
-/// 2 面目を載せるかどうかは**実イメージ数に依存する**ため、ここでは
-/// `imageIndex == nil` (自動) のまま保持し、解決は `resolveMounts` が行う。
+/// `parse` is a pure function: it touches neither the file system nor any
+/// `Machine` / `EmulatorViewModel` state. Whether a single file with no image
+/// index puts a second side in drive 1 **depends on how many images the file
+/// actually has**, so `parse` keeps `imageIndex == nil` (automatic) and leaves
+/// the decision to `resolveMounts`.
 struct LaunchRequest: Equatable {
   struct DiskSpec: Equatable {
-    /// ディスクイメージのパス (CLI の相対パスは parse 時に解決済み)。
+    /// Path to the disk image. Relative CLI paths are already resolved by `parse`.
     var path: String
-    /// 明示指定されたイメージ番号 (0 始まりに変換済み)。
-    /// nil = イメージ番号省略 = 自動 (QUASI88 の `image_disk < 0` 相当)。
+    /// An explicitly given image index, already converted to 0-based.
+    /// nil means the index was omitted, i.e. automatic — QUASI88's
+    /// `image_disk < 0`.
     var imageIndex: Int?
   }
 
-  /// 起動ストラップの明示指定 (`-romboot` / `-diskboot`)。
-  /// nil = QUASI88 と同じ自動判定 (drive 0 にディスクがあれば disk boot)。
+  /// An explicit boot strap (`-romboot` / `-diskboot`).
+  /// nil means the same automatic choice QUASI88 makes: disk boot if drive 0
+  /// holds a disk.
   enum BootStrap: Equatable {
     case rom
     case disk
   }
 
-  /// 先頭が drive 0、次が drive 1。QUASI88 と同じく 3 個目以降は無視される。
+  /// The first entry is drive 0 and the second is drive 1. As in QUASI88,
+  /// anything beyond the second is ignored.
   var disks: [DiskSpec] = []
-  /// 起動モード (`-v2`/`-v1h`/`-v1s`/`-n`)。省略時 nil = 現在の設定を維持。
+  /// Boot mode (`-v2`/`-v1h`/`-v1s`/`-n`). nil keeps the current setting.
   var system: EmulatorViewModel.BootMode?
-  /// CPU クロック (`-8mhz`/`-4mhz`)。省略時 nil = 現在の設定を維持。
+  /// CPU clock (`-8mhz`/`-4mhz`). nil keeps the current setting.
   var clock8MHz: Bool?
-  /// 起動ストラップ (`-romboot`/`-diskboot`)。省略時 nil = 自動。
+  /// Boot strap (`-romboot`/`-diskboot`). nil means automatic.
   var bootStrap: BootStrap?
 
-  /// 指定されたイメージファイルが `.m3u` / `.m3u8` プレイリストか。
-  /// パーサが単独指定を保証しているので、先頭を見れば足りる。
+  /// Whether the given image file is an `.m3u` / `.m3u8` playlist. The parser
+  /// guarantees a playlist is specified alone, so checking the first entry is
+  /// enough.
   var isPlaylistLaunch: Bool {
     guard let first = disks.first else { return false }
     return M3UPlaylist.isPlaylist(first.path)
   }
 
-  /// QUASI88 の 1 ファイルあたり最大イメージ数 (`MAX_NR_IMAGE`)。
+  /// QUASI88's maximum images per file (`MAX_NR_IMAGE`).
   static let maxImageNumber = 32
-  /// エミュレートするドライブ数 (`NR_DRIVE`)。
+  /// Number of emulated drives (`NR_DRIVE`).
   static let driveCount = 2
 
   // MARK: - URL
 
-  /// `bubilator88://boot?arg=...&arg=...` を解析する。
-  /// `arg` の値は `URLComponents` が percent-decoding 済みのものを使う
-  /// (手動で `removingPercentEncoding` を重ねないこと — 二重デコード事故防止)。
+  /// Parses `bubilator88://boot?arg=...&arg=...`.
+  ///
+  /// The `arg` values are taken as `URLComponents` already percent-decoded them.
+  /// Do not apply `removingPercentEncoding` on top, or paths get decoded twice.
   static func parse(_ url: URL) throws -> LaunchRequest {
     guard url.scheme?.lowercased() == "bubilator88" else {
       throw LaunchParseError.notBubilatorScheme
@@ -68,21 +76,25 @@ struct LaunchRequest: Equatable {
     let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
     let argv = items.filter { $0.name == "arg" }.map { $0.value ?? "" }
     guard !argv.isEmpty else { throw LaunchParseError.missingArguments }
-    // URL 経由のパスは常に絶対パス (相対パスの基準となる作業ディレクトリが
-    // 存在しないため)。baseDirectory を渡さないことで相対パスはエラーになる。
+    // Paths arriving over the URL scheme are always absolute — there is no
+    // working directory for a relative path to resolve against. Passing no
+    // baseDirectory is what makes a relative path an error.
     return try parse(argv: argv, baseDirectory: nil)
   }
 
   // MARK: - argv
 
-  /// argv (プログラム名を含まない) を QUASI88 の `get_option()` と同じ規則で解析する。
+  /// Parses argv, excluding the program name, by the same rules as QUASI88's
+  /// `get_option()`.
   ///
-  /// - Parameter baseDirectory: 相対パスの解決基準。nil のとき相対パスはエラー。
+  /// - Parameter baseDirectory: Base for resolving relative paths. When nil, a
+  ///   relative path is an error.
   static func parse(argv: [String], baseDirectory: String?) throws -> LaunchRequest {
     var req = LaunchRequest()
-    /// `-` で始まらない引数 (= イメージファイル) の個数。プレイリストの
-    /// 「1 個だけ」制約はドライブ数ではなくファイル引数の数で判定する
-    /// (`p.m3u 2 4` はファイル引数 1 個で `disks` は 2 要素になるため)。
+    /// Count of arguments not starting with `-`, i.e. image files. The
+    /// "playlists must be specified alone" rule is checked against this count
+    /// rather than the drive count, because `p.m3u 2 4` is one file argument
+    /// yet produces two `disks` entries.
     var fileArgCount = 0
     var i = 0
     while i < argv.count {
@@ -94,8 +106,9 @@ struct LaunchRequest: Equatable {
       }
       guard !arg.isEmpty else { throw LaunchParseError.emptyArgument }
 
-      // ファイル名の直後に続く数値は、すべてイメージ番号として扱う。
-      // QUASI88 get_option(): 1 個目は同じドライブ、2 個目は次のドライブ。
+      // Every number directly following a filename is an image index.
+      // Per QUASI88 get_option(): the first applies to the same drive, the
+      // second to the next one.
       var numbers: [Int] = []
       var j = i + 1
       while j < argv.count, let n = imageNumber(argv[j]) {
@@ -105,9 +118,9 @@ struct LaunchRequest: Equatable {
 
       let path = try resolvePath(arg, baseDirectory: baseDirectory)
       fileArgCount += 1
-      // プレイリストは単独指定のみ。d88 との混在も、プレイリスト同士の
-      // 複数指定も、この 1 つの判定で弾ける (ファイル引数が 2 個以上
-      // ある状態でプレイリストが 1 つでも混ざっていればエラー)。
+      // A playlist must be specified alone. This single check rejects both
+      // mixing with d88 files and specifying several playlists: two or more file
+      // arguments with any playlist among them is an error.
       if fileArgCount > 1, M3UPlaylist.isPlaylist(path) || req.disks.contains(where: {
         M3UPlaylist.isPlaylist($0.path)
       }) {
@@ -128,7 +141,8 @@ struct LaunchRequest: Equatable {
     return req
   }
 
-  /// QUASI88 と同じく、3 個目以降のイメージ指定は黙って捨てる (manual.txt:30)。
+  /// As in QUASI88, image specifications beyond the second are silently
+  /// discarded (manual.txt:30).
   private mutating func appendDisk(_ spec: DiskSpec) {
     guard disks.count < LaunchRequest.driveCount else { return }
     disks.append(spec)
@@ -148,8 +162,9 @@ struct LaunchRequest: Equatable {
     }
   }
 
-  /// 引数全体が数値として解釈できれば、その値を返す (QUASI88 は `strtol(.., 0)`
-  /// なので `0x` 接頭辞の 16 進、`0` 接頭辞の 8 進も受け付ける)。
+  /// Returns the value if the whole argument parses as a number. QUASI88 uses
+  /// `strtol(.., 0)`, so `0x`-prefixed hex and `0`-prefixed octal are accepted
+  /// too.
   private static func imageNumber(_ s: String) -> Int? {
     guard !s.isEmpty else { return nil }
     var body = Substring(s)
@@ -179,24 +194,27 @@ struct LaunchRequest: Equatable {
     return (baseDirectory as NSString).appendingPathComponent(expanded)
   }
 
-  // MARK: - ドライブ割り当ての解決
+  // MARK: - Resolving drive assignment
 
-  /// 1 ドライブ分のマウント指示。`resolveMounts` の出力。
+  /// A mount instruction for one drive. The output of `resolveMounts`.
   struct Mount: Equatable {
     var drive: Int
     var path: String
     var imageIndex: Int
   }
 
-  /// イメージ番号が自動 (省略) のケースを、実イメージ数を見て確定させる。
-  /// QUASI88 `fname.c: filename_init_disk()` と同じ規則:
+  /// Settles the cases where the image index was omitted, using how many images
+  /// each file actually contains. Follows the same rules as QUASI88
+  /// `fname.c: filename_init_disk()`:
   ///
-  /// - ファイル 1 個・番号省略で、そのファイルが 2 面以上を含む
-  ///   → drive 0 に 1 面目、drive 1 に **同じファイルの 2 面目**
-  /// - ファイル 2 個が同一パス・両方番号省略 → drive 1 は 2 面目
-  /// - それ以外の番号省略 → 1 面目
+  /// - One file, no index, and the file holds two or more images
+  ///   → first image in drive 0, **second image of the same file** in drive 1
+  /// - Two files with the same path and no index on either → drive 1 gets the
+  ///   second image
+  /// - Any other omitted index → the first image
   ///
-  /// - Parameter imageCount: `disks[i]` のパスが実際に含む面数を返すクロージャ。
+  /// - Parameter imageCount: Returns how many images the path at `disks[i]`
+  ///   actually contains.
   static func resolveMounts(_ specs: [DiskSpec], imageCount: (Int) -> Int) -> [Mount] {
     guard !specs.isEmpty else { return [] }
 
@@ -223,14 +241,15 @@ struct LaunchRequest: Equatable {
 
   // MARK: - CLI
 
-  /// macOS/Xcode がプロセス起動時に注入する引数を取り除く。
+  /// Strips the arguments macOS and Xcode inject at process launch.
   ///
-  /// - `-psn_0_12345`: LaunchServices (Finder ダブルクリック) が付ける ProcessSerialNumber
-  /// - `-NSFoo VALUE` / `-AppleBar VALUE` / `-XCFoo VALUE`: `NSUserDefaults` 形式の
-  ///   キー・値ペア (Xcode の scheme 診断オプション等)
+  /// - `-psn_0_12345`: the ProcessSerialNumber LaunchServices adds on a Finder
+  ///   double-click
+  /// - `-NSFoo VALUE` / `-AppleBar VALUE` / `-XCFoo VALUE`: `NSUserDefaults`-style
+  ///   key/value pairs, such as Xcode's scheme diagnostic options
   ///
-  /// これらを落とさないと、値の側 (`YES` 等) が `-` で始まらないため
-  /// **イメージファイル名として解釈されてしまう**。
+  /// Without stripping these, the value side (`YES` and friends) does not start
+  /// with `-` and would **be taken for an image filename**.
   static func stripSystemArguments(_ argv: [String]) -> [String] {
     var result: [String] = []
     var i = 0
@@ -239,7 +258,7 @@ struct LaunchRequest: Equatable {
       if arg.hasPrefix("-psn_") {
         i += 1
       } else if arg.hasPrefix("-NS") || arg.hasPrefix("-Apple") || arg.hasPrefix("-XC") {
-        i += 2  // キーと値の 2 個
+        i += 2  // key and value
       } else {
         result.append(arg)
         i += 1
@@ -248,8 +267,9 @@ struct LaunchRequest: Equatable {
     return result
   }
 
-  /// プロセス引数から起動リクエストを作る。引数が (システム注入分を除いて)
-  /// 空なら nil — 通常のアプリ起動なので何もしない。
+  /// Builds a launch request from the process arguments. Returns nil when they
+  /// are empty once system-injected ones are removed, since that is an ordinary
+  /// app launch with nothing to do.
   static func fromCommandLine(_ arguments: [String] = CommandLine.arguments,
                               currentDirectory: String = FileManager.default.currentDirectoryPath)
     throws -> LaunchRequest? {

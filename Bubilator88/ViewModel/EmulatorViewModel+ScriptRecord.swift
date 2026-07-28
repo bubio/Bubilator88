@@ -4,16 +4,20 @@ import EmulatorCore
 
 // MARK: - Operation recording (real play → .b88script)
 //
-// docs/SCRIPTING.md の手順4 残件「操作の記録」。再生 (EmulatorViewModel+Script.swift)
-// の対称。記録開始時に現在の boot/clock/ディスク構成で cold reset し、t=0 をリセット
-// 直後に置く(= playScript と同じセマンティクス)。これで出力スクリプトの
-// boot/clock/disk ヘッダで初期状態が完全に定まり、再生して同じ結果になる。
+// Operation recording — the remaining item of step 4 in docs/SCRIPTING.md, and
+// the mirror image of playback in EmulatorViewModel+Script.swift.
 //
-// 実ユーザ入力のみ記録: キーは keyDown/keyUp フックで拾う(ScriptPlayer/paste は
-// machine.keyboard 直叩きで keyDown/keyUp を通らない)。コントローラは v1 非対象。
+// Starting a recording cold-resets with the current boot/clock/disk
+// configuration and places t=0 immediately after the reset, the same semantics
+// as playScript. The boot/clock/disk header of the resulting script therefore
+// pins the initial state completely, so replaying it reproduces the same run.
+//
+// Only real user input is recorded: keys are captured by the keyDown/keyUp
+// hooks, which ScriptPlayer and paste bypass by driving machine.keyboard
+// directly. Controllers are out of scope for v1.
 extension EmulatorViewModel {
 
-  /// DEBUG メニュー「スクリプトを記録…」: cold reset して記録を開始する。
+  /// DEBUG menu "Record Script…": cold-resets and starts recording.
   func startScriptRecording() {
     guard scriptRecorder == nil else { return }
     if isPlayingScript {
@@ -32,7 +36,8 @@ extension EmulatorViewModel {
       return
     }
 
-    // 現在の構成から setup ヘッダを組み立てる(リセット後の初期状態を定義)。
+    // Build the setup header from the current configuration, which defines the
+    // post-reset initial state.
     var setup = setupBootSteps()
     setup.append(.clock(mhz: clock8MHz ? 8 : 4))
     for drive in 0..<2 {
@@ -41,14 +46,14 @@ extension EmulatorViewModel {
       }
     }
 
-    // cold reset(playScript と同じ手順)。ディスクは reset を跨いで保持される。
+    // Cold reset, the same sequence as playScript. Disks survive the reset.
     cancelPasteQueue()
     turboMode = false
     stop()
     let use8 = clock8MHz
     emuQueue.sync {
       machine.reset(preserveRAM: false)
-      machine.applyBootStrap()      // 現ドライブ状態から bit3 を再確定(ディスク起動)
+      machine.applyBootStrap()  // re-derive bit 3 from the current drive state (disk boot)
       machine.clock8MHz = use8
     }
 
@@ -62,7 +67,7 @@ extension EmulatorViewModel {
     start()
   }
 
-  /// 記録を確定し、`.b88script` として保存する。
+  /// Finalizes the recording and saves it as a `.b88script`.
   func stopScriptRecordingAndSave() {
     guard let recorder = scriptRecorder else { return }
     scriptRecorder = nil
@@ -71,7 +76,7 @@ extension EmulatorViewModel {
     saveRecordedScript(ScriptWriter.write(steps))
   }
 
-  /// 記録を破棄する(リセット / セーブステート読込で記録が中断されるとき)。
+  /// Discards the recording, for when a reset or a save-state load interrupts it.
   func cancelScriptRecording() {
     guard scriptRecorder != nil else { return }
     scriptRecorder = nil
@@ -80,9 +85,11 @@ extension EmulatorViewModel {
                                 comment: "Toast shown when operation recording is discarded by a reset or state load"))
   }
 
-  /// アプリ終了時に記録中なら自動保存する(終了中は保存パネルを出せないので、
-  /// 設定に関わらず保存先ディレクトリへ無言で書き出してデータ消失を防ぐ)。
-  /// `AppDelegate.applicationWillTerminate` から呼ばれる。
+  /// Auto-saves a recording still in progress when the app quits.
+  ///
+  /// A save panel cannot be shown during termination, so this writes silently to
+  /// the configured directory regardless of the setting, rather than losing the
+  /// data. Called from `AppDelegate.applicationWillTerminate`.
   func flushScriptRecordingIfNeeded() {
     guard let recorder = scriptRecorder else { return }
     scriptRecorder = nil
@@ -95,20 +102,21 @@ extension EmulatorViewModel {
                     atomically: true, encoding: .utf8)
   }
 
-  /// ディスクをマウントしたとき(記録中のみ)`disk swap` を記録する。
-  /// `EmulatorViewModel+Disk.swift` の各マウント終端から呼ばれる。
+  /// Records a `disk swap` when a disk is mounted, but only while recording.
+  /// Called at the end of each mount path in `EmulatorViewModel+Disk.swift`.
   func recordDiskMountIfNeeded(drive: Int) {
     guard let recorder = scriptRecorder else { return }
     let info = drive == 0 ? drive0Info : drive1Info
-    guard let path = info?.sourceURL?.path else { return }   // データ由来(URL無)は記録不可
+    guard let path = info?.sourceURL?.path else { return }  // data-backed mounts have no URL to record
     recorder.diskSwap(drive: drive, path: path, image: info?.currentImageIndex ?? 0)
   }
 
   // MARK: - Setup header
 
-  /// 現在のブートモードを setup ステップへ。n88 系3モードは `boot`(再生時に bit3 自動確定)、
-  /// N-BASIC / Custom はアプリ独自の DIPSW 値を持つため生 `dipsw1/2` で出力する
-  /// (EmulatorCore.BootMode とアプリ BootMode で N-BASIC の DIPSW2 が異なるため)。
+  /// Turns the current boot mode into setup steps. The three n88 modes emit
+  /// `boot`, letting playback derive bit 3. N-BASIC and Custom carry app-specific
+  /// DIPSW values and so emit raw `dipsw1`/`dipsw2` instead, because
+  /// EmulatorCore.BootMode and the app's BootMode disagree on N-BASIC's DIPSW2.
   private func setupBootSteps() -> [ScriptStep] {
     switch bootMode {
     case .n88v2:  return [.boot(.n88v2)]
@@ -121,8 +129,9 @@ extension EmulatorViewModel {
 
   // MARK: - Save
 
-  /// 記録ファイルの既定名。Drive 1 (= 内部 drive 0、ブートドライブ) の D88 ベース名を
-  /// 含めてゲームを識別しやすくする。空ドライブなら素の "Bubilator88-<stamp>"。
+  /// Default name for the recording file. Includes the base name of the D88 in
+  /// drive 1 — internally drive 0, the boot drive — so the game is easy to
+  /// identify. Falls back to a plain "Bubilator88-<stamp>" for an empty drive.
   private func recordingDefaultName() -> String {
     let stamp = DateFormatter.stable(pattern: "yyyyMMdd-HHmmss").string(from: .now)
     if let disk = drive0Info?.fileName, !disk.isEmpty {
@@ -133,7 +142,8 @@ extension EmulatorViewModel {
     return "Bubilator88-\(stamp).b88script"
   }
 
-  /// 記録テキストを保存先設定に従って書き出す(`saveScreenshot` と同じパターン)。
+  /// Writes the recorded text out according to the save-location setting, the
+  /// same pattern as `saveScreenshot`.
   private func saveRecordedScript(_ text: String) {
     let defaultName = recordingDefaultName()
 

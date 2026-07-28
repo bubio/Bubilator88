@@ -710,8 +710,8 @@ struct DebugCommands: Commands {
     }
   }
 
-  /// BIOS ROM などを配置する Application Support ディレクトリを Finder で開く。
-  /// 未作成の場合は作成してから開く。
+  /// Reveals the Application Support directory — where BIOS ROMs and friends
+  /// live — in Finder, creating it first if it does not exist yet.
   private static func openBIOSROMFolder() {
     let appSupport = FileManager.default.urls(
       for: .applicationSupportDirectory, in: .userDomainMask
@@ -720,8 +720,8 @@ struct DebugCommands: Commands {
     NSWorkspace.shared.open(appSupport)
   }
 
-  /// UserDefaults に保存された全ユーザ設定を削除する (確認アラートあり)。
-  /// 反映には再起動が必要な項目があるため、その旨も案内する。
+  /// Deletes every user setting stored in UserDefaults, behind a confirmation
+  /// alert. Some settings only take effect after a restart, which the alert says.
   private static func resetSettings() {
     let alert = NSAlert()
     alert.messageText = "設定をリセットしますか？"

@@ -130,20 +130,19 @@ extension EmulatorViewModel {
 
   // MARK: - Drive state types
 
-  /// マウント先ドライブ指定。`mountDisk(url:drive:)` の `Int` (legacy) を
-  /// 内部で型化したもの。`-1` magic value を撤廃。
+  /// Which drive to mount into. A typed form of the legacy `Int` taken by
+  /// `mountDisk(url:drive:)`, which removes the `-1` magic value.
   enum MountTarget {
     case drive(Int)
-    case both       // Mount 0&1 mode (旧 drive == -1)
+    case both  // Mount 0&1 mode (formerly drive == -1)
 
     static func from(legacy drive: Int) -> MountTarget {
       drive == -1 ? .both : .drive(drive)
     }
   }
 
-  /// 1 ドライブ分の表示・状態スナップショット。
-  /// マウント / スイッチ / 排出時、複数プロパティを 1 アクションでまとめて
-  /// 書き換えるための一時的な値オブジェクト。
+  /// A snapshot of one drive's display and state. A transient value object for
+  /// rewriting several properties as one action on mount, switch or eject.
   struct DriveState {
     let name: String
     let fileName: String?
@@ -153,9 +152,10 @@ extension EmulatorViewModel {
     static let empty = DriveState(name: "Empty", fileName: nil, info: nil, writeProtected: false)
   }
 
-  /// 1 ドライブの全表示プロパティ (name/fileName/info/writeProtected) を
-  /// 1 つの関数で更新する。`if drive == 0 { drive0X = ... } else ...` の
-  /// 散在を集約し、SwiftUI の Observable 再描画の意図を明示する。
+  /// Updates all of a drive's display properties — name, fileName, info and
+  /// writeProtected — in one function. Collapses the scattered
+  /// `if drive == 0 { drive0X = ... } else ...` and makes the intended SwiftUI
+  /// Observable invalidation explicit.
   func applyDriveState(_ state: DriveState, drive: Int) {
     if drive == 0 {
       drive0Name = state.name
@@ -175,15 +175,15 @@ extension EmulatorViewModel {
   /// Open a D88 disk image file (or archive containing D88 files) and mount it.
   /// Multi-image D88 files trigger an image selection sheet.
   /// Archives with multiple D88 files trigger an archive file picker.
-  /// `drive == -1` (legacy) triggers "Mount 0&1" mode — 内部では
-  /// `MountTarget.both` に変換される。
+  /// The legacy `drive == -1` triggers "Mount 0&1" mode, converted internally to
+  /// `MountTarget.both`.
   func mountDisk(url: URL, drive: Int) {
     mountDisk(url: url, target: MountTarget.from(legacy: drive))
   }
 
-  /// 型安全版エントリポイント。
-  /// 役割はファイル読込と「archive / direct」ディスパッチのみ。
-  /// 具体的なマウント処理は `mountArchive` / `mountDirectD88` に委譲する。
+  /// Type-safe entry point. Its only job is reading the file and dispatching
+  /// between archive and direct; the actual mounting is delegated to
+  /// `mountArchive` or `mountDirectD88`.
   func mountDisk(url: URL, target: MountTarget) {
     if M3UPlaylist.isPlaylist(url) {
       mountM3U(url: url, target: target)
@@ -212,8 +212,8 @@ extension EmulatorViewModel {
       presentDiskLoadErrorAlert(fileName: url.lastPathComponent, reason: .emptyArchive)
       return
     }
-    // キャッシュ作成失敗時は in-memory フォールバックで進めるが、
-    // 書き戻しは ModifiedDisks フォールバックに流れる。
+    // If the cache cannot be created, carry on from memory; write-back then
+    // falls through to the ModifiedDisks fallback.
     let cache = DiskCacheManager.shared
     let cacheDir: URL?
     do {
@@ -424,9 +424,9 @@ extension EmulatorViewModel {
     }
   }
 
-  /// `mountDiskImageDirect` のパラメータ群。
-  /// 9 引数を struct に集約することで「引数の渡し漏れ」「位置間違い」を防ぎ、
-  /// 呼出側の可読性を確保する。
+  /// Parameters for `mountDiskImageDirect`. Collecting nine arguments into a
+  /// struct rules out omitted and transposed arguments, and keeps the call sites
+  /// readable.
   struct DirectMountRequest {
     let disk: D88Disk
     let name: String
@@ -472,9 +472,8 @@ extension EmulatorViewModel {
     }
     let bytes = Array(cache.resolvedData(for: entry, in: pendingArchiveCacheDir))
     let archiveURL = pendingArchiveURL
-    // archive ピッカーは閉じる。
-    // 中の D88 が multi-image なら mountDiskData が改めて
-    // `.multiImageD88` を立てる (= ピッカーが入れ替わる)。
+    // Close the archive picker. If the D88 inside is multi-image, mountDiskData
+    // raises `.multiImageD88` again, swapping in the other picker.
     pickerContext = nil
     mountDiskData(bytes, name: entry.filename, drive: diskPickerDrive,
                   sourceURL: entryURL, archiveEntryName: entry.filename,
@@ -493,11 +492,13 @@ extension EmulatorViewModel {
                    originArchiveURL: originArchive)
   }
 
-  /// 単一ソース (.d88) の `MountedDiskInfo` を構築する共通ヘルパ。
-  /// imageNames (空名は `fileName #i` へフォールバック)、単一 `DiskImageGroup`、
-  /// index のクランプ規則を一本化する。手動マウント (`mountDiskImage`)、
-  /// セーブステート復元 (`reconstructDiskInfo`)、スクリプト再生後の再構築
-  /// (`rebuildDriveInfoFromScript`) が同じ規則を共有するため。
+  /// Builds the `MountedDiskInfo` for a single `.d88` source.
+  ///
+  /// Centralizes the image names (falling back to `fileName #i` for an empty
+  /// name), the single `DiskImageGroup`, and the index clamping rule, so that
+  /// manual mounts (`mountDiskImage`), save-state restore
+  /// (`reconstructDiskInfo`) and post-playback rebuilds
+  /// (`rebuildDriveInfoFromScript`) all share them.
   func makeDirectDiskInfo(allImages: [D88Disk], fileName: String, imageIndex: Int,
                           sourceURL: URL?, archiveEntryName: String? = nil,
                           originArchiveURL: URL? = nil) -> MountedDiskInfo {
@@ -513,10 +514,12 @@ extension EmulatorViewModel {
                            imageGroups: groups)
   }
 
-  /// URL scheme 起動 (`bubilator88://boot`) 専用の明示 imageIndex マウント入口。
-  /// `mountDisk(url:drive:)` と違い picker シートを出さない — 呼び出し側
-  /// (`performLaunch`) が検証フェーズで既に `disks`/`imageIndex` の妥当性を
-  /// 確認済みという前提。docs/URL_SCHEME_LAUNCH_PLAN.md §3.6。
+  /// Mount entry point with an explicit imageIndex, used only by URL scheme
+  /// launches (`bubilator88://boot`).
+  ///
+  /// Unlike `mountDisk(url:drive:)` it never presents a picker sheet, because the
+  /// caller (`performLaunch`) has already validated `disks` and `imageIndex` in
+  /// its validation phase. See docs/URL_SCHEME_LAUNCH_PLAN.md §3.6.
   func mountDiskExplicit(disks: [D88Disk], imageIndex: Int, url: URL, drive: Int) {
     mountDiskImage(disks[imageIndex], allImages: disks, imageIndex: imageIndex, url: url, drive: drive)
     Settings.shared.addRecentFile(url: url)
@@ -619,9 +622,9 @@ extension EmulatorViewModel {
 
   // MARK: - Cache Export
 
-  /// 「展開済みキャッシュをエクスポート…」メニュー本体。フォルダ選択
-  /// ダイアログを開き、accessoryView のチェックボックスに応じて
-  /// 孤児フィルタ ON/OFF でコピーする。
+  /// Implements the "Export Extracted Cache…" menu item. Opens a folder chooser
+  /// and copies, with the orphan filter on or off according to the checkbox in
+  /// the accessory view.
   func exportCachedDisks() {
     guard let result = CacheExportPanel.run() else { return }
 
@@ -793,28 +796,29 @@ extension EmulatorViewModel {
   }
 }
 
-// MARK: - Disk Write-Back (Phase 1: 単独 .d88 のライトスルー)
+// MARK: - Disk Write-Back (Phase 1: write-through for standalone .d88)
 
 extension EmulatorViewModel {
 
-  /// `SubSystem.onDiskWritten` から呼ばれるエントリポイント。
-  /// emulation thread から呼ばれる前提なので、必ず MainActor に hop してから
-  /// scheduler を叩く (scheduler は `@MainActor` 必須)。
+  /// Entry point called from `SubSystem.onDiskWritten`.
+  ///
+  /// It is called from the emulation thread, so it always hops to the MainActor
+  /// before touching the scheduler, which is `@MainActor`.
   nonisolated func diskDirtyNotification(drive: Int) {
     Task { @MainActor [weak self] in
       self?.diskWriteBackScheduler.schedule(drive: drive)
     }
   }
 
-  /// scheduler から呼ばれる実書込関数。メインスレッド前提。
+  /// The actual write, called by the scheduler. Assumes the main thread.
   func performDiskWriteBack(drive: Int) {
-    // snapshot 取得と dirty 判定+クリアを **一つの emuQueue.sync** で行う。
-    // 別々に sync すると、その間に新たな書込で dirty=true になっても、
-    // 後段の `dirty = false` で握り潰してしまう (Phase 2 既知の race)。
+    // Take the snapshot and test-and-clear dirty in **one emuQueue.sync**.
+    // Doing them as two separate syncs lets a write in between set dirty=true,
+    // only for the later `dirty = false` to swallow it — the known Phase 2 race.
     //
-    // ここで dirty を先にクリアしておけば、書込中に新たな dirty が立っても
-    // 次回 scheduler 発火で確実にもう一度書き戻される。
-    // 書込が失敗した場合のみ dirty を復元する。
+    // Clearing dirty up front means a write that arrives while this one is in
+    // flight is guaranteed to be written back on the scheduler's next firing.
+    // dirty is restored only if the write fails.
     let snapshot: [UInt8]? = emuQueue.sync { () -> [UInt8]? in
       guard let disk = machine.subSystem.drives[drive], disk.dirty,
             let bytes = disk.serialize() else { return nil }
@@ -827,11 +831,11 @@ extension EmulatorViewModel {
     let sourceURL = info?.sourceURL
     let imageIndex = info?.currentImageIndex ?? 0
 
-    // 書き戻し先 URL の決定。
-    // Phase 2 以降、アーカイブ由来でも sourceURL はキャッシュ内 .d88 を
-    // 指すので分け隔てなくそのまま書ける。
-    // - sourceURL があればそこへ
-    // - 無ければリカバリディレクトリへフォールバック
+    // Choose the write-back destination.
+    // Since Phase 2, sourceURL points at the cached .d88 even for archive-backed
+    // disks, so both cases can be written the same way.
+    // - Write to sourceURL when there is one
+    // - Otherwise fall back to the recovery directory
     guard let writeURL = sourceURL else {
       DiskWriteBackIO.writeBankToRecovery(
         bankBytes: bankBytes,
@@ -847,7 +851,7 @@ extension EmulatorViewModel {
                                     imageIndex: imageIndex,
                                     url: writeURL)
     } catch {
-      // 書込失敗 → dirty を復元 (リトライ可能にする) + リカバリへ
+      // Write failed: restore dirty so it can be retried, and fall back to recovery.
       emuQueue.sync {
         machine.subSystem.drives[drive]?.dirty = true
       }

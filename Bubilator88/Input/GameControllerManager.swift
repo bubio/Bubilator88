@@ -236,7 +236,7 @@ enum ControllerButton: String, Codable, CaseIterable, Identifiable {
 struct ControllerButtonMapping: Codable, Equatable {
   var buttons: [String: ButtonAction]
 
-  // ADV/RPG-first defaults, matching console-style 決定/キャンセル conventions
+  // ADV/RPG-first defaults, matching console-style confirm/cancel conventions
   // (the dominant PC-8801 genre): KP 2/4/6/8 for movement, A=Space (advance/confirm),
   // B=ESC (cancel/menu), X=Return, Y=Z, LB=X — Z/X kept as a bonus for action games.
   //
@@ -253,15 +253,15 @@ struct ControllerButtonMapping: Codable, Equatable {
     ControllerButton.dpadDown.rawValue: .hostShortcut(HostShortcut(keyCode: 0x54, modifierFlagsRaw: 0, displayKey: "Num 2")),  // kVK_ANSI_Keypad2
     ControllerButton.dpadLeft.rawValue: .hostShortcut(HostShortcut(keyCode: 0x56, modifierFlagsRaw: 0, displayKey: "Num 4")),  // kVK_ANSI_Keypad4
     ControllerButton.dpadRight.rawValue: .hostShortcut(HostShortcut(keyCode: 0x58, modifierFlagsRaw: 0, displayKey: "Num 6")), // kVK_ANSI_Keypad6
-    ControllerButton.buttonA.rawValue: .hostShortcut(HostShortcut(keyCode: 0x31, modifierFlagsRaw: 0, displayKey: "Space")), // kVK_Space (決定/送り)
-    ControllerButton.buttonB.rawValue: .hostShortcut(HostShortcut(keyCode: 0x35, modifierFlagsRaw: 0, displayKey: "⎋")),     // kVK_Escape (キャンセル/メニュー)
-    ControllerButton.buttonX.rawValue: .hostShortcut(HostShortcut(keyCode: 0x24, modifierFlagsRaw: 0, displayKey: "↩")),     // kVK_Return (改行/別決定)
-    ControllerButton.buttonY.rawValue: .hostShortcut(HostShortcut(keyCode: 0x06, modifierFlagsRaw: 0, displayKey: "Z")),     // kVK_ANSI_Z (アクション/ジャンプ)
-    ControllerButton.leftShoulder.rawValue: .hostShortcut(HostShortcut(keyCode: 0x07, modifierFlagsRaw: 0, displayKey: "X")),// kVK_ANSI_X (2nd アクション)
-    ControllerButton.rightShoulder.rawValue: .pc88Key(MappedKey(Keyboard.shift)),                                            // SHIFT (ダッシュ/補助)
-    ControllerButton.leftTrigger.rawValue: .hostShortcut(HostShortcut(keyCode: 0x06, modifierFlagsRaw: 1048576, displayKey: "Z")),  // ⌘Z (巻き戻しホールド)
+    ControllerButton.buttonA.rawValue: .hostShortcut(HostShortcut(keyCode: 0x31, modifierFlagsRaw: 0, displayKey: "Space")), // kVK_Space (confirm / advance text)
+    ControllerButton.buttonB.rawValue: .hostShortcut(HostShortcut(keyCode: 0x35, modifierFlagsRaw: 0, displayKey: "⎋")),     // kVK_Escape (cancel / menu)
+    ControllerButton.buttonX.rawValue: .hostShortcut(HostShortcut(keyCode: 0x24, modifierFlagsRaw: 0, displayKey: "↩")),     // kVK_Return (newline / alternate confirm)
+    ControllerButton.buttonY.rawValue: .hostShortcut(HostShortcut(keyCode: 0x06, modifierFlagsRaw: 0, displayKey: "Z")),     // kVK_ANSI_Z (action / jump)
+    ControllerButton.leftShoulder.rawValue: .hostShortcut(HostShortcut(keyCode: 0x07, modifierFlagsRaw: 0, displayKey: "X")),// kVK_ANSI_X (second action)
+    ControllerButton.rightShoulder.rawValue: .pc88Key(MappedKey(Keyboard.shift)),                                            // SHIFT (dash / modifier)
+    ControllerButton.leftTrigger.rawValue: .hostShortcut(HostShortcut(keyCode: 0x06, modifierFlagsRaw: 1048576, displayKey: "Z")),  // ⌘Z (hold to rewind)
     ControllerButton.rightTrigger.rawValue: .hostShortcut(HostShortcut(keyCode: 0x30, modifierFlagsRaw: 131072, displayKey: "Tab")), // ⇧Tab
-    ControllerButton.buttonStart.rawValue: .none,   // STOP は意図的に未割当 (誤爆で BASIC 中断を防ぐ)
+    ControllerButton.buttonStart.rawValue: .none,   // STOP is deliberately unassigned, so a stray press cannot break into BASIC
     ControllerButton.buttonSelect.rawValue: .none,
     ControllerButton.leftStickButton.rawValue: .none,
     ControllerButton.rightStickButton.rawValue: .none,
