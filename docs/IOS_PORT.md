@@ -159,7 +159,7 @@ iOS の場合は **言語・UI フレームワークが同じ (Swift / SwiftUI)*
   (将来要件が出たら追加)。
 
 ### Phase 7 — テスト
-- `EmulatorCoreTests` (530+ tests) と `BootTester` は pure Swift のため無変更で
+- `EmulatorCoreTests` (777 tests) と `BootTester` は pure Swift のため無変更で
   iOS 対応作業中も regression ガードとして機能する。Phase 0〜6 の各ステップ後に
   `cd Packages/EmulatorCore && swift test` を実行して既存挙動に影響がないことを確認。
 - iOS 版 UI の動作確認は実機/シミュレータでの手動確認 (`/run` スキルまたは Xcode 直接実行)

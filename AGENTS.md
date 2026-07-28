@@ -12,7 +12,7 @@ Bubilator88 is a **behavioral emulator** for the NEC PC-8801-FA computer, built 
 # Build
 xcodebuild -scheme Bubilator88 -configuration Debug build
 
-# Run EmulatorCore unit tests (primary test suite — 200+ tests)
+# Run EmulatorCore unit tests (primary test suite — 777 tests)
 cd Packages/EmulatorCore && swift test
 
 # Run app-level tests (UI tests, template test)
@@ -20,9 +20,22 @@ xcodebuild test -scheme Bubilator88 -configuration Debug
 
 # Run UI tests only
 xcodebuild test -scheme Bubilator88 -only-testing:Bubilator88UITests -configuration Debug
+
+# Format (2-space indent) and lint
+scripts/format_all.sh          # or --check to verify without writing
+scripts/lint.sh                # whole repo, including Packages/EmulatorCore
 ```
 
-Platform: macOS only (deployment target 26.0). No external package dependencies. Pure Xcode project with local Swift package at `Packages/EmulatorCore/`.
+Platform: macOS only. Deployment targets are **not** uniform: the app target is
+26.0, the project and test targets are 26.2, and `Package.swift` declares
+`.macOS(.v15)`. Pure Xcode project with a local Swift package at
+`Packages/EmulatorCore/`.
+
+External dependencies: **`apple/swift-log`**, used by the `Peripherals` and
+`EmulatorCore` targets. Nothing else.
+
+Code style, localization and logging conventions are documented in CLAUDE.md
+(sections "Code Style", "Localization", "Logging") — they apply here too.
 
 ## Architecture
 

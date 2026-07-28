@@ -52,14 +52,16 @@ Bubilator88/
 │   │
 │   ├── Utilities/                  Helpers
 │   │   ├── ArchiveExtractor.swift  ZIP/LHA archive extraction
+│   │   ├── OSLogHandler.swift      swift-log → os_log bridge + bootstrap
 │   │   └── TranslationManager.swift OCR translation manager
 │   │
 │   ├── Resources/                  Assets & bundled data
 │   │   ├── Assets.xcassets         App icon, colors, images
 │   │   ├── Bubilator88.help        Apple Help Book (en/ja)
+│   │   ├── Localizable.xcstrings   String Catalog (260 keys, en source + ja)
+│   │   ├── InfoPlist.xcstrings     String Catalog for Info.plist
 │   │   ├── RealESRGAN_x2.mlmodelc CoreML model
-│   │   ├── SRVGGNet_x2.mlmodelc   CoreML model
-│   │   └── ja.lproj/              Japanese localization
+│   │   └── SRVGGNet_x2.mlmodelc   CoreML model
 │   │
 │   └── Info.plist
 │
@@ -103,7 +105,7 @@ Bubilator88/
     │   │
     │   └── BootTester/             CLI boot test harness (see docs/BOOTTESTER.md)
     │
-    └── Tests/EmulatorCoreTests/    530+ unit tests (Swift Testing)
+    └── Tests/EmulatorCoreTests/    777 unit tests (Swift Testing)
 ```
 
 ## 3. Module Dependencies
@@ -115,6 +117,10 @@ Peripherals    (Logging)
 EmulatorCore   (Z80, FMSynthesis, Peripherals, Logging)
 App            (EmulatorCore)
 ```
+
+`Logging` is `apple/swift-log`, the package's only external dependency. It is
+pinned in `Package.resolved` and re-exported from `Machine.swift`, so the app
+layer can install a `LogHandler` without depending on swift-log directly.
 
 All modules use `-O` optimization in debug builds for 60fps.
 
@@ -176,7 +182,12 @@ AVAudioSourceNode render callback
 - **BIOS files loaded from disk** (`~/Library/Application Support/Bubilator88/`), never bundled.
 - **Bus protocol** is the only CPU↔world interface. CPU never accesses memory directly.
 - **SubSystem isolation**: Main CPU accesses FDC only via PIO ports 0xFC-0xFF.
-- **@_exported imports**: Machine.swift exports Z80, Pc88Bus.swift exports FMSynthesis + Peripherals.
+- **@_exported imports**: Machine.swift exports Z80 and Logging, Pc88Bus.swift exports FMSynthesis + Peripherals.
+- **Logging**: both layers use swift-log; the app bridges it to `os_log` under
+  the subsystem `com.bubio.Bubilator88`. See the Logging section of CLAUDE.md.
+- **Deployment targets are not uniform**: app target 26.0, project and test
+  targets 26.2, `Package.swift` `.macOS(.v15)`. The package number is the one
+  that matters for the Windows port, which builds `Package.swift` directly.
 
 ## 8. Reference Emulators
 
