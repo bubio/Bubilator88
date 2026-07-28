@@ -1,6 +1,6 @@
 import Foundation
 import CryptoKit
-import os.log
+import EmulatorCore  // re-exports Logging (swift-log)
 
 /// アーカイブ (ZIP/LZH/CAB/RAR) から展開した D88 ファイルをディスクキャッシュ
 /// として保持し、ライトスルー書き戻し先として再利用できるようにする。
@@ -62,7 +62,7 @@ nonisolated struct DiskCacheManager {
     return e
   }()
 
-  private static let log = Logger(subsystem: "com.bubilator88", category: "DiskCache")
+  private static let log = Logger(label: "App.DiskCache")
 
   private static let decoder: JSONDecoder = {
     let d = JSONDecoder()
@@ -121,7 +121,7 @@ nonisolated struct DiskCacheManager {
     do {
       try writeSourceMeta(meta, to: dir)
     } catch {
-      Self.log.warning("source.json write failed: \(String(describing: error), privacy: .public)")
+      Self.log.warning("source.json write failed: \(String(describing: error))")
     }
 
     return dir

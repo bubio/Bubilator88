@@ -1,6 +1,9 @@
 import SwiftUI
 import Translation
 import Vision
+import EmulatorCore  // re-exports Logging (swift-log)
+
+private let ocrLog = Logger(label: "App.OCR")
 
 /// Orchestrates Vision OCR text detection and translation overlay.
 ///
@@ -101,7 +104,7 @@ final class TranslationManager {
       }
       #if DEBUG
       let t1 = CFAbsoluteTimeGetCurrent()
-      print(String(format: "[OCR] Total: %.0fms", (t1 - t0) * 1000))
+      ocrLog.debug("[OCR] total: \(String(format: "%.0f", (t1 - t0) * 1000))ms")
       #endif
 
       var allRects: [OCRDetectionRect] = []
