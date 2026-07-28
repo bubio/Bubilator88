@@ -27,19 +27,29 @@ struct BootModeTests {
 
   // MARK: - dipSw2
 
-  @Test("dipSw2 encodes V1 and H flags per mode")
+  // Bit 3 is the boot strap and reads 0 here, meaning FDD boot. It is no longer
+  // a fixed part of the mode: `Machine.applyBootStrap()` derives it at reset from
+  // whether drive 0 holds a disk. These expectations used to be 0x79/0xF9/0xB9,
+  // from before that automatic switch existed.
+  @Test("dipSw2 encodes V1 and H flags per mode, with bit 3 defaulting to FDD boot")
   func dipSw2Values() {
-    #expect(BootMode.n88v2.dipSw2 == 0x79)
-    #expect(BootMode.n88v1h.dipSw2 == 0xF9)
-    #expect(BootMode.n88v1s.dipSw2 == 0xB9)
-    #expect(BootMode.n.dipSw2 == 0xB9)
+    #expect(BootMode.n88v2.dipSw2 == 0x71)
+    #expect(BootMode.n88v1h.dipSw2 == 0xF1)
+    #expect(BootMode.n88v1s.dipSw2 == 0xB1)
+    #expect(BootMode.n.dipSw2 == 0xB1)
+    for mode in [BootMode.n88v2, .n88v1h, .n88v1s, .n] {
+      #expect(mode.dipSw2 & 0x08 == 0, "bit 3 must default to FDD boot")
+    }
   }
 
   // MARK: - allCases
 
-  @Test("BootMode has exactly 4 cases")
+  @Test("BootMode has 4 standard cases plus custom")
   func allCasesCount() {
-    #expect(BootMode.allCases.count == 4)
+    #expect(BootMode.standardCases.count == 4)
+    #expect(BootMode.allCases.count == 5)
+    #expect(BootMode.allCases.contains(.custom))
+    #expect(!BootMode.standardCases.contains(.custom))
   }
 
   // MARK: - rawValue

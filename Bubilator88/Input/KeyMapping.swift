@@ -7,32 +7,66 @@ import Foundation
 /// Each maps to a Keyboard.Key (row, bit) for the PC-8801 matrix.
 enum KeyMapping {
 
-  static func pc88Key(for macKeyCode: UInt16) -> Keyboard.Key? {
-    let settings = Settings.shared
+  /// Everything outside the static tables that `pc88Key(for:options:)` consults:
+  /// the user's numpad overrides, the effective keyboard layout, and any
+  /// remapped special keys.
+  ///
+  /// Bundling them into a value keeps the mapping a pure function of its inputs.
+  /// Production passes ``current``, which reads `Settings.shared`; tests pass
+  /// ``standard`` so they assert against the shipped defaults instead of
+  /// whatever preferences happen to be on the machine running them.
+  struct Options {
+    var arrowKeysAsNumpad = false
+    var numberRowAsNumpad = false
+    var wasdAsNumpad = false
+    var layout: KeyboardLayout = .us
+    var specialKeyMapping: [String: Int] = [:]
 
+    /// The shipped defaults: no overrides, US layout, no remapped special keys.
+    static let standard = Options()
+
+    /// The user's current preferences.
+    @MainActor
+    static var current: Options {
+      let settings = Settings.shared
+      return Options(
+        arrowKeysAsNumpad: settings.arrowKeysAsNumpad,
+        numberRowAsNumpad: settings.numberRowAsNumpad,
+        wasdAsNumpad: settings.wasdAsNumpad,
+        layout: KeyboardLayoutDetector.effectiveLayout(),
+        specialKeyMapping: settings.specialKeyMapping
+      )
+    }
+  }
+
+  @MainActor
+  static func pc88Key(for macKeyCode: UInt16) -> Keyboard.Key? {
+    pc88Key(for: macKeyCode, options: .current)
+  }
+
+  static func pc88Key(for macKeyCode: UInt16, options: Options) -> Keyboard.Key? {
     // Arrow keys → numpad override
-    if settings.arrowKeysAsNumpad, let key = arrowToNumpad[macKeyCode] {
+    if options.arrowKeysAsNumpad, let key = arrowToNumpad[macKeyCode] {
       return key
     }
 
     // Number row → numpad override
-    if settings.numberRowAsNumpad, let key = numberToNumpad[macKeyCode] {
+    if options.numberRowAsNumpad, let key = numberToNumpad[macKeyCode] {
       return key
     }
 
     // WASD → numpad override
-    if settings.wasdAsNumpad, let key = wasdToNumpad[macKeyCode] {
+    if options.wasdAsNumpad, let key = wasdToNumpad[macKeyCode] {
       return key
     }
 
     // Layout-specific symbol overrides
-    let layout = KeyboardLayoutDetector.effectiveLayout()
-    if layout == .jis, let key = jisSymbolOverrides[macKeyCode] {
+    if options.layout == .jis, let key = jisSymbolOverrides[macKeyCode] {
       return key
     }
 
     // Customizable special keys (STOP, COPY, etc.)
-    if let key = resolvedSpecialKey(for: macKeyCode) {
+    if let key = resolvedSpecialKey(for: macKeyCode, mapping: options.specialKeyMapping) {
       return key
     }
 
@@ -41,8 +75,10 @@ enum KeyMapping {
 
   // MARK: - Special Key Resolution
 
-  private static func resolvedSpecialKey(for macKeyCode: UInt16) -> Keyboard.Key? {
-    let mapping = Settings.shared.specialKeyMapping
+  private static func resolvedSpecialKey(
+    for macKeyCode: UInt16,
+    mapping: [String: Int]
+  ) -> Keyboard.Key? {
     for sk in PC88SpecialKey.allCases {
       let code: UInt16
       if let custom = mapping[sk.rawValue] {
