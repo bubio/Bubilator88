@@ -3,737 +3,737 @@ import AppKit
 
 @main
 struct Bubilator88App: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var viewModel = EmulatorViewModel()
-    @State private var showAbout = false
+  @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+  @State private var viewModel = EmulatorViewModel()
+  @State private var showAbout = false
 
-    var body: some Scene {
-        Window("Bubilator88", id: "main") {
-            ContentView(viewModel: viewModel)
-                .onAppear { appDelegate.viewModel = viewModel }
-                // `.b88script` double-click / "Open With" arrives here for both
-                // cold-launch and warm (already-running) opens. requestScriptPlayback
-                // plays immediately if the run loop is up, otherwise defers to
-                // ContentView.onAppear's consumePendingScript() (cold launch may
-                // fire onOpenURL before ROMs load). See AppDelegate for why this
-                // lives in SwiftUI rather than application(_:open:).
-                .onOpenURL { url in
-                    if url.scheme?.lowercased() == "bubilator88" {
-                        viewModel.requestLaunch(url: url)
-                    } else if url.pathExtension.lowercased() == "b88script" {
-                        viewModel.requestScriptPlayback(url: url)
-                    }
-                }
-                .windowResizeBehavior(.disabled)
-                .windowFullScreenBehavior(.enabled)
-                .sheet(isPresented: $showAbout) {
-                    AboutView()
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("OK") { showAbout = false }
-                                    .keyboardShortcut(.defaultAction)
-                            }
-                        }
-                }
+  var body: some Scene {
+    Window("Bubilator88", id: "main") {
+      ContentView(viewModel: viewModel)
+        .onAppear { appDelegate.viewModel = viewModel }
+        // `.b88script` double-click / "Open With" arrives here for both
+        // cold-launch and warm (already-running) opens. requestScriptPlayback
+        // plays immediately if the run loop is up, otherwise defers to
+        // ContentView.onAppear's consumePendingScript() (cold launch may
+        // fire onOpenURL before ROMs load). See AppDelegate for why this
+        // lives in SwiftUI rather than application(_:open:).
+        .onOpenURL { url in
+          if url.scheme?.lowercased() == "bubilator88" {
+            viewModel.requestLaunch(url: url)
+          } else if url.pathExtension.lowercased() == "b88script" {
+            viewModel.requestScriptPlayback(url: url)
+          }
         }
-        .windowResizability(.contentSize)
-        .commands {
-            CommandGroup(replacing: .appInfo) {
-                Button("About Bubilator88") {
-                    showAbout = true
-                }
-            }
-
-            CommandGroup(replacing: .undoRedo) { }
-            CommandGroup(replacing: .pasteboard) {
-                Button("Copy Screen") { viewModel.copyScreenshotToClipboard() }
-                    .keyboardShortcut("c", modifiers: .command)
-                Button("Copy Text") { viewModel.copyTextToPasteboard() }
-                    .keyboardShortcut("c", modifiers: [.command, .shift])
-                Divider()
-                Button("Paste Text") { viewModel.pasteTextFromPasteboard() }
-                    .keyboardShortcut("v", modifiers: .command)
-            }
-            CommandGroup(replacing: .textEditing) { }
-
-            EmulatorCommands(viewModel: viewModel)
-            ViewCommands(viewModel: viewModel)
-            DiskCommands(viewModel: viewModel)
-            ControlCommands(viewModel: viewModel)
-            if viewModel.showDebugMenu {
-                DebugCommands(viewModel: viewModel)
-            }
-
-            CommandGroup(replacing: .help) {
-                Button("Bubilator88 Help") {
-                    if let bookName = Bundle.main.object(forInfoDictionaryKey: "CFBundleHelpBookName") as? String {
-                        NSHelpManager.shared.openHelpAnchor("bubilator88-help", inBook: bookName)
-                    }
-                }
-                .keyboardShortcut("?", modifiers: .command)
+        .windowResizeBehavior(.disabled)
+        .windowFullScreenBehavior(.enabled)
+        .sheet(isPresented: $showAbout) {
+          AboutView()
+            .toolbar {
+              ToolbarItem(placement: .confirmationAction) {
+                Button("OK") { showAbout = false }
+                  .keyboardShortcut(.defaultAction)
+              }
             }
         }
-
-        SwiftUI.Settings {
-            SettingsView(viewModel: viewModel)
-        }
-
-        // Regular `Window` (not `UtilityWindow`) so the debugger can become
-        // the key window — UtilityWindow uses an NSPanel with the
-        // `.nonactivatingPanel` style mask, which leaves the title bar
-        // perpetually dimmed because the panel never takes key status.
-        Window("Debugger", id: "debugger") {
-            DebugView(viewModel: viewModel)
-        }
-        .defaultSize(width: 960, height: 680)
-        .windowResizability(.contentMinSize)
-        .windowToolbarStyle(.unifiedCompact)
-        // The auto-generated "Debugger" menu entry in the standard
-        // Window menu duplicates the one we already expose from the
-        // Debug menu. Strip it.
-        .commandsRemoved()
-
-        // On-screen PC-8801 keyboard. Separate window so the emulation view
-        // keeps driving frames; clicks feed the matrix via the ViewModel.
-        Window("Software Keyboard", id: "software-keyboard") {
-            SoftwareKeyboardView(viewModel: viewModel)
-                .windowResizeBehavior(.disabled)
-        }
-        .windowResizability(.contentSize)
-        .defaultPosition(.bottom)
-        // The View menu already exposes "Software Keyboard"; drop the
-        // auto-generated Window menu duplicate.
-        .commandsRemoved()
     }
+    .windowResizability(.contentSize)
+    .commands {
+      CommandGroup(replacing: .appInfo) {
+        Button("About Bubilator88") {
+          showAbout = true
+        }
+      }
+
+      CommandGroup(replacing: .undoRedo) { }
+      CommandGroup(replacing: .pasteboard) {
+        Button("Copy Screen") { viewModel.copyScreenshotToClipboard() }
+          .keyboardShortcut("c", modifiers: .command)
+        Button("Copy Text") { viewModel.copyTextToPasteboard() }
+          .keyboardShortcut("c", modifiers: [.command, .shift])
+        Divider()
+        Button("Paste Text") { viewModel.pasteTextFromPasteboard() }
+          .keyboardShortcut("v", modifiers: .command)
+      }
+      CommandGroup(replacing: .textEditing) { }
+
+      EmulatorCommands(viewModel: viewModel)
+      ViewCommands(viewModel: viewModel)
+      DiskCommands(viewModel: viewModel)
+      ControlCommands(viewModel: viewModel)
+      if viewModel.showDebugMenu {
+        DebugCommands(viewModel: viewModel)
+      }
+
+      CommandGroup(replacing: .help) {
+        Button("Bubilator88 Help") {
+          if let bookName = Bundle.main.object(forInfoDictionaryKey: "CFBundleHelpBookName") as? String {
+            NSHelpManager.shared.openHelpAnchor("bubilator88-help", inBook: bookName)
+          }
+        }
+        .keyboardShortcut("?", modifiers: .command)
+      }
+    }
+
+    SwiftUI.Settings {
+      SettingsView(viewModel: viewModel)
+    }
+
+    // Regular `Window` (not `UtilityWindow`) so the debugger can become
+    // the key window — UtilityWindow uses an NSPanel with the
+    // `.nonactivatingPanel` style mask, which leaves the title bar
+    // perpetually dimmed because the panel never takes key status.
+    Window("Debugger", id: "debugger") {
+      DebugView(viewModel: viewModel)
+    }
+    .defaultSize(width: 960, height: 680)
+    .windowResizability(.contentMinSize)
+    .windowToolbarStyle(.unifiedCompact)
+    // The auto-generated "Debugger" menu entry in the standard
+    // Window menu duplicates the one we already expose from the
+    // Debug menu. Strip it.
+    .commandsRemoved()
+
+    // On-screen PC-8801 keyboard. Separate window so the emulation view
+    // keeps driving frames; clicks feed the matrix via the ViewModel.
+    Window("Software Keyboard", id: "software-keyboard") {
+      SoftwareKeyboardView(viewModel: viewModel)
+        .windowResizeBehavior(.disabled)
+    }
+    .windowResizability(.contentSize)
+    .defaultPosition(.bottom)
+    // The View menu already exposes "Software Keyboard"; drop the
+    // auto-generated Window menu duplicate.
+    .commandsRemoved()
+  }
 }
 
 // MARK: - Emulator Menu
 
 struct EmulatorCommands: Commands {
-    let viewModel: EmulatorViewModel
+  let viewModel: EmulatorViewModel
 
-    var body: some Commands {
-        CommandMenu("Emulator") {
-            Button {
-                if viewModel.isRunning {
-                    viewModel.pause()
-                } else {
-                    viewModel.resume()
-                }
-            } label: {
-                Label(viewModel.isRunning ? "Pause" : "Resume",
-                      systemImage: viewModel.isRunning ? "pause.fill" : "play.fill")
-            }
-            .keyboardShortcut("r", modifiers: .command)
-
-            Button {
-                viewModel.reset()
-            } label: {
-                Label("Reset", systemImage: "arrow.counterclockwise")
-            }
-            .keyboardShortcut("e", modifiers: .command)
-
-            Divider()
-
-            Picker("Boot Mode", selection: Binding(
-                get: { viewModel.bootMode },
-                set: { viewModel.bootMode = $0 }
-            )) {
-                ForEach(EmulatorViewModel.BootMode.standardCases, id: \.self) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.inline)
-
-            Divider()
-
-            Picker("CPU Clock", selection: Binding(
-                get: { viewModel.clock8MHz },
-                set: { viewModel.clock8MHz = $0 }
-            )) {
-                Text("8 MHz").tag(true)
-                Text("4 MHz").tag(false)
-            }
-            .pickerStyle(.inline)
+  var body: some Commands {
+    CommandMenu("Emulator") {
+      Button {
+        if viewModel.isRunning {
+          viewModel.pause()
+        } else {
+          viewModel.resume()
         }
+      } label: {
+        Label(viewModel.isRunning ? "Pause" : "Resume",
+              systemImage: viewModel.isRunning ? "pause.fill" : "play.fill")
+      }
+      .keyboardShortcut("r", modifiers: .command)
+
+      Button {
+        viewModel.reset()
+      } label: {
+        Label("Reset", systemImage: "arrow.counterclockwise")
+      }
+      .keyboardShortcut("e", modifiers: .command)
+
+      Divider()
+
+      Picker("Boot Mode", selection: Binding(
+        get: { viewModel.bootMode },
+        set: { viewModel.bootMode = $0 }
+      )) {
+        ForEach(EmulatorViewModel.BootMode.standardCases, id: \.self) { mode in
+          Text(mode.rawValue).tag(mode)
+        }
+      }
+      .pickerStyle(.inline)
+
+      Divider()
+
+      Picker("CPU Clock", selection: Binding(
+        get: { viewModel.clock8MHz },
+        set: { viewModel.clock8MHz = $0 }
+      )) {
+        Text("8 MHz").tag(true)
+        Text("4 MHz").tag(false)
+      }
+      .pickerStyle(.inline)
     }
+  }
 }
 
 // MARK: - Disk Menu
 
 struct DiskCommands: Commands {
-    let viewModel: EmulatorViewModel
+  let viewModel: EmulatorViewModel
 
-    @ViewBuilder
-    private func driveSubmenu(drive: Int) -> some View {
-        let label = drive + 1
-        let name = drive == 0 ? viewModel.drive0Name : viewModel.drive1Name
-        let fileName = drive == 0 ? viewModel.drive0FileName : viewModel.drive1FileName
-        let info = drive == 0 ? viewModel.drive0Info : viewModel.drive1Info
-        let shortcut: KeyEquivalent = drive == 0 ? "1" : "2"
+  @ViewBuilder
+  private func driveSubmenu(drive: Int) -> some View {
+    let label = drive + 1
+    let name = drive == 0 ? viewModel.drive0Name : viewModel.drive1Name
+    let fileName = drive == 0 ? viewModel.drive0FileName : viewModel.drive1FileName
+    let info = drive == 0 ? viewModel.drive0Info : viewModel.drive1Info
+    let shortcut: KeyEquivalent = drive == 0 ? "1" : "2"
 
-        Menu {
+    Menu {
+      Button {
+        viewModel.diskPickerDrive = drive
+        viewModel.showingDiskPicker = true
+      } label: {
+        Label("Mount...", systemImage: "opticaldiscdrive")
+      }
+      .keyboardShortcut(shortcut, modifiers: .command)
+
+      Button {
+        viewModel.ejectDisk(drive: drive)
+      } label: {
+        Label("Eject", systemImage: "eject")
+      }
+      .disabled(name == "Empty")
+
+      let wp = drive == 0 ? viewModel.drive0WriteProtected : viewModel.drive1WriteProtected
+      Button {
+        viewModel.toggleWriteProtect(drive: drive)
+      } label: {
+        if wp {
+          Label("Write Protect ✓", systemImage: "lock.fill")
+        } else {
+          Label("Write Protect", systemImage: "lock.open")
+        }
+      }
+      .disabled(name == "Empty")
+
+      if name != "Empty", let fileName {
+        Divider()
+        Text(fileName).disabled(true)
+      }
+
+      if let info {
+        let multiGroup = info.imageGroups.count > 1
+        ForEach(info.imageGroups, id: \.startIndex) { group in
+          if multiGroup {
+            Text(group.d88FileName).disabled(true)
+          }
+          ForEach(0..<group.count, id: \.self) { offset in
+            let index = group.startIndex + offset
             Button {
-                viewModel.diskPickerDrive = drive
-                viewModel.showingDiskPicker = true
+              viewModel.switchDiskImage(drive: drive, index: index)
             } label: {
-                Label("Mount...", systemImage: "opticaldiscdrive")
+              let imgName = info.imageNames[index]
+              if index == info.currentImageIndex {
+                Text(multiGroup ? "  \(imgName) ✓" : "\(imgName) ✓")
+              } else {
+                Text(multiGroup ? "  \(imgName)" : imgName)
+              }
             }
-            .keyboardShortcut(shortcut, modifiers: .command)
+          }
+        }
+      }
+    } label: {
+      Label("Drive \(label)", image: "FloppyDisk")
+    }
+  }
 
-            Button {
-                viewModel.ejectDisk(drive: drive)
-            } label: {
-                Label("Eject", systemImage: "eject")
-            }
-            .disabled(name == "Empty")
+  var body: some Commands {
+    CommandMenu("Disk") {
+      // Drive 1 submenu
+      driveSubmenu(drive: 0)
 
-            let wp = drive == 0 ? viewModel.drive0WriteProtected : viewModel.drive1WriteProtected
-            Button {
-                viewModel.toggleWriteProtect(drive: drive)
-            } label: {
-                if wp {
-                    Label("Write Protect ✓", systemImage: "lock.fill")
-                } else {
-                    Label("Write Protect", systemImage: "lock.open")
-                }
-            }
-            .disabled(name == "Empty")
+      // Drive 2 submenu
+      driveSubmenu(drive: 1)
 
-            if name != "Empty", let fileName {
-                Divider()
-                Text(fileName).disabled(true)
-            }
+      Divider()
 
-            if let info {
-                let multiGroup = info.imageGroups.count > 1
-                ForEach(info.imageGroups, id: \.startIndex) { group in
-                    if multiGroup {
-                        Text(group.d88FileName).disabled(true)
-                    }
-                    ForEach(0..<group.count, id: \.self) { offset in
-                        let index = group.startIndex + offset
-                        Button {
-                            viewModel.switchDiskImage(drive: drive, index: index)
-                        } label: {
-                            let imgName = info.imageNames[index]
-                            if index == info.currentImageIndex {
-                                Text(multiGroup ? "  \(imgName) ✓" : "\(imgName) ✓")
-                            } else {
-                                Text(multiGroup ? "  \(imgName)" : imgName)
-                            }
-                        }
-                    }
-                }
-            }
+      Menu {
+        Button {
+          viewModel.diskPickerDrive = -1
+          viewModel.showingDiskPicker = true
         } label: {
-            Label("Drive \(label)", image: "FloppyDisk")
+          Label("Mount...", systemImage: "opticaldiscdrive")
         }
+        .keyboardShortcut("3", modifiers: .command)
+
+        Button {
+          viewModel.ejectDisk(drive: 0)
+          viewModel.ejectDisk(drive: 1)
+        } label: {
+          Label("Eject", systemImage: "eject")
+        }
+        .disabled(viewModel.drive0Name == "Empty" && viewModel.drive1Name == "Empty")
+      } label: {
+        Label("Drive 1&2", image: "FloppyDisk")
+      }
+
+      Divider()
+
+      Button {
+        viewModel.createBlankDisk()
+      } label: {
+        Label("Create Blank Disk...", systemImage: "plus.circle")
+      }
+      .keyboardShortcut("n", modifiers: [.command, .shift])
+
+      Button {
+        viewModel.exportCachedDisks()
+      } label: {
+        Label("Export Cached Disks...", systemImage: "square.and.arrow.up")
+      }
+
+      Divider()
+
+      // Recent Files submenu
+      Menu("Recent Files") {
+        if Settings.shared.recentDiskFiles.isEmpty {
+          Text("No Recent Files")
+        } else {
+          ForEach(Settings.shared.recentDiskFiles) { entry in
+            Button("\(entry.displayName) — \(entry.displayDir)") {
+              viewModel.mountRecentFile(entry)
+            }
+          }
+          Divider()
+          Button {
+            Settings.shared.clearRecentFiles()
+          } label: {
+            Label("Clear Recent Files", systemImage: "trash")
+          }
+        }
+      }
     }
 
-    var body: some Commands {
-        CommandMenu("Disk") {
-            // Drive 1 submenu
-            driveSubmenu(drive: 0)
+    CommandMenu("Tape") {
+      Text(viewModel.tapeDisplayLabel).disabled(true)
 
-            // Drive 2 submenu
-            driveSubmenu(drive: 1)
+      Divider()
 
-            Divider()
-
-            Menu {
-                Button {
-                    viewModel.diskPickerDrive = -1
-                    viewModel.showingDiskPicker = true
-                } label: {
-                    Label("Mount...", systemImage: "opticaldiscdrive")
-                }
-                .keyboardShortcut("3", modifiers: .command)
-
-                Button {
-                    viewModel.ejectDisk(drive: 0)
-                    viewModel.ejectDisk(drive: 1)
-                } label: {
-                    Label("Eject", systemImage: "eject")
-                }
-                .disabled(viewModel.drive0Name == "Empty" && viewModel.drive1Name == "Empty")
-            } label: {
-                Label("Drive 1&2", image: "FloppyDisk")
-            }
-
-            Divider()
-
-            Button {
-                viewModel.createBlankDisk()
-            } label: {
-                Label("Create Blank Disk...", systemImage: "plus.circle")
-            }
-            .keyboardShortcut("n", modifiers: [.command, .shift])
-
-            Button {
-                viewModel.exportCachedDisks()
-            } label: {
-                Label("Export Cached Disks...", systemImage: "square.and.arrow.up")
-            }
-
-            Divider()
-
-            // Recent Files submenu
-            Menu("Recent Files") {
-                if Settings.shared.recentDiskFiles.isEmpty {
-                    Text("No Recent Files")
-                } else {
-                    ForEach(Settings.shared.recentDiskFiles) { entry in
-                        Button("\(entry.displayName) — \(entry.displayDir)") {
-                            viewModel.mountRecentFile(entry)
-                        }
-                    }
-                    Divider()
-                    Button {
-                        Settings.shared.clearRecentFiles()
-                    } label: {
-                        Label("Clear Recent Files", systemImage: "trash")
-                    }
-                }
-            }
+      Button {
+        viewModel.showingTapePicker = true
+      } label: {
+        Label {
+          Text("Open...")
+        } icon: {
+          Image("Cassete")
         }
+      }
+      .keyboardShortcut("t", modifiers: [.command, .shift])
 
-        CommandMenu("Tape") {
-            Text(viewModel.tapeDisplayLabel).disabled(true)
+      Button {
+        viewModel.rewindTape()
+      } label: {
+        Label("Rewind", systemImage: "backward.end")
+      }
+      .disabled(!viewModel.isTapeMounted)
 
-            Divider()
+      Button {
+        viewModel.ejectTape()
+      } label: {
+        Label("Eject", systemImage: "eject")
+      }
+      .disabled(!viewModel.isTapeMounted)
 
-            Button {
-                viewModel.showingTapePicker = true
-            } label: {
-                Label {
-                    Text("Open...")
-                } icon: {
-                    Image("Cassete")
-                }
+      Divider()
+
+      Menu("Recent Files") {
+        if Settings.shared.recentTapeFiles.isEmpty {
+          Text("No Recent Files")
+        } else {
+          ForEach(Settings.shared.recentTapeFiles) { entry in
+            Button("\(entry.displayName) — \(entry.displayDir)") {
+              viewModel.mountRecentTape(entry)
             }
-            .keyboardShortcut("t", modifiers: [.command, .shift])
-
-            Button {
-                viewModel.rewindTape()
-            } label: {
-                Label("Rewind", systemImage: "backward.end")
-            }
-            .disabled(!viewModel.isTapeMounted)
-
-            Button {
-                viewModel.ejectTape()
-            } label: {
-                Label("Eject", systemImage: "eject")
-            }
-            .disabled(!viewModel.isTapeMounted)
-
-            Divider()
-
-            Menu("Recent Files") {
-                if Settings.shared.recentTapeFiles.isEmpty {
-                    Text("No Recent Files")
-                } else {
-                    ForEach(Settings.shared.recentTapeFiles) { entry in
-                        Button("\(entry.displayName) — \(entry.displayDir)") {
-                            viewModel.mountRecentTape(entry)
-                        }
-                    }
-                    Divider()
-                    Button {
-                        Settings.shared.clearRecentTapeFiles()
-                    } label: {
-                        Label("Clear Recent Files", systemImage: "trash")
-                    }
-                }
-            }
+          }
+          Divider()
+          Button {
+            Settings.shared.clearRecentTapeFiles()
+          } label: {
+            Label("Clear Recent Files", systemImage: "trash")
+          }
         }
+      }
     }
+  }
 }
 
 // MARK: - View Menu (appended to system View menu)
 
 struct ViewCommands: Commands {
-    let viewModel: EmulatorViewModel
-    @Environment(\.openWindow) private var openWindow
+  let viewModel: EmulatorViewModel
+  @Environment(\.openWindow) private var openWindow
 
-    var body: some Commands {
-        CommandGroup(after: .toolbar) {
-            Divider()
+  var body: some Commands {
+    CommandGroup(after: .toolbar) {
+      Divider()
 
-            Button {
-                openWindow(id: "software-keyboard")
-            } label: {
-                Text("Software Keyboard")
-            }
-            .keyboardShortcut("k", modifiers: [.command, .shift])
+      Button {
+        openWindow(id: "software-keyboard")
+      } label: {
+        Text("Software Keyboard")
+      }
+      .keyboardShortcut("k", modifiers: [.command, .shift])
 
-            Divider()
+      Divider()
 
-            Button {
-                withAnimation(.easeOut(duration: 0.35)) {
-                    viewModel.windowScale = 1
-                }
-            } label: {
-                Text("Actual Size (x1)")
-            }
-            .keyboardShortcut("1", modifiers: [.command, .control])
-            .disabled(viewModel.isFullScreen)
-
-            Button {
-                withAnimation(.easeOut(duration: 0.35)) {
-                    viewModel.windowScale = 2
-                }
-            } label: {
-                Text("Double Size (x2)")
-            }
-            .keyboardShortcut("2", modifiers: [.command, .control])
-            .disabled(viewModel.isFullScreen)
-
-            Button {
-                withAnimation(.easeOut(duration: 0.35)) {
-                    viewModel.windowScale = 4
-                }
-            } label: {
-                Text("Quad Size (x4)")
-            }
-            .keyboardShortcut("4", modifiers: [.command, .control])
-            .disabled(viewModel.isFullScreen)
-
-            Divider()
-
-            Toggle(isOn: Binding(
-                get: { viewModel.scanlineEnabled },
-                set: { viewModel.scanlineEnabled = $0 }
-            )) {
-                Label("Scanlines", systemImage: "line.3.horizontal")
-            }
-            .disabled(!viewModel.isScanlineAvailable)
-
-            Divider()
-
-            Picker("Video Filter", selection: Binding(
-                get: { viewModel.videoFilter },
-                set: { viewModel.videoFilter = $0 }
-            )) {
-                ForEach(EmulatorViewModel.VideoFilter.allCases, id: \.self) { filter in
-                    Text(filter.rawValue).tag(filter)
-                }
-            }
-            .pickerStyle(.inline)
-
-            Divider()
-
-            Toggle(isOn: Binding(
-                get: { viewModel.translationManager.isEnabled },
-                set: { viewModel.toggleTranslation($0) }
-            )) {
-                Label("Translation Overlay", systemImage: "translate")
-            }
-            .keyboardShortcut("t", modifiers: .command)
-
-            Divider()
+      Button {
+        withAnimation(.easeOut(duration: 0.35)) {
+          viewModel.windowScale = 1
         }
+      } label: {
+        Text("Actual Size (x1)")
+      }
+      .keyboardShortcut("1", modifiers: [.command, .control])
+      .disabled(viewModel.isFullScreen)
+
+      Button {
+        withAnimation(.easeOut(duration: 0.35)) {
+          viewModel.windowScale = 2
+        }
+      } label: {
+        Text("Double Size (x2)")
+      }
+      .keyboardShortcut("2", modifiers: [.command, .control])
+      .disabled(viewModel.isFullScreen)
+
+      Button {
+        withAnimation(.easeOut(duration: 0.35)) {
+          viewModel.windowScale = 4
+        }
+      } label: {
+        Text("Quad Size (x4)")
+      }
+      .keyboardShortcut("4", modifiers: [.command, .control])
+      .disabled(viewModel.isFullScreen)
+
+      Divider()
+
+      Toggle(isOn: Binding(
+        get: { viewModel.scanlineEnabled },
+        set: { viewModel.scanlineEnabled = $0 }
+      )) {
+        Label("Scanlines", systemImage: "line.3.horizontal")
+      }
+      .disabled(!viewModel.isScanlineAvailable)
+
+      Divider()
+
+      Picker("Video Filter", selection: Binding(
+        get: { viewModel.videoFilter },
+        set: { viewModel.videoFilter = $0 }
+      )) {
+        ForEach(EmulatorViewModel.VideoFilter.allCases, id: \.self) { filter in
+          Text(filter.rawValue).tag(filter)
+        }
+      }
+      .pickerStyle(.inline)
+
+      Divider()
+
+      Toggle(isOn: Binding(
+        get: { viewModel.translationManager.isEnabled },
+        set: { viewModel.toggleTranslation($0) }
+      )) {
+        Label("Translation Overlay", systemImage: "translate")
+      }
+      .keyboardShortcut("t", modifiers: .command)
+
+      Divider()
     }
+  }
 }
 
 // MARK: - Control Menu
 
 struct ControlCommands: Commands {
-    let viewModel: EmulatorViewModel
+  let viewModel: EmulatorViewModel
 
-    var body: some Commands {
-        CommandMenu("Control") {
-            Button {
-                viewModel.volumeUp()
-            } label: {
-                Label("Increase Volume", systemImage: "speaker.plus")
-            }
-            .keyboardShortcut(.upArrow, modifiers: .command)
+  var body: some Commands {
+    CommandMenu("Control") {
+      Button {
+        viewModel.volumeUp()
+      } label: {
+        Label("Increase Volume", systemImage: "speaker.plus")
+      }
+      .keyboardShortcut(.upArrow, modifiers: .command)
 
-            Button {
-                viewModel.volumeDown()
-            } label: {
-                Label("Decrease Volume", systemImage: "speaker.minus")
-            }
-            .keyboardShortcut(.downArrow, modifiers: .command)
+      Button {
+        viewModel.volumeDown()
+      } label: {
+        Label("Decrease Volume", systemImage: "speaker.minus")
+      }
+      .keyboardShortcut(.downArrow, modifiers: .command)
 
-            Divider()
+      Divider()
 
-            Toggle(isOn: Binding(
-                get: { viewModel.romajiInputEnabled },
-                set: { viewModel.romajiInputEnabled = $0 }
-            )) {
-                Text("Romaji Kana Input")
-            }
-            .keyboardShortcut("k", modifiers: [.command, .option])
+      Toggle(isOn: Binding(
+        get: { viewModel.romajiInputEnabled },
+        set: { viewModel.romajiInputEnabled = $0 }
+      )) {
+        Text("Romaji Kana Input")
+      }
+      .keyboardShortcut("k", modifiers: [.command, .option])
 
-            Divider()
+      Divider()
 
-            Picker("CPU Speed", selection: Binding(
-                get: { viewModel.cpuSpeed },
-                set: { viewModel.cpuSpeed = $0 }
-            )) {
-                ForEach(EmulatorViewModel.CPUSpeed.allCases, id: \.self) { speed in
-                    Text(speed.rawValue).tag(speed)
-                }
-            }
-            .pickerStyle(.inline)
-            .disabled(viewModel.videoRecorder.isRecording
-                      || viewModel.audioRecorder.isRecording)
-
-            Divider()
-
-            Button {
-                viewModel.saveScreenshot()
-            } label: {
-                Label(
-                    Settings.shared.screenshotAutoSave
-                        ? "Save Screenshot"
-                        : "Save Screenshot…",
-                    systemImage: "camera"
-                )
-            }
-
-            Button {
-                viewModel.toggleRecording()
-            } label: {
-                if viewModel.audioRecorder.isRecording {
-                    Label("Stop Audio Recording",
-                          systemImage: "stop.circle")
-                } else if viewModel.cpuSpeed != .x1 {
-                    // Audio is sampled at wall-clock; faster CPU speeds yield
-                    // pitch-shifted/desynced output. Force x1 first.
-                    Label("Start Audio Recording (set CPU Speed to x1)",
-                          systemImage: "record.circle")
-                } else {
-                    Label(
-                        Settings.shared.recordingAutoSave
-                            ? "Start Audio Recording"
-                            : "Start Audio Recording…",
-                        systemImage: "record.circle"
-                    )
-                }
-            }
-            .keyboardShortcut("r", modifiers: [.command, .shift])
-            .disabled(viewModel.videoRecorder.isRecording
-                      || (!viewModel.audioRecorder.isRecording
-                          && viewModel.cpuSpeed != .x1))
-
-            Button {
-                viewModel.toggleVideoRecording()
-            } label: {
-                if viewModel.videoRecorder.isRecording {
-                    Label("Stop Video Recording",
-                          systemImage: "stop.circle")
-                } else if viewModel.cpuSpeed != .x1 {
-                    // Video timeline assumes wall-clock playback; faster CPU
-                    // speeds desync audio against video. Force x1 first.
-                    Label("Start Video Recording (set CPU Speed to x1)",
-                          systemImage: "video.circle")
-                } else {
-                    Label(
-                        Settings.shared.videoRecordingAutoSave
-                            ? "Start Video Recording"
-                            : "Start Video Recording…",
-                        systemImage: "video.circle"
-                    )
-                }
-            }
-            .keyboardShortcut("v", modifiers: [.command, .shift])
-            .disabled(viewModel.audioRecorder.isRecording
-                      || (!viewModel.videoRecorder.isRecording
-                          && viewModel.cpuSpeed != .x1))
-
-            Divider()
-
-            // ⌘Z is handled exclusively by AppDelegate's local NSEvent
-            // monitor (hold mode) with EmulatorMetalView.performKeyEquivalent
-            // as a backstop that consumes any event the monitor missed.
-            // Deliberately *no* keyboardShortcut binding here: we don't
-            // want AppKit dispatching menu actions on Cmd+Z autorepeats
-            // (which throttled the hold step rate when the menu was
-            // enabled) nor beeping (when it was disabled).
-            // The menu entry is mouse-click-only and gives a one-shot
-            // jump to the oldest snapshot via `viewModel.rewind()`.
-            Button {
-                viewModel.rewind()
-            } label: {
-                Label("Rewind (Hold ⌘Z)", systemImage: "gobackward")
-            }
-
-            Divider()
-
-            Button {
-                viewModel.quickSave()
-            } label: {
-                Label("Quick Save", systemImage: "square.and.arrow.down")
-            }
-            .keyboardShortcut("s", modifiers: .command)
-
-            Button {
-                viewModel.quickLoad()
-            } label: {
-                Label("Quick Load", systemImage: "square.and.arrow.up")
-            }
-            .keyboardShortcut("l", modifiers: .command)
-            .disabled(!viewModel.hasQuickSave)
-
-            if viewModel.hasQuickSave {
-                Text(viewModel.quickSaveInfo)
-                    .font(.caption)
-            }
-
-            Divider()
-
-            Button {
-                viewModel.saveStateSheetMode = .save
-                viewModel.showingSaveStateSheet = true
-            } label: {
-                Label("Save State...", systemImage: "tray.and.arrow.down")
-            }
-
-            Button {
-                viewModel.saveStateSheetMode = .load
-                viewModel.showingSaveStateSheet = true
-            } label: {
-                Label("Load State...", systemImage: "tray.and.arrow.up")
-            }
+      Picker("CPU Speed", selection: Binding(
+        get: { viewModel.cpuSpeed },
+        set: { viewModel.cpuSpeed = $0 }
+      )) {
+        ForEach(EmulatorViewModel.CPUSpeed.allCases, id: \.self) { speed in
+          Text(speed.rawValue).tag(speed)
         }
+      }
+      .pickerStyle(.inline)
+      .disabled(viewModel.videoRecorder.isRecording
+        || viewModel.audioRecorder.isRecording)
+
+      Divider()
+
+      Button {
+        viewModel.saveScreenshot()
+      } label: {
+        Label(
+          Settings.shared.screenshotAutoSave
+            ? "Save Screenshot"
+            : "Save Screenshot…",
+          systemImage: "camera"
+        )
+      }
+
+      Button {
+        viewModel.toggleRecording()
+      } label: {
+        if viewModel.audioRecorder.isRecording {
+          Label("Stop Audio Recording",
+                systemImage: "stop.circle")
+        } else if viewModel.cpuSpeed != .x1 {
+          // Audio is sampled at wall-clock; faster CPU speeds yield
+          // pitch-shifted/desynced output. Force x1 first.
+          Label("Start Audio Recording (set CPU Speed to x1)",
+                systemImage: "record.circle")
+        } else {
+          Label(
+            Settings.shared.recordingAutoSave
+              ? "Start Audio Recording"
+              : "Start Audio Recording…",
+            systemImage: "record.circle"
+          )
+        }
+      }
+      .keyboardShortcut("r", modifiers: [.command, .shift])
+      .disabled(viewModel.videoRecorder.isRecording
+        || (!viewModel.audioRecorder.isRecording
+          && viewModel.cpuSpeed != .x1))
+
+      Button {
+        viewModel.toggleVideoRecording()
+      } label: {
+        if viewModel.videoRecorder.isRecording {
+          Label("Stop Video Recording",
+                systemImage: "stop.circle")
+        } else if viewModel.cpuSpeed != .x1 {
+          // Video timeline assumes wall-clock playback; faster CPU
+          // speeds desync audio against video. Force x1 first.
+          Label("Start Video Recording (set CPU Speed to x1)",
+                systemImage: "video.circle")
+        } else {
+          Label(
+            Settings.shared.videoRecordingAutoSave
+              ? "Start Video Recording"
+              : "Start Video Recording…",
+            systemImage: "video.circle"
+          )
+        }
+      }
+      .keyboardShortcut("v", modifiers: [.command, .shift])
+      .disabled(viewModel.audioRecorder.isRecording
+        || (!viewModel.videoRecorder.isRecording
+          && viewModel.cpuSpeed != .x1))
+
+      Divider()
+
+      // ⌘Z is handled exclusively by AppDelegate's local NSEvent
+      // monitor (hold mode) with EmulatorMetalView.performKeyEquivalent
+      // as a backstop that consumes any event the monitor missed.
+      // Deliberately *no* keyboardShortcut binding here: we don't
+      // want AppKit dispatching menu actions on Cmd+Z autorepeats
+      // (which throttled the hold step rate when the menu was
+      // enabled) nor beeping (when it was disabled).
+      // The menu entry is mouse-click-only and gives a one-shot
+      // jump to the oldest snapshot via `viewModel.rewind()`.
+      Button {
+        viewModel.rewind()
+      } label: {
+        Label("Rewind (Hold ⌘Z)", systemImage: "gobackward")
+      }
+
+      Divider()
+
+      Button {
+        viewModel.quickSave()
+      } label: {
+        Label("Quick Save", systemImage: "square.and.arrow.down")
+      }
+      .keyboardShortcut("s", modifiers: .command)
+
+      Button {
+        viewModel.quickLoad()
+      } label: {
+        Label("Quick Load", systemImage: "square.and.arrow.up")
+      }
+      .keyboardShortcut("l", modifiers: .command)
+      .disabled(!viewModel.hasQuickSave)
+
+      if viewModel.hasQuickSave {
+        Text(viewModel.quickSaveInfo)
+          .font(.caption)
+      }
+
+      Divider()
+
+      Button {
+        viewModel.saveStateSheetMode = .save
+        viewModel.showingSaveStateSheet = true
+      } label: {
+        Label("Save State...", systemImage: "tray.and.arrow.down")
+      }
+
+      Button {
+        viewModel.saveStateSheetMode = .load
+        viewModel.showingSaveStateSheet = true
+      } label: {
+        Label("Load State...", systemImage: "tray.and.arrow.up")
+      }
     }
+  }
 }
 
 // MARK: - Debug Menu
 
 struct DebugCommands: Commands {
-    let viewModel: EmulatorViewModel
-    @Environment(\.openWindow) private var openWindow
+  let viewModel: EmulatorViewModel
+  @Environment(\.openWindow) private var openWindow
 
-    var body: some Commands {
-        CommandMenu("DEBUG") {
-            Button("Debugger…") {
-                openWindow(id: "debugger")
-            }
-            .keyboardShortcut("d", modifiers: [.command, .shift])
+  var body: some Commands {
+    CommandMenu("DEBUG") {
+      Button("Debugger…") {
+        openWindow(id: "debugger")
+      }
+      .keyboardShortcut("d", modifiers: [.command, .shift])
 
-            Divider()
+      Divider()
 
-        #if DEBUG
-            Button("Dump Text DMA Snapshot") {
-                viewModel.dumpTextDMASnapshotToDefaultPath()
-            }
-        #endif
-            Button("Dump Memory…") {
-                viewModel.dumpMemoryViaSavePanel()
-            }
+      #if DEBUG
+      Button("Dump Text DMA Snapshot") {
+        viewModel.dumpTextDMASnapshotToDefaultPath()
+      }
+      #endif
+      Button("Dump Memory…") {
+        viewModel.dumpMemoryViaSavePanel()
+      }
 
-            Divider()
+      Divider()
 
-            Button("スクリプトを再生…") {
-                viewModel.openAndPlayScript()
-            }
-            .disabled(viewModel.isRecordingScript)
-            if viewModel.isPlayingScript {
-                Button("スクリプト再生を停止") {
-                    viewModel.cancelScriptPlayback()
-                }
-            }
-
-            if !viewModel.isRecordingScript {
-                Button("スクリプトを記録…") {
-                    viewModel.startScriptRecording()
-                }
-                .disabled(viewModel.isPlayingScript)
-            } else {
-                Button("記録を停止して保存…") {
-                    viewModel.stopScriptRecordingAndSave()
-                }
-            }
-
-            Divider()
-
-            Button("BIOS ROM フォルダを開く") {
-                Self.openBIOSROMFolder()
-            }
-
-            Button("設定をリセット") {
-                Self.resetSettings()
-            }
-
-            Divider()
-
-            Toggle("Show Text Layer", isOn: Binding(
-                get: { viewModel.debugTextLayerEnabled },
-                set: { viewModel.debugTextLayerEnabled = $0 }
-            ))
-
-            Divider()
-
-            Toggle("FM", isOn: Binding(
-                get: { viewModel.fmEnabled },
-                set: { viewModel.fmEnabled = $0 }
-            ))
-
-            Toggle("SSG", isOn: Binding(
-                get: { viewModel.ssgEnabled },
-                set: { viewModel.ssgEnabled = $0 }
-            ))
-
-            Toggle("ADPCM", isOn: Binding(
-                get: { viewModel.adpcmEnabled },
-                set: { viewModel.adpcmEnabled = $0 }
-            ))
-
-            Toggle("Rhythm", isOn: Binding(
-                get: { viewModel.rhythmEnabled },
-                set: { viewModel.rhythmEnabled = $0 }
-            ))
-
-            Divider()
-
-            Toggle("Force YM2203 (OPN)", isOn: Binding(
-                get: { viewModel.forceOPNMode },
-                set: { viewModel.forceOPNMode = $0 }
-            ))
-
-            Divider()
-
-            Picker("CPU Overclock", selection: Binding(
-                get: { viewModel.cpuOverclock },
-                set: { viewModel.cpuOverclock = $0 }
-            )) {
-                Text("1× (Real)").tag(1)
-                Text("2×").tag(2)
-                Text("4×").tag(4)
-            }
-
+      Button("スクリプトを再生…") {
+        viewModel.openAndPlayScript()
+      }
+      .disabled(viewModel.isRecordingScript)
+      if viewModel.isPlayingScript {
+        Button("スクリプト再生を停止") {
+          viewModel.cancelScriptPlayback()
         }
-    }
+      }
 
-    /// BIOS ROM などを配置する Application Support ディレクトリを Finder で開く。
-    /// 未作成の場合は作成してから開く。
-    private static func openBIOSROMFolder() {
-        let appSupport = FileManager.default.urls(
-            for: .applicationSupportDirectory, in: .userDomainMask
-        ).first!.appendingPathComponent("Bubilator88", isDirectory: true)
-        try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
-        NSWorkspace.shared.open(appSupport)
-    }
-
-    /// UserDefaults に保存された全ユーザ設定を削除する (確認アラートあり)。
-    /// 反映には再起動が必要な項目があるため、その旨も案内する。
-    private static func resetSettings() {
-        let alert = NSAlert()
-        alert.messageText = "設定をリセットしますか？"
-        alert.informativeText = "すべてのユーザ設定が初期値に戻ります。この操作は取り消せません。変更を完全に反映するにはアプリの再起動が必要です。"
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "リセット")
-        alert.addButton(withTitle: "キャンセル")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-
-        if let bundleID = Bundle.main.bundleIdentifier {
-            UserDefaults.standard.removePersistentDomain(forName: bundleID)
+      if !viewModel.isRecordingScript {
+        Button("スクリプトを記録…") {
+          viewModel.startScriptRecording()
         }
-        UserDefaults.standard.synchronize()
+        .disabled(viewModel.isPlayingScript)
+      } else {
+        Button("記録を停止して保存…") {
+          viewModel.stopScriptRecordingAndSave()
+        }
+      }
+
+      Divider()
+
+      Button("BIOS ROM フォルダを開く") {
+        Self.openBIOSROMFolder()
+      }
+
+      Button("設定をリセット") {
+        Self.resetSettings()
+      }
+
+      Divider()
+
+      Toggle("Show Text Layer", isOn: Binding(
+        get: { viewModel.debugTextLayerEnabled },
+        set: { viewModel.debugTextLayerEnabled = $0 }
+      ))
+
+      Divider()
+
+      Toggle("FM", isOn: Binding(
+        get: { viewModel.fmEnabled },
+        set: { viewModel.fmEnabled = $0 }
+      ))
+
+      Toggle("SSG", isOn: Binding(
+        get: { viewModel.ssgEnabled },
+        set: { viewModel.ssgEnabled = $0 }
+      ))
+
+      Toggle("ADPCM", isOn: Binding(
+        get: { viewModel.adpcmEnabled },
+        set: { viewModel.adpcmEnabled = $0 }
+      ))
+
+      Toggle("Rhythm", isOn: Binding(
+        get: { viewModel.rhythmEnabled },
+        set: { viewModel.rhythmEnabled = $0 }
+      ))
+
+      Divider()
+
+      Toggle("Force YM2203 (OPN)", isOn: Binding(
+        get: { viewModel.forceOPNMode },
+        set: { viewModel.forceOPNMode = $0 }
+      ))
+
+      Divider()
+
+      Picker("CPU Overclock", selection: Binding(
+        get: { viewModel.cpuOverclock },
+        set: { viewModel.cpuOverclock = $0 }
+      )) {
+        Text("1× (Real)").tag(1)
+        Text("2×").tag(2)
+        Text("4×").tag(4)
+      }
+
     }
+  }
+
+  /// BIOS ROM などを配置する Application Support ディレクトリを Finder で開く。
+  /// 未作成の場合は作成してから開く。
+  private static func openBIOSROMFolder() {
+    let appSupport = FileManager.default.urls(
+      for: .applicationSupportDirectory, in: .userDomainMask
+    ).first!.appendingPathComponent("Bubilator88", isDirectory: true)
+    try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+    NSWorkspace.shared.open(appSupport)
+  }
+
+  /// UserDefaults に保存された全ユーザ設定を削除する (確認アラートあり)。
+  /// 反映には再起動が必要な項目があるため、その旨も案内する。
+  private static func resetSettings() {
+    let alert = NSAlert()
+    alert.messageText = "設定をリセットしますか？"
+    alert.informativeText = "すべてのユーザ設定が初期値に戻ります。この操作は取り消せません。変更を完全に反映するにはアプリの再起動が必要です。"
+    alert.alertStyle = .warning
+    alert.addButton(withTitle: "リセット")
+    alert.addButton(withTitle: "キャンセル")
+    guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+    if let bundleID = Bundle.main.bundleIdentifier {
+      UserDefaults.standard.removePersistentDomain(forName: bundleID)
+    }
+    UserDefaults.standard.synchronize()
+  }
 }
