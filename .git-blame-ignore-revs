@@ -1,0 +1,11 @@
+# Revisions to skip when running `git blame`.
+#
+# GitHub honours this file automatically. Locally, enable it once with:
+#
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Only add commits here that are provably formatting-only — i.e. commits where
+# `git diff --ignore-all-space` against the parent is empty.
+
+# Reformat the whole tree to 2-space indentation (SwiftFormat).
+# (SHA appended after the reformat commit lands.)

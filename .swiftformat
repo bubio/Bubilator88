@@ -1,0 +1,22 @@
+# SwiftFormat configuration for Bubilator88.
+#
+# Deliberately minimal: only whitespace-affecting rules are enabled, so running
+# the formatter can never rewrite code — a run must produce a diff that
+# `git diff --ignore-all-space` reports as empty. Style enforcement beyond
+# whitespace is SwiftLint's job (see .swiftlint.yml).
+#
+# Run with scripts/format_all.sh.
+
+--swiftversion 6.1
+
+# Two-space indentation throughout.
+--indent 2
+--tabwidth 2
+--indentcase false
+--ifdef no-indent
+--xcodeindentation disabled
+
+--rules indent,trailingSpace
+--trimwhitespace always
+
+--exclude .build,DerivedData,Packages/EmulatorCore/.build
