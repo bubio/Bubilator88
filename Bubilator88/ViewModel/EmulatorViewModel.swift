@@ -420,15 +420,17 @@ final class EmulatorViewModel {
   /// Cassette-tape file picker state.
   var showingTapePicker: Bool = false
 
-  /// マウント後に提示する選択シートのコンテキスト。
-  /// nil = シート非表示。`.sheet(item:)` に bind 可能 (Identifiable)。
-  /// 旧 `pending*` × 7 + `showing*Picker` × 2 はこの 1 つに集約。
+  /// Context for the selection sheet presented after a mount. nil hides the
+  /// sheet. `Identifiable`, so it binds directly to `.sheet(item:)`.
+  ///
+  /// This one property replaces the former seven `pending*` properties and two
+  /// `showing*Picker` flags.
   var pickerContext: DiskPickerContext? = nil
 
-  // MARK: - 旧 pending*/showing* プロパティの互換 shim
+  // MARK: - Compatibility shims for the former pending*/showing* properties
   //
-  // 既存の View / App コードが broken にならないよう、
-  // `pickerContext` を背後とする read-only / Bool 同期プロパティを提供する。
+  // Read-only and Bool properties backed by `pickerContext`, so existing View
+  // and App code keeps working.
 
   var pendingDiskImages: [D88Disk] {
     if case .multiImageD88(let disks, _, _, _, _) = pickerContext { return disks }
@@ -618,8 +620,9 @@ final class EmulatorViewModel {
   /// game the user launched with.
   @ObservationIgnored var didConsumeCommandLine = false
 
-  /// 再生中スクリプトのディレクトリ。再生後に各ドライブの `MountedDiskInfo`
-  /// を再構築する際、スクリプト内の相対ディスクパスを解決するために保持する。
+  /// Directory of the script being replayed. Kept so that relative disk paths in
+  /// the script can be resolved when each drive's `MountedDiskInfo` is rebuilt
+  /// after playback.
   @ObservationIgnored var scriptDir: URL?
 
   /// Active operation recorder. Fed real key/disk events; its `frameIndex`
@@ -638,8 +641,8 @@ final class EmulatorViewModel {
   /// FDD access sound effects
   let fddSound = FDDSound()
 
-  /// ライトスルー方式の D88 ディスク書き戻しスケジューラ。
-  /// onDirty 通知を debounce してファイル I/O 頻度を抑える。
+  /// Scheduler for write-through D88 write-back. Debounces the dirty
+  /// notifications to keep file I/O infrequent.
   let diskWriteBackScheduler = DiskWriteBackScheduler()
 
   /// Synthesised cassette-rewind sound played while ⌘Z is held.
@@ -724,12 +727,12 @@ final class EmulatorViewModel {
       self?.fddSound.playReadAccess(drive: drive)
     }
 
-    // ディスク書き戻しスケジューラの writeBack クロージャを接続
+    // Wire up the write-back scheduler's writeBack closure.
     diskWriteBackScheduler.writeBack = { [weak self] drive in
       self?.performDiskWriteBack(drive: drive)
     }
 
-    // SubSystem からの書込通知を受けて debounce スケジュールする
+    // Take write notifications from SubSystem and schedule them with debouncing.
     machine.subSystem.onDiskWritten = { [weak self] drive in
       self?.diskDirtyNotification(drive: drive)
     }
@@ -1165,8 +1168,8 @@ final class EmulatorViewModel {
     // down first — symmetric with performReset.
     cancelScriptPlayback()
     cancelScriptRecording()
-    // セーブステートロードで現在のディスク状態は破棄されるため、
-    // 未保存のディスク書込を先にフラッシュしておく。
+    // Loading a save state discards the current disk state, so flush any
+    // unsaved disk writes first.
     diskWriteBackScheduler.flushAll()
     let wasRunning = isRunning
     if wasRunning { stop() }
@@ -1261,8 +1264,9 @@ final class EmulatorViewModel {
 
       // Check if source is an archive
       if let archiveEntries = ArchiveExtractor.extractDiskImages(data) {
-        // アーカイブをキャッシュ展開して書き戻し先を確保。失敗時は nil で
-        // フォールバック (in-memory データから mount)。
+        // Extract the archive into the cache to secure a write-back
+        // destination. On failure fall back to nil and mount from the in-memory
+        // data.
         let cache = DiskCacheManager.shared
         let cacheDir = try? cache.ensureCached(archiveURL: url,
                                                archiveData: data,
@@ -1507,16 +1511,17 @@ struct DiskImageGroup {
 }
 
 /// Metadata about a mounted disk source for menu-based disk switching.
-/// マウント直後に提示する選択シートの種別 + 必要 payload。
-/// 旧 8 個の `pending*` プロパティを 1 つの sum type に集約。
-/// `Identifiable` 適合により SwiftUI の `.sheet(item:)` に直接渡せる。
+/// The kind of selection sheet to present right after a mount, along with the
+/// payload it needs. One sum type in place of the former eight `pending*`
+/// properties, and `Identifiable` so it can be handed straight to SwiftUI's
+/// `.sheet(item:)`.
 enum DiskPickerContext: Identifiable {
-  /// アーカイブ内に複数 .d88 エントリがあって、どれをマウントするか選ぶ。
+  /// The archive holds several .d88 entries; choose which one to mount.
   case archiveEntries(entries: [ArchiveEntry],
                       archiveURL: URL,
                       cacheDir: URL?,
                       drive: Int)
-  /// 1 つの .d88 ファイル内に複数バンク (image) があって、どれをマウントするか選ぶ。
+  /// A single .d88 file holds several banks (images); choose which one to mount.
   case multiImageD88(disks: [D88Disk],
                      sourceURL: URL?,
                      archiveEntryName: String?,
@@ -1532,18 +1537,19 @@ enum DiskPickerContext: Identifiable {
 }
 
 struct MountedDiskInfo: Identifiable, Equatable {
-  /// マウントセッションごとに発行される ID。SwiftUI 側で `.id()` /
-  /// `.onChange(of:)` の差分検出に使う。
+  /// Issued once per mount session, for SwiftUI's `.id()` and `.onChange(of:)`
+  /// change detection.
   let id: UUID
-  /// 書き戻し先 URL。アーカイブ由来時は DiskCacheManager のキャッシュ内
-  /// .d88 ファイル URL を指す。直接 .d88 マウント時は元ファイル URL。
+  /// Write-back destination. For archive-backed disks this is the .d88 inside
+  /// DiskCacheManager's cache; for a directly mounted .d88 it is the original
+  /// file.
   let sourceURL: URL?
-  /// 元アーカイブ内でのエントリ名 (NFC 正規化前)。
-  /// アーカイブ非由来 (直接 .d88) なら nil。
+  /// Entry name within the original archive, before NFC normalization. nil for
+  /// a directly mounted .d88.
   let archiveEntryName: String?
-  /// 元アーカイブの URL (アーカイブ由来時のみ)。
-  /// 現状は `fileName` 決定でのみ使用。エクスポートやステート復元の
-  /// 起点としては Phase 3 以降で利用予定。
+  /// URL of the original archive, for archive-backed disks only. Currently used
+  /// just to derive `fileName`; using it as the starting point for export and
+  /// state restore is planned for Phase 3 onwards.
   let originArchiveURL: URL?
   let allImages: [D88Disk]
   let imageNames: [String]
@@ -1565,9 +1571,9 @@ struct MountedDiskInfo: Identifiable, Equatable {
     self.imageGroups = imageGroups
   }
 
-  /// `D88Disk` が Equatable でないため、マウントセッション ID と
-  /// 表示用フィールドのみで比較する。
-  /// SwiftUI の差分検出 (=同一マウントかどうか) には十分。
+  /// `D88Disk` is not Equatable, so this compares only the mount session ID and
+  /// the display fields — enough for SwiftUI to tell whether it is the same
+  /// mount.
   static func == (lhs: MountedDiskInfo, rhs: MountedDiskInfo) -> Bool {
     lhs.id == rhs.id
       && lhs.currentImageIndex == rhs.currentImageIndex

@@ -123,9 +123,9 @@ struct ContentView: View {
       // A `.b88script` double-clicked to launch the app is held until
       // here, so it plays only after ROMs + run loop are live.
       viewModel.consumePendingScript()
-      // QUASI88 互換のコマンドライン引数 (`Bubilator88 -v2 game.d88 2`)。
-      // 起動時に一度だけ評価する。`bubilator88://` URL より先に処理する
-      // ので、両方与えられたときは URL 側が勝つ。
+      // QUASI88-compatible command-line arguments, e.g.
+      // `Bubilator88 -v2 game.d88 2`. Evaluated once at launch, and before any
+      // `bubilator88://` URL — so if both are given, the URL wins.
       viewModel.requestLaunchFromCommandLine()
       // Same deferral for a `bubilator88://boot` URL that arrived
       // before the run loop was ready (cold launch).
@@ -169,9 +169,9 @@ struct ContentView: View {
         }
       }
     )
-    // sum type pickerContext を直接 bind することで、
-    // 「どのピッカーが立っているか」と「内容」が常に整合する。
-    // .sheet(item:) は item の id 変化でシートを再構築する。
+    // Binding the pickerContext sum type directly keeps which picker is showing
+    // and what it contains permanently consistent. `.sheet(item:)` rebuilds the
+    // sheet whenever the item's id changes.
     .sheet(item: Binding(
       get: { viewModel.pickerContext },
       set: { viewModel.pickerContext = $0 }

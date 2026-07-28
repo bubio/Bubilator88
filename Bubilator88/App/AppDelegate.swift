@@ -121,9 +121,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // process exits.
     MainActor.assumeIsolated {
       viewModel?.stopRecording()
-      // 記録中なら無言で自動保存(終了中は保存パネルを出せないため)
+      // Auto-save silently if a recording is in progress; a save panel cannot
+      // be shown during termination.
       viewModel?.flushScriptRecordingIfNeeded()
-      // 未書込のディスク変更をファイルに反映させる
+      // Flush unwritten disk changes to their files.
       viewModel?.diskWriteBackScheduler.flushAll()
     }
     if let monitor = shortcutMonitor {

@@ -4,19 +4,22 @@ import EmulatorCore
 
 // MARK: - Timeline script playback (live mode)
 //
-// docs/SCRIPTING.md の手順4 (アプリ統合)。スクリプトを解析し機種を構成してから、
-// 自走 60Hz ループに乗せて live (実時間) 再生する。再生の駆動は
-// `runFrameForMetal()` から毎フレーム呼ばれる `tickScriptPlayer()` が行う。
+// Step 4 of docs/SCRIPTING.md, app integration. Parses a script, configures the
+// machine, then replays it live (in real time) on the app's own 60Hz loop.
+// Playback is driven by `tickScriptPlayer()`, called every frame from
+// `runFrameForMetal()`.
 //
-// 非サンドボックス (entitlements 空) なのでディスクは任意パスを直接読める。
+// The app is not sandboxed (empty entitlements), so disks can be read directly
+// from any path.
 extension EmulatorViewModel {
 
-  /// DEBUG メニューから: タイムラインスクリプト (.txt) を選んで live 再生する。
+  /// From the DEBUG menu: choose a timeline script and replay it live.
   func openAndPlayScript() {
     let panel = NSOpenPanel()
     panel.allowsMultipleSelection = false
     panel.canChooseDirectories = false
-    // 独自 UTI (.b88script) を優先。互換のため素のテキストも選べるようにする。
+    // Prefer the custom UTI (.b88script), but still allow plain text for
+    // compatibility.
     let scriptType = UTType("com.bubio.bubilator88.timeline-script")
     panel.allowedContentTypes = [scriptType, .plainText, .text].compactMap { $0 }
     panel.message = NSLocalizedString("Choose a timeline script to play",
@@ -25,12 +28,15 @@ extension EmulatorViewModel {
     playScript(url: url)
   }
 
-  /// AppDelegate (`.b88script` のダブルクリック/「このアプリで開く」) からの入口。
-  /// エミュレータの描画ループが立ち上がってから再生しないと、`playScript` の
-  /// `start()` が `metalView == nil` のまま `isRunning` を立て、後続の
-  /// `ContentView.onAppear` の `start()` が `guard !isRunning` で no-op になり
-  /// 描画ループが永久に始まらない (= ディスクは載るが起動しない)。
-  /// 準備済み (描画ループ稼働中) なら即再生、まだなら保留して onAppear に委ねる。
+  /// Entry point from AppDelegate, for double-clicking a `.b88script` or using
+  /// "Open With".
+  ///
+  /// Playback has to wait until the draw loop is up. Otherwise `playScript`'s
+  /// `start()` sets `isRunning` while `metalView` is still nil, the later
+  /// `start()` in `ContentView.onAppear` becomes a no-op through its
+  /// `guard !isRunning`, and the draw loop never starts — the disk mounts but
+  /// nothing boots. So: replay immediately if the draw loop is running,
+  /// otherwise defer to onAppear.
   func requestScriptPlayback(url: URL) {
     if isRunning && metalView != nil {
       playScript(url: url)
@@ -39,18 +45,19 @@ extension EmulatorViewModel {
     }
   }
 
-  /// `ContentView.onAppear` が `start()` の直後に呼ぶ。コールド起動オープンで
-  /// 保留されたスクリプトを、UI が完全に準備できた状態で再生する。
+  /// Called by `ContentView.onAppear` right after `start()`, to replay a script
+  /// that a cold-launch open left pending, now that the UI is fully ready.
   func consumePendingScript() {
     guard let url = pendingScriptURL else { return }
     pendingScriptURL = nil
     playScript(url: url)
   }
 
-  /// スクリプトを解析し、機種を cold reset で構成してから live 再生を開始する。
+  /// Parses a script, configures the machine with a cold reset, and begins live
+  /// playback.
   func playScript(url: URL) {
-    // Finder からのダブルクリック起動では onAppear の loadROMs より先に
-    // 来ることがある。ROM 未ロードのまま再生すると起動できないため保険。
+    // A Finder double-click can arrive before onAppear's loadROMs. Replaying
+    // without ROMs loaded would never boot, so guard against it here.
     if !romLoaded { loadROMs() }
 
     let text: String
@@ -81,8 +88,9 @@ extension EmulatorViewModel {
       return
     }
 
-    // ディスクパスはスクリプトのあるディレクトリ基準で解決 (絶対パスはそのまま)。
-    // loader はローカル `scriptDir` を捕捉する (self.scriptDir には依存しない)。
+    // Disk paths resolve against the script's own directory; absolute paths are
+    // used as-is. The loader captures the local `scriptDir` rather than
+    // depending on self.scriptDir.
     let scriptDir = url.deletingLastPathComponent()
     let loader: ScriptPlayer.FileLoader = { [weak self] path in
       let fileURL = self?.resolveScriptDiskURL(path, scriptDir: scriptDir)
@@ -90,10 +98,11 @@ extension EmulatorViewModel {
       return [UInt8](try Data(contentsOf: fileURL))
     }
 
-    // draw ループを止め (= machine への排他)、cold reset してセットアップを適用。
-    // self.scriptDir の確定は cancelScriptPlayback() の後にする。さもないと
-    // 前スクリプトの player を再構築する cancel 側が新ディレクトリで相対パスを
-    // 誤解決してしまう。
+    // Stop the draw loop — which is what gives exclusive access to the machine —
+    // then cold reset and apply the setup. self.scriptDir is assigned after
+    // cancelScriptPlayback(); otherwise cancel, which rebuilds the previous
+    // script's player, would resolve its relative paths against the new
+    // directory.
     cancelScriptPlayback()
     stop()
     turboMode = false
@@ -122,19 +131,21 @@ extension EmulatorViewModel {
 
     scriptPlayer = player
     isPlayingScript = true
-    // スクリプトの boot/clock ヘッダをアプリの現在設定として採用し、
-    // ステータスバー/メニュー表示を実機の構成に一致させる。
+    // Adopt the script's boot/clock header as the app's current settings, so the
+    // status bar and menus match how the machine is actually configured.
     adoptScriptSetup(steps)
-    // セットアップ済みディスクを手動マウントと同じ情報で反映 (再生中も
-    // ディスクメニューからイメージ選択できるようにする)。
+    // Reflect the disks the setup mounted with the same information a manual
+    // mount produces, so image selection stays available from the Disk menu
+    // during playback.
     rebuildDriveInfoFromScript(player: player)
     showToast(NSLocalizedString("Script playback started",
                                 comment: "Toast shown when .b88script playback begins"))
     start()
   }
 
-  /// 毎フレーム、`runFrameForMetal` の `machine.runFrame()` **直前** に呼ぶ。
-  /// draw スレッド上で実行され、`machine` を直接触る (`tickPasteQueue` と同じ)。
+  /// Call every frame, **immediately before** `machine.runFrame()` in
+  /// `runFrameForMetal`. Runs on the draw thread and touches `machine` directly,
+  /// like `tickPasteQueue`.
   func tickScriptPlayer() {
     guard let player = scriptPlayer else { return }
     let ongoing: Bool
@@ -151,7 +162,8 @@ extension EmulatorViewModel {
       return
     }
     guard !ongoing else { return }
-    // 自走完了。状態反映は main へ。`driveMount` 照会のため player を捕捉。
+    // Playback finished. Reflect state on main; capture the player so
+    // `driveMount` can still be queried.
     scriptPlayer = nil
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
@@ -162,45 +174,51 @@ extension EmulatorViewModel {
     }
   }
 
-  /// 再生中のスクリプトを中断する (DEBUG メニュー停止 / リセット時)。
+  /// Cancels a script in progress, for the DEBUG menu's stop and for resets.
   func cancelScriptPlayback() {
     guard let player = scriptPlayer else { return }
     scriptPlayer = nil
     emuQueue.sync { player.cancelLive() }
     isPlayingScript = false
-    // 中断時点でドライブに残ったディスクも手動と同じく選択できるよう、
-    // マウント素性から driveXInfo を再構築する。
+    // Rebuild driveXInfo from the mount details so that disks left in the drives
+    // at cancellation stay selectable, just as after a manual mount.
     rebuildDriveInfoFromScript(player: player)
   }
 
-  /// スクリプトの setup (`boot` / `clock` / `dipsw1/2`) を、アプリの現在設定
-  /// として採用する。機種は既に `beginLive` で構成済みなので、ここでは ViewModel
-  /// の表示/設定状態だけを同期する (`applyBootMode` は呼ばない — 呼ぶと再リセット
-  /// してスクリプトが構成した状態を壊す)。save-state ロードの `performLoad` と
-  /// 同じ「機種は触らず ViewModel state だけ追従させる」方式。
+  /// Adopts a script's setup (`boot` / `clock` / `dipsw1/2`) as the app's current
+  /// settings.
   ///
-  /// 起動モード/DIPSW は **`beginLive` 適用後の実機の実状態** (`machine.bus`) から
-  /// 逆引きする。`Pc88Bus.reset` は DIPSW を保持するので、`boot` 行・生 `dipsw`・
-  /// ヘッダ無しのいずれでも、ステータスバー表示・`Settings`・機種が必ず一致する
-  /// (ヘッダ無し時は現状維持の no-op)。`performLoad` と同じ preset/custom 分岐。
+  /// `beginLive` has already configured the machine, so this only syncs the
+  /// ViewModel's display and settings state. It deliberately does not call
+  /// `applyBootMode`, which would reset again and destroy what the script set up.
+  /// Same approach as `performLoad` for save states: leave the machine alone and
+  /// let the ViewModel state follow it.
+  ///
+  /// Boot mode and DIPSW are derived backwards from **the machine's real state
+  /// after `beginLive`** (`machine.bus`). `Pc88Bus.reset` preserves the DIPSW, so
+  /// the status bar, `Settings` and the machine always agree whether the script
+  /// used a `boot` line, raw `dipsw` values, or no header at all — in which case
+  /// this is a no-op. Same preset/custom branch as `performLoad`.
   func adoptScriptSetup(_ steps: [ScriptStep]) {
-    // クロックはスクリプトが明示した場合のみ永続化する (ヘッダ省略時に
-    // ユーザのクロック設定を勝手に書き換えない)。表示は常に実機値で同期。
+    // Persist the clock only when the script stated one, so an omitted header
+    // never rewrites the user's clock setting. The display always tracks the
+    // machine's actual value.
     clockScan: for step in steps {
       switch step {
       case .clock(let mhz):
         Settings.shared.clock8MHz = (mhz == 8)
         break clockScan
       case .boot, .dipsw1, .dipsw2, .diskMount:
-        continue                 // setup ブロック内 — clock を探し続ける
+        continue  // still in the setup block — keep looking for a clock
       default:
-        break clockScan          // timeline 開始 — clock 指定なし
+        break clockScan  // the timeline has started — no clock was given
       }
     }
     syncActiveClockFromMachine()
 
-    // 起動モード: 実機 DIPSW をプリセットへ逆引き。一致すればその機種の正準
-    // DIPSW を、一致しなければ Custom として生値を採用する (= performLoad と同型)。
+    // Boot mode: map the machine's DIPSW back onto a preset. On a match adopt
+    // that mode's canonical DIPSW; otherwise take the raw values as Custom.
+    // Same shape as performLoad.
     let sw1 = machine.bus.dipSw1
     let sw2 = machine.bus.dipSw2
     let preset = BootModePreset.from(dipSw1: sw1, dipSw2Base: sw2)
@@ -216,26 +234,28 @@ extension EmulatorViewModel {
     }
   }
 
-  /// スクリプト内のディスクパスを URL へ解決する (絶対パスはそのまま、相対は
-  /// スクリプトのあるディレクトリ基準)。`playScript` の loader と同じ規則。
+  /// Resolves a disk path from a script to a URL: absolute paths as-is, relative
+  /// ones against the script's own directory. Same rule as `playScript`'s loader.
   func resolveScriptDiskURL(_ path: String, scriptDir: URL) -> URL {
     (path as NSString).isAbsolutePath
       ? URL(fileURLWithPath: path)
       : scriptDir.appendingPathComponent(path)
   }
 
-  /// スクリプト再生後 (または中断時)、各ドライブのマウント素性から
-  /// `MountedDiskInfo` を再構築する。スクリプトは `machine` を直接叩くため
-  /// `driveXInfo` が埋まらず、手動マウント時と違ってディスクメニューから
-  /// イメージ選択ができない。手動経路 (`mountDiskImage`) と同じ情報を組み立て、
-  /// 再生後も多面 D88 のイメージ選択を可能にする。
+  /// Rebuilds `MountedDiskInfo` for each drive from the mount details, after
+  /// playback finishes or is cancelled.
+  ///
+  /// A script drives `machine` directly, which leaves `driveXInfo` empty and —
+  /// unlike a manual mount — makes image selection unavailable from the Disk
+  /// menu. Assembling the same information the manual path (`mountDiskImage`)
+  /// produces keeps multi-image D88 selection working afterwards.
   func rebuildDriveInfoFromScript(player: ScriptPlayer) {
     let scriptDir = self.scriptDir
     for drive in 0..<2 {
-      // スクリプトがこのドライブにマウントした素性を最優先で使う。
-      // disk swap/select の交換ディレイ中は machine.subSystem.drives[drive]
-      // が一時的に nil になるが、pendingMount は必ず commit されるので、
-      // 機種の瞬間状態ではなく driveMount の情報で再構築する。
+      // Prefer what the script mounted in this drive. During the swap delay of
+      // a disk swap or select, machine.subSystem.drives[drive] is briefly nil,
+      // but pendingMount is always committed eventually — so rebuild from
+      // driveMount rather than from the machine's instantaneous state.
       if let mount = player.driveMount(drive), let scriptDir {
         let url = resolveScriptDiskURL(mount.path, scriptDir: scriptDir)
         let fileName = url.deletingPathExtension().lastPathComponent
@@ -248,9 +268,10 @@ extension EmulatorViewModel {
           drive: drive)
         continue
       }
-      // スクリプトが触れていないドライブは機種の実状態に従う。
+      // Drives the script never touched follow the machine's actual state.
       if machine.subSystem.drives[drive] != nil {
-        // 既存ディスク (手動マウント等): 名前だけ反映し driveXInfo は保持。
+        // An existing disk, e.g. a manual mount: update the name only and keep
+        // driveXInfo.
         let name = machine.subSystem.drives[drive]?.name ?? "Empty"
         if drive == 0 { drive0Name = name } else { drive1Name = name }
       } else {

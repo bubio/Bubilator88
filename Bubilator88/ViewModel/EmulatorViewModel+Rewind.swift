@@ -12,7 +12,7 @@ struct RewindSnapshot {
   let thumbnail: CGImage?
 }
 
-/// Rewind (巻き戻し).
+/// Rewind.
 ///
 /// Periodically pushes a save-state snapshot to an in-memory ring
 /// buffer. Three activation paths:

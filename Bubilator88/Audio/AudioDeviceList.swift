@@ -16,7 +16,7 @@ struct AudioDeviceInfo: Identifiable, Equatable {
 }
 
 enum AudioDeviceList {
-  /// 出力ストリームを持つデバイス一覧。先頭は systemDefault。
+  /// Devices that have an output stream. The first entry is systemDefault.
   static func outputDevices() -> [AudioDeviceInfo] {
     var addr = AudioObjectPropertyAddress(
       mSelector: kAudioHardwarePropertyDevices,
@@ -44,7 +44,7 @@ enum AudioDeviceList {
     return result
   }
 
-  /// UID から AudioDeviceID を解決する。デバイスが見つからなければ nil。
+  /// Resolves a UID to an AudioDeviceID, or nil if no such device exists.
   static func deviceID(forUID uid: String) -> AudioDeviceID? {
     guard !uid.isEmpty else { return nil }
     var addr = AudioObjectPropertyAddress(
@@ -54,8 +54,9 @@ enum AudioDeviceList {
     )
     var deviceID = AudioDeviceID(kAudioObjectUnknown)
     var size = UInt32(MemoryLayout<AudioDeviceID>.size)
-    // CoreAudio は qualifier に CFStringRef*（ポインタのポインタ）を要求する。
-    // withUnsafePointer(to: &cfUID) で変数のアドレスを渡すことで CFStringRef* になる。
+    // CoreAudio wants a CFStringRef* — a pointer to a pointer — as the
+    // qualifier. Passing the variable's address via withUnsafePointer(to: &cfUID)
+    // produces exactly that.
     var cfUID: CFString = uid as CFString
     let status = withUnsafePointer(to: &cfUID) { ptr in
       AudioObjectGetPropertyData(
@@ -71,9 +72,11 @@ enum AudioDeviceList {
     return deviceID
   }
 
-  /// CoreAudio が内部で作る仮想デバイスを除外する。
-  /// CADefaultDeviceAggregate など UID が "CADefaultDevice" で始まるものは
-  /// ユーザーが選択できない内部デバイスで、設定すると不安定になる。
+  /// Excludes the virtual devices CoreAudio creates internally.
+  ///
+  /// Devices whose UID starts with "CADefaultDevice", such as
+  /// CADefaultDeviceAggregate, are internal ones the user cannot pick, and
+  /// selecting them makes output unstable.
   private static func isInternalVirtualDevice(uid: String) -> Bool {
     uid.hasPrefix("CADefaultDevice")
   }

@@ -1,17 +1,19 @@
 import AppKit
 import EmulatorCore
 
-// MARK: - 起動引数 (URL スキーム / CLI, QUASI88 互換)
+// MARK: - Launch arguments (URL scheme / CLI, QUASI88-compatible)
 //
-// docs/URL_SCHEME.md の実装。`bubilator88://boot?arg=...` および起動時の
-// コマンドライン引数を単一インスタンスへ配送し、ディスク/機種/クロックを
-// 差し替えて cold boot する。引数書式は QUASI88 と同じ (`LaunchRequest`)。
-// `.b88script` の `pendingScriptURL` と同型の deferral
-// (`pendingLaunchRequest`) を使うが、transport と消費者が別なので専用に保つ。
+// Implements docs/URL_SCHEME.md. Delivers `bubilator88://boot?arg=...` and
+// launch-time command-line arguments to the single running instance, swapping
+// disks, machine type and clock, then cold-booting. The argument format matches
+// QUASI88 (see `LaunchRequest`).
+//
+// Uses a deferral (`pendingLaunchRequest`) shaped like `.b88script`'s
+// `pendingScriptURL`, kept separate because the transport and the consumer differ.
 extension EmulatorViewModel {
 
-  /// `.onOpenURL` からの入口。パースに失敗した時点でアラートを出し、
-  /// machine には一切触れない。
+  /// Entry point from `.onOpenURL`. A parse failure raises an alert and leaves
+  /// the machine completely untouched.
   func requestLaunch(url: URL) {
     do {
       requestLaunch(request: try LaunchRequest.parse(url))
@@ -22,8 +24,9 @@ extension EmulatorViewModel {
     }
   }
 
-  /// 起動時コマンドライン引数からの入口 (`AppDelegate` が一度だけ呼ぶ)。
-  /// 引数が無ければ何もしない (Finder からの通常起動)。
+  /// Entry point for launch-time command-line arguments, called once by
+  /// `AppDelegate`. Does nothing when there are no arguments, which is an
+  /// ordinary launch from Finder.
   func requestLaunchFromCommandLine() {
     guard !didConsumeCommandLine else { return }
     didConsumeCommandLine = true
@@ -37,8 +40,8 @@ extension EmulatorViewModel {
     }
   }
 
-  /// 準備済み (描画ループ稼働中) なら即実行、まだなら保留して
-  /// `ContentView.onAppear` の `consumePendingLaunch()` に委ねる。
+  /// Runs immediately once the draw loop is up, otherwise defers to
+  /// `consumePendingLaunch()` in `ContentView.onAppear`.
   func requestLaunch(request: LaunchRequest) {
     if isRunning && metalView != nil {
       performLaunch(request)
@@ -47,21 +50,23 @@ extension EmulatorViewModel {
     }
   }
 
-  /// `ContentView.onAppear` が `start()` の直後に呼ぶ。コールド起動で
-  /// 保留された起動リクエストを、UI が完全に準備できた状態で処理する。
+  /// Called by `ContentView.onAppear` right after `start()`, to handle a launch
+  /// request that a cold start left pending, now that the UI is fully ready.
   func consumePendingLaunch() {
     guard let request = pendingLaunchRequest else { return }
     pendingLaunchRequest = nil
     performLaunch(request)
   }
 
-  /// 全ディスクを検証してから単一インスタンスを差し替える。
-  /// xm8 と同じセマンティクス: 1件でも検証・mount 失敗なら現状を一切変えない。
+  /// Validates every disk before swapping anything in the running instance.
+  /// Same semantics as xm8: if a single validation or mount fails, nothing
+  /// changes at all.
   func performLaunch(_ req: LaunchRequest) {
     if !romLoaded { loadROMs() }
 
-    // MARK: 検証フェーズ — machine を一切触らない。
-    // 1件でも失敗したら return し、現在の状態を保つ (xm8 semantics)。
+    // MARK: Validation phase — the machine is not touched at all.
+    // A single failure returns early and preserves the current state
+    // (xm8 semantics).
     let resolved: [ResolvedLaunchMount]
     switch resolveLaunchMounts(req) {
     case .failure(let message):
@@ -73,7 +78,7 @@ extension EmulatorViewModel {
       resolved = mounts
     }
 
-    // MARK: 適用フェーズ — ここから状態変更。
+    // MARK: Apply phase — state changes start here.
     cancelScriptPlayback()
     cancelScriptRecording()
     stop()
@@ -97,31 +102,34 @@ extension EmulatorViewModel {
       }
     }
 
-    // 単発リセット: 現在の `_bootModeStorage`/Settings から DIP SW を
-    // 適用し、drive 0 のマウント状態を見て FDD/ROM boot を自動判定する。
-    // `preserveRAM: true` を使う — 手動マウント+Cmd+E リセットでディスク
-    // ブートする既存の動作確認済みパスと完全に一致させる (`preserveRAM:
-    // false` はこの組合せで未検証だったため不採用)。
+    // Single reset: apply the DIP switches from the current
+    // `_bootModeStorage`/Settings, then choose FDD or ROM boot from whether
+    // drive 0 holds a disk. `preserveRAM: true` matches exactly the known-good
+    // path of a manual mount followed by a Cmd+E reset; `preserveRAM: false`
+    // was never verified in this combination, so it is not used.
     //
-    // **`reset()` を `applyBootStrap()` より先に呼ぶ** (`performReset` とは
-    // 逆順、意図的な変更): ディスク差し替え直後は `SubSystem` の
-    // `pendingMount` (400,000 T-state の交換ディレイ) が未コミットで
-    // `subSystem.drives[0]` がまだ nil ということがあり、これは
-    // `SubSystem.reset()` が明示的に flush する既知の設計 (同ファイルの
-    // コメント「リセット直後にディスク交換窓が残るとロード失敗の原因」)。
-    // 通常の手動マウント→Cmd+E は間に人間の反応時間が入るため自然に
-    // ディレイが解消されるが、`performLaunch` は直前に `stop()` で
-    // サブCPU時計を止めてしまうため 400,000 T-state が永遠に経過せず、
-    // `applyBootStrap` を先に呼ぶと「ディスクなし」に誤判定して ROM boot
-    // ビットが立ってしまう (→ BASIC に落ちて FDD 読み込みが始まらない、
-    // 実機テストで再現した症状そのもの)。`reset()` を先にして
-    // `pendingMount` を確定させてから判定する。
+    // **Call `reset()` before `applyBootStrap()`** — the opposite order from
+    // `performReset`, and deliberately so.
+    //
+    // Right after a disk swap, `SubSystem`'s `pendingMount` (the 400,000
+    // T-state swap delay) may still be uncommitted with `subSystem.drives[0]`
+    // nil. That is by design; `SubSystem.reset()` explicitly flushes it, for
+    // the reason noted there: leaving a disk-swap window open across a reset
+    // causes load failures.
+    //
+    // A manual mount followed by Cmd+E has human reaction time in between, so
+    // the delay elapses on its own. `performLaunch` does not: it has just
+    // called `stop()`, which halts the sub-CPU clock, so those 400,000 T-states
+    // never pass. Calling `applyBootStrap` first would then read "no disk" and
+    // set the ROM boot bit — dropping to BASIC with the FDD never spinning up,
+    // exactly the symptom reproduced in testing. Reset first so `pendingMount`
+    // is settled before the decision is made.
     let mode = _bootModeStorage
     let sw1 = mode.dipSw1
     let sw2Base = mode.dipSw2
     let use8MHz = clock8MHz
-    // `-romboot` / `-diskboot` は自動判定を上書きする (QUASI88 同様、
-    // 省略時はディスクの有無による自動判定)。
+    // `-romboot` / `-diskboot` override the automatic choice. As in QUASI88,
+    // omitting them falls back to deciding from whether a disk is present.
     let forcedBootStrap = req.bootStrap
     emuQueue.sync {
       machine.bus.dipSw1 = sw1
@@ -141,27 +149,28 @@ extension EmulatorViewModel {
     if romLoaded { loadROMs() }
     clearRewindBuffer()
     renderScreen()
-    // `EmulatorMetalView.updateDrawLoop()` は `window.occlusionState`
-    // (visible) を見て draw ループを一時停止する省エネ設計。FlipDisk など
-    // 外部ランチャーからの起動時は、Bubilator88 のウィンドウが最前面でない
-    // (= occluded 判定) ことがあり、そのまま `start()` すると draw ループが
-    // 再開されず CPU がリセットベクタから一切進まない (mount/reset はここまでに
-    // 完了しているのに「読み込みが始まらない」ように見える)。URL 起動は
-    // ユーザがそのゲームを見るために呼んでいる操作なので、明示的にアプリを
-    // 前面化してから start() する。
+    // `EmulatorMetalView.updateDrawLoop()` pauses the draw loop when
+    // `window.occlusionState` says the window is not visible, to save power.
+    // Launched from an external launcher such as FlipDisk, the Bubilator88
+    // window may not be frontmost and so counts as occluded; calling `start()`
+    // then would leave the draw loop paused and the CPU stuck at the reset
+    // vector. Mounting and resetting have already completed by that point, so
+    // it just looks like loading never begins. A URL launch is the user asking
+    // to see that game, so bring the app to the front before start().
     NSApp.activate(ignoringOtherApps: true)
     metalView?.window?.makeKeyAndOrderFront(nil)
     start()
     showToast("\(NSLocalizedString("Launched", comment: "Toast shown after a URL/command-line launch; followed by the drive 0 disk name")): \(drive0Name)")
   }
 
-  /// 起動リクエストを「どのドライブに、どのファイルの何面目を載せるか」まで
-  /// 確定させる。ファイル読込と D88 パースを伴うが、`machine` には触れない。
+  /// Resolves a launch request down to which image of which file goes in which
+  /// drive. Reads files and parses D88 images, but never touches `machine`.
   ///
-  /// イメージ番号省略時の割り当ては**実イメージ数に依存する** (QUASI88:
-  /// 複数面ファイルを 1 個だけ指定 → drive 1 に 2 面目) ため、先に面数を
-  /// 確定させてから `LaunchRequest.resolveMounts` に渡す。プレイリスト
-  /// 指定時は「面数 = エントリ数」として同じ規則を適用する。
+  /// Assignment with an omitted image index **depends on how many images a file
+  /// actually has** — per QUASI88, a single multi-image file puts its second
+  /// image in drive 1 — so the counts are determined first and then handed to
+  /// `LaunchRequest.resolveMounts`. For a playlist the same rule applies with
+  /// the entry count standing in for the image count.
   private func resolveLaunchMounts(_ req: LaunchRequest)
     -> LaunchMountResolution {
     guard !req.disks.isEmpty else { return .success([]) }
@@ -180,9 +189,9 @@ extension EmulatorViewModel {
 
     let mounts = LaunchRequest.resolveMounts(req.disks) { parsed[req.disks[$0].path]?.count ?? 0 }
 
-    // 明示指定されたイメージ番号が実在するかを、適用前に全件チェック。
-    // 丸め込み禁止 (xm8 semantics) — `mountDiskImage` 側のクランプはあくまで
-    // 安全側のフォールバック。
+    // Check every explicitly given image index for existence before applying
+    // anything. No rounding into range (xm8 semantics); the clamp inside
+    // `mountDiskImage` is only a defensive fallback.
     var resolved: [ResolvedLaunchMount] = []
     for mount in mounts {
       let images = parsed[mount.path] ?? []
@@ -200,16 +209,18 @@ extension EmulatorViewModel {
     return .success(resolved)
   }
 
-  /// `.m3u` / `.m3u8` 指定の解決。プレイリストの**エントリ**を d88 の「面」と
-  /// 同じものとして扱う (イメージ番号 = エントリ番号, 1 始まり):
+  /// Resolves an `.m3u` / `.m3u8` specification, treating a playlist **entry**
+  /// as the same thing as a d88 image — the image index is the entry number,
+  /// 1-based:
   ///
-  /// - `p.m3u` → エントリ1 を drive 0、エントリ2 を drive 1 (2 件以上あれば)
-  /// - `p.m3u 3` → エントリ3 を drive 0、drive 1 は空
-  /// - `p.m3u 2 4` → エントリ2 を drive 0、エントリ4 を drive 1
+  /// - `p.m3u` → entry 1 in drive 0, entry 2 in drive 1 if there are two or more
+  /// - `p.m3u 3` → entry 3 in drive 0, drive 1 empty
+  /// - `p.m3u 2 4` → entry 2 in drive 0, entry 4 in drive 1
   ///
-  /// 各エントリは**独立したソースファイル**として、その 1 面目をマウントする
-  /// (GUI の `mountM3U` と同じ規則)。ディスク書き戻しがエントリ自身のファイルに
-  /// 向くようにするため、複数面をフラット化した共有イメージリストにはしない。
+  /// Each entry is mounted as an **independent source file**, using its first
+  /// image — the same rule as the GUI's `mountM3U`. The images are deliberately
+  /// not flattened into one shared list, so that disk write-back targets the
+  /// entry's own file.
   private func resolvePlaylistMounts(_ req: LaunchRequest)
     -> LaunchMountResolution {
     let playlistPath = req.disks[0].path
@@ -247,9 +258,9 @@ extension EmulatorViewModel {
     return .success(resolved)
   }
 
-  /// 1 ディスクの検証: 読める & D88 としてパースできる。
-  /// machine には触れない (validation のみ)。イメージ番号の範囲チェックは
-  /// 自動割り当ての解決後 (`resolveMounts` の出力) に呼び出し側で行う。
+  /// Validates one disk: that it can be read and parsed as D88. Validation only
+  /// — the machine is not touched. Range-checking the image index happens in the
+  /// caller, after automatic assignment is resolved by `resolveMounts`.
   private func validateLaunchDisk(_ url: URL) -> LaunchDiskValidationResult {
     guard let data = try? Data(contentsOf: url) else {
       return .failure(String(format: NSLocalizedString(
@@ -268,24 +279,25 @@ extension EmulatorViewModel {
   }
 }
 
-/// `validateLaunchDisk` の戻り値。エラーはユーザ表示用メッセージそのもの
-/// (Error 適合が不要な内部用途) なので `Result<_, Error>` ではなく専用列挙にする。
+/// Return type of `validateLaunchDisk`. The error case carries the
+/// user-facing message directly, and nothing here needs `Error` conformance, so
+/// this is a dedicated enum rather than `Result<_, Error>`.
 private enum LaunchDiskValidationResult {
   case success([D88Disk])
   case failure(String)
 }
 
-/// `resolveLaunchMounts` の戻り値。`LaunchDiskValidationResult` と同じく、
-/// エラーはユーザ表示用メッセージそのもの (`String` は `Error` 非適合なので
-/// `Result` は使えない)。
+/// Return type of `resolveLaunchMounts`. As with `LaunchDiskValidationResult`
+/// the error case is the user-facing message itself; `String` does not conform
+/// to `Error`, so `Result` is not an option.
 private enum LaunchMountResolution {
   case success([ResolvedLaunchMount])
   case failure(String)
 }
 
-/// 検証済みの 1 ドライブ分のマウント指示。d88 直接指定なら `url` はその d88、
-/// プレイリスト指定なら `url` は**エントリのファイル**を指す (プレイリスト
-/// 自身ではない) — 書き戻し先を実ファイルに向けるため。
+/// A validated mount instruction for one drive. For a direct d88 specification
+/// `url` is that d88; for a playlist it points at **the entry's file**, not the
+/// playlist itself, so that write-back targets the real file.
 private struct ResolvedLaunchMount {
   let drive: Int
   let url: URL

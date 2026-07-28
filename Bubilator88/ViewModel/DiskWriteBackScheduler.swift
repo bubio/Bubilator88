@@ -1,26 +1,27 @@
 import Foundation
 
-/// ディスクのライトスルー書き戻しを debounce 付きでスケジュールする。
+/// Schedules write-through disk write-back, with debouncing.
 ///
-/// `SubSystem.onDiskWritten` から `schedule(drive:)` が呼ばれると、デフォルト
-/// 100ms 後に writeBack 実体 (ViewModel 注入) が呼ばれる。100ms 経過前に再度
-/// `schedule` された場合はタイマがリセットされ、連続書込をまとめる。
+/// When `SubSystem.onDiskWritten` calls `schedule(drive:)`, the actual
+/// write-back — injected by the ViewModel — runs 100ms later by default. Another
+/// `schedule` within that window resets the timer, coalescing a burst of writes.
 ///
-/// **ハードリミットは設けない。** N88-BASIC の SAVE などは連続セクタ書込が
-/// 数十〜数百 ms 続くため、途中で flush すると不完全な FAT を永続化してしまう。
-/// 完全な状態が書き込まれるのは「書込が止まって 100ms 経過した時点」だけ。
-/// アプリ正常終了は `flushAll()` で別途保証する。
+/// **There is deliberately no hard limit.** An N88-BASIC SAVE writes sectors
+/// continuously for tens to hundreds of milliseconds, so flushing partway
+/// through would persist an incomplete FAT. The only moment a complete state
+/// exists is 100ms after writes have stopped. Orderly app termination is covered
+/// separately by `flushAll()`.
 ///
-/// eject / アプリ終了 / save state load 直前は `flushNow(drive:)` /
-/// `flushAll()` で同期書き戻しを強制する。
+/// Eject, app termination and loading a save state force a synchronous
+/// write-back through `flushNow(drive:)` / `flushAll()`.
 ///
-/// メインスレッドの `Timer` を使用する。`@MainActor` 強制により、誤って
-/// 他スレッドから呼ぶとコンパイル時に検出される。emulation thread からは
-/// `Task { @MainActor in ... }` 経由で呼び出すこと。
+/// Uses a main-thread `Timer`. `@MainActor` makes calling it from another
+/// thread a compile-time error; the emulation thread must go through
+/// `Task { @MainActor in ... }`.
 @MainActor
 final class DiskWriteBackScheduler {
 
-  /// drive 番号 → 実書込クロージャ。ViewModel から注入する。
+  /// Drive number to the closure that performs the write. Injected by the ViewModel.
   var writeBack: ((Int) -> Void)?
 
   private let debounceInterval: TimeInterval
@@ -31,13 +32,14 @@ final class DiskWriteBackScheduler {
     self.debounceInterval = debounceInterval
   }
 
-  /// ディスク書込発生をスケジュールする。既に予約済みなら debounce タイマを
-  /// 再起動 (連続書込中は永遠に延長される)。
+  /// Schedules a write-back for a disk write. If one is already pending the
+  /// debounce timer restarts, so a continuous stream of writes extends it
+  /// indefinitely.
   func schedule(drive: Int) {
     pending[drive]?.invalidate()
-    // Timer のクロージャは Swift Concurrency 的には nonisolated だが、
-    // メインスレッド RunLoop で実行されるので MainActor.assumeIsolated で
-    // ランタイム保証する。
+    // The Timer closure is nonisolated as far as Swift Concurrency is
+    // concerned, but it runs on the main-thread run loop, so
+    // MainActor.assumeIsolated makes that guarantee at runtime.
     let timer = Timer.scheduledTimer(withTimeInterval: debounceInterval, repeats: false) { [weak self] _ in
       MainActor.assumeIsolated {
         self?.fire(drive: drive)
@@ -46,20 +48,20 @@ final class DiskWriteBackScheduler {
     pending[drive] = timer
   }
 
-  /// 指定ドライブの予約中タイマを即発火する。タイマ未予約なら no-op。
+  /// Fires the pending timer for a drive immediately. A no-op if none is pending.
   func flushNow(drive: Int) {
     guard let timer = pending.removeValue(forKey: drive) else { return }
     timer.invalidate()
     writeBack?(drive)
   }
 
-  /// 全ドライブの予約中タイマを即発火する。
+  /// Fires the pending timers for every drive immediately.
   func flushAll() {
     let drives = Array(pending.keys)
     for d in drives { flushNow(drive: d) }
   }
 
-  /// 内部: タイマ満了による発火。
+  /// Internal: fired by timer expiry.
   private func fire(drive: Int) {
     pending.removeValue(forKey: drive)
     writeBack?(drive)
