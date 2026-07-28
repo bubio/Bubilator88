@@ -8,4 +8,4 @@
 # `git diff --ignore-all-space` against the parent is empty.
 
 # Reformat the whole tree to 2-space indentation (SwiftFormat).
-# (SHA appended after the reformat commit lands.)
+d53c60be8fcad39b03614e50437dea55a0031cbb
