@@ -240,7 +240,7 @@ struct AudioPane: View {
 
   private func startSpectrumTask() {
     spectrumTask?.cancel()
-    spectrumTask = Task { @MainActor in
+    spectrumTask = Task {
       while !Task.isCancelled {
         try? await Task.sleep(for: .milliseconds(33))
         guard !Task.isCancelled else { break }
@@ -253,7 +253,7 @@ struct AudioPane: View {
 
   private func startPolling() {
     pollTask?.cancel()
-    pollTask = Task { @MainActor in
+    pollTask = Task {
       while !Task.isCancelled {
         try? await Task.sleep(for: .milliseconds(100))
         guard !Task.isCancelled else { break }

@@ -33,8 +33,8 @@ struct RewindStripView: View {
       HStack(spacing: 8) {
         Image(systemName: "gobackward")
           .imageScale(.large)
-        Text(String(format: NSLocalizedString("−%.1fs",
-                                              comment: "Rewind elapsed-seconds label"),
+        Text(String(format: String(localized: "−%.1fs",
+                                   comment: "Rewind elapsed-seconds label"),
                     viewModel.rewindSecondsRewound))
           .monospacedDigit()
           .font(.system(.title3, design: .rounded).weight(.semibold))

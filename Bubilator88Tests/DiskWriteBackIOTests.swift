@@ -25,9 +25,9 @@ struct DiskWriteBackIOTests {
   }
 
   private func tempFile(_ name: String = "test.d88") -> URL {
-    URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-      .appendingPathComponent("DWBIO-\(UUID().uuidString)", isDirectory: true)
-      .appendingPathComponent(name)
+    URL(filePath: NSTemporaryDirectory(), directoryHint: .isDirectory)
+      .appending(component: "DWBIO-\(UUID().uuidString)", directoryHint: .isDirectory)
+      .appending(component: name)
   }
 
   // MARK: - Item 4: multi-bank splice
@@ -197,8 +197,8 @@ struct DiskWriteBackIOTests {
 
   @Test("writeBankToRecovery: ファイル名 / ドライブ番号 / タイムスタンプを含む URL に書き出す")
   func writeBankToRecoveryWritesFile() throws {
-    let recoveryDir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-      .appendingPathComponent("DWBIO-recovery-\(UUID().uuidString)", isDirectory: true)
+    let recoveryDir = URL(filePath: NSTemporaryDirectory(), directoryHint: .isDirectory)
+      .appending(component: "DWBIO-recovery-\(UUID().uuidString)", directoryHint: .isDirectory)
     defer { try? FileManager.default.removeItem(at: recoveryDir) }
 
     let bank = makeBank(size: 128, fill: 0x77)
@@ -222,8 +222,8 @@ struct DiskWriteBackIOTests {
 
   @Test("writeBankToRecovery: ファイル名内の / と : は _ に置換される")
   func writeBankToRecoverySanitizesFileName() throws {
-    let recoveryDir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-      .appendingPathComponent("DWBIO-recovery-\(UUID().uuidString)", isDirectory: true)
+    let recoveryDir = URL(filePath: NSTemporaryDirectory(), directoryHint: .isDirectory)
+      .appending(component: "DWBIO-recovery-\(UUID().uuidString)", directoryHint: .isDirectory)
     defer { try? FileManager.default.removeItem(at: recoveryDir) }
 
     let url = DiskWriteBackIO.writeBankToRecovery(

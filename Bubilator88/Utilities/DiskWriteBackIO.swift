@@ -83,7 +83,7 @@ enum DiskWriteBackIO {
       .replacingOccurrences(of: ":", with: "_")
     let stamp = ISO8601DateFormatter().string(from: timestamp)
       .replacingOccurrences(of: ":", with: "")
-    let url = recoveryDir.appendingPathComponent("\(sanitized)-drive\(drive)-\(stamp).d88")
+    let url = recoveryDir.appending(component: "\(sanitized)-drive\(drive)-\(stamp).d88")
     do {
       try Data(bankBytes).write(to: url, options: .atomic)
       return url
@@ -96,8 +96,8 @@ enum DiskWriteBackIO {
   /// `~/Library/Application Support/Bubilator88/ModifiedDisks/`.
   static var defaultRecoveryDirectory: URL {
     URL.applicationSupportDirectory
-      .appendingPathComponent("Bubilator88", isDirectory: true)
-      .appendingPathComponent("ModifiedDisks", isDirectory: true)
+      .appending(component: "Bubilator88", directoryHint: .isDirectory)
+      .appending(component: "ModifiedDisks", directoryHint: .isDirectory)
   }
 
   private static func readUInt32LE(_ data: Data, offset: Int) -> UInt32 {

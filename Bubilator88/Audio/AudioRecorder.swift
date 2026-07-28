@@ -186,7 +186,7 @@ final class AudioRecorder {
     let fmt = DateFormatter.stable(pattern: "yyyy-MM-dd-HHmmss")
     let sanitized = Self.sanitize(baseName)
     let fileName = "\(sanitized)-\(fmt.string(from: Date())).\(format.fileExtension)"
-    let url = baseDirectory.appendingPathComponent(fileName)
+    let url = baseDirectory.appending(component: fileName)
 
     let settings = format.settings(channels: channels, layoutData: layoutData)
     let newFile = try AVAudioFile(forWriting: url,

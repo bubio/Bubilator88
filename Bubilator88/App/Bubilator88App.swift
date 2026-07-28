@@ -715,7 +715,7 @@ struct DebugCommands: Commands {
   private static func openBIOSROMFolder() {
     let appSupport = FileManager.default.urls(
       for: .applicationSupportDirectory, in: .userDomainMask
-    ).first!.appendingPathComponent("Bubilator88", isDirectory: true)
+    ).first!.appending(component: "Bubilator88", directoryHint: .isDirectory)
     try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
     NSWorkspace.shared.open(appSupport)
   }

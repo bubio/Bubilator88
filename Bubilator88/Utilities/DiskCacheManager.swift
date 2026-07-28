@@ -73,8 +73,8 @@ nonisolated struct DiskCacheManager {
 
   static var defaultRoot: URL {
     URL.applicationSupportDirectory
-      .appendingPathComponent("Bubilator88", isDirectory: true)
-      .appendingPathComponent("disks", isDirectory: true)
+      .appending(component: "Bubilator88", directoryHint: .isDirectory)
+      .appending(component: "disks", directoryHint: .isDirectory)
   }
 
   // MARK: - Public API
@@ -108,7 +108,7 @@ nonisolated struct DiskCacheManager {
     for entry in entries {
       let name = Self.sanitizedFileName(entry.filename)
       writtenNames.append(name)
-      let url = dir.appendingPathComponent(name)
+      let url = dir.appending(component: name)
       if FileManager.default.fileExists(atPath: url.path) { continue }
       do {
         try entry.data.write(to: url, options: .atomic)
@@ -145,7 +145,7 @@ nonisolated struct DiskCacheManager {
   /// Returns the URL of a given entry inside an existing cache directory.
   func cachedEntryURL(in cacheDir: URL, entryName: String) -> URL? {
     let normalized = Self.sanitizedFileName(entryName)
-    let url = cacheDir.appendingPathComponent(normalized)
+    let url = cacheDir.appending(component: normalized)
     return FileManager.default.fileExists(atPath: url.path) ? url : nil
   }
 
@@ -163,7 +163,7 @@ nonisolated struct DiskCacheManager {
 
   /// Computes the cache directory URL without creating it.
   func cacheDirectoryURL(for archiveData: Data) -> URL {
-    root.appendingPathComponent(Self.computeHash(archiveData), isDirectory: true)
+    root.appending(component: Self.computeHash(archiveData), directoryHint: .isDirectory)
   }
 
   /// Information about a single disk file held in the cache.
@@ -198,7 +198,7 @@ nonisolated struct DiskCacheManager {
       guard Self.isCacheDirectoryName(cacheDir.lastPathComponent) else { continue }
 
       let originalPath: String? = {
-        let metaURL = cacheDir.appendingPathComponent("source.json")
+        let metaURL = cacheDir.appending(component: "source.json")
         guard let data = try? Data(contentsOf: metaURL),
               let meta = try? Self.decoder.decode(SourceMeta.self, from: data)
         else { return nil }
@@ -256,7 +256,7 @@ nonisolated struct DiskCacheManager {
   /// `foo.d88` is taken it tries `foo-2.d88`, `foo-3.d88`, and so on.
   static func uniqueDestinationURL(in directory: URL, baseName: String) -> URL {
     let fm = FileManager.default
-    let url = directory.appendingPathComponent(baseName)
+    let url = directory.appending(component: baseName)
     if !fm.fileExists(atPath: url.path) { return url }
 
     let ext = (baseName as NSString).pathExtension
@@ -264,8 +264,8 @@ nonisolated struct DiskCacheManager {
     var n = 2
     while true {
       let candidate = ext.isEmpty
-        ? directory.appendingPathComponent("\(stem)-\(n)")
-        : directory.appendingPathComponent("\(stem)-\(n).\(ext)")
+        ? directory.appending(component: "\(stem)-\(n)")
+        : directory.appending(component: "\(stem)-\(n).\(ext)")
       if !fm.fileExists(atPath: candidate.path) { return candidate }
       n += 1
     }
@@ -296,7 +296,7 @@ nonisolated struct DiskCacheManager {
   }
 
   private func writeSourceMeta(_ meta: SourceMeta, to dir: URL) throws {
-    let url = dir.appendingPathComponent("source.json")
+    let url = dir.appending(component: "source.json")
     let data = try Self.encoder.encode(meta)
     try data.write(to: url, options: .atomic)
   }

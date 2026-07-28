@@ -345,33 +345,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   private func makeQuitAlert() -> NSAlert {
     let alert = NSAlert()
-    alert.messageText = NSLocalizedString(
-      "Quit Bubilator88?",
+    alert.messageText = String(
+      localized:       "Quit Bubilator88?",
       comment: "Confirmation dialog shown when Cmd+Q is pressed"
     )
-    alert.informativeText = NSLocalizedString(
-      "Unsaved emulator state will be lost.",
+    alert.informativeText = String(
+      localized:       "Unsaved emulator state will be lost.",
       comment: "Cmd+Q confirmation body"
     )
     alert.alertStyle = .warning
-    alert.addButton(withTitle: NSLocalizedString("Quit", comment: "Quit button"))
-    alert.addButton(withTitle: NSLocalizedString("Cancel", comment: "Cancel button"))
+    alert.addButton(withTitle: String(localized: "Quit", comment: "Quit button"))
+    alert.addButton(withTitle: String(localized: "Cancel", comment: "Cancel button"))
     return alert
   }
 
   private func makeCloseAlert() -> NSAlert {
     let alert = NSAlert()
-    alert.messageText = NSLocalizedString(
-      "Close the emulator window?",
+    alert.messageText = String(
+      localized:       "Close the emulator window?",
       comment: "Confirmation dialog shown when Cmd+W is pressed on the main window"
     )
-    alert.informativeText = NSLocalizedString(
-      "Unsaved emulator state will be lost.",
+    alert.informativeText = String(
+      localized:       "Unsaved emulator state will be lost.",
       comment: "Cmd+W confirmation body"
     )
     alert.alertStyle = .warning
-    alert.addButton(withTitle: NSLocalizedString("Close", comment: "Close button"))
-    alert.addButton(withTitle: NSLocalizedString("Cancel", comment: "Cancel button"))
+    alert.addButton(withTitle: String(localized: "Close", comment: "Close button"))
+    alert.addButton(withTitle: String(localized: "Cancel", comment: "Cancel button"))
     return alert
   }
 }

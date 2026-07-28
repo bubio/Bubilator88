@@ -48,10 +48,10 @@ extension EmulatorViewModel {
   /// else `~/Music`.
   private var defaultRecordingDirectory: URL {
     if let custom = Settings.shared.recordingDirectory {
-      return URL(fileURLWithPath: custom, isDirectory: true)
+      return URL(filePath: custom, directoryHint: .isDirectory)
     }
     return FileManager.default.urls(for: .musicDirectory, in: .userDomainMask).first
-      ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Music")
+      ?? FileManager.default.homeDirectoryForCurrentUser.appending(component: "Music")
   }
 
   /// Toggle recording: start if stopped, stop if running.
@@ -81,14 +81,14 @@ extension EmulatorViewModel {
     guard !isRecording else { return }
     // Mutually exclusive with video recording.
     guard !videoRecorder.isRecording else {
-      showToast(NSLocalizedString("Stop video recording first",
-                                  comment: "Mutual exclusion toast"))
+      showToast(String(localized: "Stop video recording first",
+                       comment: "Mutual exclusion toast"))
       return
     }
     // Audio capture runs at wall-clock; non-x1 CPU speeds desync the result.
     guard cpuSpeed == .x1 else {
-      showToast(NSLocalizedString("Set CPU Speed to x1 before recording",
-                                  comment: "x1 lock toast"))
+      showToast(String(localized: "Set CPU Speed to x1 before recording",
+                       comment: "x1 lock toast"))
       return
     }
     let fmtRaw = Settings.shared.recordingFormat
@@ -107,9 +107,9 @@ extension EmulatorViewModel {
       panel.canChooseDirectories = true
       panel.canChooseFiles = false
       panel.canCreateDirectories = true
-      panel.prompt = NSLocalizedString("Choose", comment: "Choose folder prompt")
-      panel.message = NSLocalizedString("Choose a folder to save the recording",
-                                        comment: "Save recording message")
+      panel.prompt = String(localized: "Choose", comment: "Choose folder prompt")
+      panel.message = String(localized: "Choose a folder to save the recording",
+                             comment: "Save recording message")
       panel.directoryURL = defaultRecordingDirectory
       guard panel.runModal() == .OK, let chosen = panel.url else { return }
       baseDir = chosen
@@ -130,11 +130,11 @@ extension EmulatorViewModel {
                               format: format,
                               separation: effectiveSeparation,
                               baseName: recordingBaseName)
-      showToast(String(format: NSLocalizedString("Recording to %@",
-                                                 comment: "Recording started toast"),
+      showToast(String(format: String(localized: "Recording to %@",
+                                      comment: "Recording started toast"),
                        audioRecorder.lastOutputURL?.lastPathComponent ?? ""))
     } catch {
-      showToast(NSLocalizedString("Recording failed", comment: "Recording error toast"))
+      showToast(String(localized: "Recording failed", comment: "Recording error toast"))
       if needsImmersive {
         let restore = Settings.shared.immersiveAudio
         emuQueue.async { [weak self] in
@@ -156,6 +156,6 @@ extension EmulatorViewModel {
     if let url {
       NSWorkspace.shared.activateFileViewerSelecting([url])
     }
-    showToast(NSLocalizedString("Recording stopped", comment: "Recording stopped toast"))
+    showToast(String(localized: "Recording stopped", comment: "Recording stopped toast"))
   }
 }

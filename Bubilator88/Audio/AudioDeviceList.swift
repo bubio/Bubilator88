@@ -10,7 +10,7 @@ struct AudioDeviceInfo: Identifiable, Equatable {
     AudioDeviceInfo(
       deviceID: AudioDeviceID(kAudioObjectUnknown),
       uid: "",
-      name: NSLocalizedString("System Default", comment: "FDD output device picker — follow system audio output")
+      name: String(localized: "System Default", comment: "FDD output device picker — follow system audio output")
     )
   }
 }

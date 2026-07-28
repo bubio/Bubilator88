@@ -337,10 +337,10 @@ struct ContentView: View {
           .symbolRenderingMode(.hierarchical)
           .foregroundStyle(Color.accentColor)
           .font(.system(size: 18))
-          .help(NSLocalizedString("Mouse captured — press Control+Esc to release",
-                                  comment: "Status bar mouse capture indicator tooltip"))
-          .accessibilityLabel(Text(NSLocalizedString("Mouse captured",
-                                                     comment: "Status bar mouse capture indicator accessibility label")))
+          .help(String(localized: "Mouse captured — press Control+Esc to release",
+                       comment: "Status bar mouse capture indicator tooltip"))
+          .accessibilityLabel(Text(String(localized: "Mouse captured",
+                                          comment: "Status bar mouse capture indicator accessibility label")))
       }
 
       // Script playback indicator (shown only while a timeline script is playing)
@@ -355,8 +355,8 @@ struct ContentView: View {
             .font(.system(size: 20))
         }
         .buttonStyle(.plain)
-        .help(NSLocalizedString("Stop script playback",
-                                comment: "Status bar script playback button tooltip"))
+        .help(String(localized: "Stop script playback",
+                     comment: "Status bar script playback button tooltip"))
       }
 
       // Operation-recording indicator (distinct from the red A/V record
@@ -371,8 +371,8 @@ struct ContentView: View {
             .font(.system(size: 20))
         }
         .buttonStyle(.plain)
-        .help(NSLocalizedString("Stop recording and save script",
-                                comment: "Status bar operation-recording button tooltip"))
+        .help(String(localized: "Stop recording and save script",
+                     comment: "Status bar operation-recording button tooltip"))
       }
 
       // Recording indicator (shown only while recording)
@@ -386,8 +386,8 @@ struct ContentView: View {
             .font(.system(size: 20))
         }
         .buttonStyle(.plain)
-        .help(NSLocalizedString("Stop audio recording",
-                                comment: "Status bar record button tooltip"))
+        .help(String(localized: "Stop audio recording",
+                     comment: "Status bar record button tooltip"))
       }
 
       if viewModel.videoRecorder.isRecording {
@@ -400,8 +400,8 @@ struct ContentView: View {
             .font(.system(size: 20))
         }
         .buttonStyle(.plain)
-        .help(NSLocalizedString("Stop video recording (CPU locked at 1×)",
-                                comment: "Status bar video record button tooltip"))
+        .help(String(localized: "Stop video recording (CPU locked at 1×)",
+                     comment: "Status bar video record button tooltip"))
       }
 
       // Volume slider (right-aligned, before translation icon)
@@ -419,8 +419,8 @@ struct ContentView: View {
         Image(systemName: "speaker.wave.3.fill")
           .foregroundStyle(.secondary)
       }
-      .help(String(format: NSLocalizedString("Volume: %lld%%",
-                                             comment: "Volume slider tooltip"),
+      .help(String(format: String(localized: "Volume: %lld%%",
+                                  comment: "Volume slider tooltip"),
                    viewModel.volumePercent))
 
       Button {

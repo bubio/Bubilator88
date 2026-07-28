@@ -171,7 +171,7 @@ enum ArchiveExtractor {
   private static func extractWithBsdtar(_ data: Data) -> [ArchiveEntry] {
     return extractToTempDir(data) { archivePath, extractDir in
       let process = Process()
-      process.executableURL = URL(fileURLWithPath: "/usr/bin/bsdtar")
+      process.executableURL = URL(filePath: "/usr/bin/bsdtar")
       process.arguments = ["xf", archivePath, "-C", extractDir,
                            "--options", "hdrcharset=CP932"]
       process.standardOutput = Pipe()
@@ -188,7 +188,7 @@ enum ArchiveExtractor {
     if let unarPath = findExecutable("unar") {
       let results = extractToTempDir(data, createExtractDir: false) { archivePath, extractDir in
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: unarPath)
+        process.executableURL = URL(filePath: unarPath)
         process.arguments = ["-no-directory", "-o", extractDir, archivePath]
         process.standardOutput = Pipe()
         process.standardError = Pipe()
@@ -202,7 +202,7 @@ enum ArchiveExtractor {
     if let unrarPath = findExecutable("unrar") {
       let results = extractToTempDir(data, createExtractDir: false) { archivePath, extractDir in
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: unrarPath)
+        process.executableURL = URL(filePath: unrarPath)
         process.arguments = ["x", "-o+", "-y", archivePath, extractDir + "/"]
         process.standardOutput = Pipe()
         process.standardError = Pipe()
@@ -216,7 +216,7 @@ enum ArchiveExtractor {
     if let sevenZPath = findExecutable("7zz") ?? findExecutable("7z") {
       let results = extractToTempDir(data) { archivePath, extractDir in
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: sevenZPath)
+        process.executableURL = URL(filePath: sevenZPath)
         process.arguments = ["x", "-y", "-o" + extractDir, archivePath]
         process.standardOutput = Pipe()
         process.standardError = Pipe()
@@ -235,16 +235,16 @@ enum ArchiveExtractor {
                                        createExtractDir: Bool = true,
                                        extractor: (String, String) throws -> Void) -> [ArchiveEntry] {
     let tempDir = FileManager.default.temporaryDirectory
-      .appendingPathComponent("Bubilator88_\(UUID().uuidString)")
-    let archivePath = tempDir.appendingPathComponent("archive").path
-    let extractDir = tempDir.appendingPathComponent("out")
+      .appending(component: "Bubilator88_\(UUID().uuidString)")
+    let archivePath = tempDir.appending(component: "archive").path
+    let extractDir = tempDir.appending(component: "out")
 
     do {
       try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
       if createExtractDir {
         try FileManager.default.createDirectory(at: extractDir, withIntermediateDirectories: true)
       }
-      try data.write(to: URL(fileURLWithPath: archivePath))
+      try data.write(to: URL(filePath: archivePath))
     } catch {
       return []
     }

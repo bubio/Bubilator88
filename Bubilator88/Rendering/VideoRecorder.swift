@@ -111,7 +111,7 @@ final class VideoRecorder {
     let fmt = DateFormatter.stable(pattern: "yyyy-MM-dd-HHmmss")
     let sanitized = Self.sanitize(baseName)
     let fileName = "\(sanitized)-\(fmt.string(from: Date())).\(format.fileExtension)"
-    let url = baseDirectory.appendingPathComponent(fileName)
+    let url = baseDirectory.appending(component: fileName)
     if FileManager.default.fileExists(atPath: url.path) {
       try? FileManager.default.removeItem(at: url)
     }
@@ -205,7 +205,7 @@ final class VideoRecorder {
   func stop(completion: (@MainActor () -> Void)? = nil) {
     guard isRecording else {
       if let completion {
-        Task { @MainActor in completion() }
+        Task { completion() }
       }
       return
     }
@@ -221,13 +221,13 @@ final class VideoRecorder {
       pixelAdaptor = nil
       guard let w else {
         if let completion {
-          DispatchQueue.main.async { Task { @MainActor in completion() } }
+          DispatchQueue.main.async { Task { completion() } }
         }
         return
       }
       w.finishWriting {
         if let completion {
-          DispatchQueue.main.async { Task { @MainActor in completion() } }
+          DispatchQueue.main.async { Task { completion() } }
         }
       }
     }

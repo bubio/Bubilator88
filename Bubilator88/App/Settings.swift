@@ -563,7 +563,7 @@ enum KeyboardLayout: String, CaseIterable, Identifiable {
 
   var displayName: String {
     switch self {
-    case .auto: return NSLocalizedString("Auto-detect", comment: "Keyboard layout auto-detection")
+    case .auto: return String(localized: "Auto-detect", comment: "Keyboard layout auto-detection")
     case .jis: return "JIS"
     case .us: return "US (ANSI)"
     }
@@ -658,7 +658,7 @@ struct RecentDiskEntry: Codable, Identifiable, Hashable {
                           bookmarkDataIsStale: &stale) {
       return url
     }
-    let fallback = URL(fileURLWithPath: filePath)
+    let fallback = URL(filePath: filePath)
     return FileManager.default.fileExists(atPath: fallback.path) ? fallback : nil
   }
 }

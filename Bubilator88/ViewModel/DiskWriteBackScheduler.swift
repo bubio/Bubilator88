@@ -17,7 +17,7 @@ import Foundation
 ///
 /// Uses a main-thread `Timer`. `@MainActor` makes calling it from another
 /// thread a compile-time error; the emulation thread must go through
-/// `Task { @MainActor in ... }`.
+/// `Task { ... }`.
 @MainActor
 final class DiskWriteBackScheduler {
 

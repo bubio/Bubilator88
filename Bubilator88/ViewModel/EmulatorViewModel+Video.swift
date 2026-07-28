@@ -10,10 +10,10 @@ extension EmulatorViewModel {
 
   private var defaultVideoDirectory: URL {
     if let custom = Settings.shared.videoRecordingDirectory {
-      return URL(fileURLWithPath: custom, isDirectory: true)
+      return URL(filePath: custom, directoryHint: .isDirectory)
     }
     return FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first
-      ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Movies")
+      ?? FileManager.default.homeDirectoryForCurrentUser.appending(component: "Movies")
   }
 
   private var videoRecordingBaseName: String {
@@ -38,8 +38,8 @@ extension EmulatorViewModel {
     guard !isVideoRecording else { return }
     // Mutually exclusive with audio recording.
     guard !audioRecorder.isRecording else {
-      showToast(NSLocalizedString("Stop audio recording first",
-                                  comment: "Mutual exclusion toast"))
+      showToast(String(localized: "Stop audio recording first",
+                       comment: "Mutual exclusion toast"))
       return
     }
 
@@ -54,9 +54,9 @@ extension EmulatorViewModel {
       panel.canChooseDirectories = true
       panel.canChooseFiles = false
       panel.canCreateDirectories = true
-      panel.prompt = NSLocalizedString("Choose", comment: "Choose folder prompt")
-      panel.message = NSLocalizedString("Choose a folder to save the video",
-                                        comment: "Save video message")
+      panel.prompt = String(localized: "Choose", comment: "Choose folder prompt")
+      panel.message = String(localized: "Choose a folder to save the video",
+                             comment: "Save video message")
       panel.directoryURL = defaultVideoDirectory
       guard panel.runModal() == .OK, let chosen = panel.url else { return }
       baseDir = chosen
@@ -66,12 +66,12 @@ extension EmulatorViewModel {
       try videoRecorder.start(baseDirectory: baseDir,
                               format: format,
                               baseName: videoRecordingBaseName)
-      showToast(String(format: NSLocalizedString("Recording video to %@",
-                                                 comment: "Video recording started toast"),
+      showToast(String(format: String(localized: "Recording video to %@",
+                                      comment: "Video recording started toast"),
                        videoRecorder.lastOutputURL?.lastPathComponent ?? ""))
     } catch {
-      showToast(NSLocalizedString("Video recording failed",
-                                  comment: "Video recording error toast"))
+      showToast(String(localized: "Video recording failed",
+                       comment: "Video recording error toast"))
     }
   }
 
@@ -86,7 +86,7 @@ extension EmulatorViewModel {
         NSWorkspace.shared.activateFileViewerSelecting([url])
       }
     }
-    showToast(NSLocalizedString("Video recording stopped",
-                                comment: "Video recording stopped toast"))
+    showToast(String(localized: "Video recording stopped",
+                     comment: "Video recording stopped toast"))
   }
 }

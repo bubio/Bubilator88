@@ -18,8 +18,8 @@ extension EmulatorViewModel {
     do {
       requestLaunch(request: try LaunchRequest.parse(url))
     } catch {
-      showAlert(title: NSLocalizedString("Launch URL Error",
-                                         comment: "Alert title: a bubilator88:// URL could not be parsed"),
+      showAlert(title: String(localized: "Launch URL Error",
+                              comment: "Alert title: a bubilator88:// URL could not be parsed"),
                 message: "\(url.absoluteString): \(error.localizedDescription)")
     }
   }
@@ -34,8 +34,8 @@ extension EmulatorViewModel {
       guard let request = try LaunchRequest.fromCommandLine() else { return }
       requestLaunch(request: request)
     } catch {
-      showAlert(title: NSLocalizedString("Launch Argument Error",
-                                         comment: "Alert title: the command-line arguments could not be parsed"),
+      showAlert(title: String(localized: "Launch Argument Error",
+                              comment: "Alert title: the command-line arguments could not be parsed"),
                 message: error.localizedDescription)
     }
   }
@@ -70,8 +70,8 @@ extension EmulatorViewModel {
     let resolved: [ResolvedLaunchMount]
     switch resolveLaunchMounts(req) {
     case .failure(let message):
-      showAlert(title: NSLocalizedString("Cannot Load Disk",
-                                         comment: "Alert title: a disk named in the launch arguments could not be mounted"),
+      showAlert(title: String(localized: "Cannot Load Disk",
+                              comment: "Alert title: a disk named in the launch arguments could not be mounted"),
                 message: message)
       return
     case .success(let mounts):
@@ -160,7 +160,7 @@ extension EmulatorViewModel {
     NSApp.activate(ignoringOtherApps: true)
     metalView?.window?.makeKeyAndOrderFront(nil)
     start()
-    showToast("\(NSLocalizedString("Launched", comment: "Toast shown after a URL/command-line launch; followed by the drive 0 disk name")): \(drive0Name)")
+    showToast("\(String(localized: "Launched", comment: "Toast shown after a URL/command-line launch; followed by the drive 0 disk name")): \(drive0Name)")
   }
 
   /// Resolves a launch request down to which image of which file goes in which
@@ -181,7 +181,7 @@ extension EmulatorViewModel {
 
     var parsed: [String: [D88Disk]] = [:]
     for spec in req.disks where parsed[spec.path] == nil {
-      switch validateLaunchDisk(URL(fileURLWithPath: spec.path)) {
+      switch validateLaunchDisk(URL(filePath: spec.path)) {
       case .failure(let message): return .failure(message)
       case .success(let disks): parsed[spec.path] = disks
       }
@@ -196,13 +196,13 @@ extension EmulatorViewModel {
     for mount in mounts {
       let images = parsed[mount.path] ?? []
       guard mount.imageIndex < images.count else {
-        return .failure(String(format: NSLocalizedString(
-            "\"%1$@\" has no image %2$ld (it contains %3$ld image(s)).",
+        return .failure(String(format: String(
+            localized:             "\"%1$@\" has no image %2$ld (it contains %3$ld image(s)).",
             comment: "Error: the image number given in the launch arguments is past the end of the D88 file. %1 file path, %2 requested 1-based image number, %3 number of images in the file"),
           mount.path, mount.imageIndex + 1, images.count))
       }
       resolved.append(ResolvedLaunchMount(drive: mount.drive,
-                                          url: URL(fileURLWithPath: mount.path),
+                                          url: URL(filePath: mount.path),
                                           images: images,
                                           imageIndex: mount.imageIndex))
     }
@@ -224,16 +224,16 @@ extension EmulatorViewModel {
   private func resolvePlaylistMounts(_ req: LaunchRequest)
     -> LaunchMountResolution {
     let playlistPath = req.disks[0].path
-    let playlistURL = URL(fileURLWithPath: playlistPath)
+    let playlistURL = URL(filePath: playlistPath)
     guard let entries = M3UPlaylist.entryURLs(contentsOf: playlistURL) else {
-      return .failure(String(format: NSLocalizedString(
-          "Cannot read \"%@\". The file does not exist or is not accessible.",
+      return .failure(String(format: String(
+          localized:           "Cannot read \"%@\". The file does not exist or is not accessible.",
           comment: "Error: a file named in the launch arguments could not be read. %@ is the file path"),
         playlistPath))
     }
     guard !entries.isEmpty else {
-      return .failure(String(format: NSLocalizedString(
-          "\"%@\" contains no disk image entries.",
+      return .failure(String(format: String(
+          localized:           "\"%@\" contains no disk image entries.",
           comment: "Error: an m3u/m3u8 playlist has only blank or comment lines. %@ is the playlist path"),
         playlistPath))
     }
@@ -242,8 +242,8 @@ extension EmulatorViewModel {
     var resolved: [ResolvedLaunchMount] = []
     for mount in mounts {
       guard mount.imageIndex < entries.count else {
-        return .failure(String(format: NSLocalizedString(
-            "\"%1$@\" has no entry %2$ld (it contains %3$ld entries).",
+        return .failure(String(format: String(
+            localized:             "\"%1$@\" has no entry %2$ld (it contains %3$ld entries).",
             comment: "Error: the entry number given in the launch arguments is past the end of the playlist. %1 playlist path, %2 requested 1-based entry number, %3 number of entries"),
           playlistPath, mount.imageIndex + 1, entries.count))
       }
@@ -263,15 +263,15 @@ extension EmulatorViewModel {
   /// caller, after automatic assignment is resolved by `resolveMounts`.
   private func validateLaunchDisk(_ url: URL) -> LaunchDiskValidationResult {
     guard let data = try? Data(contentsOf: url) else {
-      return .failure(String(format: NSLocalizedString(
-          "Cannot read \"%@\". The file does not exist or is not accessible.",
+      return .failure(String(format: String(
+          localized:           "Cannot read \"%@\". The file does not exist or is not accessible.",
           comment: "Error: a file named in the launch arguments could not be read. %@ is the file path"),
         url.path))
     }
     let disks = D88Disk.parseAll(data: Array(data))
     guard !disks.isEmpty else {
-      return .failure(String(format: NSLocalizedString(
-          "\"%@\" is not a valid D88 disk image.",
+      return .failure(String(format: String(
+          localized:           "\"%@\" is not a valid D88 disk image.",
           comment: "Error: a file named in the launch arguments is readable but is not a D88 image. %@ is the file path"),
         url.path))
     }
