@@ -26,14 +26,14 @@ struct BreakpointPane: View {
         }
         .labelsHidden()
         .frame(width: 110)
-        .help("監視対象。Main/Sub PC = アドレスでの命令フェッチ、Mem R/W = バスアクセス、IO R/W = ポートアクセス。")
+        .help("What to watch. Main/Sub PC = an instruction fetch at the address, Mem R/W = a bus access, IO R/W = a port access.")
 
         TextField("addr (hex)", text: $session.newBPAddressText)
           .textFieldStyle(.roundedBorder)
           .font(.system(.body, design: .monospaced))
           .frame(width: 80)
           .onSubmit { session.addNewBreakpoint() }
-          .help("ブレークポイントのアドレス (16進数)。IOポートは下位1バイトのみ有効。")
+          .help("Breakpoint address, in hex. Only the low byte is significant for IO ports.")
 
         if session.newBPKind == .memW || session.newBPKind == .ioW {
           Text("==")
@@ -43,12 +43,12 @@ struct BreakpointPane: View {
             .font(.system(.body, design: .monospaced))
             .frame(width: 50)
             .onSubmit { session.addNewBreakpoint() }
-            .help("バイト一致フィルタ (省略可)。設定時は書き込み値が一致した場合のみ発火。空欄で任意の書き込みに反応。")
+            .help("Optional byte filter. When set, the breakpoint only fires if the written value matches; leave it empty to fire on any write.")
         }
 
         Button("Add") { session.addNewBreakpoint() }
           .disabled(session.newBPAddressText.isEmpty)
-          .help("現在のパラメータでブレークポイントを追加")
+          .help("Add a breakpoint with the current settings")
 
         Spacer()
 
@@ -60,7 +60,7 @@ struct BreakpointPane: View {
           Image(systemName: "trash")
         }
         .disabled(session.debugger.breakpoints.isEmpty)
-        .help("すべてのブレークポイントを削除")
+        .help("Delete every breakpoint")
       }
     }
     .padding(8)
@@ -98,7 +98,7 @@ struct BreakpointPane: View {
     }
     .buttonStyle(.plain)
     .disabled(session.debugger.breakpoints.isEmpty)
-    .help("すべてのブレークポイントを一括で有効/無効切替。")
+    .help("Enable or disable every breakpoint at once.")
   }
 
   @ViewBuilder
@@ -110,17 +110,17 @@ struct BreakpointPane: View {
       ))
       .labelsHidden()
       .toggleStyle(.checkbox)
-      .help("有効/無効を切り替え (削除しない)")
+      .help("Enable or disable this breakpoint without deleting it")
 
       Text(bp.kind.displayName)
         .font(.system(.body, design: .monospaced))
-        .help("ブレークポイントの対象。このアクセスが発生した時点でエミュレータが停止する。")
+        .help("What this breakpoint watches. The emulator stops the moment such an access happens.")
 
       if let filter = bp.valueFilter {
         Text(String(format: "== %02X", filter))
           .font(.system(.body, design: .monospaced))
           .foregroundStyle(.orange)
-          .help("書き込み値がこのバイトと一致した場合のみ発火")
+          .help("Fires only when the written value matches this byte")
       }
 
       Spacer()
@@ -131,7 +131,7 @@ struct BreakpointPane: View {
         Image(systemName: "minus.circle")
       }
       .buttonStyle(.borderless)
-      .help("このブレークポイントを削除")
+      .help("Delete this breakpoint")
     }
   }
 }

@@ -629,34 +629,34 @@ struct DebugCommands: Commands {
 
       Divider()
 
-      Button("スクリプトを再生…") {
+      Button("Play Script…") {
         viewModel.openAndPlayScript()
       }
       .disabled(viewModel.isRecordingScript)
       if viewModel.isPlayingScript {
-        Button("スクリプト再生を停止") {
+        Button("Stop Script Playback") {
           viewModel.cancelScriptPlayback()
         }
       }
 
       if !viewModel.isRecordingScript {
-        Button("スクリプトを記録…") {
+        Button("Record Script…") {
           viewModel.startScriptRecording()
         }
         .disabled(viewModel.isPlayingScript)
       } else {
-        Button("記録を停止して保存…") {
+        Button("Stop Recording and Save…") {
           viewModel.stopScriptRecordingAndSave()
         }
       }
 
       Divider()
 
-      Button("BIOS ROM フォルダを開く") {
+      Button("Open BIOS ROM Folder") {
         Self.openBIOSROMFolder()
       }
 
-      Button("設定をリセット") {
+      Button("Reset Settings") {
         Self.resetSettings()
       }
 
@@ -724,11 +724,19 @@ struct DebugCommands: Commands {
   /// alert. Some settings only take effect after a restart, which the alert says.
   private static func resetSettings() {
     let alert = NSAlert()
-    alert.messageText = "設定をリセットしますか？"
-    alert.informativeText = "すべてのユーザ設定が初期値に戻ります。この操作は取り消せません。変更を完全に反映するにはアプリの再起動が必要です。"
+    alert.messageText = String(
+      localized: "Reset all settings?",
+      comment: "Confirmation alert title for the DEBUG menu's Reset Settings")
+    alert.informativeText = String(
+      localized: """
+      Every user preference returns to its default. This cannot be undone, and \
+      the app must be restarted for all of the changes to take effect.
+      """,
+      comment: "Confirmation alert body for the DEBUG menu's Reset Settings")
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "リセット")
-    alert.addButton(withTitle: "キャンセル")
+    alert.addButton(
+      withTitle: String(localized: "Reset", comment: "Confirm button for Reset Settings"))
+    alert.addButton(withTitle: String(localized: "Cancel", comment: "Cancel button"))
     guard alert.runModal() == .alertFirstButtonReturn else { return }
 
     if let bundleID = Bundle.main.bundleIdentifier {

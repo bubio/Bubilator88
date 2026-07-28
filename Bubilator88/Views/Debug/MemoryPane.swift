@@ -44,10 +44,10 @@ struct MemoryPane: View {
         .frame(width: 80)
         .font(.system(.body, design: .monospaced))
         .onSubmit(applyAddress)
-        .help("表示する16ビットアドレス (16進数)。1234/0x1234/1234H 形式に対応。")
+        .help("16-bit address to display, in hex. Accepts 1234, 0x1234 and 1234H.")
 
       Button("Go", action: applyAddress)
-        .help("入力アドレスにジャンプ")
+        .help("Jump to the entered address")
 
       Spacer()
 
@@ -58,7 +58,7 @@ struct MemoryPane: View {
         step: 4
       )
       .frame(width: 160)
-      .help("表示する16バイト行数")
+      .help("Number of 16-byte rows to show")
     }
     .padding(8)
   }
@@ -96,12 +96,12 @@ struct MemoryPane: View {
     HStack(spacing: 12) {
       Text(String(format: "%04X", row.id))
         .foregroundStyle(.secondary)
-        .help("行の先頭アドレス")
+        .help("Address at the start of the row")
       Text(row.hex)
-        .help("このアドレスからの16バイト (メインZ80バス経由)")
+        .help("16 bytes from this address, read through the main Z80 bus")
       Text(row.ascii)
         .foregroundStyle(.secondary)
-        .help("ASCIIプレビュー (非表示文字は '.')")
+        .help("ASCII preview; unprintable bytes show as '.'")
     }
     .font(.system(.body, design: .monospaced))
     .padding(.horizontal, 8)

@@ -92,13 +92,13 @@ struct TextVRAMPane: View {
         Text("\(session.textVRAMCols)×\(session.textVRAMRows)")
           .foregroundStyle(.secondary)
           .font(.caption.monospaced())
-          .help("現在のテキスト解像度 (列×行)")
+          .help("Current text resolution (columns × rows)")
 
         if session.textVRAMCursorEnabled {
           Text("Cur: \(session.textVRAMCursorX),\(session.textVRAMCursorY)")
             .foregroundStyle(.orange)
             .font(.caption.monospaced())
-            .help("CRTCカーソル位置 (列, 行)")
+            .help("CRTC cursor position (column, row)")
         }
       }
 
@@ -111,17 +111,17 @@ struct TextVRAMPane: View {
       }
       .labelsHidden()
       .frame(width: 58)
-      .help("キャンバスズームレベル")
+      .help("Canvas zoom level")
 
       Toggle("Attr", isOn: Bindable(session.settings).textvramShowAttrDecode)
         .toggleStyle(.button)
         .controlSize(.small)
-        .help("属性デコードパネルの表示/非表示")
+        .help("Show or hide the attribute decode panel")
 
       Toggle("Auto", isOn: Bindable(session.settings).textvramAutoFollow)
         .toggleStyle(.switch)
         .controlSize(.mini)
-        .help("実行中は2Hzで自動更新。一時停止時に自動キャプチャ。")
+        .help("Refreshes at 2 Hz while running, and captures automatically when paused.")
 
       Button {
         session.captureTextVRAM()
@@ -129,7 +129,7 @@ struct TextVRAMPane: View {
         Image(systemName: "arrow.clockwise")
       }
       .buttonStyle(.borderless)
-      .help("テキストVRAMスナップショットを今すぐ取得")
+      .help("Capture a text VRAM snapshot now")
 
       Button {
         exportPPM()
@@ -138,7 +138,7 @@ struct TextVRAMPane: View {
       }
       .buttonStyle(.borderless)
       .disabled(image == nil)
-      .help("現在のテキストフレームをバイナリPPMファイル (P6形式) でエクスポート")
+      .help("Export the current text frame as a binary PPM file (P6)")
     }
     .padding(.horizontal, 10)
     .padding(.vertical, 6)
@@ -159,10 +159,10 @@ struct TextVRAMPane: View {
           .padding(8)
       } else {
         ContentUnavailableView(
-          "テキストVRAMデータなし",
+          "No text VRAM data",
           systemImage: "textformat",
           description: Text(
-            "更新ボタンを押すか、エミュレータを一時停止するとテキストレイヤーをキャプチャできます。"
+            "Press Refresh, or pause the emulator, to capture the text layer."
           )
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -179,12 +179,12 @@ struct TextVRAMPane: View {
     let rows = attrRows
     return VStack(alignment: .leading, spacing: 0) {
       HStack {
-        Text("属性デコード")
+        Text("Attribute Decode")
           .font(.caption.bold())
           .padding(.horizontal, 10)
           .padding(.top, 4)
         Spacer()
-        Text("\(rows.count) 文字")
+        Text("\(rows.count) characters")
           .font(.caption)
           .foregroundStyle(.secondary)
           .padding(.trailing, 10)
@@ -195,57 +195,57 @@ struct TextVRAMPane: View {
         TableColumn("Row") { r in
           Text("\(r.row)")
             .foregroundStyle(.secondary)
-            .help("文字行 (0始まり)")
+            .help("Character row, 0-based")
         }
         .width(min: 30, ideal: 36, max: 50)
 
         TableColumn("Col") { r in
           Text("\(r.col)")
             .foregroundStyle(.secondary)
-            .help("文字列 (0始まり)")
+            .help("Character column, 0-based")
         }
         .width(min: 30, ideal: 36, max: 50)
 
         TableColumn("Code") { r in
           Text(r.codeName)
-            .help("文字コード (16進数) とASCIIプレビュー")
+            .help("Character code in hex, with an ASCII preview")
         }
         .width(min: 70, ideal: 90, max: 110)
 
         TableColumn("Attr") { r in
           Text(String(format: "%02X", r.attr))
             .foregroundStyle(.secondary)
-            .help("属性バイト生値 (16進数)")
+            .help("Raw attribute byte, in hex")
         }
         .width(min: 38, ideal: 44, max: 54)
 
         TableColumn("GRB") { r in
           Text(r.color)
-            .help("カラーインデックス (bits 7-5): GRBパレット 0-7")
+            .help("Colour index (bits 7-5): GRB palette 0-7")
         }
         .width(min: 28, ideal: 32, max: 40)
 
         TableColumn("Rev") { r in
           Text(r.rev)
-            .help("リバースビデオ (bit 0)")
+            .help("Reverse video (bit 0)")
         }
         .width(min: 28, ideal: 32, max: 38)
 
         TableColumn("Sec") { r in
           Text(r.sec)
-            .help("シークレット/非表示文字 (bit 1)")
+            .help("Secret / hidden character (bit 1)")
         }
         .width(min: 28, ideal: 32, max: 38)
 
         TableColumn("Uln") { r in
           Text(r.uline)
-            .help("アンダーライン (bit 3)")
+            .help("Underline (bit 3)")
         }
         .width(min: 28, ideal: 32, max: 38)
 
         TableColumn("Grph") { r in
           Text(r.grph)
-            .help("グラフ文字セット (bit 4)")
+            .help("Graphic character set (bit 4)")
         }
         .width(min: 32, ideal: 36, max: 44)
       }
@@ -323,7 +323,9 @@ struct TextVRAMPane: View {
           data.count == 640 * height * 4 else { return }
 
     let panel = NSSavePanel()
-    panel.title = "テキストVRAMをエクスポート"
+    panel.title = String(
+      localized: "Export Text VRAM",
+      comment: "Save panel title for the debugger's text VRAM export")
     panel.nameFieldStringValue = "bubilator88-textvram.ppm"
     panel.allowedContentTypes = [UTType(filenameExtension: "ppm") ?? .data]
     panel.canCreateDirectories = true
@@ -342,10 +344,15 @@ struct TextVRAMPane: View {
       }
       do {
         try Data(bytes).write(to: url, options: .atomic)
-        session.viewModel.showToast("テキストVRAMを \(url.lastPathComponent) にエクスポートしました")
+        session.viewModel.showToast(
+          String(
+            format: String(
+              localized: "Exported text VRAM to %@",
+              comment: "Toast after the debugger exports text VRAM. %@ is the file name"),
+            url.lastPathComponent))
       } catch {
         session.viewModel.showAlert(
-          title: "エクスポート失敗",
+          title: String(localized: "Export Failed", comment: "Alert title when a debugger export fails"),
           message: error.localizedDescription
         )
       }

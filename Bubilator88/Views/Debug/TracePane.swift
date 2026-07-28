@@ -46,9 +46,9 @@ struct TracePane: View {
 
       if cachedEntries.isEmpty {
         ContentUnavailableView(
-          "トレースなし",
+          "No trace",
           systemImage: "list.bullet.indent",
-          description: Text("デバッガを接続した状態でエミュレータを実行すると命令履歴がキャプチャされます。")
+          description: Text("Run the emulator with the debugger attached to capture instruction history.")
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
@@ -56,55 +56,55 @@ struct TracePane: View {
           TableColumn("#") { row in
             Text("\(row.index)")
               .foregroundStyle(.secondary)
-              .help("リングバッファインデックス (0 = 最古の命令)")
+              .help("Ring buffer index; 0 is the oldest instruction")
           }
           .width(min: 40, ideal: 50, max: 70)
 
           TableColumn("PC") { row in
             diffCell(row.entry.pc, prev: row.prev?.pc)
-              .help("命令実行時のPC。行を選択すると逆アセンブルペインをここにピン留め。")
+              .help("PC at the time the instruction ran. Selecting a row pins the disassembly pane here.")
           }
           .width(min: 50, ideal: 56, max: 70)
 
           TableColumn("AF") { row in
             diffCell(row.entry.af, prev: row.prev?.af)
-              .help("命令実行前のAF。変化したセルはオレンジでハイライト。")
+              .help("AF before the instruction ran. Cells that changed are highlighted in orange.")
           }
           .width(min: 50, ideal: 56, max: 70)
 
           TableColumn("BC") { row in
             diffCell(row.entry.bc, prev: row.prev?.bc)
-              .help("命令実行前のBC")
+              .help("BC before the instruction ran")
           }
           .width(min: 50, ideal: 56, max: 70)
 
           TableColumn("DE") { row in
             diffCell(row.entry.de, prev: row.prev?.de)
-              .help("命令実行前のDE")
+              .help("DE before the instruction ran")
           }
           .width(min: 50, ideal: 56, max: 70)
 
           TableColumn("HL") { row in
             diffCell(row.entry.hl, prev: row.prev?.hl)
-              .help("命令実行前のHL")
+              .help("HL before the instruction ran")
           }
           .width(min: 50, ideal: 56, max: 70)
 
           TableColumn("IX") { row in
             diffCell(row.entry.ix, prev: row.prev?.ix)
-              .help("命令実行前のIX")
+              .help("IX before the instruction ran")
           }
           .width(min: 50, ideal: 56, max: 70)
 
           TableColumn("IY") { row in
             diffCell(row.entry.iy, prev: row.prev?.iy)
-              .help("命令実行前のIY")
+              .help("IY before the instruction ran")
           }
           .width(min: 50, ideal: 56, max: 70)
 
           TableColumn("SP") { row in
             diffCell(row.entry.sp, prev: row.prev?.sp)
-              .help("命令実行前のSP")
+              .help("SP before the instruction ran")
           }
           .width(min: 50, ideal: 56, max: 70)
 
@@ -112,7 +112,7 @@ struct TracePane: View {
             Text(Self.deltaSummary(row.entry, prev: row.prev))
               .foregroundStyle(Color.orange)
               .textSelection(.enabled)
-              .help("前の命令からの変化レジスタのサマリ (旧値→新値)")
+              .help("Registers that changed since the previous instruction (old → new)")
           }
           .width(min: 80, ideal: 180, max: 400)
         }
@@ -155,7 +155,7 @@ struct TracePane: View {
     HStack(spacing: 8) {
       Text("Trace").font(.headline)
 
-      Text("\(cachedEntries.count)件")
+      Text("\(cachedEntries.count) entries")
         .foregroundStyle(.secondary)
         .font(.caption)
 
@@ -169,12 +169,12 @@ struct TracePane: View {
       .pickerStyle(.segmented)
       .labelsHidden()
       .frame(width: 110)
-      .help("表示するCPUの命令履歴。MainとSubはそれぞれ1024エントリのリングバッファを持つ。")
+      .help("Which CPU's instruction history to show. Main and Sub each have a 1024-entry ring buffer.")
 
       Toggle("Auto", isOn: Bindable(session.settings).traceAutoFollow)
         .toggleStyle(.switch)
         .controlSize(.mini)
-        .help("一時停止時に自動更新")
+        .help("Refresh automatically when paused")
 
       Button {
         refresh()
@@ -182,7 +182,7 @@ struct TracePane: View {
         Image(systemName: "arrow.clockwise")
       }
       .buttonStyle(.borderless)
-      .help("トレーススナップショットを取得")
+      .help("Capture a trace snapshot")
 
       Button {
         exportJSONL()
@@ -191,7 +191,7 @@ struct TracePane: View {
       }
       .buttonStyle(.borderless)
       .disabled(cachedEntries.isEmpty)
-      .help("トレースをJSONLとしてエクスポート (クロスエミュレータ比較用)")
+      .help("Export the trace as JSONL, for cross-emulator comparison")
 
       Button(role: .destructive) {
         if session.settings.traceWhichCPU == .main {
@@ -205,7 +205,7 @@ struct TracePane: View {
         Image(systemName: "trash")
       }
       .buttonStyle(.borderless)
-      .help("トレースバッファをクリア")
+      .help("Clear the trace buffer")
     }
     .padding(.horizontal, 10)
     .padding(.vertical, 6)
