@@ -1,6 +1,9 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+This file provides guidance to AI coding agents (Codex, Claude Code, etc.) when
+working with code in this repository. It is the canonical source — other
+agent-specific files (e.g. `CLAUDE.md`) point back here rather than
+duplicating content.
 
 ## Project Overview
 
@@ -26,20 +29,28 @@ scripts/format_all.sh          # or --check to verify without writing
 scripts/lint.sh                # whole repo, including Packages/EmulatorCore
 ```
 
+Lint is not wired into the build; run `scripts/lint.sh`, which covers the app
+and `Packages/EmulatorCore` alike. See the Code Style section for why there is
+no build tool plugin.
+
 Platform: macOS only. Deployment targets are **not** uniform: the app target is
 26.0, the project and test targets are 26.2, and `Package.swift` declares
 `.macOS(.v15)`. Pure Xcode project with a local Swift package at
 `Packages/EmulatorCore/`.
 
-External dependencies: **`apple/swift-log`**, used by the `Peripherals` and
-`EmulatorCore` targets. Nothing else.
-
-Code style, localization and logging conventions are documented in CLAUDE.md
-(sections "Code Style", "Localization", "Logging") — they apply here too.
+External dependencies: **`apple/swift-log`** (pinned in `Package.resolved`), used
+by the `Peripherals` and `EmulatorCore` targets. Nothing else — the Xcode project
+has no package dependencies of its own.
 
 ## Architecture
 
-Refer to `docs/ARCHITECTURE.md` for the full design document. Key points:
+Refer to `docs/ARCHITECTURE.md` for the full design document. Key docs:
+`docs/KNOWN_PITFALLS.md` (regression lessons), `docs/BOOTTESTER.md` (CLI test
+harness), `docs/PERSISTENCE.md` (永続化データ一覧), `docs/URL_SCHEME.md`
+(`bubilator88://` URL スキーム + CLI 起動引数。書式は QUASI88 互換、FlipDisk
+連携). 人間向け AI 活用ガイド: `docs/AI_WORKFLOW.md`.
+
+Key points:
 
 **Layer structure:** EmulatorCore (pure Swift, no platform APIs) ← App (SwiftUI/AppKit). Lower layers must never depend on upper layers.
 
@@ -72,3 +83,77 @@ Refer to `docs/ARCHITECTURE.md` for the full design document. Key points:
 - Unit tests use Swift Testing framework (`@Test`); UI tests use XCTest
 - BIOS files are never bundled — loaded from `~/Library/Application Support/Bubilator88/`
 - No additional LSI-level classes unless explicitly justified
+- **Persist reusable scripts** — when creating Python/Shell scripts for analysis, conversion, or debugging, save reusable ones to `scripts/` rather than regenerating each time
+- **EmulatorCore/Sources を変更したら、コミット前に `/regression` (scripts/regression_compare.py) を実行** — true regression があれば ship しない
+
+## Code Style
+
+- **2-space indentation.** Enforced by SwiftFormat via `scripts/format_all.sh`;
+  the `.swiftformat` config enables only `indent` and `trailingSpace`, so the
+  formatter can never rewrite code — a run must leave
+  `git diff --ignore-all-space` empty.
+- **Comments are English DocC.** Use `///` for API documentation and `//` for
+  implementation notes. Japanese stays only where it is the subject rather than
+  the prose: game titles, PC-8801 keytop legends (画面消去, 説明, 半角), kana that
+  is itself the data, and direct quotations from QUASI88.
+- **Hardware findings are documentation.** Comments recording real-hardware
+  behaviour pair with docs/KNOWN_PITFALLS.md — translate or edit them faithfully
+  rather than compressing them.
+- **SwiftLint is lenient and warning-only** (`.swiftlint.yml`). Rules that fight
+  the deliberate column alignment used in bit-manipulation and lookup-table code
+  (`comma`, `colon`, `switch_case_alignment`) are disabled on purpose. Do not
+  re-enable them to "fix" alignment.
+- **Lint runs from `scripts/lint.sh`, never from the build.** A SwiftLint build
+  tool plugin was tried and reverted: plugin approval is per-user state (Xcode's
+  defaults for the GUI, `~/Library/org.swift.swiftpm/security/plugins.json` for
+  the CLI) and cannot be committed, so every `xcodebuild` invocation on every
+  machine would have needed `-skipPackagePluginValidation` forever. Adding it to
+  `Packages/EmulatorCore/Package.swift` was never viable either: that manifest is
+  also built on Windows (`.github/workflows/release-windows.yml`) and
+  SwiftLintPlugins ships macOS-only binary artifacts.
+- **`git blame`**: run `git config blame.ignoreRevsFile .git-blame-ignore-revs`
+  once so the whole-tree reindent does not mask real authorship.
+
+## Localization
+
+UI strings live in String Catalogs: `Bubilator88/Resources/Localizable.xcstrings`
+(490 keys) and `InfoPlist.xcstrings`. English is the source language and has no
+localization entries — it falls back to the key itself, so **the key is the
+English string**. Japanese is the only translated language.
+
+Call sites use `String(localized:comment:)`; SwiftUI views rely on
+`LocalizedStringKey` literals in `Text`/`Button`/`.help`.
+`scripts/strings_to_xcstrings.py` converts legacy `.strings` files if one ever
+reappears.
+
+A command-line build never fills the catalog in — only opening it in Xcode's
+editor does. Use **`scripts/extract_loc_keys.py --missing`** after a build to
+list keys the compiler extracted but the catalog lacks. It reads the
+`.stringsdata` that `SWIFT_EMIT_LOC_STRINGS = YES` emits, so it reports the
+*exact* key, including the format specifiers SwiftUI derives from interpolation
+(`Text("FM \(ch + 1): muted")` → `"FM %lld: muted"`). Guessing those by hand
+ships strings that silently never resolve.
+
+EmulatorCore itself has no localization. `Script.swift` / `ScriptPlayer.swift`
+therefore raise errors carrying an English **format string plus arguments**, and
+the app layer translates them through the catalog
+(`ViewModel/ScriptErrorLocalization.swift`) — the format string doubles as the
+catalog key.
+
+## Logging
+
+Both layers log through **swift-log**. `Bubilator88/Utilities/OSLogHandler.swift`
+bridges it to `os_log` under the subsystem `com.bubio.Bubilator88`, with the
+swift-log label's last component as the category
+(`EmulatorCore.UPD765A` → `UPD765A`). `bootstrapLogging()` is called from
+`AppDelegate.init()` — the earliest hook available, and it must stay ahead of the
+first `Logger` construction anywhere, because a `Logger` captures its handler for
+good at construction time.
+
+```bash
+log stream --level debug --predicate 'subsystem == "com.bubio.Bubilator88"'
+```
+
+Name loggers `App.<Component>` in the app layer and `EmulatorCore.<Component>` in
+the core. DEBUG builds admit `.debug`; release starts at `.info`. `print()` is
+reserved for BootTester, which is a CLI writing to stdout on purpose.
