@@ -277,6 +277,66 @@ struct LaunchRequest: Equatable {
     guard !argv.isEmpty else { return nil }
     return try parse(argv: argv, baseDirectory: currentDirectory)
   }
+
+  // MARK: - Help
+
+  /// True if `arguments` (process argv, program name included) asks for usage
+  /// help. Checked against the raw argv, **before** `stripSystemArguments`:
+  /// that stripper eats an `-NSFoo`/`-AppleFoo`/`-XCFoo` flag together with the
+  /// value that follows it, so checking after stripping could silently swallow
+  /// a `--help` that happened to land in that value slot.
+  static func wantsHelp(_ arguments: [String] = CommandLine.arguments) -> Bool {
+    let helpFlags: Set<String> = ["-h", "-help", "--help"]
+    return arguments.dropFirst().contains { helpFlags.contains($0.lowercased()) }
+  }
+
+  /// Usage text for `-h`/`-help`/`--help`, printed to stdout and nothing else —
+  /// there is no GUI at the point it is shown. Kept in sync by hand with
+  /// `apply(option:)`.
+  ///
+  /// The prose pieces are individually localized (matching the app's
+  /// preferred-language setting, per `String(localized:)`); the option
+  /// spellings and argument placeholders are left as-is since they are
+  /// literal syntax the user types, not prose.
+  static var usageText: String {
+    let usage = String(
+      localized:       "Usage: Bubilator88 [-option ...] image-file [image-No] [image-file [image-No]]",
+      comment: "CLI --help: usage synopsis line")
+    let optionsLabel = String(
+      localized:       "Options:",
+      comment: "CLI --help: header above the option list")
+    let bootModeDesc = String(
+      localized:       "boot mode (default: keep current setting)",
+      comment: "CLI --help: description of the -v2/-v1h/-v1s/-n options")
+    let clockDesc = String(
+      localized:       "CPU clock (default: keep current setting)",
+      comment: "CLI --help: description of the -4mhz/-8mhz options")
+    let bootStrapDesc = String(
+      localized:       "boot strap override (default: automatic)",
+      comment: "CLI --help: description of the -romboot/-diskboot options")
+    let helpDesc = String(
+      localized:       "show this help and exit",
+      comment: "CLI --help: description of the -h/-help/--help options")
+    let body = String(
+      localized:       """
+      image-file is a .d88/.m3u/.m3u8 path. A number right after it selects the
+      image/entry (1-based, first file -> drive 1:, second file -> drive 2:).
+      Options and file arguments may be given in any order.
+      """,
+      comment: "CLI --help: closing paragraph explaining the image-file argument")
+
+    return """
+      \(usage)
+
+      \(optionsLabel)
+        -v2, -v1h, -v1s, -n    \(bootModeDesc)
+        -4mhz, -8mhz           \(clockDesc)
+        -romboot, -diskboot    \(bootStrapDesc)
+        -h, -help, --help      \(helpDesc)
+
+      \(body)
+      """
+  }
 }
 
 enum LaunchParseError: Error, Equatable {
