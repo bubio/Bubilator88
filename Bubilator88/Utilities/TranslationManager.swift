@@ -1,9 +1,15 @@
 import SwiftUI
-import Translation
+// `TranslationSession` is a non-Sendable class whose `translate(_:)` is a plain
+// nonisolated async method, so calling it from this @MainActor type counts as
+// sending the session across isolation domains. The session is only ever
+// created and used from the main actor (Apple's own usage pattern), so the
+// diagnostics are downgraded rather than worked around.
+@preconcurrency import Translation
 import Vision
 import EmulatorCore  // re-exports Logging (swift-log)
 
-private let ocrLog = Logger(label: "App.OCR")
+// `nonisolated` so background OCR work can log; `Logger` is Sendable.
+nonisolated private let ocrLog = Logger(label: "App.OCR")
 
 /// Orchestrates Vision OCR text detection and translation overlay.
 ///
@@ -99,7 +105,7 @@ final class TranslationManager {
       guard let cgImage = Self.createCGImageStatic(from: s4, width: width * 4, height: height * 4) else {
         return nil
       }
-      guard let observations = try? await Self.recognizeTextStatic(in: cgImage) else {
+      guard let lines = try? await Self.recognizeTextStatic(in: cgImage) else {
         return nil
       }
       #if DEBUG
@@ -108,10 +114,9 @@ final class TranslationManager {
       #endif
 
       var allRects: [OCRDetectionRect] = []
-      for observation in observations {
-        let candidate = observation.topCandidates(1).first
-        let text = candidate?.string ?? ""
-        let bbox = observation.boundingBox
+      for line in lines {
+        let text = line.text
+        let bbox = line.boundingBox
         let rect = CGRect(
           x: bbox.origin.x,
           y: 1.0 - bbox.maxY,
@@ -352,7 +357,12 @@ final class TranslationManager {
     }
   }
 
-  private nonisolated static func recognizeTextStatic(in image: CGImage) async throws -> [VNRecognizedTextObservation] {
+  /// Runs Vision text recognition and returns plain `Sendable` values.
+  ///
+  /// `VNRecognizedTextObservation` is a non-Sendable class, so the observations
+  /// are flattened to `OCRTextLine` inside the completion handler instead of
+  /// being resumed through the continuation.
+  private nonisolated static func recognizeTextStatic(in image: CGImage) async throws -> [OCRTextLine] {
     try await withCheckedThrowingContinuation { continuation in
       let request = VNRecognizeTextRequest { request, error in
         if let error {
@@ -360,7 +370,11 @@ final class TranslationManager {
           return
         }
         let observations = request.results as? [VNRecognizedTextObservation] ?? []
-        continuation.resume(returning: observations)
+        let lines = observations.map {
+          OCRTextLine(text: $0.topCandidates(1).first?.string ?? "",
+                      boundingBox: $0.boundingBox)
+        }
+        continuation.resume(returning: lines)
       }
       request.recognitionLanguages = ["ja"]
       request.recognitionLevel = .accurate
@@ -379,6 +393,14 @@ final class TranslationManager {
 }
 
 // MARK: - Data Types
+
+/// One recognized text line, carried out of Vision's non-Sendable
+/// `VNRecognizedTextObservation` so it can cross isolation domains.
+struct OCRTextLine: Sendable {
+  let text: String
+  /// Vision-normalized 0..1 box with bottom-left origin.
+  let boundingBox: CGRect
+}
 
 /// OCR detection rectangle with optional translation.
 struct OCRDetectionRect: Identifiable {

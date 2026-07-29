@@ -1,6 +1,9 @@
 import Testing
 @testable import Bubilator88
 
+/// `@MainActor` because `BootMode.dipSw1` reads `Settings.shared` for the
+/// `.custom` case, so the type is genuinely main-actor bound.
+@MainActor
 struct BootModeTests {
 
   typealias BootMode = EmulatorViewModel.BootMode

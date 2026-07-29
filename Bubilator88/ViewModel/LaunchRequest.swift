@@ -56,7 +56,10 @@ struct LaunchRequest: Equatable {
   }
 
   /// QUASI88's maximum images per file (`MAX_NR_IMAGE`).
-  static let maxImageNumber = 32
+  ///
+  /// `nonisolated` because `LaunchError.errorDescription` is a nonisolated
+  /// protocol requirement and needs to read this constant.
+  nonisolated static let maxImageNumber = 32
   /// Number of emulated drives (`NR_DRIVE`).
   static let driveCount = 2
 

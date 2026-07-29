@@ -2,6 +2,9 @@ import Testing
 import Foundation
 @testable import Bubilator88
 
+/// `@MainActor`: the launch parsers live in the app target, whose default
+/// actor isolation is the main actor.
+@MainActor
 struct LaunchRequestTests {
 
   typealias BootMode = EmulatorViewModel.BootMode

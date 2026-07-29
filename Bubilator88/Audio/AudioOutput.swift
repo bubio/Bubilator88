@@ -137,7 +137,7 @@ final class AudioOutput {
       interleaved: false
     )!
 
-    let sourceNode = AVAudioSourceNode(format: format) { [weak self] _, _, frameCount, audioBufferList -> OSStatus in
+    let sourceNode = AVAudioSourceNode(format: format) { @Sendable [weak self] _, _, frameCount, audioBufferList -> OSStatus in
       guard let self = self else { return noErr }
       let ablPointer = UnsafeMutableAudioBufferListPointer(audioBufferList)
       guard ablPointer.count >= 2,
@@ -204,7 +204,7 @@ final class AudioOutput {
     var sourceNodes: [AVAudioSourceNode] = []
 
     for idx in 0..<Self.spatialNodeCount {
-      let sourceNode = AVAudioSourceNode(format: monoFormat) { [weak self] _, _, frameCount, audioBufferList -> OSStatus in
+      let sourceNode = AVAudioSourceNode(format: monoFormat) { @Sendable [weak self] _, _, frameCount, audioBufferList -> OSStatus in
         guard let self = self else { return noErr }
         let ablPointer = UnsafeMutableAudioBufferListPointer(audioBufferList)
         guard let buf = ablPointer[0].mData?.assumingMemoryBound(to: Float.self) else {
@@ -279,9 +279,9 @@ final class AudioOutput {
   /// 1024-frame buffer. There is no overhead when the tap is not installed.
   /// Call `removeSpectrumTap()` before the audio engine stops or the window
   /// is closed.
-  func installSpectrumTap(_ block: @escaping (AVAudioPCMBuffer) -> Void) {
+  func installSpectrumTap(_ block: @escaping @Sendable (AVAudioPCMBuffer) -> Void) {
     guard let engine = audioEngine else { return }
-    engine.mainMixerNode.installTap(onBus: 0, bufferSize: 1024, format: nil) { buf, _ in
+    engine.mainMixerNode.installTap(onBus: 0, bufferSize: 1024, format: nil) { @Sendable buf, _ in
       block(buf)
     }
   }

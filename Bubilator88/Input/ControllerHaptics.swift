@@ -23,9 +23,15 @@ final class ControllerHaptics {
           let engine = haptics.createEngine(withLocality: .default) else { return }
 
     self.hapticEngine = engine
-    engine.resetHandler = { [weak self] in
-      try? self?.hapticEngine?.start()
-      self?.preparePatternPlayer()
+    // `@Sendable`: CoreHaptics invokes the reset handler on its own queue. Left
+    // to inherit this target's default main-actor isolation, Swift 6 would
+    // insert an executor check here and trap when the engine resets.
+    engine.resetHandler = { @Sendable [weak self] in
+      Task { @MainActor in
+        guard let self else { return }
+        try? self.hapticEngine?.start()
+        self.preparePatternPlayer()
+      }
     }
     try? engine.start()
     preparePatternPlayer()

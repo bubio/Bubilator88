@@ -17,6 +17,7 @@ final class Bubilator88UITestsLaunchTests: XCTestCase {
     continueAfterFailure = false
   }
 
+  @MainActor
   func testLaunch() throws {
     let app = XCUIApplication()
     app.launch()

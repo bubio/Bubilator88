@@ -18,7 +18,10 @@ import Foundation
 @Observable
 final class AudioRecorder {
 
-  enum RecordingFormat: String, CaseIterable, Identifiable {
+  /// `nonisolated` because it is a plain descriptor read from the write queue
+  /// as well as the main actor; it would otherwise inherit the enclosing
+  /// class's `@MainActor`.
+  nonisolated enum RecordingFormat: String, CaseIterable, Identifiable {
     case wav, alac, aac
 
     var id: String { rawValue }

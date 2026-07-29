@@ -3,7 +3,8 @@ import AppKit
 import UniformTypeIdentifiers
 import EmulatorCore
 
-private let renderLog = Logger(label: "App.Rendering")
+// `nonisolated` so the nonisolated snapshot writers can log; `Logger` is Sendable.
+nonisolated private let renderLog = Logger(label: "App.Rendering")
 
 // MARK: - Rendering
 

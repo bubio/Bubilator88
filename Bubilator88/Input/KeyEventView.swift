@@ -299,7 +299,11 @@ class KeyCaptureNSView: NSView {
   }
 
   deinit {
-    endCapture()
-    removeMonitors()
+    // An NSView is deallocated on the main thread, but `deinit` is nonisolated
+    // as far as the compiler is concerned.
+    MainActor.assumeIsolated {
+      endCapture()
+      removeMonitors()
+    }
   }
 }

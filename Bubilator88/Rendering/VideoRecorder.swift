@@ -30,7 +30,10 @@ nonisolated private let kAudioSampleRate: Double = 44_100
 @Observable
 final class VideoRecorder {
 
-  enum RecordingFormat: String, CaseIterable, Identifiable {
+  /// `nonisolated` because it is a plain descriptor read from the write queue
+  /// as well as the main actor; it would otherwise inherit the enclosing
+  /// class's default main-actor isolation.
+  nonisolated enum RecordingFormat: String, CaseIterable, Identifiable {
     // ProRes 4444 keeps full 4:4:4 chroma — best for pixel-art /
     // wire-frame content where 1px colored lines would otherwise be
     // desaturated by H.264's 4:2:0 subsampling. Larger files.
