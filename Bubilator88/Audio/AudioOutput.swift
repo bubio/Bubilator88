@@ -1,5 +1,6 @@
 import AVFoundation
 import EmulatorCore
+import Synchronization
 
 /// CoreAudio output for YM2608 emulator sound.
 ///
@@ -22,7 +23,10 @@ final class AudioOutput {
   private var varispeed: AVAudioUnitVarispeed?
 
   /// Reference to YM2608 for pulling audio samples.
-  /// Must be set before calling start().
+  ///
+  /// **Isolation:** `nonisolated(unsafe)` because the render callback and the
+  /// emulation thread read it. Wired once during setup, before `start()` puts
+  /// any thread on the audio path, and not reassigned afterwards.
   nonisolated(unsafe) weak var sound: YM2608?
 
   /// Multichannel recorder tap. When set and actively recording, each
@@ -35,6 +39,15 @@ final class AudioOutput {
 
   /// Lock for thread-safe buffer access (audio thread pulls, emu thread pushes).
   private let bufferLock = NSLock()
+
+  // MARK: Ring-buffer state — bufferLock invariant
+  //
+  // Every field from here to `spatialLastSamples` is read and written from both
+  // the CoreAudio render thread and the emulation thread, and **every access
+  // holds `bufferLock`**. The `nonisolated(unsafe)` on each is therefore only
+  // opting out of this target's default main-actor isolation; it is not an
+  // unsynchronized access. An actor is not an option here: the render callback
+  // cannot `await`.
 
   /// Ring buffer for interleaved stereo audio samples [L, R, L, R, ...]
   private nonisolated(unsafe) var ringBuffer: [Float] = []
@@ -70,8 +83,17 @@ final class AudioOutput {
 
   // MARK: - Immersive Audio
 
-  /// Whether immersive audio is active
-  nonisolated(unsafe) private(set) var spatialEnabled: Bool = false
+  /// Whether immersive audio is active.
+  ///
+  /// `Atomic` rather than `nonisolated(unsafe) var`: flipped on the main actor
+  /// when the engine starts/stops, read on the emulation thread by
+  /// `drainSamples`.
+  private let spatialFlag = Atomic<Bool>(false)
+
+  nonisolated private(set) var spatialEnabled: Bool {
+    get { spatialFlag.load(ordering: .relaxed) }
+    set { spatialFlag.store(newValue, ordering: .relaxed) }
+  }
 
   private var environmentNode: AVAudioEnvironmentNode?
   private var spatialSourceNodes: [AVAudioSourceNode] = []

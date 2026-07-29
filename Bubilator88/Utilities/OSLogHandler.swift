@@ -37,25 +37,26 @@ struct OSLogHandler: LogHandler {
     set { metadata[key] = newValue }
   }
 
-  func log(
-    level: Logging.Logger.Level,
-    message: Logging.Logger.Message,
-    metadata explicit: Logging.Logger.Metadata?,
-    source: String,
-    file: String,
-    function: String,
-    line: UInt
-  ) {
-    let merged = explicit.map { self.metadata.merging($0) { _, new in new } } ?? self.metadata
-    let suffix =
+  /// swift-log 1.12 replaced the flat-parameter `log(level:message:…)` with
+  /// this event-based entry point; implementing the old one only reaches it
+  /// through a deprecated forwarding default.
+  func log(event: LogEvent) {
+    let merged = event.metadata.map { self.metadata.merging($0) { _, new in new } } ?? self.metadata
+    var suffix =
       merged.isEmpty
         ? ""
         : " " + merged.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
+    if let error = event.error {
+      suffix += " error=\(error)"
+    }
 
     // The whole string is already assembled by swift-log's interpolation, so
     // there is nothing left for os_log to redact. Marking it public keeps the
     // messages readable instead of collapsing them to <private>.
-    osLogger.log(level: Self.osLogType(for: level), "\(message.description + suffix, privacy: .public)")
+    osLogger.log(
+      level: Self.osLogType(for: event.level),
+      "\(event.message.description + suffix, privacy: .public)"
+    )
   }
 
   private static func osLogType(for level: Logging.Logger.Level) -> OSLogType {

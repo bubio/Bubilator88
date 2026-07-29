@@ -570,7 +570,18 @@ final class EmulatorViewModel {
   let emuQueue = DispatchQueue(label: "com.bubio.bubilator88.emu", qos: .userInteractive)
 
   let machine: Machine
+  /// **Isolation:** used from the Metal draw path and from `emuQueue`, never
+  /// from the main actor as such, so it opts out of this target's default
+  /// main-actor isolation. `ScreenRenderer` itself holds no cross-thread state.
   nonisolated(unsafe) let renderer = ScreenRenderer()
+
+  /// The 640×400 RGBA frame the Metal view samples.
+  ///
+  /// **Isolation:** written by `runFrameForMetal` on the Metal draw thread and
+  /// by the `emuQueue`-serialized paths; other readers take a copy through
+  /// `emuQueue.sync`. `captureThumbnail()` is the one place that reads it
+  /// directly, which is safe only because state saves happen with the run loop
+  /// stopped.
   @ObservationIgnored nonisolated(unsafe) var pixelBuffer: [UInt8]
 
   /// UI update throttle counter (render thread)

@@ -2,6 +2,7 @@ import AVFoundation
 import CoreMedia
 import CoreVideo
 import Foundation
+import Synchronization
 
 // Marked `nonisolated` so the writeQueue helpers (which are themselves
 // nonisolated to run off the main actor) can read these constants without
@@ -77,8 +78,14 @@ final class VideoRecorder {
   private(set) var lastOutputURL: URL?
 
   /// Audio-thread / Metal-thread readable flag (avoids actor hop).
+  ///
+  /// `Atomic` rather than `nonisolated(unsafe) var`: written on the main actor
+  /// by `start()`/`stop()`, read from the audio and Metal draw threads.
   @ObservationIgnored
-  nonisolated(unsafe) private(set) var isRecordingFlag: Bool = false
+  private let recordingFlag = Atomic<Bool>(false)
+
+  /// Off-main-thread readable "is a session running" flag.
+  nonisolated var isRecordingFlag: Bool { recordingFlag.load(ordering: .relaxed) }
 
   @ObservationIgnored
   nonisolated private let writeQueue = DispatchQueue(
@@ -199,7 +206,7 @@ final class VideoRecorder {
 
     lastOutputURL = url
     isRecording = true
-    isRecordingFlag = true
+    recordingFlag.store(true, ordering: .relaxed)
   }
 
   /// Stop the current session. Returns immediately; finishWriting runs
@@ -212,7 +219,7 @@ final class VideoRecorder {
       }
       return
     }
-    isRecordingFlag = false
+    recordingFlag.store(false, ordering: .relaxed)
     isRecording = false
     writeQueue.async { [self] in
       videoInput?.markAsFinished()
