@@ -27,6 +27,15 @@ import AppKit
 ///   via `NSWindow.willCloseNotification` — a notification, so again no delegate.
 final class AppDelegate: NSObject, NSApplicationDelegate {
   override init() {
+    // Handled before anything else touches `self`: `-h`/`-help`/`--help` must
+    // print to stdout and exit without ever bringing up a window. This is the
+    // earliest hook in the process (see the comment below), so it is also the
+    // only point that can intercept a CLI `--help` before AppKit starts
+    // building UI.
+    if LaunchRequest.wantsHelp() {
+      print(LaunchRequest.usageText)
+      exit(0)
+    }
     super.init()
     // Earliest hook in the process: `@NSApplicationDelegateAdaptor` is the
     // first stored property of `Bubilator88App`, so this runs before the view

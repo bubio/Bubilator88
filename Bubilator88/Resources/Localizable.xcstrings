@@ -685,6 +685,18 @@
         }
       }
     },
+    "CPU clock (default: keep current setting)": {
+      "comment": "CLI --help: description of the -4mhz/-8mhz options",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPUクロック（省略時は現在の設定を維持）"
+          }
+        }
+      }
+    },
     "CRTC cursor position (column, row)": {
       "localizations": {
         "ja": {
@@ -2725,6 +2737,18 @@
         }
       }
     },
+    "Options:": {
+      "comment": "CLI --help: header above the option list",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オプション:"
+          }
+        }
+      }
+    },
     "Output Device": {
       "localizations": {
         "ja": {
@@ -4577,6 +4601,18 @@
         }
       }
     },
+    "Usage: Bubilator88 [-option ...] image-file [image-No] [image-file [image-No]]": {
+      "comment": "CLI --help: usage synopsis line",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使い方: Bubilator88 [-オプション ...] イメージファイル [イメージ番号] [イメージファイル [イメージ番号]]"
+          }
+        }
+      }
+    },
     "Use the toggle in the header to resume": {
       "localizations": {
         "ja": {
@@ -4779,6 +4815,30 @@
         }
       }
     },
+    "boot mode (default: keep current setting)": {
+      "comment": "CLI --help: description of the -v2/-v1h/-v1s/-n options",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "起動モード（省略時は現在の設定を維持）"
+          }
+        }
+      }
+    },
+    "boot strap override (default: automatic)": {
+      "comment": "CLI --help: description of the -romboot/-diskboot options",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "起動ストラップの上書き（省略時は自動判定）"
+          }
+        }
+      }
+    },
     "by %@": {
       "localizations": {
         "ja": {
@@ -4833,6 +4893,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "disk select <drive> <index>"
+          }
+        }
+      }
+    },
+    "image-file is a .d88/.m3u/.m3u8 path. A number right after it selects the\nimage/entry (1-based, first file -> drive 1:, second file -> drive 2:).\nOptions and file arguments may be given in any order.": {
+      "comment": "CLI --help: closing paragraph explaining the image-file argument",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イメージファイルは .d88/.m3u/.m3u8 のパス。直後の数値でイメージ/エントリ番号を\n指定できる（1始まり、1個目のファイルが drive 1:、2個目が drive 2:）。\nオプションとファイル引数は順不同で指定できる。"
           }
         }
       }
@@ -4905,6 +4977,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "reset は cold か warm です: %@"
+          }
+        }
+      }
+    },
+    "show this help and exit": {
+      "comment": "CLI --help: description of the -h/-help/--help options",
+      "extractionState": "manual",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この使い方を表示して終了"
           }
         }
       }

@@ -352,4 +352,22 @@ struct LaunchRequestTests {
     #expect(req?.system == .n88v2)
     #expect(req?.disks == [DiskSpec(path: "/cwd/games/ys.d88", imageIndex: 1)])
   }
+
+  // MARK: - Help
+
+  @Test("-h / -help / --help はどれも wantsHelp を成立させる", arguments: ["-h", "-help", "--help", "-Help", "--HELP"])
+  func wantsHelpRecognizesFlag(_ flag: String) {
+    #expect(LaunchRequest.wantsHelp(["/App/Bubilator88", flag]))
+  }
+
+  @Test("ヘルプ指定が無ければ wantsHelp は false")
+  func wantsHelpFalseWithoutFlag() {
+    #expect(!LaunchRequest.wantsHelp(["/App/Bubilator88", "-v2", "/d/a.d88"]))
+    #expect(!LaunchRequest.wantsHelp(["/App/Bubilator88"]))
+  }
+
+  @Test("他のオプションと組み合わせても検出される")
+  func wantsHelpAmongOtherArguments() {
+    #expect(LaunchRequest.wantsHelp(["/App/Bubilator88", "-v2", "--help", "/d/a.d88"]))
+  }
 }

@@ -71,6 +71,12 @@ FlipDisk（自前ランチャー）などの外部ランチャーやシェルか
 （QUASI88 は警告して読み飛ばすが、本実装はランチャー側の誤りを黙って
 飲み込まないためエラーにする）。
 
+`-h` / `-help` / `--help` は特別扱い: 他の引数を一切解釈せず、使い方を
+**stdout に print して `exit(0)`** する（GUI は一度も起動しない）。実行
+ファイルを直接叩いたときだけ見える（`open` 経由だと stdout がターミナル
+に継承されないため出力は見えない）。URL スキーム側では意味を持たない
+（`bubilator88://boot?arg=--help` は他の未知オプションと同じくエラーになる）。
+
 `-dipsw` は未対応: QUASI88 の値は N88-BASIC の `NEW ON` 引数のセマンティクス
 で、Bubilator88 の `dipSw1`/`dipSw2Base`（ポート 0x30/0x31 の生ビット）とは
 別のエンコードであり、機械的な対応付けができないため。
@@ -166,6 +172,10 @@ open -n -a Bubilator88 --args -v2 /x/x.d88 2 4   # -n で強制的に新イン�
   (`requestLaunch(url:)` / `requestLaunchFromCommandLine()` /
   `consumePendingLaunch()` / `performLaunch(_:)`)。URL も CLI も
   `LaunchRequest` に正規化してから同一の検証 → 適用パスを通る
+- `--help`: `LaunchRequest.wantsHelp(_:)` / `LaunchRequest.usageText`
+  （純粋関数、`Bubilator88/ViewModel/LaunchRequest.swift`）。呼び出しは
+  `Bubilator88/App/AppDelegate.swift` の `override init()` 冒頭 — プロセス内
+  で `NSApplication` がウィンドウを作るより前に判定できる唯一のフックのため
 - Info.plist: `CFBundleURLTypes` に scheme `bubilator88` を登録
 - FlipDisk 側: **Bubilator88 固有のコードは持たない**。URL テンプレートは
   エミュレータ登録データ (`Emulator.arguments`) で、`lib/services/placeholder.dart`
