@@ -9,8 +9,10 @@ import AVFoundation
 /// `bandCount` log-frequency bands expressed as dB values.
 ///
 /// Thread safety: `currentBands` can be read from any thread; internal
-/// processing uses an `NSLock` to protect the shared output array.
-final class SpectrumAnalyzer: @unchecked Sendable {
+/// processing uses an `NSLock` to protect the shared output array. The type is
+/// `nonisolated` because it lives on the audio render thread, not the main
+/// actor; the default-MainActor isolation of this target must not apply here.
+nonisolated final class SpectrumAnalyzer: @unchecked Sendable {
 
   // MARK: - Constants
 

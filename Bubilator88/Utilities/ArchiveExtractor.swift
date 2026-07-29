@@ -3,7 +3,7 @@ import Compression
 
 // MARK: - Archive Types
 
-enum ArchiveType {
+nonisolated enum ArchiveType {
   case zip
   case lzh
   case cab
@@ -11,14 +11,15 @@ enum ArchiveType {
   case none
 }
 
-struct ArchiveEntry {
+nonisolated struct ArchiveEntry {
   let filename: String
   let data: Data
 }
 
 // MARK: - ArchiveExtractor
 
-enum ArchiveExtractor {
+/// `nonisolated`: pure byte-level archive parsing, no UI state.
+nonisolated enum ArchiveExtractor {
 
   /// Disk image extensions to extract from archives.
   private static let diskExtensions: Set<String> = ["d88", "d77", "2d", "2hd"]

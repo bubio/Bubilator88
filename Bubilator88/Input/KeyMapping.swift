@@ -5,7 +5,9 @@ import Foundation
 ///
 /// macOS key codes are defined in Carbon/Events.h (kVK_* constants).
 /// Each maps to a Keyboard.Key (row, bit) for the PC-8801 matrix.
-enum KeyMapping {
+/// `nonisolated`: pure lookup tables with no UI state, so the target's
+/// default-MainActor isolation does not apply.
+nonisolated enum KeyMapping {
 
   /// Everything outside the static tables that `pc88Key(for:options:)` consults:
   /// the user's numpad overrides, the effective keyboard layout, and any
@@ -264,7 +266,8 @@ enum KeyMapping {
 
 /// PC-8801 keys that have no direct equivalent on modern keyboards.
 /// Users can remap these to any Mac key via Settings.
-enum PC88SpecialKey: String, CaseIterable, Identifiable {
+/// `nonisolated` for the same reason as `KeyMapping`: pure key-table data.
+nonisolated enum PC88SpecialKey: String, CaseIterable, Identifiable {
   case stop = "STOP"
   case copy = "COPY"
   case clrHome = "CLR/HOME"
@@ -308,7 +311,7 @@ enum PC88SpecialKey: String, CaseIterable, Identifiable {
 // MARK: - Mac Key Name Lookup
 
 /// Display name for a macOS virtual key code.
-func macKeyName(for keyCode: UInt16) -> String {
+nonisolated func macKeyName(for keyCode: UInt16) -> String {
   switch keyCode {
   // Function keys
   case 0x7A: return "F1"

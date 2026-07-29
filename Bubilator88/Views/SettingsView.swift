@@ -836,7 +836,12 @@ struct TranslationLanguage: Identifiable {
   ]
 
   /// Fetch languages available for ja→X translation via LanguageAvailability API.
-  static func fetchAvailable() async -> [TranslationLanguage] {
+  ///
+  /// `@concurrent` so `LanguageAvailability` (non-Sendable) stays confined to a
+  /// background executor. Plain `nonisolated` is not enough under approachable
+  /// concurrency: the function would inherit the caller's (main actor)
+  /// isolation and the instance would still have to cross it.
+  @concurrent nonisolated static func fetchAvailable() async -> [TranslationLanguage] {
     let availability = LanguageAvailability()
     let japanese = Locale.Language(identifier: "ja")
     let supported = await availability.supportedLanguages

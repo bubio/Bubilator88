@@ -2,6 +2,7 @@ import AVFoundation
 import CoreMedia
 import CoreVideo
 import Foundation
+import Synchronization
 
 // Marked `nonisolated` so the writeQueue helpers (which are themselves
 // nonisolated to run off the main actor) can read these constants without
@@ -30,7 +31,10 @@ nonisolated private let kAudioSampleRate: Double = 44_100
 @Observable
 final class VideoRecorder {
 
-  enum RecordingFormat: String, CaseIterable, Identifiable {
+  /// `nonisolated` because it is a plain descriptor read from the write queue
+  /// as well as the main actor; it would otherwise inherit the enclosing
+  /// class's default main-actor isolation.
+  nonisolated enum RecordingFormat: String, CaseIterable, Identifiable {
     // ProRes 4444 keeps full 4:4:4 chroma — best for pixel-art /
     // wire-frame content where 1px colored lines would otherwise be
     // desaturated by H.264's 4:2:0 subsampling. Larger files.
@@ -74,8 +78,14 @@ final class VideoRecorder {
   private(set) var lastOutputURL: URL?
 
   /// Audio-thread / Metal-thread readable flag (avoids actor hop).
+  ///
+  /// `Atomic` rather than `nonisolated(unsafe) var`: written on the main actor
+  /// by `start()`/`stop()`, read from the audio and Metal draw threads.
   @ObservationIgnored
-  nonisolated(unsafe) private(set) var isRecordingFlag: Bool = false
+  private let recordingFlag = Atomic<Bool>(false)
+
+  /// Off-main-thread readable "is a session running" flag.
+  nonisolated var isRecordingFlag: Bool { recordingFlag.load(ordering: .relaxed) }
 
   @ObservationIgnored
   nonisolated private let writeQueue = DispatchQueue(
@@ -196,7 +206,7 @@ final class VideoRecorder {
 
     lastOutputURL = url
     isRecording = true
-    isRecordingFlag = true
+    recordingFlag.store(true, ordering: .relaxed)
   }
 
   /// Stop the current session. Returns immediately; finishWriting runs
@@ -209,7 +219,7 @@ final class VideoRecorder {
       }
       return
     }
-    isRecordingFlag = false
+    recordingFlag.store(false, ordering: .relaxed)
     isRecording = false
     writeQueue.async { [self] in
       videoInput?.markAsFinished()

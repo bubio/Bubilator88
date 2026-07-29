@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import Synchronization
 
 /// Multichannel audio recorder.
 ///
@@ -18,7 +19,10 @@ import Foundation
 @Observable
 final class AudioRecorder {
 
-  enum RecordingFormat: String, CaseIterable, Identifiable {
+  /// `nonisolated` because it is a plain descriptor read from the write queue
+  /// as well as the main actor; it would otherwise inherit the enclosing
+  /// class's `@MainActor`.
+  nonisolated enum RecordingFormat: String, CaseIterable, Identifiable {
     case wav, alac, aac
 
     var id: String { rawValue }
@@ -157,9 +161,17 @@ final class AudioRecorder {
   private let writeQueue = DispatchQueue(label: "com.bubilator88.audiorecorder",
                                          qos: .utility)
 
-  /// Non-isolated flag readable from the audio thread to avoid actor hops.
+  /// Flag readable from the audio thread to avoid actor hops.
+  ///
+  /// `Atomic` rather than `nonisolated(unsafe) var`: this is written on the main
+  /// actor by `start()`/`stop()` and read on the audio render thread, so it is
+  /// genuine cross-thread mutable state. Relaxed ordering is enough — the flag
+  /// only gates work that is itself serialized on `writeQueue`.
   @ObservationIgnored
-  nonisolated(unsafe) private(set) var isRecordingFlag: Bool = false
+  private let recordingFlag = Atomic<Bool>(false)
+
+  /// Audio-thread readable "is a session running" flag.
+  nonisolated var isRecordingFlag: Bool { recordingFlag.load(ordering: .relaxed) }
 
   /// Start a new recording session.
   /// - Parameters:
@@ -202,13 +214,13 @@ final class AudioRecorder {
 
     lastOutputURL = url
     isRecording = true
-    isRecordingFlag = true
+    recordingFlag.store(true, ordering: .relaxed)
   }
 
   /// Stop the current session and close the file.
   func stop() {
     guard isRecording else { return }
-    isRecordingFlag = false
+    recordingFlag.store(false, ordering: .relaxed)
     isRecording = false
     writeQueue.sync { self.file = nil }
   }

@@ -760,11 +760,14 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
 
   private func resetCursorHideTimer() {
     cursorHideTimer?.invalidate()
+    // The timer fires on the main run loop, but the compiler sees only a
+    // `@Sendable` closure — `assumeIsolated` states that invariant instead of
+    // hopping (which would delay the cursor hide by a turn).
     cursorHideTimer = Timer.scheduledTimer(withTimeInterval: cursorHideDelay, repeats: false) { [weak self] _ in
-      guard let self, !self.cursorHidden else { return }
-      NSCursor.hide()
-      self.cursorHidden = true
-      DispatchQueue.main.async {
+      MainActor.assumeIsolated {
+        guard let self, !self.cursorHidden else { return }
+        NSCursor.hide()
+        self.cursorHidden = true
         self.viewModel.showFullScreenOverlay = false
       }
     }
@@ -819,15 +822,20 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
     windowObservers.removeAll()
     guard let window else { return }
     windowObservers = [
+      // All three are posted on `.main`, so `assumeIsolated` is the accurate
+      // statement of what already happens; the closures are `@Sendable` only
+      // because NotificationCenter's signature says so.
       nc.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: window, queue: .main) { [weak self] _ in
-        self?.updateDrawLoop()
+        MainActor.assumeIsolated { self?.updateDrawLoop() }
       },
       nc.addObserver(forName: NSWindow.didEnterFullScreenNotification, object: window, queue: .main) { [weak self] _ in
-        self?.startMouseMonitor()
+        MainActor.assumeIsolated { self?.startMouseMonitor() }
       },
       nc.addObserver(forName: NSWindow.didExitFullScreenNotification, object: window, queue: .main) { [weak self] _ in
-        self?.stopMouseMonitor()
-        self?.viewModel.showFullScreenOverlay = false
+        MainActor.assumeIsolated {
+          self?.stopMouseMonitor()
+          self?.viewModel.showFullScreenOverlay = false
+        }
       },
     ]
   }

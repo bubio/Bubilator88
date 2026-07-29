@@ -5,7 +5,8 @@ import Foundation
 /// The bank splice and recovery-save logic of the write-back path, factored out
 /// of `EmulatorViewModel` because it does not depend on ViewModel state — which
 /// makes it testable.
-enum DiskWriteBackIO {
+/// `nonisolated` follows from "pure functions only": no main-actor state here.
+nonisolated enum DiskWriteBackIO {
 
   enum WriteError: Error, LocalizedError {
     case bankHeaderOutOfRange

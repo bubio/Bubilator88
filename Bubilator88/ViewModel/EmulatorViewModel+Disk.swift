@@ -268,8 +268,12 @@ extension EmulatorViewModel {
 
     func mountSlot(_ slot: (disk: D88Disk, name: String, entryName: String),
                    drive: Int, imageIndex: Int) {
+      // Bind the name first: `slot` is a tuple carrying a non-Sendable D88Disk,
+      // and capturing it in the main-actor-isolated `flatMap` closure would
+      // send it across isolation. The entry name alone is a String.
+      let entryName = slot.entryName
       let entryURL = cacheDir.flatMap {
-        cache.cachedEntryURL(in: $0, entryName: slot.entryName)
+        cache.cachedEntryURL(in: $0, entryName: entryName)
       }
       mountDiskImageDirect(DirectMountRequest(
         disk: slot.disk, name: slot.name, drive: drive,

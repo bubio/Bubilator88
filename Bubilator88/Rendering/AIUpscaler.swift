@@ -6,7 +6,16 @@ import QuartzCore
 /// CoreML-based AI super-resolution upscaler for the emulator display.
 /// Uses Real-ESRGAN (or compatible) model to upscale 640×400 → 1280×800.
 /// Runs inference asynchronously on the Neural Engine with double-buffered output.
-final class AIUpscaler {
+///
+/// ### Isolation
+/// `nonisolated` because this lives on the Metal draw path and its own
+/// `inferenceQueue`, never on the main actor — the target's default main-actor
+/// isolation must not apply here. `@unchecked Sendable` because the instance is
+/// handed to `inferenceQueue.async`: the state shared between the draw thread
+/// and the inference queue (`isInferring`, the double-buffered
+/// `outputTextures`, `readIndex`/`writeIndex`, `generation`) is guarded by
+/// `lock`. **New shared state must go inside the locked region.**
+nonisolated final class AIUpscaler: @unchecked Sendable {
 
   enum State {
     case unavailable

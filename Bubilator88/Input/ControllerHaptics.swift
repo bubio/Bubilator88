@@ -1,5 +1,6 @@
 import GameController
 import CoreHaptics
+import Synchronization
 
 /// Haptic feedback driven by SSG noise effect detection.
 /// Uses GCHapticEngine for DualSense/supported controllers.
@@ -9,7 +10,14 @@ final class ControllerHaptics {
   private var hapticEngine: CHHapticEngine?
   private var impactPlayer: CHHapticPatternPlayer?
 
-  nonisolated(unsafe) private(set) var isEnabled: Bool = false
+  /// Set on the main actor when the haptic engine starts/stops, read from the
+  /// emulation thread that detects SSG noise. `Atomic` makes that defined.
+  private let enabledFlag = Atomic<Bool>(false)
+
+  nonisolated private(set) var isEnabled: Bool {
+    get { enabledFlag.load(ordering: .relaxed) }
+    set { enabledFlag.store(newValue, ordering: .relaxed) }
+  }
 
   init(controller: GCController) {
     self.controller = controller
@@ -23,9 +31,15 @@ final class ControllerHaptics {
           let engine = haptics.createEngine(withLocality: .default) else { return }
 
     self.hapticEngine = engine
-    engine.resetHandler = { [weak self] in
-      try? self?.hapticEngine?.start()
-      self?.preparePatternPlayer()
+    // `@Sendable`: CoreHaptics invokes the reset handler on its own queue. Left
+    // to inherit this target's default main-actor isolation, Swift 6 would
+    // insert an executor check here and trap when the engine resets.
+    engine.resetHandler = { @Sendable [weak self] in
+      Task { @MainActor in
+        guard let self else { return }
+        try? self.hapticEngine?.start()
+        self.preparePatternPlayer()
+      }
     }
     try? engine.start()
     preparePatternPlayer()

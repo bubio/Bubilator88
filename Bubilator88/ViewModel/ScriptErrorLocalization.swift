@@ -13,7 +13,10 @@ import Foundation
 /// string extractor never sees it, so every format used below must be present in
 /// `Localizable.xcstrings` with `extractionState: "manual"`. Adding a new error
 /// message in the core therefore means adding a matching catalog entry.
-enum ScriptErrorLocalization {
+/// `nonisolated` because this is a pure catalog lookup with no UI state; the
+/// target's default-MainActor isolation would otherwise make it unusable from
+/// tests and from background error handling.
+nonisolated enum ScriptErrorLocalization {
 
   /// The localized text of a parse error, without the file or line prefix.
   static func message(for error: ScriptError) -> String {

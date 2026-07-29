@@ -1,5 +1,6 @@
 import AVFoundation
 import CoreAudio
+import Synchronization
 
 /// Synthesized floppy disk drive access sounds.
 ///
@@ -19,8 +20,14 @@ final class FDDSound {
   private var readAccessBuffers: [AVAudioPCMBuffer] = []
 
   private let sampleRate: Double = 44100
-  /// Accessed from both main and emulation threads; Bool read/write is effectively atomic.
-  nonisolated(unsafe) private(set) var isEnabled: Bool = false
+  /// Accessed from both the main and the emulation thread. `Atomic` makes that
+  /// defined rather than relying on Bool writes happening to be indivisible.
+  private let enabledFlag = Atomic<Bool>(false)
+
+  nonisolated private(set) var isEnabled: Bool {
+    get { enabledFlag.load(ordering: .relaxed) }
+    set { enabledFlag.store(newValue, ordering: .relaxed) }
+  }
 
   /// L/R gain per drive: (leftGain, rightGain)
   /// Drive 0 leans right, drive 1 leans left, neither fully panned.
@@ -212,6 +219,9 @@ final class FDDSound {
 
   /// Minimum interval between read access sounds per drive (seconds).
   private let readAccessMinInterval: TimeInterval = 0.03
+  /// Emulation-thread confined: only `playReadAccess(drive:)` touches it, and
+  /// that is called from the emulation thread alone. `nonisolated(unsafe)`
+  /// opts out of default main-actor isolation, nothing more.
   nonisolated(unsafe) private var lastReadAccessTime: [TimeInterval] = [0, 0]
 
   /// Play seek step sound (called from emulation thread on each track step).
