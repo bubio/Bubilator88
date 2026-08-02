@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Keyboard">
-    <meta name="description" content="Mac と PC-8801 のキー対応、レイアウト、特殊キー割り当て">
-    <meta name="keywords" content="キーボード, キー, マッピング, 入力, GRPH, STOP, COPY, テンキー, JIS, US, ANSI">
+    <meta name="description" content="Mac と PC-8801 のキー対応、レイアウト、特殊キー割り当て、ソフトウェアキーボード、ローマ字カナ入力">
+    <meta name="keywords" content="キーボード, キー, マッピング, 入力, GRPH, STOP, COPY, テンキー, JIS, US, ANSI, ソフトウェアキーボード, ソフトキーボード, ローマ字, カナ, かな入力">
     <meta name="robots" content="index">
     <title>キーボード</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -65,6 +65,14 @@
         <li><strong>数字キーをテンキーとして使用</strong> — 数字キー 0-9 をテンキー 0-9 に割り当て。テンキー数字のみ受け付けるゲーム用（アドベンチャーゲームのメニュー選択など）。</li>
         <li><strong>WASDをテンキーとして使用</strong> — <kbd>W</kbd>/<kbd>A</kbd>/<kbd>S</kbd>/<kbd>D</kbd> をテンキー 8/4/2/6 に割り当て、左手でキャラクターを移動できます。</li>
     </ul>
+
+    <h2>ソフトウェアキーボード</h2>
+    <p><strong>表示 &gt; ソフトウェアキーボード</strong>（<kbd>&#8679;&#8984;K</kbd>）で、PC-8801 の配列を再現した画面上のキーボードを開きます。キーをクリックすると実機のキーを押したのと同じように入力されます。</p>
+    <p>SHIFT / CTRL / GRPH / カナ / CAPS は、シングルクリックすると次に押した 1 キーだけ有効になり、ダブルクリックすると解除するまで押しっぱなしになります。カナ・SHIFT・GRPH が有効な間は、キートップの刻印がそれぞれカナ・記号・グラフィック文字に切り替わります（グラフィック文字の表示には <code>FONT.ROM</code> が必要です）。</p>
+
+    <h2>ローマ字カナ入力</h2>
+    <p><strong>コントロール &gt; ローマ字カナ入力</strong>（<kbd>&#8997;&#8984;K</kbd>）を有効にすると、ローマ字で打った文字が半角カタカナに変換されて入力されます。</p>
+    <p>変換途中の文字は <kbd>Backspace</kbd> で 1 文字ずつ消せ、<kbd>ESC</kbd> で入力を中止できます。それ以外のキー（数字、記号、Return など）はそのまま PC-8801 に送られます。</p>
 
     <h2>その他のキー</h2>
     <table>

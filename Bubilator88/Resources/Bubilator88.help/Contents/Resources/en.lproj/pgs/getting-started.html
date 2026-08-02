@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Getting Started">
     <meta name="description" content="Prepare ROM files, boot Bubilator88, and use Boot Mode and CPU Clock">
-    <meta name="keywords" content="ROM, setup, boot, Boot Mode, CPU Clock, N88-BASIC, N80.ROM, DISK.ROM">
+    <meta name="keywords" content="ROM, setup, boot, Boot Mode, CPU Clock, N88-BASIC, N80.ROM, DISK.ROM, extended RAM, launch arguments, command line, URL scheme">
     <meta name="robots" content="index">
     <title>Getting Started</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -95,6 +95,11 @@
         <tr><td>1 MB</td><td>Equivalent to eight expansion cards. For the few titles that require 1 MB of extended RAM.</td></tr>
     </table>
     <div class="note">The original PC-8801-02N held 128 KB per card, with up to 4 cards (= 512 KB) supported by NEC. The 1 MB option corresponds to third-party high-capacity cards.</div>
+
+    <h2>Launch Arguments</h2>
+    <p>An external launcher or a terminal can start Bubilator88 with a disk and a boot mode already selected. The argument format matches QUASI88: list options such as <code>-v2</code> / <code>-v1h</code> / <code>-v1s</code> / <code>-n</code> (boot mode) and <code>-4mhz</code> / <code>-8mhz</code> (CPU clock) alongside the path of the disk to open.</p>
+    <p>The same arguments can be passed through the URL scheme, one argument per <code>arg</code> item: <code>bubilator88://boot?arg=-v1h&amp;arg=…</code> (paths must be absolute and percent-encoded).</p>
+    <p>For the full syntax, run <code>/Applications/Bubilator88.app/Contents/MacOS/Bubilator88 -h</code> in Terminal.</p>
 
     <p><a href="../index.html">Back to Bubilator88 Help</a></p>
     </div>
