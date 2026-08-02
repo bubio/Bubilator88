@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Getting Started">
     <meta name="description" content="ROM ファイルの準備、起動、ブートモードと CPUクロックの使い方">
-    <meta name="keywords" content="ROM, セットアップ, 起動, ブートモード, CPUクロック, N88-BASIC, N80.ROM, DISK.ROM">
+    <meta name="keywords" content="ROM, セットアップ, 起動, ブートモード, CPUクロック, N88-BASIC, N80.ROM, DISK.ROM, 拡張RAM, 起動引数, コマンドライン, URL スキーム">
     <meta name="robots" content="index">
     <title>はじめに</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -96,6 +96,11 @@
         <tr><td>1 MB</td><td>拡張RAM カード 8 枚相当。1 MB の RAM を要求する一部ソフト向け。</td></tr>
     </table>
     <div class="note">純正の PC-8801-02N は 128 KB/枚で、本体には最大 4 枚 (= 512 KB) まで装着可能でした。1 MB はサードパーティの大容量カードに相当します。</div>
+
+    <h2>起動引数で開く</h2>
+    <p>外部のランチャーやターミナルから、ディスクとブートモードを指定して起動できます。引数の書式は QUASI88 と同じで、<code>-v2</code> / <code>-v1h</code> / <code>-v1s</code> / <code>-n</code>（ブートモード）、<code>-4mhz</code> / <code>-8mhz</code>（CPUクロック）などを、開きたいディスクのパスと並べて指定します。</p>
+    <p>URL スキームでも同じ引数を渡せます。<code>bubilator88://boot?arg=-v1h&amp;arg=…</code> のように、引数 1 個を <code>arg</code> 1 個で表します（パスは絶対パス、パーセントエンコーディングが必要です）。</p>
+    <p>詳しい書式は、ターミナルで <code>/Applications/Bubilator88.app/Contents/MacOS/Bubilator88 -h</code> を実行すると表示されます。</p>
 
     <p><a href="../index.html">Bubilator88 ヘルプに戻る</a></p>
     </div>

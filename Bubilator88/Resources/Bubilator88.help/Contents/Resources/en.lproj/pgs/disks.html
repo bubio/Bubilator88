@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Using Disks">
-    <meta name="description" content="Mount disk images, open supported archives, and create blank disks">
-    <meta name="keywords" content="disk, D88, mount, eject, drive, floppy, blank, archive, ZIP, LZH, CAB, RAR">
+    <meta name="description" content="Mount disk images, use playlists, write protection, write-back, and create blank disks">
+    <meta name="keywords" content="disk, D88, mount, eject, drive, floppy, blank, archive, ZIP, LZH, CAB, RAR, m3u, playlist, write protect, write-back, save data, cache">
     <meta name="robots" content="index">
     <title>Using Disks</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -34,7 +34,8 @@
     <h2>Supported Formats</h2>
     <p>Bubilator88 can open the following files:</p>
     <ul>
-        <li><strong>D88</strong> disk images</li>
+        <li><strong>D88</strong> disk images (<code>.d88</code>, <code>.d77</code>, <code>.2d</code>, <code>.2hd</code>)</li>
+        <li><strong>M3U</strong> playlists (<code>.m3u</code>, <code>.m3u8</code>)</li>
         <li><strong>ZIP</strong>, <strong>LZH</strong>, <strong>CAB</strong>, and <strong>RAR</strong> archives
             (when they contain D88 disk images)</li>
     </ul>
@@ -48,10 +49,16 @@
         <tr><td><strong>Disk &gt; Drive 2 &gt; Mount...</strong></td><td><kbd>&#8984;2</kbd></td></tr>
         <tr><td><strong>Disk &gt; Drive 1&amp;2 &gt; Mount...</strong></td><td><kbd>&#8984;3</kbd></td></tr>
     </table>
+    <p>You can also drag and drop a file onto the emulation screen. Dropped files are mounted in <strong>Drive 1&amp;2</strong> mode.</p>
+
     <h2>Multiple Images and Archives</h2>
     <p>If the selected file contains multiple disk images, a picker sheet appears before mounting. After mounting, you can switch images from <strong>Disk &gt; Drive 1</strong> / <strong>Drive 2</strong> or from the status-bar drive menus.</p>
     <p><strong>Drive 1&amp;2 &gt; Mount...</strong> assigns the first image to Drive 1 and the second image to Drive 2. If there is no second image, Drive 2 stays empty.</p>
     <p>If an archive contains multiple disk files, you first choose which file to open.</p>
+
+    <h2>Playlists</h2>
+    <p>Multi-disk titles can be opened from an <code>.m3u</code> / <code>.m3u8</code> playlist that lists the disk images, one path per line. Blank lines and lines starting with <code>#</code> are ignored, and relative paths are resolved against the playlist's own folder.</p>
+    <p>Opened in <strong>Drive 1&amp;2</strong> mode, the first entry goes to Drive 1 and the second to Drive 2. When opened into a single drive, only the first entry is used.</p>
 
     <h2>Creating Blank Disks</h2>
     <p>Use <strong>Disk &gt; Create Blank Disk...</strong> (<kbd>&#8679;&#8984;N</kbd>) to create a formatted blank D88 image. After saving, the new disk is mounted automatically in Drive 1.</p>
@@ -60,6 +67,18 @@
         <li><strong>2DD</strong> (640KB) — Double-sided double-density (default)</li>
         <li><strong>2HD</strong> (1.2MB) — Double-sided high-density</li>
     </ul>
+
+    <h2>Write Protection</h2>
+    <p><strong>Disk &gt; Drive 1</strong> / <strong>Drive 2 &gt; Write Protect</strong> blocks writes to the mounted disk, just like the tab on a real floppy. A check mark appears in the menu while it is on, and writes from the software fail.</p>
+
+    <h2>Writing Back to Disk</h2>
+    <p>When software writes to a disk (saving a game, for example), the change is written back to the original D88 file automatically, about 0.1 seconds after the writes stop. There is no setting for this; it is always on. Ejecting a disk, quitting the app, and loading a save state write back immediately.</p>
+    <div class="note">Turn on <strong>Write Protect</strong> for disks whose original file you do not want modified.</div>
+    <p>Disks inside an archive (ZIP / LZH / CAB / RAR) are written back to the cache extracted on first mount. The original archive is never modified.</p>
+    <p>If no write-back destination can be determined, or the write fails, the disk is saved as a recovery D88 in <code>~/Library/Application Support/Bubilator88/ModifiedDisks/</code>.</p>
+
+    <h2>Exporting Cached Disks</h2>
+    <p><strong>Disk &gt; Export Cached Disks...</strong> copies D88 files from the archive cache into a folder of your choice. Check <strong>Only disks whose original archive is missing</strong> to export just the disks whose source archive has been moved or deleted.</p>
 
     <h2>Ejecting and Recent Files</h2>
     <p>Use <strong>Disk &gt; Drive 1 &gt; Eject</strong> or <strong>Disk &gt; Drive 2 &gt; Eject</strong> to remove a disk.</p>
