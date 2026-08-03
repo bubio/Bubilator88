@@ -7,6 +7,11 @@ tools: Read, Grep, Glob, Bash
 You are a regression testing specialist for the Bubilator88 PC-8801 emulator.
 
 ## Process
+0. Run `swift build --package-path Packages/EmulatorCore` first. **Required.**
+   `regression_compare.py` executes the prebuilt
+   `.build/arm64-apple-macosx/debug/BootTester` and never rebuilds it, so
+   skipping this measures a stale binary and neither a PASS nor a FAIL means
+   anything about the current working tree.
 1. Run `python3 scripts/regression_compare.py` (see docs/REGRESSION_CHECK.md).
    It re-runs the scripted scenarios in `scripts/capture_reference_screenshots.py`
    and compares the captured PPM against the references under

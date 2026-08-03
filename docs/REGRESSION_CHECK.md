@@ -11,6 +11,18 @@ SubSystem / ScreenRenderer / FMSynthesis など) の挙動を変えうる修正�
 エミュレーション挙動に影響が出ないと確信できる場合はスキップ可。迷ったら
 走らせる。
 
+## 実行方法
+
+```bash
+swift build --package-path Packages/EmulatorCore   # 必須
+python3 scripts/regression_compare.py
+```
+
+**`swift build` を飛ばさないこと。** `regression_compare.py` は
+`.build/arm64-apple-macosx/debug/BootTester` を実行するだけで、
+自分ではビルドしない。ビルドを忘れると古いバイナリを測ることになり、
+PASS も FAIL も作業ツリーの状態を反映しない。
+
 ## 構成
 
 3 つの成果物が連携する:
