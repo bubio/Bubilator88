@@ -667,6 +667,12 @@ struct DebugCommands: Commands {
         set: { viewModel.debugTextLayerEnabled = $0 }
       ))
 
+      Toggle("Exempt Text from Scanlines", isOn: Binding(
+        get: { viewModel.debugTextScanlineExempt },
+        set: { viewModel.debugTextScanlineExempt = $0 }
+      ))
+      .disabled(!viewModel.effectiveScanlineEnabled)
+
       Divider()
 
       Toggle("FM", isOn: Binding(

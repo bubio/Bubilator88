@@ -9,7 +9,7 @@ struct VertexOut {
 struct FilterParams {
     float2 textureDimensions;  // 640x200 (200-line) or 640x400 (400-line/None)
     float2 outputDimensions;   // viewport size in pixels
-    uint   scanlineEnabled;    // 1 = on, 0 = off
+    uint   scanlineEnabled;    // bit 0 = on, bit 1 = exempt text pixels
     uint   is400LineMode;      // 1 = 400-line (no doubling), 0 = 200-line (doubled)
     float  hqOffset;           // diagonal transition offset (default 0.25)
     float  hqGradient;         // gradient scale (default 0.7)
@@ -32,8 +32,19 @@ vertex VertexOut vertexShader(uint vertexID [[vertex_id]],
 
 // MARK: - Scanline helper
 
-static float scanlineMultiplier(float2 texCoord, constant FilterParams &params) {
-    if (params.scanlineEnabled == 0) return 1.0;
+// `params.scanlineEnabled` is a bit field: bit 0 turns scanlines on, bit 1 asks
+// for text pixels to be left at full brightness. ScreenRenderer tags those with
+// alpha 0xFE (everything else stays 0xFF), so one nearest-neighbour alpha fetch
+// tells the two apart — sampled independently of `s` to keep the test hard even
+// when the color path is interpolating.
+static float scanlineMultiplier(float2 texCoord,
+                                constant FilterParams &params,
+                                texture2d<float> tex) {
+    if ((params.scanlineEnabled & 1) == 0) return 1.0;
+    if (params.scanlineEnabled & 2) {
+        constexpr sampler alphaSampler(filter::nearest, address::clamp_to_edge);
+        if (tex.sample(alphaSampler, texCoord).a < 0.999) return 1.0;
+    }
     float srcY = texCoord.y * params.textureDimensions.y;
     if (params.textureDimensions.y > 300) {
         // 400-line texture (doubled or native 400): every 2 rows = 1 scanline
@@ -51,7 +62,7 @@ fragment float4 fragmentNearest(VertexOut in [[stage_in]],
                                  sampler s [[sampler(0)]],
                                  constant FilterParams &params [[buffer(0)]]) {
     float4 color = tex.sample(s, in.texCoord);
-    float sl = scanlineMultiplier(in.texCoord, params);
+    float sl = scanlineMultiplier(in.texCoord, params, tex);
     return float4(color.rgb * sl, 1.0);
 }
 
@@ -62,7 +73,7 @@ fragment float4 fragmentLinear(VertexOut in [[stage_in]],
                                 sampler s [[sampler(0)]],
                                 constant FilterParams &params [[buffer(0)]]) {
     float4 color = tex.sample(s, in.texCoord);
-    float sl = scanlineMultiplier(in.texCoord, params);
+    float sl = scanlineMultiplier(in.texCoord, params, tex);
     return float4(color.rgb * sl, 1.0);
 }
 
@@ -102,7 +113,7 @@ fragment float4 fragmentBicubic(VertexOut in [[stage_in]],
     }
     result /= weightSum;
 
-    float sl = scanlineMultiplier(in.texCoord, params);
+    float sl = scanlineMultiplier(in.texCoord, params, tex);
     return float4(result.rgb * sl, 1.0);
 }
 

@@ -89,7 +89,15 @@ extension EmulatorViewModel {
 
   // MARK: - Frame Rendering
 
-  nonisolated func renderCurrentFrame(into pixelBuffer: inout [UInt8], blinkCursor: Bool, debugTextLayerEnabled: Bool = true) {
+  /// `markTextPixels` tags text-layer pixels so the display shader can exempt
+  /// them from scanline dimming. Only the on-screen path passes it; snapshot
+  /// and export callers leave it off so their pixels stay untouched.
+  nonisolated func renderCurrentFrame(
+    into pixelBuffer: inout [UInt8],
+    blinkCursor: Bool,
+    debugTextLayerEnabled: Bool = true,
+    markTextPixels: Bool = false
+  ) {
     let graphicsPalette = Self.effectiveRenderPalette(
       busPalette: machine.bus.palette,
       graphicsColorMode: machine.bus.graphicsColorMode,
@@ -177,6 +185,7 @@ extension EmulatorViewModel {
       cursorBlock: (machine.crtc.cursorMode & 0x02) != 0,
       hireso: true,
       skipLine: machine.crtc.skipLine,
+      markTextPixels: markTextPixels,
       into: &pixelBuffer
     )
   }
@@ -191,7 +200,8 @@ extension EmulatorViewModel {
         rewindStepCounter = Self.rewindStepDivider - 1
         stepRewindBack()
         renderCurrentFrame(into: &pixelBuffer, blinkCursor: false,
-                           debugTextLayerEnabled: debugTextLayerEnabled)
+                           debugTextLayerEnabled: debugTextLayerEnabled,
+                           markTextPixels: markTextPixelsForDisplay)
       } else {
         rewindStepCounter -= 1
       }
@@ -223,7 +233,9 @@ extension EmulatorViewModel {
     // pinned execution. Otherwise the 60Hz Metal loop would keep
     // toggling the cursor even as T-states stop advancing.
     let blink = !(machine.debugger?.isPaused ?? false)
-    renderCurrentFrame(into: &pixelBuffer, blinkCursor: blink, debugTextLayerEnabled: debugTextLayerEnabled)
+    renderCurrentFrame(into: &pixelBuffer, blinkCursor: blink,
+                       debugTextLayerEnabled: debugTextLayerEnabled,
+                       markTextPixels: markTextPixelsForDisplay)
 
     // Snapshot recording happens after render so the thumbnail
     // captured from `pixelBuffer` matches the state we just saved.
