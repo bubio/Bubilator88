@@ -23,6 +23,12 @@ final class Settings {
     didSet { UserDefaults.standard.set(pseudoStereo, forKey: "pseudoStereo") }
   }
 
+  /// CD mix: output low-pass + stereo reverb, fitted against a 1989 game-music
+  /// CD. Taste rather than hardware accuracy, so it stays opt-in.
+  var cdMix: Bool = false {
+    didSet { UserDefaults.standard.set(cdMix, forKey: "cdMix") }
+  }
+
   // MARK: - DIP Switches
 
   /// DIP switch 1 (port 0x30 read). Applied on reset.
@@ -448,6 +454,9 @@ final class Settings {
     }
     if let v = UserDefaults.standard.object(forKey: "spatialAudio") as? Bool {
       immersiveAudio = v
+    }
+    if let v = UserDefaults.standard.object(forKey: "cdMix") as? Bool {
+      cdMix = v
     }
     if let v = UserDefaults.standard.object(forKey: "fddSound") as? Bool {
       fddSound = v

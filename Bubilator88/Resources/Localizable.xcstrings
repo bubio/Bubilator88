@@ -853,6 +853,16 @@
         }
       }
     },
+    "CD Mix" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CD ミックス"
+          }
+        }
+      }
+    },
     "Can't Load Disk Image" : {
       "comment" : "Disk load failure alert title",
       "localizations" : {
@@ -1683,6 +1693,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "エミュレータの実行状態 (緑 = 実行中、橙 = 停止中)"
+          }
+        }
+      }
+    },
+    "Enable CD Mix" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CD ミックスを有効にする"
           }
         }
       }
@@ -3408,6 +3428,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "アトリビュートバイトの生値 (16 進)"
+          }
+        }
+      }
+    },
+    "Recreates the mastering of classic game music CDs." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あの頃のゲームミュージック CD のマスタリングを再現します。"
           }
         }
       }

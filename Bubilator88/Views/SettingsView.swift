@@ -297,6 +297,13 @@ private struct AudioSettingsTab: View {
           .foregroundStyle(.secondary)
       }
 
+      Section("CD Mix") {
+        Toggle("Enable CD Mix", isOn: cdMixBinding)
+        Text("Recreates the mastering of classic game music CDs.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+
       Section("Immersive Audio") {
         Toggle("Enable Immersive Audio", isOn: immersiveAudioBinding)
         Text("Places FM, SSG, ADPCM, and Rhythm channels in 3D space with head tracking. Requires compatible headphones.")
@@ -431,6 +438,13 @@ private struct AudioSettingsTab: View {
     Binding(
       get: { viewModel.pseudoStereo },
       set: { viewModel.pseudoStereo = $0 }
+    )
+  }
+
+  private var cdMixBinding: Binding<Bool> {
+    Binding(
+      get: { viewModel.cdMix },
+      set: { viewModel.cdMix = $0 }
     )
   }
 
