@@ -350,6 +350,15 @@ final class EmulatorViewModel {
     }
   }
 
+  /// CD mix output stage: low-pass + stereo reverb — persisted via Settings.
+  var cdMix: Bool {
+    get { Settings.shared.cdMix }
+    set {
+      Settings.shared.cdMix = newValue
+      machine.sound.cdMixEnabled = newValue
+    }
+  }
+
   /// Immersive audio: place YM2608 channels in 3D space — persisted via Settings.
   var immersiveAudio: Bool {
     get { Settings.shared.immersiveAudio }
@@ -757,6 +766,7 @@ final class EmulatorViewModel {
     machine.clock8MHz = clock8MHz
     machine.sound.immersiveOutputEnabled = Settings.shared.immersiveAudio
     machine.sound.pseudoStereoEnabled = pseudoStereo && !immersiveAudio
+    machine.sound.cdMixEnabled = Settings.shared.cdMix
     audio.sound = machine.sound
     audio.recorder = audioRecorder
     audio.videoRecorder = videoRecorder
