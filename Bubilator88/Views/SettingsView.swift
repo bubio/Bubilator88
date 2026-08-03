@@ -371,7 +371,7 @@ private struct AudioSettingsTab: View {
         }
 
         if !isAAC && settings.recordingSeparation == "separated" {
-          Text("Separated records FM, SSG, ADPCM, and Rhythm into 8 discrete channels for DAW import (Logic, Audacity). QuickTime Player and most media players will only play the first 2 channels.")
+          Text("Separated records FM, SSG, ADPCM, and Rhythm into 8 discrete channels for DAW import (Logic, Audacity). Media players cannot play it back correctly — use Stereo for listening.")
             .font(.caption)
             .foregroundStyle(.secondary)
         } else {

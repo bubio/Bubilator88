@@ -4234,12 +4234,12 @@
         }
       }
     },
-    "Separated records FM, SSG, ADPCM, and Rhythm into 8 discrete channels for DAW import (Logic, Audacity). QuickTime Player and most media players will only play the first 2 channels." : {
+    "Separated records FM, SSG, ADPCM, and Rhythm into 8 discrete channels for DAW import (Logic, Audacity). Media players cannot play it back correctly — use Stereo for listening." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "FM、SSG、ADPCM、Rhythmを8つの独立チャンネルに分離して記録します。DAW (Logic、Audacity等) への取り込み用です。QuickTime Playerなど大半のプレーヤーでは先頭の2chのみ再生されます。"
+            "value" : "FM、SSG、ADPCM、Rhythmを8つの独立チャンネルに分離して記録します。DAW (Logic、Audacity等) への取り込み用です。メディアプレーヤーでは正しく再生できないため、試聴にはステレオを使ってください。"
           }
         }
       }
