@@ -5,6 +5,7 @@ import EmulatorCore
 struct FilterParams {
   var textureDimensions: SIMD2<Float>
   var outputDimensions: SIMD2<Float>
+  /// bit 0 = scanlines on, bit 1 = leave text pixels undimmed.
   var scanlineEnabled: UInt32
   var is400LineMode: UInt32
   var hqOffset: Float
@@ -46,6 +47,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   /// Current video filter and scanline state (updated from ViewModel).
   private var currentFilter: EmulatorViewModel.VideoFilter = .none
   private var currentScanlineEnabled: Bool = false
+  private var currentTextScanlineExempt: Bool = false
 
 
   // Frame pacing (BubiZ-1500 style)
@@ -72,6 +74,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
     self.isPaused = true
     currentFilter = viewModel.videoFilter
     currentScanlineEnabled = viewModel.effectiveScanlineEnabled
+    currentTextScanlineExempt = viewModel.debugTextScanlineExempt
     setupMetal()
   }
 
@@ -82,10 +85,15 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
 
   // MARK: - Video Filter
 
-  func updateVideoFilter(_ filter: EmulatorViewModel.VideoFilter, scanlineEnabled: Bool) {
+  func updateVideoFilter(
+    _ filter: EmulatorViewModel.VideoFilter,
+    scanlineEnabled: Bool,
+    textScanlineExempt: Bool = false
+  ) {
     let previousFilter = currentFilter
     currentFilter = filter
     currentScanlineEnabled = scanlineEnabled
+    currentTextScanlineExempt = textScanlineExempt
 
     if previousFilter.requiresAIUpscale && !filter.requiresAIUpscale {
       aiUpscaler?.releaseResources()
@@ -356,9 +364,12 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
     let outDims = SIMD2<Float>(Float(outputWidth), Float(outputHeight))
     switch kind {
     case .main:
+      // bit 0 = scanlines on, bit 1 = exempt text pixels (see Display.metal).
+      var scanlineFlags: UInt32 = (currentScanlineEnabled && !is400) ? 1 : 0
+      if scanlineFlags != 0 && currentTextScanlineExempt { scanlineFlags |= 2 }
       ptr.pointee = FilterParams(
         textureDimensions: dims, outputDimensions: outDims,
-        scanlineEnabled: (currentScanlineEnabled && !is400) ? 1 : 0,
+        scanlineEnabled: scanlineFlags,
         is400LineMode: is400 ? 1 : 0,
         hqOffset: viewModel.hqOffset,
         hqGradient: viewModel.hqGradient,

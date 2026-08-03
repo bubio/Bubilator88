@@ -1778,6 +1778,17 @@
         }
       }
     },
+    "Exempt Text from Scanlines" : {
+      "comment" : "DEBUG menu: keep the text layer at full brightness under the scanline overlay",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テキストにスキャンラインを適用しない"
+          }
+        }
+      }
+    },
     "Expected the image keyword: %@" : {
       "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",

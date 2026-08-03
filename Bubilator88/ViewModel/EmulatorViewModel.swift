@@ -171,7 +171,7 @@ final class EmulatorViewModel {
     get { VideoFilter(rawValue: Settings.shared.videoFilter) ?? .none }
     set {
       Settings.shared.videoFilter = newValue.rawValue
-      metalView?.updateVideoFilter(newValue, scanlineEnabled: effectiveScanlineEnabled)
+      pushVideoFilterToMetalView()
     }
   }
 
@@ -179,8 +179,15 @@ final class EmulatorViewModel {
     get { Settings.shared.scanlineEnabled }
     set {
       Settings.shared.scanlineEnabled = newValue
-      metalView?.updateVideoFilter(videoFilter, scanlineEnabled: effectiveScanlineEnabled)
+      pushVideoFilterToMetalView()
     }
+  }
+
+  /// DEBUG-only experiment: keep the text layer out of the scanline dimming,
+  /// the way XM8's SDL port does. Not persisted — always off at launch, since
+  /// dimming everything uniformly is what a real CRT does.
+  var debugTextScanlineExempt: Bool = false {
+    didSet { pushVideoFilterToMetalView() }
   }
 
   var isScanlineAvailable: Bool {
@@ -189,6 +196,21 @@ final class EmulatorViewModel {
 
   var effectiveScanlineEnabled: Bool {
     isScanlineAvailable && scanlineEnabled
+  }
+
+  /// Tag text pixels only while the exemption can actually take effect, so the
+  /// alpha marks never reach the AI upscaler or any other consumer of the
+  /// shared pixel buffer.
+  var markTextPixelsForDisplay: Bool {
+    effectiveScanlineEnabled && debugTextScanlineExempt
+  }
+
+  private func pushVideoFilterToMetalView() {
+    metalView?.updateVideoFilter(
+      videoFilter,
+      scanlineEnabled: effectiveScanlineEnabled,
+      textScanlineExempt: debugTextScanlineExempt
+    )
   }
 
   // MARK: - HQ Filter Debug Parameters
