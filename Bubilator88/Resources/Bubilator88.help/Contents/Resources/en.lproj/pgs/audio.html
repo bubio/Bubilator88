@@ -75,14 +75,14 @@
     <table>
         <tr><th>Format</th><th>Extension</th><th>Notes</th></tr>
         <tr><td>WAV</td><td>.wav</td><td>Uncompressed 16-bit PCM. Best for DAW import.</td></tr>
-        <tr><td>Apple Lossless</td><td>.caf</td><td>Lossless compression. Typically 50–70% of WAV size.</td></tr>
+        <tr><td>Apple Lossless</td><td>.caf</td><td>Lossless compression. Typically 50–70% of WAV size. For Separated (8ch), WAV is recommended.</td></tr>
         <tr><td>AAC</td><td>.m4a</td><td>Lossy compression. Always written as stereo (AAC cannot encode 8 discrete channels).</td></tr>
     </table>
 
     <h3>Channel Modes</h3>
     <p>The <strong>Channels</strong> picker chooses the recording layout (AAC is locked to stereo):</p>
     <ul>
-        <li><strong>Separated (8ch)</strong>: FM, SSG, ADPCM, and Rhythm each get their own stereo pair in one 8-channel file (ch0/1 FM, ch2/3 SSG, ch4/5 ADPCM, ch6/7 Rhythm). Intended for DAW workflows (Logic, Audacity) where you want to mix or edit each source independently. QuickTime Player and most media players will only play the first two channels.</li>
+        <li><strong>Separated (8ch)</strong>: FM, SSG, ADPCM, and Rhythm each get their own stereo pair in one 8-channel file (ch0/1 FM, ch2/3 SSG, ch4/5 ADPCM, ch6/7 Rhythm). Intended for DAW workflows (Logic, Audacity) where you want to mix or edit each source independently. Media players such as QuickTime Player may not play these files back correctly — use Stereo (2ch) if you just want to listen.</li>
         <li><strong>Stereo (2ch)</strong>: Records the final mix. Plays in any media player. If Pseudo Stereo is enabled, its effect is captured in the file.</li>
     </ul>
     <p>Separated mode internally forces immersive-style per-channel output for the duration of the session, so Pseudo Stereo is not applied to the recording (by design — DAW users want the raw per-source signal).</p>

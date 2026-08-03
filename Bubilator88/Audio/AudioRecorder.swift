@@ -6,8 +6,19 @@ import Synchronization
 ///
 /// Two modes:
 ///   - `.separated`: 8-channel file. ch0/1 FM, ch2/3 SSG, ch4/5 ADPCM, ch6/7 Rhythm.
-///                   Intended for DAW import (Logic/Audacity). QuickTime and most
-///                   media players will only play ch0/ch1.
+///                   **DAW import only** (Logic/Audacity); no media player plays
+///                   it back correctly. AVAudioFile's WAV writer discards the
+///                   discrete-8 `AVChannelLayoutKey` (`afinfo` reports "no channel
+///                   layout"), so players guess a layout from the channel count:
+///                   CoreAudio (QuickTime, afplay) takes ch0/ch1 and drops the
+///                   other three stems entirely, while ffmpeg/ffplay assume 7.1
+///                   and downmix all eight — ch3 (SSG-R) lands in LFE and is
+///                   discarded, ch2 (SSG-L) collapses to centre mono, and the
+///                   result sits 10–13 dB down. See
+///                   docs/MULTICHANNEL_RECORDING_INVESTIGATION.md for the
+///                   measurements. `.alac` is worse still: the ALAC encoder
+///                   rewrites the layout to an explicit 7.1 tag, which scrambles
+///                   which channels a downmix picks up.
 ///   - `.stereo`:    Standard 2-channel mix. Plays in any player.
 ///
 /// AAC cannot encode discrete 8-channel layouts and is therefore always
