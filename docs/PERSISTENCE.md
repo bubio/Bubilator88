@@ -127,9 +127,14 @@
   読み出しは「ファイル内 → 無ければサイドカー」の順 (`EmulatorViewModel.loadMeta` /
   `loadThumbnailData`)。Quick Look 拡張の投入後にサイドカー書き込みを止める予定
   (→ `docs/QUICKLOOK_PLAN.md`)。**既存のサイドカーは削除しない**
-- 部分読み: サムネイルやメタだけが要る場面 (スロット一覧) では
-  `SaveStateFileAccess.readSection` がヘッダとセクションテーブルだけを読んで
-  目的セクションへ seek する。数 MB の全読みは発生しない
+- 部分読み: サムネイルやメタだけが要る場面 (スロット一覧、Quick Look 拡張) では
+  `Shared/SaveStateFileAccess.swift` の `readSection` がヘッダとセクションテーブル
+  だけを読んで目的セクションへ seek する。数 MB の全読みは発生しない。
+  アプリと `Bubilator88QuickLook` 拡張の両ターゲットでコンパイルされるため、
+  このファイルはアプリ状態に依存させないこと
+- Finder のアイコンとスペースキープレビューは `Bubilator88QuickLook.appex`
+  (Quick Look Thumbnail Extension) が `THMB` セクションから描画する。
+  UTType `com.bubio.bubilator88.save-state` はアプリの Info.plist で宣言
 
 ### メタデータ (meta.json / `AMTA` セクション) の内容
 

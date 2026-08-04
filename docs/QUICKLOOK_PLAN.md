@@ -3,7 +3,7 @@
 `.b88s` を単体で自己完結させ、Finder のサムネイル表示とスペースキープレビューを
 Quick Look 拡張で提供するための設計メモ。
 
-**進捗: Phase 1 実装済み (2026-08-04) / Phase 2・3 未着手。**
+**進捗: Phase 1・2 実装済み (2026-08-04) / Phase 3 未着手。**
 
 ## 1. 背景と現状
 
@@ -148,7 +148,35 @@ extension SaveStateFile {
 - `parseSectionTable` が `parse` と同じタグ・オフセット・サイズを返すこと
 - EmulatorCore/Sources を触るので、**コミット前に `/regression` 必須**
 
-## 4. Phase 2: UTType 宣言 + Thumbnail Extension
+## 4. Phase 2: UTType 宣言 + Thumbnail Extension (実装済み)
+
+実装の実際:
+
+- `Bubilator88QuickLook/` — `ThumbnailProvider.swift` (`QLThumbnailProvider`)、
+  `Info.plist` (`com.apple.quicklook.thumbnail`)、サンドボックス entitlements
+- **共有ソースは `Shared/` に置いた。** `SaveStateFileAccess.swift` はアプリと拡張の
+  両方でコンパイルする必要があるが、Xcode 16 の同期グループ
+  (`PBXFileSystemSynchronizedRootGroup`) は「フォルダ丸ごと 1 ターゲット」が基本で、
+  `Bubilator88/` 配下の 1 ファイルだけを別ターゲットにも入れるのは素直に書けない。
+  独立した `Shared/` を作り、両ターゲットの `fileSystemSynchronizedGroups` に載せる
+  のが最も素直だった。この構成のため同ファイルはアプリ状態に依存させないこと
+- `project.pbxproj` はターゲット定義・埋め込みフェーズ (`dstSubfolderSpec = 13`)・
+  EmulatorCore の `XCSwiftPackageProductDependency` を手で追記した
+
+### 動作確認 (2026-08-04)
+
+`UTType(filenameExtension: "b88s")` が `com.bubio.bubilator88.save-state` を返し、
+`QLThumbnailGenerator` が `.thumbnail` 表現として 512×320 の実画面
+(スタークルーザーのセーブ) を生成することを確認済み。
+
+> `qlmanage -t` はこの環境でハングして使えなかった。検証には
+> `QLThumbnailGenerator.generateBestRepresentation` を使うほうが速い。
+> `mdls` の `kMDItemContentType` は登録直後は古い dynamic UTI を返すので判定に使わない
+> (`UTType(filenameExtension:)` か `URL.resourceValues(forKeys: [.contentTypeKey])` を見る)。
+
+以下は設計時の記述。
+
+## 4'. Phase 2 設計メモ
 
 ### 4.1 UTType
 

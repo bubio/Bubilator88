@@ -12,6 +12,23 @@
 	<array>
 		<dict>
 			<key>UTTypeIdentifier</key>
+			<string>com.bubio.bubilator88.save-state</string>
+			<key>UTTypeDescription</key>
+			<string>Bubilator88 Save State</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>b88s</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
 			<string>com.bubio.bubilator88.timeline-script</string>
 			<key>UTTypeDescription</key>
 			<string>Bubilator88 Timeline Script</string>
