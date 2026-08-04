@@ -217,6 +217,13 @@ HTML を返し、スクリーンショットは `QLPreviewReplyAttachment` と�
 ディスク名 / ブートモード / CPU クロック / 保存日時。配色は `Canvas` /
 `CanvasText` システムカラーで light・dark 両対応。
 
+ラベル (ディスク / ブートモード / CPU クロック / 保存日時、およびスクリーンショット
+なしのプレースホルダ) は `Bubilator88QuickLookPreview/Resources/Localizable.xcstrings`
+で日本語化してある。**拡張は独立したバンドルなのでアプリの String Catalog は参照
+できず、拡張ターゲット自身に置く必要がある** (`String(localized:)` が見るのは
+`Bundle.main` = appex バンドル)。保存日時は `DateFormatter.localizedString` なので
+ロケールに従う。
+
 **なぜターゲットが 2 つなのか:** 1 つの appex が持てる `NSExtensionPointIdentifier`
 は 1 つだけで、サムネイル (`com.apple.quicklook.thumbnail`) とプレビュー
 (`com.apple.quicklook.preview`) は別の extension point。したがってサムネイル用と
