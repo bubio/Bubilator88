@@ -115,14 +115,23 @@
 
 | ファイル | 形式 | 説明 |
 |---------|------|------|
-| `slot_N.b88s` | バイナリ | エミュレータ全状態 (→ SAVE_STATE.md) |
-| `slot_N.meta.json` | JSON | ブートモード, ディスク名, クロック設定 |
-| `slot_N.thumb.png` | PNG | サムネイル (320×200) |
+| `slot_N.b88s` | バイナリ | エミュレータ全状態 + アプリメタ (`AMTA`) + サムネイル (`THMB`) (→ SAVE_STATE.md) |
+| `slot_N.meta.json` | JSON | ブートモード, ディスク名, クロック設定 (`AMTA` と同内容の互換用サイドカー) |
+| `slot_N.thumb.png` | PNG | サムネイル 320×200 (`THMB` と同内容の互換用サイドカー) |
 
 - N = 0-9 (10スロット)
 - クイックセーブ: `quicksave.b88s` / `.meta.json` / `.thumb.png`
+- **`.b88s` は単体で完結する。** メタデータとサムネイルはファイル内の `AMTA` /
+  `THMB` セクションにも入るので、`.b88s` だけをコピーしても情報は失われない。
+  サイドカーの 2 ファイルは Finder 表示と旧バージョン互換のために併存しており、
+  読み出しは「ファイル内 → 無ければサイドカー」の順 (`EmulatorViewModel.loadMeta` /
+  `loadThumbnailData`)。Quick Look 拡張の投入後にサイドカー書き込みを止める予定
+  (→ `docs/QUICKLOOK_PLAN.md`)。**既存のサイドカーは削除しない**
+- 部分読み: サムネイルやメタだけが要る場面 (スロット一覧) では
+  `SaveStateFileAccess.readSection` がヘッダとセクションテーブルだけを読んで
+  目的セクションへ seek する。数 MB の全読みは発生しない
 
-### メタデータ (meta.json) の内容
+### メタデータ (meta.json / `AMTA` セクション) の内容
 
 ```json
 {

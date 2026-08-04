@@ -44,7 +44,9 @@
 | `MAIN` | 0x4E49414D | Yes | 全コンポーネント状態 (シリアライズ連結) | ~500KB |
 | `DSK0` | 0x304B5344 | No | ドライブ0 D88イメージ | 0-1.2MB |
 | `DSK1` | 0x314B5344 | No | ドライブ1 D88イメージ | 0-1.2MB |
+| `CMT ` | 0x20544D43 | No | カセットデッキ + I8251 (テープマウント時のみ) | テープサイズ依存 |
 | `META` | 0x4154454D | Yes | メタデータ JSON | ~100B |
+| `AMTA` | 0x41544D41 | No | アプリ層メタデータ JSON (アプリが書く) | ~300B |
 | `THMB` | 0x424D4854 | No | サムネイル画像 | ~10KB |
 
 **推定ファイルサイズ**: ディスクなし ~500KB、2HD×2 ~2.9MB
@@ -214,9 +216,21 @@ JSON 形式のメタデータ:
 
 `drive*ArchiveEntry` は ZIP/LHA 等のアーカイブからディスクをマウントした場合に、アーカイブ内のエントリファイル名を保持する。この場合 `drive*SourceURL` はアーカイブファイル自体のパスを指す。ロード時にアーカイブを再展開して該当エントリの D88 を再パースすることで、マルチイメージ切替を復元する。`drive*ArchiveEntry` が null の場合、`drive*SourceURL` は D88 ファイルへの直接パス (従来動作) か、Mount 0&1 モードでアーカイブ全エントリを展開する。
 
+### AMTA セクション
+
+アプリ層のメタデータ (`EmulatorViewModel.SaveMeta` を `JSONEncoder` で符号化した
+もの)。ブートモード、ドライブ名/ファイル名、`drive*SourceURL`、`drive*ImageIndex`、
+`drive*ArchiveEntry` を含み、`META` より情報量が多い。
+
+EmulatorCore はこのタグの意味を知らない。アプリ層が
+`createSaveState(extraSections:)` で渡し、`SaveStateFileAccess.readSection` で
+読み出す。互換用に同内容の `.meta.json` サイドカーも併存する (→ PERSISTENCE.md)。
+
 ### THMB セクション
 
-サムネイル画像データ。アプリ層で付加される (EmulatorCore は関与しない)。
+サムネイル画像データ (320×200 PNG)。アプリ層が `createSaveState(thumbnail:)` に
+渡す (EmulatorCore は中身に関与しない)。ヘッダ 0x34/0x38 にオフセットとサイズが
+書かれるほか、セクションテーブルにも `THMB` として載る。
 
 ---
 
@@ -278,6 +292,12 @@ enum SaveStateFile {
     static func build(sections: [(tag: UInt32, data: [UInt8])],
                       thumbnail: [UInt8]?) -> [UInt8]
     static func parse(_ data: [UInt8]) throws -> [UInt32: [UInt8]]
+
+    /// Header + section table only. Lets a caller seek to one section
+    /// without reading the whole file. EmulatorCore does no file I/O —
+    /// the caller reads the leading bytes and seeks itself.
+    static func parseSectionTable(_ data: [UInt8]) throws
+      -> [(tag: UInt32, offset: Int, size: Int)]
 }
 ```
 
@@ -285,7 +305,8 @@ enum SaveStateFile {
 
 ```swift
 extension Machine {
-    func createSaveState(thumbnail: [UInt8]?) -> [UInt8]
+    func createSaveState(thumbnail: [UInt8]? = nil,
+                         extraSections: [(tag: UInt32, data: [UInt8])] = []) -> [UInt8]
     mutating func loadSaveState(_ data: [UInt8]) throws
 }
 ```
@@ -296,8 +317,12 @@ extension Machine {
 
 ## 5. バージョン互換性
 
-- **前方互換**: 未知のセクションタグはスキップ → 新セクション追加は安全
-- **後方互換**: `version < 2` または `version > currentVersion` → ロード拒否 (`unsupportedVersion` エラー)
+- **前方互換**: 未知のセクションタグはスキップ → 新セクション追加は安全。
+  `parse` は全タグを辞書に入れるだけ、`loadSaveState` は既知タグを辞書引きするだけで、
+  セクション数の検証も未知タグの拒否も行わない。**アプリ層セクション (`AMTA` など) の
+  追加でバージョンを上げる必要はない** — 古いビルドでも状態復元は成功し、そのセクションが
+  無視されるだけ
+- **後方互換**: `version < 3` または `version > currentVersion` → ロード拒否 (`unsupportedVersion` エラー)
 - **セクション内拡張**: 末尾追加方式。Reader の remaining > 0 なら追加データを読める
 - 破壊的変更時のみバージョン番号をインクリメント
 
@@ -307,6 +332,11 @@ extension Machine {
 |---------|------|------|
 | 1 | — | 初版 (pre-release) |
 | 2 | 2026-04 | CRTC に `blinkCounter` / `blinkAttribBit` 追加 (BLINK 属性実装) + YM2608 に `adpcmReadBuffer` 追加 (ADPCM RAM memory-read ラッチ復元)。v1 は拒否 |
+| 3 | 2026-04-21 | BubiC event.cpp スケジューラ移行に伴い chase-heuristic フィールド (`needsSubCPURun`, `pioInterleaveInstructionsRemaining`, `subPortBWriteGeneration`, `pendingFreshMainPort*`, `pendingATNIdleLoopObservation` 等) を削除。v2 は拒否 (出典: `SaveState.swift:179`) |
+
+> **本ドキュメントは v2 時点の記述が残っている。** 上表の v3 行はコード中のコメントから
+> 起こしたもので、§2 の MAIN セクションのレイアウト記述は v3 の実装 (`writeSaveState`)
+> と突き合わせ直す必要がある (未実施)。
 
 ---
 

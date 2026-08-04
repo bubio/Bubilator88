@@ -1148,6 +1148,22 @@ final class EmulatorViewModel {
     statePath.deletingPathExtension().appendingPathExtension("thumb.png")
   }
 
+  /// App metadata for a state file: from the `AMTA` section when present,
+  /// otherwise from the sidecar JSON written by builds before the section
+  /// existed. States saved by those builds must keep loading correctly.
+  private func loadMeta(for statePath: URL) -> SaveMeta? {
+    let data = SaveStateFileAccess.readSection(SaveStateFileAccess.appMetaTag, from: statePath)
+      ?? (try? Data(contentsOf: metaPath(for: statePath)))
+    guard let data else { return nil }
+    return try? JSONDecoder().decode(SaveMeta.self, from: data)
+  }
+
+  /// Thumbnail PNG for a state file, with the same in-file-then-sidecar order.
+  private func loadThumbnailData(for statePath: URL) -> Data? {
+    SaveStateFileAccess.readSection(SaveStateFileAccess.thumbnailTag, from: statePath)
+      ?? (try? Data(contentsOf: thumbnailPath(for: statePath)))
+  }
+
   private func captureThumbnail() -> Data? {
     let srcWidth = 640
     let srcHeight = 400
@@ -1184,9 +1200,6 @@ final class EmulatorViewModel {
     // Capture thumbnail on main thread (pixelBuffer access)
     let thumbData = captureThumbnail()
     emuQueue.sync {
-      let data = machine.createSaveState()
-      try? FileManager.default.createDirectory(at: Self.saveStateDir, withIntermediateDirectories: true)
-      try? Data(data).write(to: path, options: .atomic)
       let meta = SaveMeta(
         bootMode: bootMode.rawValue,
         clock8MHz: clock8MHz,
@@ -1203,7 +1216,20 @@ final class EmulatorViewModel {
         drive0ArchiveEntry: self.drive0Info?.archiveEntryName,
         drive1ArchiveEntry: self.drive1Info?.archiveEntryName
       )
-      try? JSONEncoder().encode(meta).write(to: metaPath(for: path), options: .atomic)
+      let metaJSON = try? JSONEncoder().encode(meta)
+      // Thumbnail and app metadata go inside the .b88s so the file stands on
+      // its own when copied or shared. The sidecars are still written for now:
+      // they are what older builds and Finder (until the Quick Look extension
+      // ships) read. Never delete existing ones.
+      var extraSections: [(tag: UInt32, data: [UInt8])] = []
+      if let metaJSON {
+        extraSections.append((tag: SaveStateFileAccess.appMetaTag, data: Array(metaJSON)))
+      }
+      let data = machine.createSaveState(thumbnail: thumbData.map { Array($0) },
+                                         extraSections: extraSections)
+      try? FileManager.default.createDirectory(at: Self.saveStateDir, withIntermediateDirectories: true)
+      try? Data(data).write(to: path, options: .atomic)
+      try? metaJSON?.write(to: metaPath(for: path), options: .atomic)
     }
     if let thumbData {
       try? thumbData.write(to: thumbnailPath(for: path), options: .atomic)
@@ -1242,10 +1268,7 @@ final class EmulatorViewModel {
       showToast(saveStateLoadErrorMessage(loadError))
       return
     }
-    let meta: SaveMeta? = {
-      guard let metaData = try? Data(contentsOf: metaPath(for: path)) else { return nil }
-      return try? JSONDecoder().decode(SaveMeta.self, from: metaData)
-    }()
+    let meta: SaveMeta? = loadMeta(for: path)
     if let meta {
       if let mode = BootMode(rawValue: meta.bootMode) {
         _bootModeStorage = mode
@@ -1420,8 +1443,7 @@ final class EmulatorViewModel {
           let date = attrs[.modificationDate] as? Date else { return "" }
     let fmt = DateFormatter.stable(pattern: "MM/dd HH:mm")
     var parts = [fmt.string(from: date)]
-    if let metaData = try? Data(contentsOf: metaPath(for: quickSavePath)),
-       let meta = try? JSONDecoder().decode(SaveMeta.self, from: metaData) {
+    if let meta = loadMeta(for: quickSavePath) {
       let name0: String? = meta.drive0FileName ?? meta.drive0Name
       let name1: String? = meta.drive1FileName ?? meta.drive1Name
       var names: [String] = []
@@ -1440,8 +1462,7 @@ final class EmulatorViewModel {
     }
     let fmt = DateFormatter.stable(pattern: "MM/dd HH:mm")
     var label = "Quick Load — \(fmt.string(from: date))"
-    if let metaData = try? Data(contentsOf: metaPath(for: quickSavePath)),
-       let meta = try? JSONDecoder().decode(SaveMeta.self, from: metaData) {
+    if let meta = loadMeta(for: quickSavePath) {
       let disks = [meta.disk0, meta.disk1].compactMap { $0 }.filter { !$0.isEmpty }
       if !disks.isEmpty {
         label += " — \(disks.joined(separator: ", "))"
@@ -1451,18 +1472,16 @@ final class EmulatorViewModel {
   }
 
   var quickSaveThumbnail: NSImage? {
-    guard let data = try? Data(contentsOf: thumbnailPath(for: quickSavePath)) else { return nil }
+    guard let data = loadThumbnailData(for: quickSavePath) else { return nil }
     return NSImage(data: data)
   }
 
   func loadSlotMeta(_ slot: Int) -> SaveMeta? {
-    guard let data = try? Data(contentsOf: metaPath(for: saveStatePath(slot: slot))) else { return nil }
-    return try? JSONDecoder().decode(SaveMeta.self, from: data)
+    loadMeta(for: saveStatePath(slot: slot))
   }
 
   func slotThumbnail(_ slot: Int) -> NSImage? {
-    let path = thumbnailPath(for: saveStatePath(slot: slot))
-    guard let data = try? Data(contentsOf: path) else { return nil }
+    guard let data = loadThumbnailData(for: saveStatePath(slot: slot)) else { return nil }
     return NSImage(data: data)
   }
 
