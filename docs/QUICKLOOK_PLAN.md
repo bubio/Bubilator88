@@ -3,7 +3,7 @@
 `.b88s` を単体で自己完結させ、Finder のサムネイル表示とスペースキープレビューを
 Quick Look 拡張で提供するための設計メモ。
 
-**進捗: Phase 1・2 実装済み (2026-08-04) / Phase 3 未着手。**
+**進捗: Phase 1・2・3 実装済み (2026-08-04)。残タスクは §6 step 6 (サイドカー書き込みの停止)。**
 
 ## 1. 背景と現状
 
@@ -209,7 +209,70 @@ extension SaveStateFile {
 - Finder のサムネイルはキャッシュされる。動作確認時は `qlmanage -r cache` が必要
 - 拡張のコード署名がアプリ本体と揃っていないと Finder に認識されない
 
-## 5. Phase 3: Preview Extension
+## 5. Phase 3: Preview Extension (実装済み)
+
+`Bubilator88QuickLookPreview/` — `QLPreviewProvider` による data-based preview。
+HTML を返し、スクリーンショットは `QLPreviewReplyAttachment` として `cid:screen` で
+参照する。表示は 640×400 の画面 (`image-rendering: pixelated` で 2 倍表示) +
+ディスク名 / ブートモード / CPU クロック / 保存日時。配色は `Canvas` /
+`CanvasText` システムカラーで light・dark 両対応。
+
+**なぜターゲットが 2 つなのか:** 1 つの appex が持てる `NSExtensionPointIdentifier`
+は 1 つだけで、サムネイル (`com.apple.quicklook.thumbnail`) とプレビュー
+(`com.apple.quicklook.preview`) は別の extension point。したがってサムネイル用と
+プレビュー用で appex を分ける必要がある。両方とも `Shared/` と EmulatorCore を
+共有し、アプリの Embed Foundation Extensions フェーズに同居する。
+
+### 制約: 旧セーブのプレビューは情報が減る
+
+拡張はサンドボックス内で動き、Quick Look から渡された **その URL しか読めない**。
+`.b88s` の隣にある `.meta.json` / `.thumb.png` サイドカーは読めないので、
+`THMB`/`AMTA` を持たない旧セーブのプレビューは以下だけになる:
+
+| 項目 | 旧セーブでの可否 | 出所 |
+|------|-----------------|------|
+| スクリーンショット | ✗ (プレースホルダ表示) | `THMB` |
+| ブートモード | ✗ | `AMTA` のみ |
+| ディスク名 | ○ | `META` (コアが以前から書いている) |
+| CPU クロック | ○ | `META` |
+| 保存日時 | ○ | ヘッダ 0x08 |
+
+アプリ内のスロット一覧はサイドカーにフォールバックするので従来どおり全部出る。
+差が出るのは Finder のプレビューだけ。
+
+### 検証 (2026-08-04)
+
+`pluginkit -m -p com.apple.quicklook.preview` で登録を確認。生成される HTML を
+WKWebView でレンダリングして目視確認済み (サムネイルあり / ディスク名あり /
+旧セーブの 3 パターン)。
+
+> 初版はプレースホルダが黒背景に薄い黒文字で不可視だった。`.missing` は
+> `.screen` の黒塗りを上書きする必要がある。
+
+### 落とし穴: `QLIsDataBasedPreview` は必須
+
+`NSExtensionAttributes` に **`QLIsDataBasedPreview = true` が無いと、`QLPreviewProvider`
+であっても QuickLook はビューコントローラ型の拡張として起動しようとして落ちる**。
+症状は Finder でくるくる回り続け、サムネイルも出なくなる (サムネイルが `THMB` を
+持たないファイルではプレビュー経由で生成されるため、巻き添えになる)。
+
+ログにはこう出る:
+
+```
+E  Bubilator88QuickLookPreview: *** Assertion failure in <private>, QLPreviewExtensionViewController.m:139
+```
+
+Xcode の "Quick Look Preview Extension" テンプレートは**ビュー型が既定** で
+(`QLIsDataBasedPreview` は `false`、principal class は `PreviewViewController`)、
+data-based にするには手で切り替える必要がある。Apple 自身の data-based 拡張
+(`Icon Composer QuickLook Preview.appex`) の Info.plist が参考になる。
+
+デバッグ方法: `log show --last 5m --predicate 'process CONTAINS "Bubilator88QuickLookPreview"'`。
+`qlmanage -p` はウィンドウを開いて返ってこないが、**拡張自体は起動するのでログは取れる**。
+また Debug と Release の両方が Launch Services に登録されていると、片方だけ直しても
+古い方が使われることがある (両方ビルドし直すこと)。
+
+## 5'. Phase 3 設計メモ
 
 `QLPreviewProvider` でスペースキープレビューを実装する。表示内容:
 

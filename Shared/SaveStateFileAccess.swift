@@ -15,6 +15,8 @@ enum SaveStateFileAccess {
   /// FourCC of the app-layer metadata section (`SaveMeta` as JSON).
   static let appMetaTag = SaveStateFile.fourCC("AMTA")
   static let thumbnailTag = SaveStateFile.fourCC("THMB")
+  /// FourCC of the emulator's own metadata section (disk names, CPU clock).
+  static let coreMetaTag = SaveStateFile.fourCC("META")
 
   /// Upper bound on the section count read from a header before it is treated
   /// as corrupt. A real state file has fewer than ten sections; this only
@@ -47,5 +49,29 @@ enum SaveStateFileAccess {
           let data = try? handle.read(upToCount: entry.size),
           data.count == entry.size else { return nil }
     return data
+  }
+
+  /// When the state was written, from the header timestamp at offset 0x08.
+  ///
+  /// The file's own modification date usually says the same thing, but the
+  /// header survives copying with tools that do not preserve dates.
+  static func readTimestamp(from url: URL) -> Date? {
+    guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+    defer { try? handle.close() }
+    guard let header = try? handle.read(upToCount: SaveStateFile.headerSize),
+          header.count == SaveStateFile.headerSize else { return nil }
+
+    var magicPos = 0
+    guard SaveStateFile.readU32LE(Array(header), at: &magicPos) == SaveStateFile.magic else {
+      return nil
+    }
+    // Timestamp is a Double written as its little-endian bit pattern.
+    var bits: UInt64 = 0
+    for i in (8..<16).reversed() {
+      bits = (bits << 8) | UInt64(header[i])
+    }
+    let seconds = Double(bitPattern: bits)
+    guard seconds.isFinite, seconds > 0 else { return nil }
+    return Date(timeIntervalSince1970: seconds)
   }
 }

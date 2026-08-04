@@ -132,9 +132,12 @@
   だけを読んで目的セクションへ seek する。数 MB の全読みは発生しない。
   アプリと `Bubilator88QuickLook` 拡張の両ターゲットでコンパイルされるため、
   このファイルはアプリ状態に依存させないこと
-- Finder のアイコンとスペースキープレビューは `Bubilator88QuickLook.appex`
-  (Quick Look Thumbnail Extension) が `THMB` セクションから描画する。
-  UTType `com.bubio.bubilator88.save-state` はアプリの Info.plist で宣言
+- Finder のアイコンは `Bubilator88QuickLook.appex` が `THMB` から、スペースキー
+  プレビューは `Bubilator88QuickLookPreview.appex` が `THMB` + `AMTA` + `META` +
+  ヘッダのタイムスタンプから描画する (extension point が別なので appex も別)。
+  UTType `com.bubio.bubilator88.save-state` はアプリの Info.plist で宣言。
+  拡張はサンドボックス内で渡された URL しか読めず、サイドカーは参照できないため、
+  旧セーブの Finder プレビューは情報が減る (→ `docs/QUICKLOOK_PLAN.md` §5)
 
 ### メタデータ (meta.json / `AMTA` セクション) の内容
 

@@ -10,6 +10,8 @@
 		B616EC4B2F550F2200D819FE /* EmulatorCore in Frameworks */ = {isa = PBXBuildFile; productRef = B6AA00022F4BF001002BAE55 /* EmulatorCore */; };
 		B6C1000000000000000000ED /* Bubilator88QuickLook.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B6C1000000000000000000E2 /* Bubilator88QuickLook.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B6C1000000000000000000F1 /* EmulatorCore in Frameworks */ = {isa = PBXBuildFile; productRef = B6C1000000000000000000F0 /* EmulatorCore */; };
+		B6C2000000000000000000ED /* Bubilator88QuickLookPreview.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B6C2000000000000000000E2 /* Bubilator88QuickLookPreview.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B6C2000000000000000000F1 /* EmulatorCore in Frameworks */ = {isa = PBXBuildFile; productRef = B6C2000000000000000000F0 /* EmulatorCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +36,13 @@
 			remoteGlobalIDString = B6C1000000000000000000E1;
 			remoteInfo = Bubilator88QuickLook;
 		};
+		B6C2000000000000000000EE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B62EED602F4BE8160011A29B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B6C2000000000000000000E1;
+			remoteInfo = Bubilator88QuickLookPreview;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -44,6 +53,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				B6C1000000000000000000ED /* Bubilator88QuickLook.appex in Embed Foundation Extensions */,
+				B6C2000000000000000000ED /* Bubilator88QuickLookPreview.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -56,6 +66,7 @@
 		B62EED7F2F4BE8170011A29B /* Bubilator88UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Bubilator88UITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B64DDE5B2F4BE8CB002BAE55 /* Bubilator88.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Bubilator88.entitlements; sourceTree = "<group>"; };
 		B6C1000000000000000000E2 /* Bubilator88QuickLook.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Bubilator88QuickLook.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		B6C2000000000000000000E2 /* Bubilator88QuickLookPreview.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Bubilator88QuickLookPreview.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -73,6 +84,14 @@
 				Bubilator88QuickLook.entitlements,
 			);
 			target = B6C1000000000000000000E1 /* Bubilator88QuickLook */;
+		};
+		B6C2000000000000000000EA /* Exceptions for "Bubilator88QuickLookPreview" folder in "Bubilator88QuickLookPreview" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				Bubilator88QuickLookPreview.entitlements,
+			);
+			target = B6C2000000000000000000E1 /* Bubilator88QuickLookPreview */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -108,6 +127,14 @@
 			path = Shared;
 			sourceTree = "<group>";
 		};
+		B6C2000000000000000000E9 /* Bubilator88QuickLookPreview */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B6C2000000000000000000EA /* Exceptions for "Bubilator88QuickLookPreview" folder in "Bubilator88QuickLookPreview" target */,
+			);
+			path = Bubilator88QuickLookPreview;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -141,6 +168,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B6C2000000000000000000E4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B6C2000000000000000000F1 /* EmulatorCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -149,6 +184,7 @@
 			children = (
 				B62EED6A2F4BE8160011A29B /* Bubilator88 */,
 				B6C1000000000000000000E9 /* Bubilator88QuickLook */,
+				B6C2000000000000000000E9 /* Bubilator88QuickLookPreview */,
 				B6C1000000000000000000EB /* Shared */,
 				B62EED782F4BE8170011A29B /* Bubilator88Tests */,
 				B62EED822F4BE8170011A29B /* Bubilator88UITests */,
@@ -166,6 +202,7 @@
 				B62EED752F4BE8170011A29B /* Bubilator88Tests.xctest */,
 				B62EED7F2F4BE8170011A29B /* Bubilator88UITests.xctest */,
 				B6C1000000000000000000E2 /* Bubilator88QuickLook.appex */,
+				B6C2000000000000000000E2 /* Bubilator88QuickLookPreview.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -186,6 +223,7 @@
 			);
 			dependencies = (
 				B6C1000000000000000000EF /* PBXTargetDependency */,
+				B6C2000000000000000000EF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				B62EED6A2F4BE8160011A29B /* Bubilator88 */,
@@ -269,6 +307,30 @@
 			productReference = B6C1000000000000000000E2 /* Bubilator88QuickLook.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		B6C2000000000000000000E1 /* Bubilator88QuickLookPreview */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B6C2000000000000000000E6 /* Build configuration list for PBXNativeTarget "Bubilator88QuickLookPreview" */;
+			buildPhases = (
+				B6C2000000000000000000E3 /* Sources */,
+				B6C2000000000000000000E4 /* Frameworks */,
+				B6C2000000000000000000E5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B6C2000000000000000000E9 /* Bubilator88QuickLookPreview */,
+				B6C1000000000000000000EB /* Shared */,
+			);
+			name = Bubilator88QuickLookPreview;
+			packageProductDependencies = (
+				B6C2000000000000000000F0 /* EmulatorCore */,
+			);
+			productName = Bubilator88QuickLookPreview;
+			productReference = B6C2000000000000000000E2 /* Bubilator88QuickLookPreview.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -291,6 +353,9 @@
 						TestTargetID = B62EED672F4BE8160011A29B;
 					};
 					B6C1000000000000000000E1 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					B6C2000000000000000000E1 = {
 						CreatedOnToolsVersion = 26.2;
 					};
 				};
@@ -317,6 +382,7 @@
 				B62EED742F4BE8170011A29B /* Bubilator88Tests */,
 				B62EED7E2F4BE8170011A29B /* Bubilator88UITests */,
 				B6C1000000000000000000E1 /* Bubilator88QuickLook */,
+				B6C2000000000000000000E1 /* Bubilator88QuickLookPreview */,
 			);
 		};
 /* End PBXProject section */
@@ -344,6 +410,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B6C1000000000000000000E5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B6C2000000000000000000E5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -381,6 +454,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B6C2000000000000000000E3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -398,6 +478,11 @@
 			isa = PBXTargetDependency;
 			target = B6C1000000000000000000E1 /* Bubilator88QuickLook */;
 			targetProxy = B6C1000000000000000000EE /* PBXContainerItemProxy */;
+		};
+		B6C2000000000000000000EF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B6C2000000000000000000E1 /* Bubilator88QuickLookPreview */;
+			targetProxy = B6C2000000000000000000EE /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -746,6 +831,64 @@
 			};
 			name = Release;
 		};
+		B6C2000000000000000000E7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Bubilator88QuickLookPreview/Bubilator88QuickLookPreview.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = Z9RG6Y45L5;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Bubilator88QuickLookPreview/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bubio.Bubilator88.QuickLookPreview;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		B6C2000000000000000000E8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Bubilator88QuickLookPreview/Bubilator88QuickLookPreview.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = Z9RG6Y45L5;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Bubilator88QuickLookPreview/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bubio.Bubilator88.QuickLookPreview;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -794,6 +937,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		B6C2000000000000000000E6 /* Build configuration list for PBXNativeTarget "Bubilator88QuickLookPreview" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B6C2000000000000000000E7 /* Debug */,
+				B6C2000000000000000000E8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -809,6 +961,10 @@
 			productName = EmulatorCore;
 		};
 		B6C1000000000000000000F0 /* EmulatorCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = EmulatorCore;
+		};
+		B6C2000000000000000000F0 /* EmulatorCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = EmulatorCore;
 		};
