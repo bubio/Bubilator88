@@ -1,0 +1,61 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Boot Mode" : {
+      "comment" : "Quick Look preview: boot mode row",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ブートモード"
+          }
+        }
+      }
+    },
+    "CPU Clock" : {
+      "comment" : "Quick Look preview: CPU clock row",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CPU クロック"
+          }
+        }
+      }
+    },
+    "Disks" : {
+      "comment" : "Quick Look preview: disk names row",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ディスク"
+          }
+        }
+      }
+    },
+    "No screenshot in this save state" : {
+      "comment" : "Quick Look preview: shown for states written before thumbnails were stored inside the file",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このセーブステートには画面が保存されていません"
+          }
+        }
+      }
+    },
+    "Saved" : {
+      "comment" : "Quick Look preview: save date row",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存日時"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
