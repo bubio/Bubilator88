@@ -224,7 +224,8 @@ JSON 形式のメタデータ:
 
 EmulatorCore はこのタグの意味を知らない。アプリ層が
 `createSaveState(extraSections:)` で渡し、`SaveStateFileAccess.readSection` で
-読み出す。互換用に同内容の `.meta.json` サイドカーも併存する (→ PERSISTENCE.md)。
+読み出す。旧ビルドは同内容を `.meta.json` サイドカーに書いていた。現行は書かないが、
+旧スロット向けに読みフォールバックだけ残してある (→ PERSISTENCE.md)。
 
 ### THMB セクション
 
@@ -377,7 +378,8 @@ extension Machine {
 
 - スロット 0-9
 - `~/Library/Application Support/Bubilator88/SaveStates/slot_N.b88s`
-- 各スロットに付随: `.meta.json` (ブートモード, ディスク名), `.thumb.png` (320×200 サムネイル)
+- ブートモード/ディスク名は `AMTA`、サムネイルは `THMB` として `.b88s` 内に入る
+  (旧ビルドの `.meta.json` / `.thumb.png` サイドカーは読みのみ対応)
 - メニューから選択
 
 ### ファイル構成

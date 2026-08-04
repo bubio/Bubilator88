@@ -1140,6 +1140,8 @@ final class EmulatorViewModel {
     var drive1ArchiveEntry: String?
   }
 
+  /// Sidecar paths, read-only: saves stopped writing these once `AMTA` / `THMB`
+  /// went inside the `.b88s`. Slots written by older builds still have them.
   private func metaPath(for statePath: URL) -> URL {
     statePath.deletingPathExtension().appendingPathExtension("meta.json")
   }
@@ -1218,9 +1220,10 @@ final class EmulatorViewModel {
       )
       let metaJSON = try? JSONEncoder().encode(meta)
       // Thumbnail and app metadata go inside the .b88s so the file stands on
-      // its own when copied or shared. The sidecars are still written for now:
-      // they are what older builds and Finder (until the Quick Look extension
-      // ships) read. Never delete existing ones.
+      // its own when copied or shared. The `.meta.json` / `.thumb.png` sidecars
+      // are no longer written — the Quick Look extensions cover what they were
+      // for in Finder — but they are still read as a fallback, and existing
+      // ones are never deleted (see loadMeta / loadThumbnailData).
       var extraSections: [(tag: UInt32, data: [UInt8])] = []
       if let metaJSON {
         extraSections.append((tag: SaveStateFileAccess.appMetaTag, data: Array(metaJSON)))
@@ -1229,10 +1232,6 @@ final class EmulatorViewModel {
                                          extraSections: extraSections)
       try? FileManager.default.createDirectory(at: Self.saveStateDir, withIntermediateDirectories: true)
       try? Data(data).write(to: path, options: .atomic)
-      try? metaJSON?.write(to: metaPath(for: path), options: .atomic)
-    }
-    if let thumbData {
-      try? thumbData.write(to: thumbnailPath(for: path), options: .atomic)
     }
     saveStateRevision += 1
     if wasRunning { start() }
