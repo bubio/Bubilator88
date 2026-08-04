@@ -329,16 +329,16 @@ struct LaunchRequest: Equatable {
       comment: "CLI --help: closing paragraph explaining the image-file argument")
 
     return """
-      \(usage)
+    \(usage)
 
-      \(optionsLabel)
-        -v2, -v1h, -v1s, -n    \(bootModeDesc)
-        -4mhz, -8mhz           \(clockDesc)
-        -romboot, -diskboot    \(bootStrapDesc)
-        -h, -help, --help      \(helpDesc)
+    \(optionsLabel)
+      -v2, -v1h, -v1s, -n    \(bootModeDesc)
+      -4mhz, -8mhz           \(clockDesc)
+      -romboot, -diskboot    \(bootStrapDesc)
+      -h, -help, --help      \(helpDesc)
 
-      \(body)
-      """
+    \(body)
+    """
   }
 }
 
