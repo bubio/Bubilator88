@@ -149,6 +149,7 @@ BOOTTEST_LOAD_STATE=~/Library/Application\ Support/Bubilator88/SaveStates/quicks
 | `BOOTTEST_IRQ_TRACE` | (set to enable) | Log interrupt dispatch events |
 | `BOOTTEST_AUDIO_SUMMARY` | (set to enable) | Print audio frame statistics |
 | `BOOTTEST_AUDIO_MASK` | `fm,ssg,...` | Audio channel filter (fm/ssg/adpcm/rhythm) |
+| `BOOTTEST_AUDIO_WAV` | `<path.wav>` | Dump the rendered YM2608 output as 16-bit stereo WAV (44100 Hz) |
 | `BOOTTEST_FM_TRACE` | `1` | Enable FM register tracing |
 | `BOOTTEST_FM_TRACE_PATH` | (none) | FM trace output file path |
 | `BOOTTEST_CPU_TRACE_PATH` | (none) | Per-opcode CPU register trace. Format: `seq=N f=F PC=XXXX AF=... R=... IFF=X`. Diff across emulators/branches to find the first divergent instruction. |
