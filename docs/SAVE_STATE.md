@@ -18,7 +18,7 @@
 | Offset | Size | 型 | 内容 |
 |--------|------|----|------|
 | 0x00 | 4 | UInt32 | マジック `0x38385542` (ASCII "BU88") |
-| 0x04 | 2 | UInt16 | フォーマットバージョン (現在: 2) |
+| 0x04 | 2 | UInt16 | フォーマットバージョン (現在: 3) |
 | 0x06 | 2 | UInt16 | 予約 |
 | 0x08 | 8 | Double | タイムスタンプ (Unix epoch) |
 | 0x10 | 32 | UTF-8 | エミュレータバージョン文字列 (null-padded) |
@@ -72,7 +72,9 @@
 9. UPD1990A (カレンダ)
 10. Machine メタデータ (totalTStates, rtcCounter, clock8MHz 等)
 
-#### Z80 CPU (メイン/サブ共通, 各約26バイト)
+#### Z80 CPU (メイン/サブ共通, 各31バイト)
+
+書き込み順。Bool は 1 バイト、Int は Int64 として 8 バイト。
 
 | プロパティ | 型 |
 |-----------|-----|
@@ -84,18 +86,23 @@
 | im | UInt8 |
 | halted, eiPending | Bool × 2 |
 
-#### Pc88Bus (~150KB)
+#### Pc88Bus
+
+固定メモリだけで 116KB (mainRAM 64KB + GVRAM 48KB + tvram 4KB)。拡張RAM を
+積んでいるとカード枚数 × バンク数 × 32KB が加算される。
 
 **メモリ (固定サイズ):**
 - mainRAM: 64KB
 - gvram[0-2]: 3 × 16KB = 48KB
 - tvram: 4KB
 
-**バンク切替状態:**
-- romModeN88, ramMode, gamMode, evramMode (Bool × 4)
+**バンク切替状態 (この順):**
+- romModeN88, ramMode (Bool × 2)
 - gvramPlane (Int)
-- extROMBank, n88ExtROMSelect, textWindowOffset (UInt8 × 3)
+- gamMode, evramMode (Bool × 2)
+- extROMBank, n88ExtROMSelect (UInt8 × 2)
 - extROMEnabled (Bool)
+- textWindowOffset (UInt8)
 
 **表示制御:**
 - port30w, borderColor, layerControl (UInt8 × 3)
@@ -108,12 +115,13 @@
 - extRAMWriteEnable, extRAMReadEnable (Bool × 2)
 - extRAMCard, extRAMBank (Int × 2)
 
-**その他:**
+**その他 (この順):**
 - kanjiAddr1, kanjiAddr2 (UInt16 × 2)
 - aluControl1, aluControl2, aluReg[0-2] (UInt8 × 5)
 - port31, port32, port40w (UInt8 × 3)
-- cpuClock8MHz, vrtcFlag, directBasicBoot, tvramEnabled (Bool × 4)
+- cpuClock8MHz, vrtcFlag, directBasicBoot (Bool × 3)
 - pendingWaitStates (Int)
+- tvramEnabled (Bool)
 - palette[0-7]: 各 (b, r, g) = UInt8 × 3 × 8 = 24バイト
 
 #### InterruptController (7バイト)
@@ -123,7 +131,7 @@
 | pendingLevels, levelThreshold | UInt8 × 2 |
 | sgsMode, maskRTC, maskVRTC, maskRXRDY, maskSound | Bool × 5 |
 
-#### DMAController (30バイト)
+#### DMAController (26バイト)
 
 チャネル × 4:
 - address, count (UInt16 × 2)
@@ -138,7 +146,19 @@
 
 #### CRTC (~24KB)
 
-固定プロパティ (scanline, displayEnabled, mode200Line, 表示パラメータ, blinkRate/blinkCounter/blinkAttribBit, カーソル, vretrace 等) + parameters 配列 (長さプレフィックス付き) + dmaBuffer (24,000バイト固定)
+書き込み順:
+
+1. scanline (Int), vrtcFlag (Bool), tStateAccumulator (Int), displayEnabled,
+   mode200Line (Bool × 2)
+2. parameters 配列 (UInt32 長さ + データ), parameterIndex, expectedParameters (Int × 2),
+   currentCommand (UInt8)
+3. 表示パラメータ — charsPerLine, linesPerScreen, charLinesPerRow (UInt8 × 3),
+   skipLine (Bool), displayMode (UInt8), attrNonTransparent (Bool),
+   attrsPerLine, intrMask (UInt8 × 2), reverseDisplay (Bool)
+4. カーソル — cursorX, cursorY (Int × 2), cursorEnabled (Bool), cursorMode (UInt8)
+5. blinkRate, blinkCounter (Int × 2), blinkAttribBit (UInt8), vretrace (Int)
+6. dataReady, lightPen, underrun (Bool × 3)
+7. dmaBuffer (24,000バイト固定), dmaBufferPtr (Int), dmaUnderrun (Bool)
 
 > フォーマット v2 (2026-04) で `blinkCounter` (Int) と `blinkAttribBit` (UInt8) が
 > `blinkRate` と `vretrace` の間に追加された。v1 ファイルはロード時に拒否される。
@@ -147,30 +167,47 @@
 
 長さプレフィックス (UInt32) + 以下を連結:
 
-- レジスタバンク: registers[256] + extRegisters[256] + selectedAddr × 2 = 514バイト
-- タイマ状態 (A/B カウンタ, 有効/オーバーフロー/IRQ フラグ)
-- FM状態 (fmSampleCounter, fNum[6], fNum3[3])
-- SSG状態 (トーン/ノイズ/エンベロープ/バンドリミット)
+- レジスタバンク: registers[256] + extRegisters[256] + selectedAddr / selectedExtAddr
+  = 514バイト
+- タイマ状態 (A/B カウンタ, 有効/オーバーフロー/IRQ フラグ, statusMask, irqControl,
+  irqAsserted, busyStatusCounter)
+- clock8MHz
+- FM状態 (fmSampleCounter, fmFNumMain[6], fmFNum3[3])
+- SSG状態 (トーン/ノイズ/エンベロープ) + バンドリミット状態 (位相/ステップ/出力レベル)
 - ADPCM状態 (アドレス, プレイバック, 出力, adpcmReadBuffer)
 - ADPCM RAM: 256KB固定
+- ミキサ出力ラッチ (audioSampleAccum, fmOutputL/R, rhythmOutputL/R)
 - ビープ状態 (beepOn, singSignal, beepPhase)
 - FMSynthesizer ブロブ (長さプレフィックス付き, ~8KB)
 
 ##### FMSynthesizer (~8KB)
 
-- FMチャネル × 6: 各チャネルに FMOp × 4 (全オペレータパラメータ)
-- LFO状態
-- リズムチャネル × 6 (pos, step, pan, level, volume)
-- リズム制御 (TL, key, extendedChannelsEnabled)
+書き込み順:
+
+- FMチャネル × 6: 各チャネルに FMOp × 4 (全オペレータパラメータ) +
+  fb / algo / panLeft / panRight / pmsIndex
+- ratio (UInt32) + multable[4][16] (UInt32 × 64)
+- LFO状態 (lfoCount, lfoDCount, lfoEnabled)
+- リズムチャネル × 6 (size, pos, step, pan, level, volumeL, volumeR)
+- リズム制御 (rhythmTL, rhythmVolL/R, rhythmKey, extendedChannelsEnabled)
+- chipClock, outputRate (Int × 2)
 
 #### SubSystem (~100KB+)
 
-- サブCPU (Z80, 26バイト)
+書き込み順:
+
+- サブCPU (Z80, 31バイト)
 - SubBus: romram 32KB + motorOn[4] + driveSelect + currentSubPC
-- PIO8255: ポート状態 (2 sides × 3 ports) + portAB/portC + pendingAB
-- UPD765A FDC (長さプレフィックス付き, ~1-2KB): phase, command, バッファ, CHRN, ステータス, シーク状態, タイミング
-- CPUスケジューリング状態 (subCpuTStates, pioInterleave等)
+- PIO8255: ポート状態 (2 sides × 3 ports) + portAB/portC + pendingAB +
+  clearPortsByCommandRegister
+- UPD765A FDC (長さプレフィックス付き, ~1-2KB): phase, command, バッファ, CHRN,
+  ステータス, per-drive シーク状態, SPECIFY タイミング, フォーマット ID, 実行コンテキスト
+- diskAccess[0-1] (アクセスランプ), subCpuTStates
 - レガシーモード状態 (useLegacyMode 時のコマンドプロセッサ全体)
+- デバッグカウンタ (commandCount, lastCommand, fdcInterruptDeliveredCount)
+
+> v3 でサブCPU 追い上げヒューリスティックのフィールド
+> (`pioInterleaveInstructionsRemaining` 等) は削除された。ここには残っていない。
 
 #### UPD1990A (11バイト)
 
@@ -181,9 +218,13 @@
 
 - totalTStates (UInt64)
 - rtcCounter (Int)
-- subCpuAccumulator (Int)
+- subAccumClocks (Int)
+- subDebt (Int)
 - clock8MHz (Bool)
 - traceEnabled (Bool)
+
+> `subAccumClocks` / `subDebt` は v3 のスケジューラ移行で v2 の
+> `subCpuAccumulator` を置き換えたもの。
 
 ---
 
@@ -194,25 +235,38 @@
 - セクションが存在する → `D88Disk.parse(data:)` で復元してマウント
 - セクションが存在しない → ドライブをイジェクト
 
+### `CMT ` セクション
+
+テープをマウントしている状態 (`cassette.isLoaded`) でのみ書かれる。I8251 と
+CassetteDeck の 2 ブロブを長さプレフィックス付きで並べたもの:
+
+```
+[usartLen(u32 LE)][I8251 state][deckLen(u32 LE)][CassetteDeck state]
+```
+
+セクションが無いロードは eject 相当 — `cassette.eject()` + `usart.reset()` が走る。
+テープバッファ本体を含むので、大きなテープでは `.b88s` もその分肥大する
+(内訳は PERSISTENCE.md)。
+
 ### META セクション
 
 JSON 形式のメタデータ:
 
+EmulatorCore が文字列連結で組み立てる 3 フィールドのみ。ディスク未挿入なら名前は
+空文字列になる。
+
 ```json
-{
-  "disk0": "ディスク名",
-  "disk1": null,
-  "clock8MHz": true,
-  "drive0SourceURL": "file://~/Disks/Ys.d88",
-  "drive1SourceURL": null,
-  "drive0ImageIndex": 0,
-  "drive1ImageIndex": null,
-  "drive0ArchiveEntry": null,
-  "drive1ArchiveEntry": null
-}
+{"disk0":"ディスク名","disk1":"","clock8MHz":true}
 ```
 
-ロード時、MAIN と DSK セクションがエミュレータ状態を復元する。META の `drive*SourceURL` は元ファイルの絶対パスで、ロード後にディスク切替メニューを再構成するために使われる (元ファイルが存在すればマルチイメージの全ディスクが利用可能になる)。
+エミュレータ状態の復元は MAIN と DSK セクションが担う。META はそれ自体では復元に
+使われず、ファイルを開かずに中身を知りたい側 (Quick Look プレビュー拡張) の
+情報源になっている。
+
+ディスクの再マウント情報 — `drive*SourceURL` (元ファイルの絶対パス)、
+`drive*ImageIndex`、`drive*ArchiveEntry` — は META ではなく **`AMTA`** にある。
+ロード後にディスク切替メニューを再構成するのはアプリ層の仕事で、元ファイルが
+存在すればマルチイメージの全ディスクが再び利用可能になる。
 
 `drive*ArchiveEntry` は ZIP/LHA 等のアーカイブからディスクをマウントした場合に、アーカイブ内のエントリファイル名を保持する。この場合 `drive*SourceURL` はアーカイブファイル自体のパスを指す。ロード時にアーカイブを再展開して該当エントリの D88 を再パースすることで、マルチイメージ切替を復元する。`drive*ArchiveEntry` が null の場合、`drive*SourceURL` は D88 ファイルへの直接パス (従来動作) か、Mount 0&1 モードでアーカイブ全エントリを展開する。
 
@@ -335,9 +389,7 @@ extension Machine {
 | 2 | 2026-04 | CRTC に `blinkCounter` / `blinkAttribBit` 追加 (BLINK 属性実装) + YM2608 に `adpcmReadBuffer` 追加 (ADPCM RAM memory-read ラッチ復元)。v1 は拒否 |
 | 3 | 2026-04-21 | BubiC event.cpp スケジューラ移行に伴い chase-heuristic フィールド (`needsSubCPURun`, `pioInterleaveInstructionsRemaining`, `subPortBWriteGeneration`, `pendingFreshMainPort*`, `pendingATNIdleLoopObservation` 等) を削除。v2 は拒否 (出典: `SaveState.swift:179`) |
 
-> **本ドキュメントは v2 時点の記述が残っている。** 上表の v3 行はコード中のコメントから
-> 起こしたもので、§2 の MAIN セクションのレイアウト記述は v3 の実装 (`writeSaveState`)
-> と突き合わせ直す必要がある (未実施)。
+> §2 のレイアウト記述は 2026-08-04 に `writeSaveState` 系の実装と突き合わせ済み。
 
 ---
 
@@ -361,7 +413,7 @@ extension Machine {
 | ディスク変更後にロード | セーブ時のディスクに巻き戻る (正常動作) |
 | ダーティセクター | serialize() が全データを含む。完全復元 |
 | 書込み禁止フラグ | D88 ヘッダに含まれる。復元される |
-| アーカイブ由来のディスク | META に archiveEntry を記録。ロード時にアーカイブを再展開 |
+| アーカイブ由来のディスク | `AMTA` に archiveEntry を記録。ロード時にアーカイブを再展開 |
 | 元アーカイブ削除済み | DSK セクション内の D88 データで復元。ディスク切替は不可 |
 
 ---
