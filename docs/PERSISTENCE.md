@@ -190,14 +190,19 @@
 
 ## 4. AI アップスケーリングモデル
 
-**検索順序:**
-1. `~/Library/Application Support/Bubilator88/Models/`
-2. アプリバンドル内 (Resources/)
+**アプリバンドル内 (`Resources/`) のみ**から読み込む。Application Support 配下に
+モデルを置く場所はない。
 
-| モデル | 用途 | バンドル |
-|--------|------|---------|
-| `SRVGGNet_x2.mlmodelc` | 高速 AI アップスケーリング | Yes |
-| `RealESRGAN_x2.mlmodelc` | 高品質 AI アップスケーリング | Yes |
+| モデル | フィルタ |
+|--------|---------|
+| `SRVGGNet_x2_lite.mlmodelc` | AI Upscale (Fast) |
+| `SRVGGNet_x2.mlmodelc` | AI Upscale (Balanced) |
+| `RealESRGAN_x2.mlmodelc` | AI Upscale (Quality) |
+
+以前は `~/Library/Application Support/Bubilator88/Models/` をバンドルより優先する
+仕組みがあったが、そこに置かれた古いモデルがバンドルの誤変換版を 1 年以上隠して
+いたため撤去した。差し替えたい場合は `Resources/` のファイルを置き換える
+(`models/PROVENANCE.md` 参照)。
 
 ---
 
@@ -208,8 +213,6 @@
 ├── N88.ROM, N80.ROM, DISK.ROM, ...    ROM ファイル
 ├── KANJI1.ROM, KANJI2.ROM             漢字ROM
 ├── 2608_BD.WAV, ...                   リズム音源
-├── Models/                            AI モデル (オプション)
-│   └── *.mlmodelc
 └── SaveStates/
     ├── quicksave.b88s
     ├── slot_0.b88s ... slot_9.b88s

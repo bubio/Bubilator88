@@ -194,24 +194,28 @@ SRVGGNetCompact: VGG スタイルの軽量超解像ネットワーク。
 
 ## Stage 6: CoreML 変換・インストール
 
-学習完了時に自動で mlpackage が生成される。手動でコンパイル・インストール:
+チェックポイントから直接、バンドル形式まで一発で変換する:
 
 ```bash
-# コンパイル
-cd $WORK/training
-xcrun coremlcompiler compile SRVGGNet_x2_pc88.mlpackage .
-
-# インストール (Models/ に置くとバンドル版より優先)
-cp -r SRVGGNet_x2_pc88.mlmodelc \
-  ~/Library/Application\ Support/Bubilator88/Models/SRVGGNet_x2.mlmodelc
+python scripts/convert_srvggnet_coreml.py \
+  --checkpoint models/SRVGGNet_x2.pth \
+  --out-mlmodelc Bubilator88/Resources/SRVGGNet_x2.mlmodelc
 ```
 
-### バンドル版を置き換える場合
+> **skip モードに注意。** SRVGGNetCompact の skip 接続の補間方法は
+> **チェックポイントに保存されない**ため、変換側で指定する。出荷中の 2 モデルは
+> どちらも **bilinear**（スクリプトの既定値）。誤って `nearest` で変換しても
+> load も推論も成功してしまい、画質だけが落ちる。実際にバンドルの Balanced が
+> この状態で 1 年以上気づかれなかった。詳細は `models/PROVENANCE.md`。
 
-```bash
-cp -r SRVGGNet_x2_pc88.mlmodelc \
-  /path/to/Bubilator88/Resources/SRVGGNet_x2.mlmodelc
-```
+配置先は `Bubilator88/Resources/` のみ。以前は
+`~/Library/Application Support/Bubilator88/Models/` に置くとバンドル版より
+優先される仕組みがあったが、**上記の誤変換を隠していたため撤去した**。
+実行されるのは常にバンドルされたモデルである。
+
+学習完了時に `$WORK/training` へ生成される mlpackage を手動でコンパイルする
+場合は `xcrun coremlcompiler compile <name>.mlpackage .`。ただし skip モードは
+学習スクリプト側の既定に従うため、上のコンバータ経由を推奨する。
 
 ---
 
