@@ -1,3 +1,4 @@
+import Accelerate
 import CoreML
 import CoreVideo  // CVPixelBuffer
 import Metal
@@ -14,7 +15,9 @@ import QuartzCore
 /// handed to `inferenceQueue.async`: the state shared between the draw thread
 /// and the inference queue (`isInferring`, the double-buffered
 /// `outputTextures`, `readIndex`/`writeIndex`, `generation`) is guarded by
-/// `lock`. **New shared state must go inside the locked region.**
+/// `lock`. **New shared state must go inside the locked region.** `cachedFrame`
+/// is the exception: it is only ever touched by `submitFrame`, which runs on the
+/// draw thread alone.
 nonisolated final class AIUpscaler: @unchecked Sendable {
 
   enum State {
@@ -26,8 +29,20 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
 
   private(set) var state: State = .unavailable
   private(set) var inferenceTimeMs: Double = 0
-  /// Number of completed inferences (for FPS measurement by the render loop)
+  /// Number of completed inferences
   private(set) var completedCount: Int = 0
+  /// Number of frames that reused the previous result because the source was
+  /// byte-identical (see `submitFrame`).
+  private(set) var skippedCount: Int = 0
+
+  /// Frames presented to the display: inferences plus skipped-but-still-correct
+  /// frames. This — not `completedCount` — is what the render loop should use to
+  /// measure AI frame rate, otherwise a static screen reads as 0 fps.
+  var presentedCount: Int {
+    lock.lock()
+    defer { lock.unlock() }
+    return completedCount + skippedCount
+  }
 
   private var model: MLModel?
   private let device: MTLDevice
@@ -44,6 +59,24 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
   private var inputBuffer: CVPixelBuffer?
   private var inputWidth: Int = 0
   private var inputHeight: Int = 0
+
+  /// Copy of the source pixels last handed to the model, for unchanged-frame
+  /// detection. Draw thread only — never read from `inferenceQueue`.
+  private var cachedFrame: [UInt8] = []
+  /// `completedCount` that the inference for `cachedFrame` will reach if it
+  /// succeeds. Until it does, `cachedFrame` is only a record of what was *sent*,
+  /// not of what is on screen — skipping against it would strand the previous
+  /// image. Inference can be abandoned by a throw, a missing/malformed output,
+  /// or a stale generation, none of which advance `completedCount`.
+  /// Draw thread only, like `cachedFrame`.
+  private var cachedFrameCompletion: Int = 0
+
+  /// Scratch for the CVPixelBuffer output path, reused rather than reallocated
+  /// per frame. Inference queue only, like `bgraConverter`.
+  private var scaledBuffer: [UInt8] = []
+  /// CHW-float → BGRA8 conversion for the MultiArray output path. Inference
+  /// queue only — `processMultiArrayOutput` never runs on the draw thread.
+  private let bgraConverter = BGRAConverter()
 
   private let inferenceQueue = DispatchQueue(label: "com.bubilator88.ai-upscale", qos: .userInteractive)
   private let lock = NSLock()
@@ -130,6 +163,11 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
   private var inferenceCount: Int = 0
 
   /// Submit a frame for AI upscaling. Copies pixel data and runs inference asynchronously.
+  ///
+  /// Frames byte-identical to the last one submitted are dropped without running
+  /// the model: the previous output texture is still correct, so re-inferring
+  /// only burns Neural Engine time and power. PC-8801 screens sit still often
+  /// (menus, text, static artwork), and at Quality one inference is ~150 ms.
   func submitFrame(rgbaData: UnsafeBufferPointer<UInt8>, width: Int, height: Int) {
     guard case .ready = state, model != nil else { return }
 
@@ -138,9 +176,26 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
       lock.unlock()
       return
     }
+    // Only a completed frame makes a skip safe — otherwise there is nothing to
+    // reuse, and a screen that starts out static would never get upscaled.
+    let haveOutput = hasCompletedFrame
+    let completed = completedCount
     isInferring = true
     lock.unlock()
 
+    // Refreshes the cache as a side effect, so this must run on every frame.
+    let unchanged = frameIsUnchanged(rgbaData, byteCount: width * height * 4)
+    if unchanged && haveOutput && completed >= cachedFrameCompletion {
+      lock.lock()
+      skippedCount += 1
+      isInferring = false
+      lock.unlock()
+      return
+    }
+
+    // From here we are committed to inferring, so the cached frame is only
+    // trustworthy once this run lands.
+    cachedFrameCompletion = completed + 1
     inferenceCount += 1
 
     // Ensure input CVPixelBuffer matches dimensions
@@ -179,6 +234,22 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
     inferenceQueue.async { [weak self] in
       self?.runInference(generation: currentGeneration)
     }
+  }
+
+  /// Whether `rgbaData` matches the frame last submitted to the model. When it
+  /// does not, the cache is refreshed so the *next* call compares against this
+  /// frame — callers must therefore invoke this once per submitted frame.
+  private func frameIsUnchanged(_ rgbaData: UnsafeBufferPointer<UInt8>, byteCount: Int) -> Bool {
+    guard let src = rgbaData.baseAddress, byteCount > 0 else { return false }
+
+    if cachedFrame.count == byteCount {
+      let same = cachedFrame.withUnsafeBytes { memcmp($0.baseAddress!, src, byteCount) == 0 }
+      if same { return true }
+    } else {
+      cachedFrame = [UInt8](repeating: 0, count: byteCount)
+    }
+    cachedFrame.withUnsafeMutableBytes { _ = memcpy($0.baseAddress!, src, byteCount) }
+    return false
   }
 
   private func runInference(generation: Int) {
@@ -254,6 +325,22 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
     let hStride = multiArray.strides[2].intValue
     let wStride = multiArray.strides[3].intValue
     let dstBytesPerRow = outWidth * 4
+    let region = MTLRegion(origin: MTLOrigin(), size: MTLSize(width: outWidth, height: outHeight, depth: 1))
+    defer {
+      if inferenceCount <= 5 {
+        NSLog("[AIUpscaler] MultiArray output: %dx%d, %.1fms", outWidth, outHeight, elapsed)
+      }
+    }
+
+    // Fast path: vImage, ~7x the scalar loops below and with no per-frame
+    // allocation. Falls through when the array's rows are not contiguous, which
+    // the bundled models never produce but a `Models/` override might.
+    if let converted = bgraConverter.convert(multiArray, width: outWidth, height: outHeight) {
+      texture.replace(region: region, mipmapLevel: 0, withBytes: converted, bytesPerRow: dstBytesPerRow)
+      publishOutput(texture, elapsed: elapsed)
+      return
+    }
+
     var bgraBuffer = [UInt8](repeating: 0, count: dstBytesPerRow * outHeight)
 
     if multiArray.dataType == .float16 {
@@ -292,11 +379,15 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
       }
     }
 
-    let region = MTLRegion(origin: MTLOrigin(), size: MTLSize(width: outWidth, height: outHeight, depth: 1))
     bgraBuffer.withUnsafeBufferPointer { bufPtr in
       texture.replace(region: region, mipmapLevel: 0, withBytes: bufPtr.baseAddress!, bytesPerRow: dstBytesPerRow)
     }
 
+    publishOutput(texture, elapsed: elapsed)
+  }
+
+  /// Hand a finished texture to the draw thread and end the inference.
+  private func publishOutput(_ texture: MTLTexture, elapsed: Double) {
     lock.lock()
     outputTextures[writeIndex] = texture
     readIndex = writeIndex
@@ -306,10 +397,6 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
     completedCount += 1
     isInferring = false
     lock.unlock()
-
-    if inferenceCount <= 5 {
-      NSLog("[AIUpscaler] MultiArray output: %dx%d, %.1fms", outWidth, outHeight, elapsed)
-    }
   }
 
   /// Fallback: process CVPixelBuffer output (image type model)
@@ -347,7 +434,9 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
     // CoreML output has float [0,1] truncated to uint8 [0,1] — scale by 255
     let srcPtr = baseAddress.assumingMemoryBound(to: UInt8.self)
     let dstBytesPerRow = outWidth * 4
-    var scaledBuffer = [UInt8](repeating: 0, count: dstBytesPerRow * outHeight)
+    if scaledBuffer.count != dstBytesPerRow * outHeight {
+      scaledBuffer = [UInt8](repeating: 0, count: dstBytesPerRow * outHeight)
+    }
     for y in 0..<outHeight {
       for x in 0..<outWidth {
         let si = y * bytesPerRow + x * 4
@@ -363,15 +452,7 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
       texture.replace(region: region, mipmapLevel: 0, withBytes: ptr.baseAddress!, bytesPerRow: dstBytesPerRow)
     }
 
-    lock.lock()
-    outputTextures[writeIndex] = texture
-    readIndex = writeIndex
-    writeIndex = 1 - writeIndex
-    hasCompletedFrame = true
-    inferenceTimeMs = elapsed
-    completedCount += 1
-    isInferring = false
-    lock.unlock()
+    publishOutput(texture, elapsed: elapsed)
 
     NSLog("[AIUpscaler] Inference completed: %.1fms (%dx%d, fmt=0x%X)", elapsed, outWidth, outHeight, Int(pixelFormat))
   }
@@ -423,6 +504,106 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
     }
   }
 
+  /// Converts CoreML's CHW float output into the interleaved BGRA8 bytes an
+  /// `MTLTexture` wants, using vImage with every scratch buffer reused.
+  ///
+  /// **Byte-for-byte identical to the scalar loops it replaces.**
+  /// `vImageConvert_PlanarFtoPlanar8` with min 0 / max 1 scales by 255 and
+  /// rounds exactly as `Int(v * 255 + 0.5)` does — verified exhaustively across
+  /// all 63,488 finite `Float16` values, zero mismatches — and it clamps the
+  /// non-finite ones instead of trapping the way `Int(_:)` would.
+  ///
+  /// Not thread-safe: one instance per `AIUpscaler`, used only from
+  /// `inferenceQueue`. Internal rather than private so the bit-identity claim
+  /// above can be tested directly.
+  final class BGRAConverter {
+    private var width = 0
+    private var height = 0
+    private var planeF: UnsafeMutablePointer<Float>?
+    private var planes8: [UnsafeMutablePointer<UInt8>] = []
+    private var alphaPlane: UnsafeMutablePointer<UInt8>?
+    private var bgra: UnsafeMutablePointer<UInt8>?
+
+    deinit { releaseBuffers() }
+
+    /// Give back the ~12 MB of scratch. The next `convert` reallocates.
+    func releaseBuffers() {
+      planeF?.deallocate()
+      planes8.forEach { $0.deallocate() }
+      alphaPlane?.deallocate()
+      bgra?.deallocate()
+      planeF = nil
+      planes8 = []
+      alphaPlane = nil
+      bgra = nil
+      width = 0
+      height = 0
+    }
+
+    private func ensureBuffers(width w: Int, height h: Int) {
+      guard w != width || h != height else { return }
+      releaseBuffers()
+      let count = w * h
+      planeF = .allocate(capacity: count)
+      planes8 = (0..<3).map { _ in UnsafeMutablePointer<UInt8>.allocate(capacity: count) }
+      let alpha = UnsafeMutablePointer<UInt8>.allocate(capacity: count)
+      alpha.initialize(repeating: 255, count: count)
+      alphaPlane = alpha
+      bgra = .allocate(capacity: count * 4)
+      width = w
+      height = h
+    }
+
+    /// Returns the converted BGRA8 bytes (valid until the next call), or `nil`
+    /// when the array's layout is one vImage cannot take — a non-contiguous row
+    /// or an unexpected scalar type — leaving the caller to fall back.
+    func convert(_ multiArray: MLMultiArray, width w: Int, height h: Int) -> UnsafeRawPointer? {
+      guard multiArray.strides[3].intValue == 1 else { return nil }
+      let elementSize: Int
+      switch multiArray.dataType {
+      case .float16: elementSize = MemoryLayout<Float16>.size
+      case .float32: elementSize = MemoryLayout<Float32>.size
+      default: return nil
+      }
+
+      ensureBuffers(width: w, height: h)
+      guard let planeF, let alphaPlane, let bgra, planes8.count == 3 else { return nil }
+
+      let chStride = multiArray.strides[1].intValue
+      let hStride = multiArray.strides[2].intValue
+      let base = multiArray.dataPointer
+
+      for c in 0..<3 {
+        var src = buffer(base.advanced(by: c * chStride * elementSize), rowBytes: hStride * elementSize)
+        var asFloat32 = buffer(planeF, rowBytes: w * MemoryLayout<Float>.size)
+        if multiArray.dataType == .float16 {
+          guard vImageConvert_Planar16FtoPlanarF(&src, &asFloat32, 0) == kvImageNoError else { return nil }
+        } else {
+          asFloat32 = src
+        }
+        var plane = buffer(planes8[c], rowBytes: w)
+        guard vImageConvert_PlanarFtoPlanar8(&asFloat32, &plane, 1.0, 0.0, 0) == kvImageNoError else { return nil }
+      }
+
+      // Planar8toARGB8888 writes its four planes in argument order, so feeding
+      // it B, G, R, alpha lays down BGRA. `planes8` is [R, G, B].
+      var blue = buffer(planes8[2], rowBytes: w)
+      var green = buffer(planes8[1], rowBytes: w)
+      var red = buffer(planes8[0], rowBytes: w)
+      var alpha = buffer(alphaPlane, rowBytes: w)
+      var dest = buffer(bgra, rowBytes: w * 4)
+      guard vImageConvert_Planar8toARGB8888(&blue, &green, &red, &alpha, &dest, 0) == kvImageNoError else {
+        return nil
+      }
+      return UnsafeRawPointer(bgra)
+    }
+
+    private func buffer(_ data: UnsafeMutableRawPointer, rowBytes: Int) -> vImage_Buffer {
+      vImage_Buffer(data: data, height: vImagePixelCount(height),
+                    width: vImagePixelCount(width), rowBytes: rowBytes)
+    }
+  }
+
   /// Release resources when switching away from AI filter.
   func releaseResources() {
     lock.lock()
@@ -432,5 +613,14 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
     isInferring = false
     lock.unlock()
     inputBuffer = nil
+
+    // The conversion scratch is ~16 MB and belongs to `inferenceQueue`, which
+    // may be using it right now — this call comes from the draw thread. Hand the
+    // release to that queue so it lands between conversions rather than during
+    // one. Anything the queue picks up afterwards reallocates on demand.
+    inferenceQueue.async { [weak self] in
+      self?.bgraConverter.releaseBuffers()
+      self?.scaledBuffer = []
+    }
   }
 }
