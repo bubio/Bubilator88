@@ -140,6 +140,8 @@ PC-8801 の起動には実機の ROM ファイルおよびリズム音源用 WAV
 ## Credits
 
 - **FM 合成エンジン**: [fmgen](http://retropc.net/cisc/sound/) by cisc — Swift への移植
+  (利用条件は `Packages/EmulatorCore/Sources/FMSynthesis/fmgen-readme.txt`、
+  改変内容は同ディレクトリの `fmgen-changes.md` を参照)
 - **参考エミュレーター**: [QUASI88](https://www.eonet.ne.jp/~showtime/quasi88/) by S.Fukunaga — ビヘイビアリファレンスとして参照
 - **参考エミュレーター**: [common source code project](https://takeda-toshiya.my.coocan.jp/common/index.html) by Takeda Toshiya — BubiC-8801MA として参照
 - **参考エミュレーター**: [X88000](https://quagma.sakura.ne.jp/manuke/x88000.html) by Manuke — Z80 未文書化命令や細部の実装リファレンスとして参照

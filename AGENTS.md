@@ -48,7 +48,8 @@ Refer to `docs/ARCHITECTURE.md` for the full design document. Key docs:
 `docs/KNOWN_PITFALLS.md` (regression lessons), `docs/BOOTTESTER.md` (CLI test
 harness), `docs/PERSISTENCE.md` (永続化データ一覧), `docs/URL_SCHEME.md`
 (`bubilator88://` URL スキーム + CLI 起動引数。書式は QUASI88 互換、FlipDisk
-連携). 人間向け AI 活用ガイド: `docs/AI_WORKFLOW.md`.
+連携), `docs/FMGEN_FORK_COMPARISON.md` (fmgen 派生版の修正と Bubilator の
+対応状況). 人間向け AI 活用ガイド: `docs/AI_WORKFLOW.md`.
 
 Key points:
 
