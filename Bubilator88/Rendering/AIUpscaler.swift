@@ -92,7 +92,13 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
 
   private(set) var loadedModelName: String = ""
 
-  /// Load a named ML model. Searches Application Support first, then app bundle.
+  /// Load a named ML model from the app bundle.
+  ///
+  /// The bundle is the only place looked. An earlier version preferred
+  /// `~/Library/Application Support/Bubilator88/Models/`, and that override
+  /// silently shadowed the bundle for over a year while the bundled Balanced
+  /// model was a mis-export — nothing surfaced which file was actually running.
+  /// Ship one model per filter, from `Resources`, always.
   func loadModel(named modelName: String) async {
     // Skip if already loaded
     if case .ready = state, loadedModelName == modelName { return }
@@ -101,20 +107,6 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
     releaseResources()
     model = nil
 
-    // 1. Search ~/Library/Application Support/Bubilator88/Models/
-    let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-      .appending(component: "Bubilator88/Models")
-
-    if let modelsDir = appSupport {
-      for ext in ["mlmodelc", "mlpackage"] {
-        let url = modelsDir.appending(component: "\(modelName).\(ext)")
-        if FileManager.default.fileExists(atPath: url.path) {
-          if await tryLoadModel(from: url, name: modelName) { return }
-        }
-      }
-    }
-
-    // 2. Search app bundle
     for ext in ["mlmodelc", "mlpackage"] {
       if let bundleURL = Bundle.main.url(forResource: modelName, withExtension: ext) {
         if await tryLoadModel(from: bundleURL, name: modelName) { return }
@@ -123,20 +115,6 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
 
     state = .unavailable
     NSLog("[AIUpscaler] Model '%@' not found.", modelName)
-  }
-
-  private func findModelFile(in directory: URL) -> URL? {
-    let fm = FileManager.default
-    guard let files = try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else {
-      return nil
-    }
-    // Prefer .mlmodelc (compiled), then .mlpackage
-    for ext in ["mlmodelc", "mlpackage"] {
-      if let url = files.first(where: { $0.pathExtension == ext }) {
-        return url
-      }
-    }
-    return nil
   }
 
   private func tryLoadModel(from url: URL, name: String = "") async -> Bool {
