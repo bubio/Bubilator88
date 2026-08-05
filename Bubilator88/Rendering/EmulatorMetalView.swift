@@ -58,7 +58,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   // FPS measurement
   private var fpsFrameCount: Int = 0
   private var fpsLastTime: CFTimeInterval = 0
-  private var aiLastCompletedCount: Int = 0
+  private var aiLastPresentedCount: Int = 0
 
 
 
@@ -454,9 +454,11 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
     if fpsElapsed >= 0.5 {
       let measuredFPS: Double
       if currentFilter.requiresAIUpscale, let upscaler = aiUpscaler {
-        let completed = upscaler.completedCount
-        measuredFPS = Double(completed - aiLastCompletedCount) / fpsElapsed
-        aiLastCompletedCount = completed
+        // `presentedCount`, not `completedCount`: a frame skipped because the
+        // source was unchanged still displays a correct, current image.
+        let presented = upscaler.presentedCount
+        measuredFPS = Double(presented - aiLastPresentedCount) / fpsElapsed
+        aiLastPresentedCount = presented
       } else {
         measuredFPS = Double(fpsFrameCount) / fpsElapsed
       }

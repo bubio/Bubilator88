@@ -14,7 +14,9 @@ import QuartzCore
 /// handed to `inferenceQueue.async`: the state shared between the draw thread
 /// and the inference queue (`isInferring`, the double-buffered
 /// `outputTextures`, `readIndex`/`writeIndex`, `generation`) is guarded by
-/// `lock`. **New shared state must go inside the locked region.**
+/// `lock`. **New shared state must go inside the locked region.** `cachedFrame`
+/// is the exception: it is only ever touched by `submitFrame`, which runs on the
+/// draw thread alone.
 nonisolated final class AIUpscaler: @unchecked Sendable {
 
   enum State {
@@ -26,8 +28,20 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
 
   private(set) var state: State = .unavailable
   private(set) var inferenceTimeMs: Double = 0
-  /// Number of completed inferences (for FPS measurement by the render loop)
+  /// Number of completed inferences
   private(set) var completedCount: Int = 0
+  /// Number of frames that reused the previous result because the source was
+  /// byte-identical (see `submitFrame`).
+  private(set) var skippedCount: Int = 0
+
+  /// Frames presented to the display: inferences plus skipped-but-still-correct
+  /// frames. This — not `completedCount` — is what the render loop should use to
+  /// measure AI frame rate, otherwise a static screen reads as 0 fps.
+  var presentedCount: Int {
+    lock.lock()
+    defer { lock.unlock() }
+    return completedCount + skippedCount
+  }
 
   private var model: MLModel?
   private let device: MTLDevice
@@ -44,6 +58,17 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
   private var inputBuffer: CVPixelBuffer?
   private var inputWidth: Int = 0
   private var inputHeight: Int = 0
+
+  /// Copy of the source pixels last handed to the model, for unchanged-frame
+  /// detection. Draw thread only — never read from `inferenceQueue`.
+  private var cachedFrame: [UInt8] = []
+  /// `completedCount` that the inference for `cachedFrame` will reach if it
+  /// succeeds. Until it does, `cachedFrame` is only a record of what was *sent*,
+  /// not of what is on screen — skipping against it would strand the previous
+  /// image. Inference can be abandoned by a throw, a missing/malformed output,
+  /// or a stale generation, none of which advance `completedCount`.
+  /// Draw thread only, like `cachedFrame`.
+  private var cachedFrameCompletion: Int = 0
 
   private let inferenceQueue = DispatchQueue(label: "com.bubilator88.ai-upscale", qos: .userInteractive)
   private let lock = NSLock()
@@ -130,6 +155,11 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
   private var inferenceCount: Int = 0
 
   /// Submit a frame for AI upscaling. Copies pixel data and runs inference asynchronously.
+  ///
+  /// Frames byte-identical to the last one submitted are dropped without running
+  /// the model: the previous output texture is still correct, so re-inferring
+  /// only burns Neural Engine time and power. PC-8801 screens sit still often
+  /// (menus, text, static artwork), and at Quality one inference is ~150 ms.
   func submitFrame(rgbaData: UnsafeBufferPointer<UInt8>, width: Int, height: Int) {
     guard case .ready = state, model != nil else { return }
 
@@ -138,9 +168,26 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
       lock.unlock()
       return
     }
+    // Only a completed frame makes a skip safe — otherwise there is nothing to
+    // reuse, and a screen that starts out static would never get upscaled.
+    let haveOutput = hasCompletedFrame
+    let completed = completedCount
     isInferring = true
     lock.unlock()
 
+    // Refreshes the cache as a side effect, so this must run on every frame.
+    let unchanged = frameIsUnchanged(rgbaData, byteCount: width * height * 4)
+    if unchanged && haveOutput && completed >= cachedFrameCompletion {
+      lock.lock()
+      skippedCount += 1
+      isInferring = false
+      lock.unlock()
+      return
+    }
+
+    // From here we are committed to inferring, so the cached frame is only
+    // trustworthy once this run lands.
+    cachedFrameCompletion = completed + 1
     inferenceCount += 1
 
     // Ensure input CVPixelBuffer matches dimensions
@@ -179,6 +226,22 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
     inferenceQueue.async { [weak self] in
       self?.runInference(generation: currentGeneration)
     }
+  }
+
+  /// Whether `rgbaData` matches the frame last submitted to the model. When it
+  /// does not, the cache is refreshed so the *next* call compares against this
+  /// frame — callers must therefore invoke this once per submitted frame.
+  private func frameIsUnchanged(_ rgbaData: UnsafeBufferPointer<UInt8>, byteCount: Int) -> Bool {
+    guard let src = rgbaData.baseAddress, byteCount > 0 else { return false }
+
+    if cachedFrame.count == byteCount {
+      let same = cachedFrame.withUnsafeBytes { memcmp($0.baseAddress!, src, byteCount) == 0 }
+      if same { return true }
+    } else {
+      cachedFrame = [UInt8](repeating: 0, count: byteCount)
+    }
+    cachedFrame.withUnsafeMutableBytes { _ = memcpy($0.baseAddress!, src, byteCount) }
+    return false
   }
 
   private func runInference(generation: Int) {
