@@ -19,13 +19,13 @@
     ],
     "specificationVersion" : 9,
     "mlProgramOperationTypeHistogram" : {
-      "Ios18.mul" : 1,
+      "Ios16.upsampleBilinear" : 1,
       "PixelShuffle" : 1,
       "Ios18.prelu" : 17,
       "Ios18.cast" : 1,
       "Ios18.conv" : 18,
-      "UpsampleNearestNeighbor" : 1,
-      "Ios18.add" : 1
+      "Ios18.add" : 1,
+      "Ios18.mul" : 1
     },
     "computePrecision" : "Mixed (Float16, Float32, Int32)",
     "isUpdatable" : "0",
@@ -44,8 +44,8 @@
       "name" : "MLModelType_mlProgram"
     },
     "userDefinedMetadata" : {
-      "com.github.apple.coremltools.conversion_date" : "2026-03-30",
-      "com.github.apple.coremltools.source" : "torch==2.7.0",
+      "com.github.apple.coremltools.conversion_date" : "2026-07-10",
+      "com.github.apple.coremltools.source" : "torch==2.11.0",
       "com.github.apple.coremltools.version" : "9.0",
       "com.github.apple.coremltools.source_dialect" : "TorchScript"
     },
@@ -63,7 +63,7 @@
         "name" : "input"
       }
     ],
-    "generatedClassName" : "SRVGGNet_x2",
+    "generatedClassName" : "model",
     "method" : "predict"
   }
 ]
