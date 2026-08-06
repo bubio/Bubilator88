@@ -12,14 +12,11 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(ls:*)",
-      "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(wc:*)",
       "Bash(xxd:*)",
-      "Bash(awk:*)",
       "Bash(cd:*)",
       "WebSearch",
-      "Bash(gh api:*)",
       "Skill(update-config)"
     ]
   },
@@ -52,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "FILE=$(cat /dev/stdin | jq -r '.tool_input.file_path // .tool_input.filePath // empty'); if echo \"$FILE\" | grep -qE '\\.swift$'; then cd \"$CLAUDE_PROJECT_DIR/Packages/EmulatorCore\" && swift build 2>&1 | tail -20; fi",
+            "command": "FILE=$(cat /dev/stdin | jq -r '.tool_input.file_path // .tool_input.filePath // empty'); if echo \"$FILE\" | grep -qE 'Packages/EmulatorCore/.*\\.swift$'; then cd \"$CLAUDE_PROJECT_DIR/Packages/EmulatorCore\" && swift build 2>&1 | tail -20; fi",
             "timeout": 120,
             "statusMessage": "Swift build checking..."
           }

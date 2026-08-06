@@ -15,7 +15,7 @@ Bubilator88 is a **behavioral emulator** for the NEC PC-8801-FA computer, built 
 # Build
 xcodebuild -scheme Bubilator88 -configuration Debug build
 
-# Run EmulatorCore unit tests (primary test suite — 777 tests)
+# Run EmulatorCore unit tests (primary test suite)
 cd Packages/EmulatorCore && swift test
 
 # Run app-level tests (UI tests, template test)
@@ -37,10 +37,6 @@ Platform: macOS only. Deployment targets are **not** uniform: the app target is
 26.0, the project and test targets are 26.2, and `Package.swift` declares
 `.macOS(.v15)`. Pure Xcode project with a local Swift package at
 `Packages/EmulatorCore/`.
-
-External dependencies: **`apple/swift-log`** (pinned in `Package.resolved`), used
-by the `Peripherals` and `EmulatorCore` targets. Nothing else — the Xcode project
-has no package dependencies of its own.
 
 ## Architecture
 
@@ -118,7 +114,7 @@ Key points:
 ## Localization
 
 UI strings live in String Catalogs: `Bubilator88/Resources/Localizable.xcstrings`
-(490 keys) and `InfoPlist.xcstrings`. English is the source language and has no
+and `InfoPlist.xcstrings`. English is the source language and has no
 localization entries — it falls back to the key itself, so **the key is the
 English string**. Japanese is the only translated language.
 
