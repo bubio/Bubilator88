@@ -597,7 +597,16 @@ final class EmulatorViewModel {
 
   // MARK: - Internal (shared across extension files)
 
-  /// All Machine access is serialized on this queue.
+  /// All Machine access is serialized on this queue — including the run loop.
+  ///
+  /// The emulation step itself executes on the main thread (the Metal draw
+  /// callback drives it), so `emuQueue` is not a worker thread: it is the
+  /// mutual-exclusion token that every Machine toucher takes. `draw(in:)`
+  /// wraps `runFrameForMetal` in `emuQueue.sync`, which is what keeps the
+  /// `emuQueue.async` writers off the running machine.
+  ///
+  /// **Do not call `emuQueue.sync` from anything reachable inside
+  /// `runFrameForMetal`** — the queue is serial, so re-entering it deadlocks.
   let emuQueue = DispatchQueue(label: "com.bubio.bubilator88.emu", qos: .userInteractive)
 
   let machine: Machine
@@ -608,11 +617,10 @@ final class EmulatorViewModel {
 
   /// The 640×400 RGBA frame the Metal view samples.
   ///
-  /// **Isolation:** written by `runFrameForMetal` on the Metal draw thread and
-  /// by the `emuQueue`-serialized paths; other readers take a copy through
-  /// `emuQueue.sync`. `captureThumbnail()` is the one place that reads it
-  /// directly, which is safe only because state saves happen with the run loop
-  /// stopped.
+  /// **Isolation:** written by `runFrameForMetal`, which the draw loop runs
+  /// under `emuQueue.sync`; other readers take a copy through `emuQueue.sync`
+  /// as well. `captureThumbnail()` is the one place that reads it directly,
+  /// which is safe only because state saves happen with the run loop stopped.
   @ObservationIgnored nonisolated(unsafe) var pixelBuffer: [UInt8]
 
   /// UI update throttle counter (render thread)

@@ -136,12 +136,14 @@ extension EmulatorViewModel {
   /// draw loop while `isRewinding` is true. When the buffer is
   /// exhausted the emulator simply freezes on the oldest frame —
   /// the user can then release the key to resume from there.
+  ///
+  /// **Isolation:** reached only through `runFrameForMetal`, which the draw
+  /// loop already runs inside `emuQueue.sync`. Re-entering the queue here
+  /// would deadlock, so the load runs directly under the caller's hold.
   func stepRewindBack() {
     guard let last = rewindSnapshots.popLast() else { return }
     let raw = decompressSnapshotState(last.state)
-    emuQueue.sync {
-      try? machine.loadSaveState(Array(raw))
-    }
+    try? machine.loadSaveState(Array(raw))
     rewindSnapshotCount = rewindSnapshots.count
   }
 

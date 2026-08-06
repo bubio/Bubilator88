@@ -181,8 +181,14 @@ final class DebugSession {
 
   // MARK: - Snapshot capture
 
-  /// Asynchronously capture a snapshot on the emulator queue and
-  /// publish it back to the main actor. Never blocks the UI thread.
+  /// Capture a snapshot on the emulator queue and publish it back to the
+  /// main actor.
+  ///
+  /// The capture runs off the main thread, but it is not free of it: the run
+  /// loop holds `emuQueue` for each frame, so this block waits for a frame
+  /// boundary and the next frame waits for this block. That is the point —
+  /// reading Z80/VRAM state while `machine.runFrame()` mutates it is a data
+  /// race. At the 0.5–1 s poll cadence the cost is a single delayed frame.
   func refresh() {
     let hexBase = hexBaseAddress
     let hexCount = hexRowCount * 16
