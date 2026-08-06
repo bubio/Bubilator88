@@ -145,7 +145,8 @@ extension EmulatorViewModel {
 
   /// Call every frame, **immediately before** `machine.runFrame()` in
   /// `runFrameForMetal`. Runs on the draw thread and touches `machine` directly,
-  /// like `tickPasteQueue`.
+  /// like `tickPasteQueue` — the caller already holds `emuQueue`, so nothing
+  /// here may take it again.
   func tickScriptPlayer() {
     guard let player = scriptPlayer else { return }
     let ongoing: Bool
@@ -250,7 +251,8 @@ extension EmulatorViewModel {
   /// Builds the `DriveState` a script mount corresponds to — the same shape a
   /// manual mount (`mountDiskImage`) produces, so image selection from the Disk
   /// menu keeps working. Pure ViewModel state: it touches neither `machine` nor
-  /// `emuQueue`, so it is safe to call from the draw thread.
+  /// `emuQueue`. The latter is what makes it callable from the draw thread —
+  /// that path holds `emuQueue`, so taking it here would deadlock.
   func makeScriptDriveState(_ mount: ScriptPlayer.DriveMount, scriptDir: URL) -> DriveState {
     let url = resolveScriptDiskURL(mount.path, scriptDir: scriptDir)
     let fileName = url.deletingPathExtension().lastPathComponent

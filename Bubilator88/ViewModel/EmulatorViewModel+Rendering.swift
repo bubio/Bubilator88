@@ -191,7 +191,10 @@ extension EmulatorViewModel {
   }
 
   /// Run emulation frame(s) for Metal rendering path.
-  /// Called directly from EmulatorMetalView.draw(in:) -- NOT on emuQueue.
+  ///
+  /// Called from `EmulatorMetalView.draw(in:)` on the main thread, wrapped in
+  /// `emuQueue.sync`. Everything reachable from here therefore already holds
+  /// the queue: taking it again (`emuQueue.sync`) deadlocks.
   func runFrameForMetal(frameCount: Int = 1) {
     if isRewinding {
       // Reverse playback at 1/Nth the raw step rate so the buffer

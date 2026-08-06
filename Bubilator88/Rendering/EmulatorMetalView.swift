@@ -438,7 +438,15 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
     var newFrame = false
     let realElapsed = now - emulationStartTime
     if emulatedTime <= realElapsed {
-      viewModel.runFrameForMetal(frameCount: framesPerDraw)
+      // Take `emuQueue` for the emulation step. This thread *is* the main
+      // thread, so the block runs inline — the queue is used purely as the
+      // mutual-exclusion token that `emuQueue.async` writers (debugger
+      // attach/detach, YM2608 debug masks, the Debug window's snapshot
+      // capture) already take. Without it those writers run concurrently
+      // with `machine.runFrame()`.
+      viewModel.emuQueue.sync {
+        viewModel.runFrameForMetal(frameCount: framesPerDraw)
+      }
       fpsFrameCount += framesPerDraw
       emulatedTime += frameInterval
       newFrame = true
