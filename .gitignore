@@ -54,6 +54,11 @@ skills-lock.json
 # Ensure local Swift package is tracked
 !Packages/
 
+# Pin dependency versions in the repo (override the global "Package.resolved" rule).
+# Both resolution files must agree: SPM builds (swift build/test, BootTester,
+# regression) read the package's copy, Xcode builds read the workspace's copy.
+!Package.resolved
+
 # SwiftUI source folder (not a build dir — override global [Dd]ebug/ rule)
 !Bubilator88/Views/Debug/
 
