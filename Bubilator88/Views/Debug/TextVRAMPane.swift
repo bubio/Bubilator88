@@ -317,8 +317,8 @@ struct TextVRAMPane: View {
   // MARK: - PPM export
 
   private func exportPPM() {
-    let hireso = session.textVRAMHireso
-    let height = hireso ? 400 : 200
+    let is400Line = session.textVRAMHireso
+    let height = is400Line ? 400 : 200
     guard let data = session.textVRAMImageData,
           data.count == 640 * height * 4 else { return }
 

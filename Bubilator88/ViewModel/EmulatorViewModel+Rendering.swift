@@ -184,7 +184,10 @@ extension EmulatorViewModel {
       cursorY: machine.crtc.cursorY,
       cursorVisible: cursorVisible,
       cursorBlock: (machine.crtc.cursorMode & 0x02) != 0,
-      hireso: true,
+      // Always true: the pixel buffer is 640×400 regardless of display mode
+      // (200-line output is line-doubled into it), so text is drawn at the
+      // 400-line cell height to match. Nothing to do with the monitor type.
+      is400Line: true,
       skipLine: machine.crtc.skipLine,
       markTextPixels: markTextPixels,
       into: &pixelBuffer
@@ -206,6 +209,19 @@ extension EmulatorViewModel {
     emuQueue.sync {
       guard emulationLoop.shouldRun else { return }
       runFrameForMetal(frameCount: frameCount)
+      // Re-pace from the machine itself rather than a fixed 1/60. The frame
+      // rate is a function of the monitor and the CRTC parameters, so it
+      // changes when software reprograms the CRTC (a 20-row screen on a 24kHz
+      // monitor is 56.4Hz, a 25-row one 55.4Hz) — reading it here keeps the
+      // pacer correct without the host having to be told.
+      let rate = machine.frameRate
+      if rate > 0 {
+        emulationLoop.setFrameInterval(1.0 / rate)
+        if abs(rate - publishedFrameRate) > 0.01 {
+          publishedFrameRate = rate
+          Task { @MainActor [weak self] in self?.targetFrameRate = rate }
+        }
+      }
     }
   }
 

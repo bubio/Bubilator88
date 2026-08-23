@@ -59,8 +59,11 @@ nonisolated final class EmulationLoop: @unchecked Sendable {
     condition.unlock()
   }
 
-  /// Wall-clock length of one machine frame. Step 3 (monitor type) will drive
-  /// this off the CRT mode instead of the fixed 1/60.
+  /// Wall-clock length of one machine frame.
+  ///
+  /// Fed from `Machine.frameRate` after every step, so it tracks the monitor
+  /// type and whatever geometry software has programmed into the CRTC. The
+  /// initial 1/60 only covers the window before the first frame runs.
   func setFrameInterval(_ interval: CFTimeInterval) {
     condition.lock()
     frameInterval = interval
