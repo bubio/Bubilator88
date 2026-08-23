@@ -110,7 +110,7 @@ struct Bubilator88App: App {
 // MARK: - Emulator Menu
 
 struct EmulatorCommands: Commands {
-  let viewModel: EmulatorViewModel
+  @Bindable var viewModel: EmulatorViewModel
 
   var body: some Commands {
     CommandMenu("Emulator") {
@@ -135,10 +135,7 @@ struct EmulatorCommands: Commands {
 
       Divider()
 
-      Picker("Boot Mode", selection: Binding(
-        get: { viewModel.bootMode },
-        set: { viewModel.bootMode = $0 }
-      )) {
+      Picker("Boot Mode", selection: $viewModel.bootMode) {
         ForEach(EmulatorViewModel.BootMode.standardCases, id: \.self) { mode in
           Text(mode.rawValue).tag(mode)
         }
@@ -147,10 +144,7 @@ struct EmulatorCommands: Commands {
 
       Divider()
 
-      Picker("CPU Clock", selection: Binding(
-        get: { viewModel.clock8MHz },
-        set: { viewModel.clock8MHz = $0 }
-      )) {
+      Picker("CPU Clock", selection: $viewModel.clock8MHz) {
         Text("8 MHz").tag(true)
         Text("4 MHz").tag(false)
       }
@@ -354,7 +348,7 @@ struct DiskCommands: Commands {
 // MARK: - View Menu (appended to system View menu)
 
 struct ViewCommands: Commands {
-  let viewModel: EmulatorViewModel
+  @Bindable var viewModel: EmulatorViewModel
   @Environment(\.openWindow) private var openWindow
 
   var body: some Commands {
@@ -402,20 +396,14 @@ struct ViewCommands: Commands {
 
       Divider()
 
-      Toggle(isOn: Binding(
-        get: { viewModel.scanlineEnabled },
-        set: { viewModel.scanlineEnabled = $0 }
-      )) {
+      Toggle(isOn: $viewModel.scanlineEnabled) {
         Label("Scanlines", systemImage: "line.3.horizontal")
       }
       .disabled(!viewModel.isScanlineAvailable)
 
       Divider()
 
-      Picker("Video Filter", selection: Binding(
-        get: { viewModel.videoFilter },
-        set: { viewModel.videoFilter = $0 }
-      )) {
+      Picker("Video Filter", selection: $viewModel.videoFilter) {
         ForEach(EmulatorViewModel.VideoFilter.allCases, id: \.self) { filter in
           Text(filter.rawValue).tag(filter)
         }
@@ -424,6 +412,9 @@ struct ViewCommands: Commands {
 
       Divider()
 
+      // Not a pass-through: the getter reads the manager's own flag while the
+      // setter goes through `toggleTranslation`, which tears the session up or
+      // down. `@Bindable` cannot express that.
       Toggle(isOn: Binding(
         get: { viewModel.translationManager.isEnabled },
         set: { viewModel.toggleTranslation($0) }
@@ -440,7 +431,7 @@ struct ViewCommands: Commands {
 // MARK: - Control Menu
 
 struct ControlCommands: Commands {
-  let viewModel: EmulatorViewModel
+  @Bindable var viewModel: EmulatorViewModel
 
   var body: some Commands {
     CommandMenu("Control") {
@@ -460,20 +451,14 @@ struct ControlCommands: Commands {
 
       Divider()
 
-      Toggle(isOn: Binding(
-        get: { viewModel.romajiInputEnabled },
-        set: { viewModel.romajiInputEnabled = $0 }
-      )) {
+      Toggle(isOn: $viewModel.romajiInputEnabled) {
         Text("Romaji Kana Input")
       }
       .keyboardShortcut("k", modifiers: [.command, .option])
 
       Divider()
 
-      Picker("CPU Speed", selection: Binding(
-        get: { viewModel.cpuSpeed },
-        set: { viewModel.cpuSpeed = $0 }
-      )) {
+      Picker("CPU Speed", selection: $viewModel.cpuSpeed) {
         ForEach(EmulatorViewModel.CPUSpeed.allCases, id: \.self) { speed in
           Text(speed.rawValue).tag(speed)
         }
@@ -606,7 +591,7 @@ struct ControlCommands: Commands {
 // MARK: - Debug Menu
 
 struct DebugCommands: Commands {
-  let viewModel: EmulatorViewModel
+  @Bindable var viewModel: EmulatorViewModel
   @Environment(\.openWindow) private var openWindow
 
   var body: some Commands {
@@ -662,52 +647,28 @@ struct DebugCommands: Commands {
 
       Divider()
 
-      Toggle("Show Text Layer", isOn: Binding(
-        get: { viewModel.debugTextLayerEnabled },
-        set: { viewModel.debugTextLayerEnabled = $0 }
-      ))
+      Toggle("Show Text Layer", isOn: $viewModel.debugTextLayerEnabled)
 
-      Toggle("Exempt Text from Scanlines", isOn: Binding(
-        get: { viewModel.debugTextScanlineExempt },
-        set: { viewModel.debugTextScanlineExempt = $0 }
-      ))
-      .disabled(!viewModel.effectiveScanlineEnabled)
+      Toggle("Exempt Text from Scanlines", isOn: $viewModel.debugTextScanlineExempt)
+        .disabled(!viewModel.effectiveScanlineEnabled)
 
       Divider()
 
-      Toggle("FM", isOn: Binding(
-        get: { viewModel.fmEnabled },
-        set: { viewModel.fmEnabled = $0 }
-      ))
+      Toggle("FM", isOn: $viewModel.fmEnabled)
 
-      Toggle("SSG", isOn: Binding(
-        get: { viewModel.ssgEnabled },
-        set: { viewModel.ssgEnabled = $0 }
-      ))
+      Toggle("SSG", isOn: $viewModel.ssgEnabled)
 
-      Toggle("ADPCM", isOn: Binding(
-        get: { viewModel.adpcmEnabled },
-        set: { viewModel.adpcmEnabled = $0 }
-      ))
+      Toggle("ADPCM", isOn: $viewModel.adpcmEnabled)
 
-      Toggle("Rhythm", isOn: Binding(
-        get: { viewModel.rhythmEnabled },
-        set: { viewModel.rhythmEnabled = $0 }
-      ))
+      Toggle("Rhythm", isOn: $viewModel.rhythmEnabled)
 
       Divider()
 
-      Toggle("Force YM2203 (OPN)", isOn: Binding(
-        get: { viewModel.forceOPNMode },
-        set: { viewModel.forceOPNMode = $0 }
-      ))
+      Toggle("Force YM2203 (OPN)", isOn: $viewModel.forceOPNMode)
 
       Divider()
 
-      Picker("CPU Overclock", selection: Binding(
-        get: { viewModel.cpuOverclock },
-        set: { viewModel.cpuOverclock = $0 }
-      )) {
+      Picker("CPU Overclock", selection: $viewModel.cpuOverclock) {
         Text("1× (Real)").tag(1)
         Text("2×").tag(2)
         Text("4×").tag(4)

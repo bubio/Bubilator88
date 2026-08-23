@@ -320,6 +320,9 @@ extension EmulatorViewModel {
         ocrSampleRequested.exchange(false, ordering: .relaxed)
           ? Array(pixelBuffer) : nil
 
+      // `DispatchQueue.main.async`, not `Task { @MainActor }`: this fires from
+      // the emulation thread several times a second and the hops must land in
+      // the order they were made. Unstructured `Task`s carry no such ordering.
       DispatchQueue.main.async { [weak self] in
         guard let self else { return }
         self.drive0Access = d0

@@ -32,7 +32,7 @@ private let tapeFileTypes: [UTType] = [
 // MARK: - ContentView
 
 struct ContentView: View {
-  let viewModel: EmulatorViewModel
+  @Bindable var viewModel: EmulatorViewModel
 
   var body: some View {
     VStack(spacing: 0) {
@@ -131,20 +131,28 @@ struct ContentView: View {
       // before the run loop was ready (cold launch).
       viewModel.consumePendingLaunch()
     }
-    .onReceive(NotificationCenter.default.publisher(for: NSWindow.willEnterFullScreenNotification)) { _ in
-      viewModel.isFullScreen = true
+    // `NotificationCenter.notifications` rather than `.onReceive`: these were
+    // the view layer's only dependency on Combine.
+    .task {
+      for await _ in NotificationCenter.default.notifications(
+        named: NSWindow.willEnterFullScreenNotification) {
+        viewModel.isFullScreen = true
+      }
     }
-    .onReceive(NotificationCenter.default.publisher(for: NSWindow.willExitFullScreenNotification)) { _ in
-      viewModel.showFullScreenOverlay = false
+    .task {
+      for await _ in NotificationCenter.default.notifications(
+        named: NSWindow.willExitFullScreenNotification) {
+        viewModel.showFullScreenOverlay = false
+      }
     }
-    .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification)) { _ in
-      viewModel.isFullScreen = false
+    .task {
+      for await _ in NotificationCenter.default.notifications(
+        named: NSWindow.didExitFullScreenNotification) {
+        viewModel.isFullScreen = false
+      }
     }
     .fileImporter(
-      isPresented: Binding(
-        get: { viewModel.showingDiskPicker },
-        set: { viewModel.showingDiskPicker = $0 }
-      ),
+      isPresented: $viewModel.showingDiskPicker,
       allowedContentTypes: diskFileTypes,
       allowsMultipleSelection: false
     ) { result in
@@ -157,10 +165,7 @@ struct ContentView: View {
     // invisible sibling view via .background.
     .background(
       Color.clear.fileImporter(
-        isPresented: Binding(
-          get: { viewModel.showingTapePicker },
-          set: { viewModel.showingTapePicker = $0 }
-        ),
+        isPresented: $viewModel.showingTapePicker,
         allowedContentTypes: tapeFileTypes,
         allowsMultipleSelection: false
       ) { result in
@@ -172,10 +177,7 @@ struct ContentView: View {
     // Binding the pickerContext sum type directly keeps which picker is showing
     // and what it contains permanently consistent. `.sheet(item:)` rebuilds the
     // sheet whenever the item's id changes.
-    .sheet(item: Binding(
-      get: { viewModel.pickerContext },
-      set: { viewModel.pickerContext = $0 }
-    )) { context in
+    .sheet(item: $viewModel.pickerContext) { context in
       switch context {
       case .multiImageD88(let disks, _, _, _, _):
         DiskImagePickerView(
@@ -191,18 +193,12 @@ struct ContentView: View {
         )
       }
     }
-    .sheet(isPresented: Binding(
-      get: { viewModel.showingSaveStateSheet },
-      set: { viewModel.showingSaveStateSheet = $0 }
-    )) {
+    .sheet(isPresented: $viewModel.showingSaveStateSheet) {
       SaveStateSheetView(viewModel: viewModel)
     }
     .alert(
       viewModel.alertTitle,
-      isPresented: Binding(
-        get: { viewModel.alertIsPresented },
-        set: { viewModel.alertIsPresented = $0 }
-      )
+      isPresented: $viewModel.alertIsPresented
     ) {
       Button("OK", role: .cancel) { }
     } message: {
@@ -227,7 +223,7 @@ struct ContentView: View {
     ]
     _ = provider.loadObject(ofClass: URL.self) { url, _ in
       guard let url, acceptedExts.contains(url.pathExtension.lowercased()) else { return }
-      DispatchQueue.main.async {
+      Task { @MainActor in
         viewModel.mountDisk(url: url, drive: -1)
       }
     }
@@ -409,10 +405,7 @@ struct ContentView: View {
         Image(systemName: "speaker.fill")
           .foregroundStyle(.secondary)
         Slider(
-          value: Binding(
-            get: { viewModel.volume },
-            set: { viewModel.volume = $0 }
-          ),
+          value: $viewModel.volume,
           in: 0...1
         )
         .frame(width: 60)

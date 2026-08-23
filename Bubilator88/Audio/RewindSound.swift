@@ -45,7 +45,7 @@ final class RewindSound {
     // in the meantime (generation will differ).
     player.scheduleBuffer(tail, at: nil,
                           options: .interruptsAtLoop) { [weak self] in
-      DispatchQueue.main.async {
+      Task { @MainActor in
         guard let self, self.generation == myGen else { return }
         self.player.stop()
       }
