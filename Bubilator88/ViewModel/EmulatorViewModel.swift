@@ -1241,6 +1241,18 @@ final class EmulatorViewModel {
   struct SaveMeta: Codable {
     var bootMode: String
     var clock8MHz: Bool
+    /// Monitor type (DIP SW1 bit 8) the state was captured under.
+    ///
+    /// It has to travel with the state even though DIP switches do not, and
+    /// the difference is that this one has a *consequence* baked into the
+    /// serialized machine: the CRTC geometry software programmed after
+    /// reading port 0x40 bit 1. Restoring 25×16 = 448 lines into a machine
+    /// running at 15,980 Hz yields 35.7Hz — a combination no real machine can
+    /// be in, because on a 15kHz monitor the ROM programs 25×8 = 256 instead.
+    ///
+    /// Optional so states written before 1.5.0 still decode; see
+    /// `performLoad` for why they default to 24kHz.
+    var monitorType: Int?
     var disk0: String?
     var disk1: String?
     var drive0Name: String?
@@ -1330,6 +1342,7 @@ final class EmulatorViewModel {
       let meta = SaveMeta(
         bootMode: bootMode.rawValue,
         clock8MHz: clock8MHz,
+        monitorType: machine.monitorType.rawValue,
         disk0: machine.subSystem.drives[0]?.name,
         disk1: machine.subSystem.drives[1]?.name,
         drive0Name: self.drive0Name == "Empty" ? nil : self.drive0Name,
@@ -1393,6 +1406,18 @@ final class EmulatorViewModel {
       return
     }
     let meta: SaveMeta? = loadMeta(for: path)
+    // Outside the `if let meta` below on purpose. The restored CRTC geometry
+    // was chosen by software for one particular monitor; leaving the machine
+    // on whatever the picker currently says produces a frame rate no real
+    // machine can have (448 lines at 15,980 Hz = 35.7Hz). A state with no app
+    // metadata predates 1.5.0, when port 0x40 bit 1 always read 0 — so its
+    // geometry was programmed for a 24kHz monitor.
+    let restoredMonitor = meta?.monitorType.flatMap(MonitorType.init(rawValue:)) ?? .khz24
+    emuQueue.sync { machine.monitorType = restoredMonitor }
+    // Mirror it into Settings the way `clock8MHz` is mirrored, so the picker
+    // agrees with the machine and the next Reset does not silently change the
+    // frame rate back.
+    Settings.shared.monitorType = restoredMonitor
     if let meta {
       if let mode = BootMode(rawValue: meta.bootMode) {
         _bootModeStorage = mode
