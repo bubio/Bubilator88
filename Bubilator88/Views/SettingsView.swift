@@ -94,13 +94,20 @@ private struct GeneralSettingsTab: View {
           Text("15 kHz (Standard)").tag(MonitorType.khz15)
         }
         .pickerStyle(.menu)
-        Text("DIP SW1-8 on real hardware. The monitor's horizontal frequency "
-             + "decides the VSYNC rate: 55.4 Hz at 24 kHz, 62.4 Hz at 15 kHz "
-             + "\u{2014} neither is 60 Hz. Applied on next reset.")
+        Text("DIP SW1-8 on real hardware. The monitor's horizontal frequency decides the VSYNC rate: 55.4 Hz at 24 kHz, 62.4 Hz at 15 kHz \u{2014} neither is 60 Hz. Applied on next reset.")
           .font(.caption)
           .foregroundStyle(.secondary)
       } header: {
         Text("Monitor")
+      }
+
+      Section {
+        Toggle("Memory wait", isOn: $settings.memoryWaitDip)
+        Text("DIP SW1-6 on real hardware. Adds one wait state to main memory and text VRAM accesses, slowing the machine slightly. Off on a factory-default PC-8801. Applied on next reset.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      } header: {
+        Text("Memory Wait")
       }
 
       Section {

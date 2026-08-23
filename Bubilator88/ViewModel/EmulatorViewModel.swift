@@ -855,6 +855,7 @@ final class EmulatorViewModel {
     machine.bus.dipSw2 = _bootModeStorage.dipSw2 | 0x08
     // Set before the reset: the monitor decides the CRTC's reset geometry.
     machine.monitorType = Settings.shared.monitorType
+    machine.memoryWaitDip = Settings.shared.memoryWaitDip
     machine.reset()
     machine.clock8MHz = clock8MHz
     machine.sound.immersiveOutputEnabled = Settings.shared.immersiveAudio
@@ -1195,6 +1196,7 @@ final class EmulatorViewModel {
     }
     let use8MHz = clock8MHz
     let monitorType = Settings.shared.monitorType
+    let memoryWaitDip = Settings.shared.memoryWaitDip
     emuQueue.sync {
       // Auto-select ROM/DISK boot: if drive 0 is empty, set DIP SW2
       // bit 3 to skip the ~30s disk-boot timeout and go straight to
@@ -1205,6 +1207,7 @@ final class EmulatorViewModel {
       machine.applyBootStrap(base: sw2Base)
       // Like the DIP switches, the monitor type only takes effect on reset.
       machine.monitorType = monitorType
+      machine.memoryWaitDip = memoryWaitDip
       machine.reset(preserveRAM: true)
       machine.clock8MHz = use8MHz
       machine.cpuOverclock = cpuOverclock
