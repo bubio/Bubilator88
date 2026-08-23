@@ -20,7 +20,7 @@ import QuartzCore
 /// `setRunning(false)` + `join()`). Emulation → main must always be `async`.
 /// A blocking wait in the other direction deadlocks, and Thread Sanitizer does
 /// not catch deadlocks.
-final class EmulationLoop: @unchecked Sendable {
+nonisolated final class EmulationLoop: @unchecked Sendable {
   /// Runs one batch of machine frames. Called on the emulation thread, and
   /// responsible for taking `emuQueue` and re-checking `shouldRun` under it
   /// (see `stop()` for why the re-check has to happen there).

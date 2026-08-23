@@ -10,9 +10,11 @@ import Foundation
 /// of `machine.runFrame()`. Once the emulation loop owns its own thread that
 /// guarantee is gone, so every input mutation goes through this queue instead
 /// and is applied where the machine is quiescent.
-enum InputEvent {
-  case pressKey(Keyboard.Key)
-  case releaseKey(Keyboard.Key)
+nonisolated enum InputEvent {
+  /// `record` marks real user input, which a script recording captures.
+  /// Injected keys (paste queue, script playback, game controller) pass false.
+  case pressKey(Keyboard.Key, record: Bool)
+  case releaseKey(Keyboard.Key, record: Bool)
   case releaseAllKeys
   case mouseMovement(dx: Int, dy: Int)
   case mouseButtons(left: Bool, right: Bool)
@@ -26,7 +28,7 @@ enum InputEvent {
 /// Ordering is the whole point: a press followed by a release must reach the
 /// matrix in that order, and `releaseAllKeys` must not overtake the presses it
 /// is meant to clear.
-final class InputEventQueue: @unchecked Sendable {
+nonisolated final class InputEventQueue: @unchecked Sendable {
   private let lock = NSLock()
   private var events: [InputEvent] = []
 

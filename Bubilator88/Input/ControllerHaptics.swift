@@ -1,3 +1,4 @@
+import Foundation
 import GameController
 import CoreHaptics
 import Synchronization
@@ -8,7 +9,12 @@ final class ControllerHaptics {
 
   private weak var controller: GCController?
   private var hapticEngine: CHHapticEngine?
-  private var impactPlayer: CHHapticPatternPlayer?
+
+  /// Written on the main actor when the engine starts or resets, read from the
+  /// emulation thread in `playImpact()`. The lock is what makes that defined;
+  /// it is never held across anything that can block.
+  nonisolated(unsafe) private var impactPlayer: CHHapticPatternPlayer?
+  nonisolated private let impactPlayerLock = NSLock()
 
   /// Set on the main actor when the haptic engine starts/stops, read from the
   /// emulation thread that detects SSG noise. `Atomic` makes that defined.
@@ -49,7 +55,9 @@ final class ControllerHaptics {
   func stop() {
     hapticEngine?.stop()
     hapticEngine = nil
+    impactPlayerLock.lock()
     impactPlayer = nil
+    impactPlayerLock.unlock()
     isEnabled = false
   }
 
@@ -70,15 +78,21 @@ final class ControllerHaptics {
     ], parameters: [])
 
     if let pattern {
-      impactPlayer = try? engine.makePlayer(with: pattern)
+      let player = try? engine.makePlayer(with: pattern)
+      impactPlayerLock.lock()
+      impactPlayer = player
+      impactPlayerLock.unlock()
     }
   }
 
   // MARK: - Trigger
 
-  /// Fire a single impact haptic (called from emulation frame loop).
-  func playImpact() {
+  /// Fire a single impact haptic. Called from the emulation thread.
+  nonisolated func playImpact() {
     guard isEnabled else { return }
-    try? impactPlayer?.start(atTime: CHHapticTimeImmediate)
+    impactPlayerLock.lock()
+    let player = impactPlayer
+    impactPlayerLock.unlock()
+    try? player?.start(atTime: CHHapticTimeImmediate)
   }
 }

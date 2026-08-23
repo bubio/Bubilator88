@@ -8,7 +8,7 @@ import Foundation
 /// thread split would be a read of live machine state from the wrong thread —
 /// and could disagree with the frame actually being uploaded if the mode
 /// changed in between.
-final class FrameSlot {
+nonisolated final class FrameSlot: @unchecked Sendable {
   var pixels: [UInt8]
   var is400LineMode: Bool = false
 
@@ -27,7 +27,7 @@ final class FrameSlot {
 /// The producer never blocks: if the renderer has not picked up the previous
 /// frame, that frame is simply dropped. Emulation must not be paced by the
 /// display.
-final class FramePublisher: @unchecked Sendable {
+nonisolated final class FramePublisher: @unchecked Sendable {
   private let lock = NSLock()
   private let pixelCount: Int
 

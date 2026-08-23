@@ -33,20 +33,20 @@ extension EmulatorViewModel {
   // MARK: - Tunables
 
   /// Snapshot interval in emulated frames at 60 fps (30 frames ≒ 0.5s).
-  static let rewindSnapshotInterval: Int = 30
+  nonisolated static let rewindSnapshotInterval: Int = 30
 
   /// Maximum number of snapshots retained (60 × 0.5s = 30s window).
-  static let rewindBufferCapacity: Int = 60
+  nonisolated static let rewindBufferCapacity: Int = 60
 
   /// Thumbnail dimensions used by the strip overlay.
-  static let rewindThumbnailWidth: Int = 160
-  static let rewindThumbnailHeight: Int = 100
+  nonisolated static let rewindThumbnailWidth: Int = 160
+  nonisolated static let rewindThumbnailHeight: Int = 100
 
   /// One stepRewindBack per N draw frames. Lower = faster rewind.
   /// 4 ≈ 7.5 game-seconds per wall second at 60fps with 0.5s snapshot
   /// interval — enough that the strip animates visibly instead of
   /// blowing through the entire 30s window in a single second.
-  static let rewindStepDivider: Int = 4
+  nonisolated static let rewindStepDivider: Int = 4
 
   // MARK: - Public API
 
@@ -91,10 +91,11 @@ extension EmulatorViewModel {
   /// Called once per emulated frame from the Metal draw loop. Pushes a
   /// snapshot at `rewindSnapshotInterval` cadence; cheap when not on a
   /// snapshot frame (just an integer increment).
-  func recordRewindSnapshotIfNeeded() {
+  nonisolated func recordRewindSnapshotIfNeeded() {
     // Don't capture during recording sessions — rewinding mid-recording
-    // would desync the wall-clock timeline.
-    if videoRecorder.isRecording || audioRecorder.isRecording { return }
+    // would desync the wall-clock timeline. The atomic flags, not the
+    // `@Observable` properties: this runs on the emulation thread.
+    if videoRecorder.isRecordingFlag || audioRecorder.isRecordingFlag { return }
 
     rewindFrameCounter += 1
     if rewindFrameCounter < Self.rewindSnapshotInterval { return }
@@ -131,6 +132,7 @@ extension EmulatorViewModel {
       // here, so the flip happens under the queue. The write still executes on
       // the calling (main) thread, which is what `@Observable` requires.
       isRewinding = true
+      rewindActive = true
       return rewindSnapshots.compactMap { $0.thumbnail }
     }
     rewindSnapshotCount = rewindStartSnapshotCount
@@ -144,7 +146,10 @@ extension EmulatorViewModel {
   /// remaining snapshots since they predate the new "current" state.
   func stopRewindHold() {
     if !isRewinding { return }
-    emuQueue.sync { isRewinding = false }
+    emuQueue.sync {
+      isRewinding = false
+      rewindActive = false
+    }
     rewindSound.stop()
     audio.setVolume(preRewindVolume)
     releaseAllKeys()
@@ -159,7 +164,7 @@ extension EmulatorViewModel {
   /// **Isolation:** reached only through `runFrameForMetal`, which the draw
   /// loop already runs inside `emuQueue.sync`. Re-entering the queue here
   /// would deadlock, so the load runs directly under the caller's hold.
-  func stepRewindBack() {
+  nonisolated func stepRewindBack() {
     guard let last = rewindSnapshots.popLast() else { return }
     let raw = decompressSnapshotState(last.state)
     try? machine.loadSaveState(Array(raw))
@@ -214,13 +219,13 @@ extension EmulatorViewModel {
   /// Mirror the ring-buffer depth into the `@Observable` counter the menus and
   /// the strip overlay bind to. Called from the emulation thread, so the write
   /// hops to the main thread — SwiftUI observation is not thread-safe.
-  func publishRewindSnapshotCount(_ count: Int) {
+  nonisolated func publishRewindSnapshotCount(_ count: Int) {
     Task { @MainActor [weak self] in
       self?.rewindSnapshotCount = count
     }
   }
 
-  private func decompressSnapshotState(_ data: Data) -> Data {
+  nonisolated private func decompressSnapshotState(_ data: Data) -> Data {
     // Snapshots before any compression-failure fallback are stored
     // raw; NSData.decompressed throws on malformed input, so on
     // failure we treat the bytes as already-decompressed.
@@ -231,7 +236,7 @@ extension EmulatorViewModel {
   /// The pixel buffer is RGBA premultiplied-last; we draw it scaled
   /// into a fresh CGContext so the result is a standalone CGImage
   /// (no shared backing with the live framebuffer).
-  private func captureRewindThumbnail() -> CGImage? {
+  nonisolated private func captureRewindThumbnail() -> CGImage? {
     let srcWidth = 640
     let srcHeight = 400
     let dataProvider = CGDataProvider(data: Data(pixelBuffer) as CFData)

@@ -31,17 +31,19 @@ extension EmulatorViewModel {
 
     for action in actions {
       let key = Keyboard.Key(action.row, action.bit)
-      if action.down {
-        pressKey(key)
-      } else {
-        releaseKey(key)
-      }
+      apply(action.down ? .pressKey(key, record: false)
+        : .releaseKey(key, record: false))
     }
   }
 
   /// Advance the paste queue by one logical frame. Called from
   /// `runFrameForMetal()` before the machine tick.
-  func tickPasteQueue() {
+  /// Drain one tick of the paste queue into the matrix.
+  ///
+  /// Runs on the emulation thread inside the frame, so the keys are applied
+  /// directly rather than posted — they are already at the frame boundary, and
+  /// injected keys must not be captured by a script recording.
+  nonisolated func tickPasteQueue() {
     var actions: [TextPasteQueue.KeyAction] = []
     pasteQueueLock.lock()
     pasteQueue.tick { actions.append($0) }
@@ -49,11 +51,8 @@ extension EmulatorViewModel {
 
     for action in actions {
       let key = Keyboard.Key(action.row, action.bit)
-      if action.down {
-        pressKey(key)
-      } else {
-        releaseKey(key)
-      }
+      apply(action.down ? .pressKey(key, record: false)
+        : .releaseKey(key, record: false))
     }
   }
 }

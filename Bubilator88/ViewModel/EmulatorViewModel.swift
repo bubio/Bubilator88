@@ -209,6 +209,7 @@ final class EmulatorViewModel {
   }
 
   private func pushVideoFilterToMetalView() {
+    syncLoopSettings()
     metalView?.updateVideoFilter(
       videoFilter,
       scanlineEnabled: effectiveScanlineEnabled,
@@ -508,23 +509,30 @@ final class EmulatorViewModel {
   /// fills/clears.
   var rewindSnapshotCount: Int = 0
 
+  /// The emulation loop's copy of `isRewinding`.
+  ///
+  /// `isRewinding` itself is `@Observable` UI state and must stay on the main
+  /// thread; the loop consults this mirror, flipped under `emuQueue` at the
+  /// same moment.
+  @ObservationIgnored nonisolated(unsafe) var rewindActive: Bool = false
+
   /// True while the user is holding the rewind key. Drives reverse
-  /// playback in the Metal frame loop and gates audio/recording UI.
+  /// playback in the emulation loop and gates audio/recording UI.
   var isRewinding: Bool = false
 
   /// Ring buffer of save-state snapshots (oldest at index 0). All access
   /// is on the main thread (Metal draw loop + UI events), so no lock is
   /// required.
-  @ObservationIgnored var rewindSnapshots: [RewindSnapshot] = []
+  @ObservationIgnored nonisolated(unsafe) var rewindSnapshots: [RewindSnapshot] = []
 
   /// Frame counter feeding `rewindSnapshotInterval` cadence.
-  @ObservationIgnored var rewindFrameCounter: Int = 0
+  @ObservationIgnored nonisolated(unsafe) var rewindFrameCounter: Int = 0
 
   /// Counts down draw-frames between snapshot pops during reverse
   /// playback. Driven by `EmulatorViewModel.rewindStepDivider`; a
   /// value of 4 means we pop one snapshot every 4 draws (≈ 1/4 the
   /// raw rate, so 30s of buffered history rewinds in ~4 wall seconds).
-  @ObservationIgnored var rewindStepCounter: Int = 0
+  @ObservationIgnored nonisolated(unsafe) var rewindStepCounter: Int = 0
 
   /// Snapshot count captured when the user pressed the rewind key.
   /// Used to compute "how far back the user has rewound" for the
@@ -593,6 +601,7 @@ final class EmulatorViewModel {
   /// graphics and attribute-graphics rendering intact.
   var debugTextLayerEnabled: Bool = true {
     didSet {
+      syncLoopSettings()
       guard !isRunning else { return }
       renderScreen()
     }
@@ -656,6 +665,29 @@ final class EmulatorViewModel {
   /// applied by the emulation loop at a frame boundary. See `InputEvent`.
   @ObservationIgnored let inputQueue = InputEventQueue()
 
+  /// Display and feedback settings the emulation loop consults every frame.
+  ///
+  /// They are main-actor UI state, so the loop reads a snapshot instead of the
+  /// live properties. `syncLoopSettings()` refreshes it from the main thread
+  /// whenever one of the inputs changes; a frame that races the update simply
+  /// uses the previous value, exactly as it would have before the split.
+  struct LoopSettings {
+    var debugTextLayerEnabled = true
+    var markTextPixels = false
+    var hapticEnabled = false
+  }
+
+  @ObservationIgnored nonisolated(unsafe) var loopSettings = LoopSettings()
+
+  /// Refresh `loopSettings` from the live UI state. Main thread only.
+  func syncLoopSettings() {
+    loopSettings = LoopSettings(
+      debugTextLayerEnabled: debugTextLayerEnabled,
+      markTextPixels: markTextPixelsForDisplay,
+      hapticEnabled: Settings.shared.controllerHapticEnabled
+    )
+  }
+
   /// Host-side mirrors of the queued bus-mouse settings, so the corresponding
   /// properties read back what was last set rather than what the machine has
   /// caught up to.
@@ -663,8 +695,8 @@ final class EmulatorViewModel {
   @ObservationIgnored var mouseJoyModeMirror: Bool = false
 
   /// Paste queue that replays clipboard text as simulated keystrokes.
-  @ObservationIgnored let pasteQueue = TextPasteQueue()
-  @ObservationIgnored let pasteQueueLock = NSLock()
+  @ObservationIgnored nonisolated(unsafe) let pasteQueue = TextPasteQueue()
+  @ObservationIgnored nonisolated let pasteQueueLock = NSLock()
 
   /// Romaji → half-width katakana input mode (host-side IME). When on, typed
   /// letters are converted to kana and injected via `pasteQueue` instead of
@@ -682,7 +714,7 @@ final class EmulatorViewModel {
 
   /// Active timeline-script player (live mode). Driven once per machine
   /// frame from `runFrameForMetal()`, same thread as `tickPasteQueue`.
-  @ObservationIgnored var scriptPlayer: ScriptPlayer?
+  @ObservationIgnored nonisolated(unsafe) var scriptPlayer: ScriptPlayer?
 
   /// A `.b88script` opened (double-click) before the emulator was ready
   /// to play it. Consumed by `consumePendingScript()` from
@@ -706,14 +738,14 @@ final class EmulatorViewModel {
   /// Directory of the script being replayed. Kept so that relative disk paths in
   /// the script can be resolved when each drive's `MountedDiskInfo` is rebuilt
   /// after playback.
-  @ObservationIgnored var scriptDir: URL?
+  @ObservationIgnored nonisolated(unsafe) var scriptDir: URL?
 
   /// What each drive's `MountedDiskInfo` was last rebuilt from during live
   /// script playback: the mounted path and image index, or nil for an empty
   /// drive. `tickScriptPlayer()` compares the player's mounts against this every
   /// frame so a mid-script `disk swap` / `disk select` / `disk eject` shows up in
   /// the status bar and the Disk menu right away, not only when playback ends.
-  @ObservationIgnored var scriptMountSnapshot: [ScriptMountKey?] = [nil, nil]
+  @ObservationIgnored nonisolated(unsafe) var scriptMountSnapshot: [ScriptMountKey?] = [nil, nil]
 
   /// Identity of one drive's script mount, for change detection only.
   struct ScriptMountKey: Equatable {
@@ -723,7 +755,7 @@ final class EmulatorViewModel {
 
   /// Active operation recorder. Fed real key/disk events; its `frameIndex`
   /// is advanced once per machine frame from `runFrameForMetal()`.
-  @ObservationIgnored var scriptRecorder: ScriptRecorder?
+  @ObservationIgnored nonisolated(unsafe) var scriptRecorder: ScriptRecorder?
 
   /// Audio output for YM2608 SSG sound
   let audio = AudioOutput()
@@ -828,11 +860,7 @@ final class EmulatorViewModel {
     // callback used to, and re-checks `shouldRun` under it so `stop()` can
     // guarantee no frame is in flight once it returns.
     emulationLoop = EmulationLoop { [weak self] batch in
-      guard let self else { return }
-      self.emuQueue.sync {
-        guard self.emulationLoop.shouldRun else { return }
-        self.runFrameForMetal(frameCount: batch)
-      }
+      self?.runEmulationStep(frameCount: batch)
     }
 
     // Wire up the write-back scheduler's writeBack closure.
@@ -872,6 +900,7 @@ final class EmulatorViewModel {
     // `updateDrawLoop()`, feeds the current window visibility to the loop —
     // emulation stays parked while the window is occluded, as it did when the
     // draw loop drove it.
+    syncLoopSettings()
     emulationLoop.setFramesPerStep(cpuSpeed.framesPerDraw)
     emulationLoop.start()
     metalView?.startEmulation()
@@ -1587,26 +1616,24 @@ final class EmulatorViewModel {
       return
     }
     guard let key = KeyMapping.pc88Key(for: keyCode) else { return }
-    postInput(.pressKey(key))
-    // Record only real user input — ScriptPlayer/paste inject directly via
-    // machine.keyboard and never reach keyDown/keyUp.
-    scriptRecorder?.keyDown(key)
+    // Recording rides along with the event so `ScriptRecorder` stays confined
+    // to the emulation thread, in the same order the matrix sees the press.
+    postInput(.pressKey(key, record: true))
   }
 
   func keyUp(_ keyCode: UInt16) {
     guard let key = KeyMapping.pc88Key(for: keyCode) else { return }
-    postInput(.releaseKey(key))
-    scriptRecorder?.keyUp(key)
+    postInput(.releaseKey(key, record: true))
   }
 
   /// Press a PC-8801 key directly (used by game controller).
   func pressKey(_ key: Keyboard.Key) {
-    postInput(.pressKey(key))
+    postInput(.pressKey(key, record: false))
   }
 
   /// Release a PC-8801 key directly (used by game controller).
   func releaseKey(_ key: Keyboard.Key) {
-    postInput(.releaseKey(key))
+    postInput(.releaseKey(key, record: false))
   }
 
   /// Release every held key. Used when a rewind swaps the matrix out from
@@ -1665,24 +1692,34 @@ final class EmulatorViewModel {
 
   /// Apply everything queued to the machine. Called at the frame boundary by
   /// the emulation loop, and inline by `postInput` while the loop is parked.
-  func applyPendingInput() {
+  nonisolated func applyPendingInput() {
     for event in inputQueue.drain() {
-      switch event {
-      case .pressKey(let key):
-        machine.keyboard.pressKey(row: key.row, bit: key.bit)
-      case .releaseKey(let key):
-        machine.keyboard.releaseKey(row: key.row, bit: key.bit)
-      case .releaseAllKeys:
-        machine.keyboard.releaseAll()
-      case .mouseMovement(let dx, let dy):
-        machine.mouse.injectMovement(dx: dx, dy: dy)
-      case .mouseButtons(let left, let right):
-        machine.mouse.setButtons(left: left, right: right)
-      case .mouseEnabled(let on):
-        machine.mouse.enabled = on
-      case .mouseJoyMode(let on):
-        machine.mouse.joyMode = on
-      }
+      apply(event)
+    }
+  }
+
+  /// Apply one input event to the machine. Emulation thread (or main, while
+  /// the loop is parked).
+  nonisolated func apply(_ event: InputEvent) {
+    switch event {
+    case .pressKey(let key, let record):
+      machine.keyboard.pressKey(row: key.row, bit: key.bit)
+      // Only real user input is recorded; the script player and the paste
+      // queue inject keys that a recording must not capture.
+      if record { scriptRecorder?.keyDown(key) }
+    case .releaseKey(let key, let record):
+      machine.keyboard.releaseKey(row: key.row, bit: key.bit)
+      if record { scriptRecorder?.keyUp(key) }
+    case .releaseAllKeys:
+      machine.keyboard.releaseAll()
+    case .mouseMovement(let dx, let dy):
+      machine.mouse.injectMovement(dx: dx, dy: dy)
+    case .mouseButtons(let left, let right):
+      machine.mouse.setButtons(left: left, right: right)
+    case .mouseEnabled(let on):
+      machine.mouse.enabled = on
+    case .mouseJoyMode(let on):
+      machine.mouse.joyMode = on
     }
   }
 }
@@ -1690,7 +1727,7 @@ final class EmulatorViewModel {
 // MARK: - Mounted Disk Info
 
 /// A group of disk images originating from a single D88 file.
-struct DiskImageGroup {
+nonisolated struct DiskImageGroup {
   let d88FileName: String
   let startIndex: Int
   let count: Int
@@ -1722,7 +1759,7 @@ enum DiskPickerContext: Identifiable {
   }
 }
 
-struct MountedDiskInfo: Identifiable, Equatable {
+nonisolated struct MountedDiskInfo: Identifiable, Equatable {
   /// Issued once per mount session, for SwiftUI's `.id()` and `.onChange(of:)`
   /// change detection.
   let id: UUID

@@ -105,10 +105,15 @@ extension EmulatorViewModel {
   /// Records a `disk swap` when a disk is mounted, but only while recording.
   /// Called at the end of each mount path in `EmulatorViewModel+Disk.swift`.
   func recordDiskMountIfNeeded(drive: Int) {
-    guard let recorder = scriptRecorder else { return }
+    guard scriptRecorder != nil else { return }
     let info = drive == 0 ? drive0Info : drive1Info
     guard let path = info?.sourceURL?.path else { return }  // data-backed mounts have no URL to record
-    recorder.diskSwap(drive: drive, path: path, image: info?.currentImageIndex ?? 0)
+    let image = info?.currentImageIndex ?? 0
+    // Main thread: take the queue, since the recorder otherwise belongs to the
+    // emulation thread (see `applyPendingInput`).
+    emuQueue.sync {
+      scriptRecorder?.diskSwap(drive: drive, path: path, image: image)
+    }
   }
 
   // MARK: - Setup header
