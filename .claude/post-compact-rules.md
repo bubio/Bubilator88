@@ -7,5 +7,5 @@
 - Run `python3 scripts/regression_compare.py` for pixel regression (the
   single source of truth; 15 scenarios, pixel-exact with per-scenario
   tolerance)
-- Architecture details: see docs/ARCHITECTURE.md
-- Known pitfalls: see docs/KNOWN_PITFALLS.md
+- Architecture details: see docs/develop/Bubilator88/ARCHITECTURE.md
+- Known pitfalls: see docs/develop/Bubilator88/KNOWN_PITFALLS.md

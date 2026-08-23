@@ -3,7 +3,7 @@ import EmulatorCore
 
 // MARK: - Launch arguments (URL scheme / CLI, QUASI88-compatible)
 //
-// Implements docs/URL_SCHEME.md. Delivers `bubilator88://boot?arg=...` and
+// Implements docs/develop/Bubilator88/URL_SCHEME.md. Delivers `bubilator88://boot?arg=...` and
 // launch-time command-line arguments to the single running instance, swapping
 // disks, machine type and clock, then cold-booting. The argument format matches
 // QUASI88 (see `LaunchRequest`).

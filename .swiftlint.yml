@@ -42,7 +42,7 @@ disabled_rules:
   - identifier_name
   - type_name
 
-  # TODOs are how docs/KNOWN_PITFALLS.md entries get seeded. Do not nag.
+  # TODOs are how docs/develop/Bubilator88/KNOWN_PITFALLS.md entries get seeded. Do not nag.
   - todo
 
   # Whitespace belongs to SwiftFormat, not SwiftLint.

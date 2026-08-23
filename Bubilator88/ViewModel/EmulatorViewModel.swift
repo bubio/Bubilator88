@@ -661,7 +661,7 @@ final class EmulatorViewModel {
   /// on it. Consumed by `consumePendingLaunch()` from `ContentView.onAppear`,
   /// right after the run loop is started. Kept separate from
   /// `pendingScriptURL` (different transport, different consumer) — see
-  /// docs/URL_SCHEME.md. Stores the *parsed* request, not the URL, so the
+  /// docs/develop/Bubilator88/URL_SCHEME.md. Stores the *parsed* request, not the URL, so the
   /// command-line entry point shares the same deferral and apply path.
   @ObservationIgnored var pendingLaunchRequest: LaunchRequest?
 

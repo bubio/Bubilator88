@@ -523,7 +523,7 @@ extension EmulatorViewModel {
   ///
   /// Unlike `mountDisk(url:drive:)` it never presents a picker sheet, because the
   /// caller (`performLaunch`) has already validated `disks` and `imageIndex` in
-  /// its validation phase. See docs/URL_SCHEME_LAUNCH_PLAN.md §3.6.
+  /// its validation phase. See docs/develop/Bubilator88/URL_SCHEME_LAUNCH_PLAN.md §3.6.
   func mountDiskExplicit(disks: [D88Disk], imageIndex: Int, url: URL, drive: Int) {
     mountDiskImage(disks[imageIndex], allImages: disks, imageIndex: imageIndex, url: url, drive: drive)
     Settings.shared.addRecentFile(url: url)
