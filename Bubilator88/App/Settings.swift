@@ -98,6 +98,13 @@ final class Settings {
     didSet { UserDefaults.standard.set(screenshotAutoSave, forKey: "screenshotAutoSave") }
   }
 
+  /// The `Ask save location every time` toggle for screenshots: the inverse of
+  /// `screenshotAutoSave`, so the UI can bind straight to it.
+  var screenshotAskEveryTime: Bool {
+    get { !screenshotAutoSave }
+    set { screenshotAutoSave = !newValue }
+  }
+
   /// Directory for auto-saved screenshots (absolute path). Nil means
   /// no directory has been chosen yet.
   var screenshotDirectory: String? = nil {
@@ -130,6 +137,13 @@ final class Settings {
     didSet { UserDefaults.standard.set(recordingAutoSave, forKey: "recordingAutoSave") }
   }
 
+  /// The `Ask save location every time` toggle for audio recordings: the inverse of
+  /// `recordingAutoSave`, so the UI can bind straight to it.
+  var recordingAskEveryTime: Bool {
+    get { !recordingAutoSave }
+    set { recordingAutoSave = !newValue }
+  }
+
   /// Directory for auto-saved recordings (absolute path). Nil means
   /// use the default ~/Music.
   var recordingDirectory: String? = nil {
@@ -155,6 +169,13 @@ final class Settings {
     didSet { UserDefaults.standard.set(videoRecordingAutoSave, forKey: "videoRecordingAutoSave") }
   }
 
+  /// The `Ask save location every time` toggle for video recordings: the inverse of
+  /// `videoRecordingAutoSave`, so the UI can bind straight to it.
+  var videoRecordingAskEveryTime: Bool {
+    get { !videoRecordingAutoSave }
+    set { videoRecordingAutoSave = !newValue }
+  }
+
   /// Directory for auto-saved video recordings (absolute path). Nil means
   /// use the default ~/Movies.
   var videoRecordingDirectory: String? = nil {
@@ -171,6 +192,13 @@ final class Settings {
   /// instead of showing NSSavePanel every time. Default true (~/Documents).
   var scriptRecordingAutoSave: Bool = true {
     didSet { UserDefaults.standard.set(scriptRecordingAutoSave, forKey: "scriptRecordingAutoSave") }
+  }
+
+  /// The `Ask save location every time` toggle for recorded scripts: the inverse of
+  /// `scriptRecordingAutoSave`, so the UI can bind straight to it.
+  var scriptRecordingAskEveryTime: Bool {
+    get { !scriptRecordingAutoSave }
+    set { scriptRecordingAutoSave = !newValue }
   }
 
   /// Directory for auto-saved operation scripts (absolute path). Nil means

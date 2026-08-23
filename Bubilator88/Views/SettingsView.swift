@@ -26,7 +26,7 @@ struct SettingsView: View {
 // MARK: - General Tab
 
 private struct GeneralSettingsTab: View {
-  let viewModel: EmulatorViewModel
+  @Bindable var viewModel: EmulatorViewModel
 
   @State private var settings = Settings.shared
 
@@ -40,10 +40,7 @@ private struct GeneralSettingsTab: View {
         }
         .pickerStyle(.menu)
 
-        Toggle("Ask save location every time", isOn: Binding(
-          get: { !settings.screenshotAutoSave },
-          set: { settings.screenshotAutoSave = !$0 }
-        ))
+        Toggle("Ask save location every time", isOn: $settings.screenshotAskEveryTime)
 
         HStack {
           Text(settings.screenshotDirectory ?? "~/Pictures")
@@ -65,10 +62,7 @@ private struct GeneralSettingsTab: View {
       }
 
       Section("Script Recording") {
-        Toggle("Ask save location every time", isOn: Binding(
-          get: { !settings.scriptRecordingAutoSave },
-          set: { settings.scriptRecordingAutoSave = !$0 }
-        ))
+        Toggle("Ask save location every time", isOn: $settings.scriptRecordingAskEveryTime)
 
         HStack {
           Text(settings.scriptRecordingDirectory ?? "~/Documents")
@@ -108,10 +102,7 @@ private struct GeneralSettingsTab: View {
       }
 
       Section("Development") {
-        Toggle("Show DEBUG Menu", isOn: Binding(
-          get: { viewModel.showDebugMenu },
-          set: { viewModel.showDebugMenu = $0 }
-        ))
+        Toggle("Show DEBUG Menu", isOn: $viewModel.showDebugMenu)
       }
     }
     .formStyle(.grouped)
@@ -187,10 +178,7 @@ private struct DisplaySettingsTab: View {
         }
         .pickerStyle(.menu)
 
-        Toggle("Ask save location every time", isOn: Binding(
-          get: { !settings.videoRecordingAutoSave },
-          set: { settings.videoRecordingAutoSave = !$0 }
-        ))
+        Toggle("Ask save location every time", isOn: $settings.videoRecordingAskEveryTime)
 
         HStack {
           Text(settings.videoRecordingDirectory ?? "~/Movies")
@@ -248,7 +236,7 @@ private struct DisplaySettingsTab: View {
 // MARK: - Audio Tab
 
 private struct AudioSettingsTab: View {
-  let viewModel: EmulatorViewModel
+  @Bindable var viewModel: EmulatorViewModel
   @State private var settings = Settings.shared
   @State private var audioBufferDebounceTask: Task<Void, Never>?
   @State private var availableOutputDevices: [AudioDeviceInfo] = [.systemDefault]
@@ -290,7 +278,7 @@ private struct AudioSettingsTab: View {
       }
 
       Section("Pseudo Stereo") {
-        Toggle("Enable Pseudo Stereo", isOn: pseudoStereoBinding)
+        Toggle("Enable Pseudo Stereo", isOn: $viewModel.pseudoStereo)
           .disabled(viewModel.immersiveAudio)
         Text("Applies a chorus effect to mono FM output for stereo widening.")
           .font(.caption)
@@ -298,14 +286,14 @@ private struct AudioSettingsTab: View {
       }
 
       Section("CD Mix") {
-        Toggle("Enable CD Mix", isOn: cdMixBinding)
+        Toggle("Enable CD Mix", isOn: $viewModel.cdMix)
         Text("Recreates the mastering of classic game music CDs.")
           .font(.caption)
           .foregroundStyle(.secondary)
       }
 
       Section("Immersive Audio") {
-        Toggle("Enable Immersive Audio", isOn: immersiveAudioBinding)
+        Toggle("Enable Immersive Audio", isOn: $viewModel.immersiveAudio)
         Text("Places FM, SSG, ADPCM, and Rhythm channels in 3D space with head tracking. Requires compatible headphones.")
           .font(.caption)
           .foregroundStyle(.secondary)
@@ -347,10 +335,7 @@ private struct AudioSettingsTab: View {
           .pickerStyle(.menu)
         }
 
-        Toggle("Ask save location every time", isOn: Binding(
-          get: { !settings.recordingAutoSave },
-          set: { settings.recordingAutoSave = !$0 }
-        ))
+        Toggle("Ask save location every time", isOn: $settings.recordingAskEveryTime)
 
         HStack {
           Text(settings.recordingDirectory ?? "~/Music")
@@ -434,26 +419,6 @@ private struct AudioSettingsTab: View {
     )
   }
 
-  private var pseudoStereoBinding: Binding<Bool> {
-    Binding(
-      get: { viewModel.pseudoStereo },
-      set: { viewModel.pseudoStereo = $0 }
-    )
-  }
-
-  private var cdMixBinding: Binding<Bool> {
-    Binding(
-      get: { viewModel.cdMix },
-      set: { viewModel.cdMix = $0 }
-    )
-  }
-
-  private var immersiveAudioBinding: Binding<Bool> {
-    Binding(
-      get: { viewModel.immersiveAudio },
-      set: { viewModel.immersiveAudio = $0 }
-    )
-  }
 }
 
 // MARK: - Controller Tab
