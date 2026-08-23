@@ -340,6 +340,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   /// Present the Cmd+W close-confirmation sheet (async so the keyDown event
   /// finishes dispatching first — no nested-runloop reentrancy). On confirm,
   /// the sheet closes the window; on cancel it reverses the quit dissolve.
+  ///
+  /// Deliberately **not** `Task { @MainActor }`: what this needs is a run-loop
+  /// turn, which `DispatchQueue.main.async` guarantees and a `Task` hop does
+  /// not. Same reasoning as `Views/Debug/AudioPane.swift`.
   private func requestCloseConfirmation(for window: NSWindow) {
     guard !closeConfirmationActive else { return }
     closeConfirmationActive = true

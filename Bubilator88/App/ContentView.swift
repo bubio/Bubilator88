@@ -131,14 +131,25 @@ struct ContentView: View {
       // before the run loop was ready (cold launch).
       viewModel.consumePendingLaunch()
     }
-    .onReceive(NotificationCenter.default.publisher(for: NSWindow.willEnterFullScreenNotification)) { _ in
-      viewModel.isFullScreen = true
+    // `NotificationCenter.notifications` rather than `.onReceive`: these were
+    // the view layer's only dependency on Combine.
+    .task {
+      for await _ in NotificationCenter.default.notifications(
+        named: NSWindow.willEnterFullScreenNotification) {
+        viewModel.isFullScreen = true
+      }
     }
-    .onReceive(NotificationCenter.default.publisher(for: NSWindow.willExitFullScreenNotification)) { _ in
-      viewModel.showFullScreenOverlay = false
+    .task {
+      for await _ in NotificationCenter.default.notifications(
+        named: NSWindow.willExitFullScreenNotification) {
+        viewModel.showFullScreenOverlay = false
+      }
     }
-    .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification)) { _ in
-      viewModel.isFullScreen = false
+    .task {
+      for await _ in NotificationCenter.default.notifications(
+        named: NSWindow.didExitFullScreenNotification) {
+        viewModel.isFullScreen = false
+      }
     }
     .fileImporter(
       isPresented: $viewModel.showingDiskPicker,
@@ -212,7 +223,7 @@ struct ContentView: View {
     ]
     _ = provider.loadObject(ofClass: URL.self) { url, _ in
       guard let url, acceptedExts.contains(url.pathExtension.lowercased()) else { return }
-      DispatchQueue.main.async {
+      Task { @MainActor in
         viewModel.mountDisk(url: url, drive: -1)
       }
     }

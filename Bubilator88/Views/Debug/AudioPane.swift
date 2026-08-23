@@ -167,7 +167,7 @@ struct AudioPane: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black.opacity(0.08))
-        .cornerRadius(4)
+        .clipShape(.rect(cornerRadius: 4))
         .padding(.horizontal, 12)
 
         HStack {
