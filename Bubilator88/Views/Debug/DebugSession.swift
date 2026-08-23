@@ -437,11 +437,11 @@ final class DebugSession {
   // MARK: - Text VRAM viewer state
 
   /// Rendered RGBA8 frame — text layer only (dark-gray background).
-  /// 640×200 in normal mode, 640×400 in 400-line (hireso) mode.
+  /// 640×200 in normal mode, 640×400 in 400-line mode.
   /// Produced on the emu queue by ``captureTextVRAM()``.
   var textVRAMImageData: Data? = nil
 
-  /// True when the last capture was in 400-line (hireso) mode → image is 640×400.
+  /// True when the last capture was in 400-line mode → image is 640×400.
   var textVRAMHireso: Bool = false
 
   /// Raw character codes (cols × rows). Kept for the attribute decode panel.
@@ -483,12 +483,12 @@ final class DebugSession {
       let cx        = machine.crtc.cursorX
       let cy        = machine.crtc.cursorY
       let cen       = machine.crtc.cursorEnabled
-      let hireso    = machine.bus.is400LineMode
+      let is400Line = machine.bus.is400LineMode
       let skipLine  = machine.crtc.skipLine
       let colorMode = machine.bus.colorMode
       let palette   = ScreenRenderer.expandPalette(machine.bus.palette)
 
-      let imgHeight = hireso ? ScreenRenderer.height400 : ScreenRenderer.height
+      let imgHeight = is400Line ? ScreenRenderer.height400 : ScreenRenderer.height
 
       // Pre-fill with dark gray so the text background is distinguishable
       // from GVRAM-masked black. renderTextOverlay writes only foreground
@@ -523,7 +523,7 @@ final class DebugSession {
         cursorY:            cy,
         cursorVisible:      cen,
         cursorBlock:        true,
-        hireso:             hireso,
+        is400Line:          is400Line,
         skipLine:           skipLine,
         into:               &buffer
       )
@@ -532,7 +532,7 @@ final class DebugSession {
       Task { @MainActor [weak self] in
         guard let self else { return }
         self.textVRAMImageData     = imageData
-        self.textVRAMHireso        = hireso
+        self.textVRAMHireso        = is400Line
         self.textVRAMChars         = chars
         self.textVRAMAttrs         = attrs
         self.textVRAMCols          = cols
