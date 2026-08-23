@@ -843,12 +843,12 @@ final class EmulatorViewModel {
   /// user-visible "pause" semantics should go through `pause()`
   /// instead, which also handles translation OCR and the toast.
   func stop() {
+    isRunning = false
     metalView?.stopEmulation()
     audio.stop()
     fddSound.stop()
     gameController.stop()
 
-    isRunning = false
     fps = 0.0
   }
 
