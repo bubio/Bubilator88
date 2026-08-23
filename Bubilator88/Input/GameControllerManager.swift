@@ -446,7 +446,26 @@ final class GameControllerManager {
 
   private weak var viewModel: EmulatorViewModel?
   private var activeController: GCController?
-  @ObservationIgnored nonisolated(unsafe) private(set) var haptics: ControllerHaptics?
+  /// Assigned on the main actor when a controller connects or disconnects, and
+  /// read from the emulation thread every frame. The lock guards the reference
+  /// itself — an unsynchronized optional-class read/write is retain/release
+  /// traffic, not merely a stale pointer. `ControllerHaptics` handles its own
+  /// internal state from there.
+  @ObservationIgnored nonisolated(unsafe) private var hapticsStorage: ControllerHaptics?
+  @ObservationIgnored nonisolated private let hapticsLock = NSLock()
+
+  nonisolated private(set) var haptics: ControllerHaptics? {
+    get {
+      hapticsLock.lock()
+      defer { hapticsLock.unlock() }
+      return hapticsStorage
+    }
+    set {
+      hapticsLock.lock()
+      hapticsStorage = newValue
+      hapticsLock.unlock()
+    }
+  }
 
   /// Observable state for SwiftUI — updated on connect/disconnect/mapping changes.
   private(set) var connectedControllers: [ConnectedControllerInfo] = []
@@ -487,6 +506,7 @@ final class GameControllerManager {
     let period = sound.ssgNoisePeriod
     defer { prevNoisePeriod = period }
 
+    let haptics = self.haptics
     guard hapticEnabled, haptics?.isEnabled == true else { return }
 
     if hapticCooldown > 0 {

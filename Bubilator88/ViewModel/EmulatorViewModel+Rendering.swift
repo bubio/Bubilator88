@@ -357,16 +357,19 @@ extension EmulatorViewModel {
   /// `is400LineMode` travels with the frame because the Metal view can no
   /// longer read it off the live bus: that is emulation-thread state, and it
   /// could have changed since this frame was drawn.
-  nonisolated func publishFrame() {
+  /// - Parameter counted: false for a frame rendered on the main thread while
+  ///   the loop is parked, so it does not inflate the FPS readout.
+  nonisolated func publishFrame(counted: Bool = true) {
     framePublisher.publish(pixels: pixelBuffer,
-                           is400LineMode: machine.bus.is400LineMode)
+                           is400LineMode: machine.bus.is400LineMode,
+                           counted: counted)
   }
 
   // MARK: - Screen Rendering
 
   func renderScreen() {
     renderCurrentFrame(into: &pixelBuffer, blinkCursor: false, debugTextLayerEnabled: debugTextLayerEnabled)
-    publishFrame()
+    publishFrame(counted: false)
 
     #if DEBUG
     dumpTextDMASnapshotIfRequested()

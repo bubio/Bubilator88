@@ -680,12 +680,18 @@ final class EmulatorViewModel {
   @ObservationIgnored nonisolated(unsafe) var loopSettings = LoopSettings()
 
   /// Refresh `loopSettings` from the live UI state. Main thread only.
+  ///
+  /// The write goes through `emuQueue` even though a stale frame would be
+  /// harmless: the loop reads these fields every frame, and an unsynchronized
+  /// write is a data race whatever the semantics. It fires a few times a second
+  /// at most.
   func syncLoopSettings() {
-    loopSettings = LoopSettings(
+    let snapshot = LoopSettings(
       debugTextLayerEnabled: debugTextLayerEnabled,
       markTextPixels: markTextPixelsForDisplay,
       hapticEnabled: Settings.shared.controllerHapticEnabled
     )
+    emuQueue.sync { loopSettings = snapshot }
   }
 
   /// Host-side mirrors of the queued bus-mouse settings, so the corresponding
@@ -975,7 +981,7 @@ final class EmulatorViewModel {
   /// draw cycle will pick up the change.
   func renderSingleFrame() {
     renderCurrentFrame(into: &pixelBuffer, blinkCursor: false)
-    publishFrame()
+    publishFrame(counted: false)
     metalView?.draw()
   }
 
@@ -1687,7 +1693,14 @@ final class EmulatorViewModel {
   /// keys pressed while paused still reach the matrix, as they always have.
   private func postInput(_ event: InputEvent) {
     inputQueue.post(event)
-    if !isRunning { applyPendingInput() }
+    // Draining inline is only safe when nothing else is touching the machine.
+    // `isRunning` alone does not establish that: `stop()` clears it *before*
+    // joining, so a keystroke landing in that window would mutate the matrix
+    // while the final frame is still running. Taking the queue is correct
+    // whatever the flag says, and free when the loop really is parked.
+    if !isRunning {
+      emuQueue.sync { applyPendingInput() }
+    }
   }
 
   /// Apply everything queued to the machine. Called at the frame boundary by

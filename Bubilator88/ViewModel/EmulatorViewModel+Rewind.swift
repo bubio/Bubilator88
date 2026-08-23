@@ -110,7 +110,7 @@ extension EmulatorViewModel {
       rewindSnapshots.removeFirst()
     }
     rewindSnapshots.append(snapshot)
-    publishRewindSnapshotCount(rewindSnapshots.count)
+    publishRewindSnapshotCount()
   }
 
   // MARK: - Phase 2: hold-to-rewind
@@ -168,7 +168,7 @@ extension EmulatorViewModel {
     guard let last = rewindSnapshots.popLast() else { return }
     let raw = decompressSnapshotState(last.state)
     try? machine.loadSaveState(Array(raw))
-    publishRewindSnapshotCount(rewindSnapshots.count)
+    publishRewindSnapshotCount()
   }
 
   // MARK: - Phase 1: one-shot rewind (menu click fallback)
@@ -219,9 +219,15 @@ extension EmulatorViewModel {
   /// Mirror the ring-buffer depth into the `@Observable` counter the menus and
   /// the strip overlay bind to. Called from the emulation thread, so the write
   /// hops to the main thread — SwiftUI observation is not thread-safe.
-  nonisolated func publishRewindSnapshotCount(_ count: Int) {
+  ///
+  /// The depth is re-read under `emuQueue` once the hop lands rather than
+  /// carried across it. A `clearRewindBuffer()` that runs in between would
+  /// otherwise be overwritten by this stale count, leaving the Rewind menu
+  /// enabled over an empty buffer.
+  nonisolated func publishRewindSnapshotCount() {
     Task { @MainActor [weak self] in
-      self?.rewindSnapshotCount = count
+      guard let self else { return }
+      self.rewindSnapshotCount = self.emuQueue.sync { self.rewindSnapshots.count }
     }
   }
 

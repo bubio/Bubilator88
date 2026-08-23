@@ -60,7 +60,11 @@ nonisolated final class FramePublisher: @unchecked Sendable {
   ///
   /// The slot is claimed under the lock, filled outside it, then handed over
   /// under the lock again — so a 1 MB copy never blocks the renderer.
-  func publish(pixels: [UInt8], is400LineMode: Bool) {
+  ///
+  /// `counted` distinguishes a frame the machine actually produced from one the
+  /// main thread rendered while the loop was parked (a debugger step, a redraw
+  /// after a mount). Only the former belongs in the FPS readout.
+  func publish(pixels: [UInt8], is400LineMode: Bool, counted: Bool = true) {
     lock.lock()
     let slot: FrameSlot
     if let reusable = free.popLast() {
@@ -87,7 +91,7 @@ nonisolated final class FramePublisher: @unchecked Sendable {
     lock.lock()
     if let dropped = ready { free.append(dropped) }
     ready = slot
-    published &+= 1
+    if counted { published &+= 1 }
     lock.unlock()
   }
 
