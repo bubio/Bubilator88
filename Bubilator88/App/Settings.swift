@@ -1,3 +1,4 @@
+import EmulatorCore
 import Foundation
 
 /// Centralized persistent settings backed by UserDefaults.
@@ -40,6 +41,21 @@ final class Settings {
   /// Applied on reset.
   var dipSw2Base: UInt8 = 0x71 {
     didSet { UserDefaults.standard.set(Int(dipSw2Base), forKey: "dipSw2Base") }
+  }
+
+  /// Attached monitor — DIP SW1 bit 8 ("CRT モード") on real hardware.
+  /// Applied on reset.
+  ///
+  /// It is not part of `dipSw1`: that byte is literally what port 0x30 reads
+  /// back, and `SPECS/DIP_SWITCH.md` shows port 0x30 only carries SW1-1…SW1-5.
+  /// Bit 8 has no port-0x30 representation, so it needs its own storage. The
+  /// read-back for software is port 0x40 bit 1 (SHG).
+  ///
+  /// 24kHz is the default: it is what a PC-8801-FA ships with, and it is what
+  /// the emulator already reported to software before 1.5.0, so no title sees
+  /// its SHG answer change.
+  var monitorType: MonitorType = .khz24 {
+    didSet { UserDefaults.standard.set(monitorType.rawValue, forKey: "monitorType") }
   }
 
   /// Extended RAM card count. Applied on reset (disk reload).
@@ -466,6 +482,10 @@ final class Settings {
     }
     if let v = UserDefaults.standard.object(forKey: "dipSw2Base") as? Int {
       dipSw2Base = UInt8(v & 0xFF)
+    }
+    if let v = UserDefaults.standard.object(forKey: "monitorType") as? Int,
+       let m = MonitorType(rawValue: v) {
+      monitorType = m
     }
     if let v = UserDefaults.standard.object(forKey: "extramCards") as? Int,
        [0, 1, 8].contains(v) {

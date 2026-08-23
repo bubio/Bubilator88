@@ -431,6 +431,11 @@ struct ContentView: View {
           .monospacedDigit()
           .foregroundStyle(.secondary)
           .frame(minWidth: 40, alignment: .trailing)
+          .help(viewModel.targetFrameRate > 0
+                ? String(format: "PC-8801 VSYNC: %.2f Hz (%@ monitor)",
+                         viewModel.targetFrameRate,
+                         Settings.shared.monitorType == .khz24 ? "24 kHz" : "15 kHz")
+                : "PC-8801 VSYNC rate")
         Circle()
           .fill(viewModel.turboMode ? Color.orange :
             viewModel.isRunning ? Color.green : Color.gray)

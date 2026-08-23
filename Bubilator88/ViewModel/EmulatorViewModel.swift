@@ -288,6 +288,13 @@ final class EmulatorViewModel {
   /// Measured frames per second (updated every second while running)
   var fps: Double = 0.0
 
+  /// The machine's own VSYNC rate, published from the emulation thread.
+  ///
+  /// Exists so the status bar can explain a reading of "55 fps": that is the
+  /// PC-8801 running correctly on a 24kHz monitor, not a dropped-frame
+  /// problem. The machine has never actually run at 60Hz.
+  var targetFrameRate: Double = 0.0
+
   /// Current boot mode (backing storage, also used for save state restore without reset)
   var _bootModeStorage: BootMode = .n88v2
 
@@ -514,6 +521,11 @@ final class EmulatorViewModel {
   /// `isRewinding` itself is `@Observable` UI state and must stay on the main
   /// thread; the loop consults this mirror, flipped under `emuQueue` at the
   /// same moment.
+  /// Last frame rate handed to the pacer. Emulation-thread only (it lives
+  /// inside the `emuQueue` critical section), and only exists so the
+  /// main-thread publish happens on change rather than every frame.
+  @ObservationIgnored nonisolated(unsafe) var publishedFrameRate: Double = 0.0
+
   @ObservationIgnored nonisolated(unsafe) var rewindActive: Bool = false
 
   /// True while the user is holding the rewind key. Drives reverse
@@ -841,6 +853,8 @@ final class EmulatorViewModel {
     machine.bus.dipSw1 = _bootModeStorage.dipSw1
     // Drive 0 is always empty at init → ROM boot (bit 3 = 1)
     machine.bus.dipSw2 = _bootModeStorage.dipSw2 | 0x08
+    // Set before the reset: the monitor decides the CRTC's reset geometry.
+    machine.monitorType = Settings.shared.monitorType
     machine.reset()
     machine.clock8MHz = clock8MHz
     machine.sound.immersiveOutputEnabled = Settings.shared.immersiveAudio
@@ -1180,6 +1194,7 @@ final class EmulatorViewModel {
       if Settings.shared.dipSw2Base != sw2Base { Settings.shared.dipSw2Base = sw2Base }
     }
     let use8MHz = clock8MHz
+    let monitorType = Settings.shared.monitorType
     emuQueue.sync {
       // Auto-select ROM/DISK boot: if drive 0 is empty, set DIP SW2
       // bit 3 to skip the ~30s disk-boot timeout and go straight to
@@ -1188,6 +1203,8 @@ final class EmulatorViewModel {
       // ScriptPlayer / BootTester.)
       machine.bus.dipSw1 = sw1
       machine.applyBootStrap(base: sw2Base)
+      // Like the DIP switches, the monitor type only takes effect on reset.
+      machine.monitorType = monitorType
       machine.reset(preserveRAM: true)
       machine.clock8MHz = use8MHz
       machine.cpuOverclock = cpuOverclock
