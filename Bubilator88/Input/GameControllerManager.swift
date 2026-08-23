@@ -446,7 +446,26 @@ final class GameControllerManager {
 
   private weak var viewModel: EmulatorViewModel?
   private var activeController: GCController?
-  private(set) var haptics: ControllerHaptics?
+  /// Assigned on the main actor when a controller connects or disconnects, and
+  /// read from the emulation thread every frame. The lock guards the reference
+  /// itself — an unsynchronized optional-class read/write is retain/release
+  /// traffic, not merely a stale pointer. `ControllerHaptics` handles its own
+  /// internal state from there.
+  @ObservationIgnored nonisolated(unsafe) private var hapticsStorage: ControllerHaptics?
+  @ObservationIgnored nonisolated private let hapticsLock = NSLock()
+
+  nonisolated private(set) var haptics: ControllerHaptics? {
+    get {
+      hapticsLock.lock()
+      defer { hapticsLock.unlock() }
+      return hapticsStorage
+    }
+    set {
+      hapticsLock.lock()
+      hapticsStorage = newValue
+      hapticsLock.unlock()
+    }
+  }
 
   /// Observable state for SwiftUI — updated on connect/disconnect/mapping changes.
   private(set) var connectedControllers: [ConnectedControllerInfo] = []
@@ -463,13 +482,13 @@ final class GameControllerManager {
 
   // MARK: - SSG Noise Haptic Detection
 
-  private var prevNoisePeriod: UInt8 = 0
-  private var hapticCooldown: Int = 0
+  @ObservationIgnored nonisolated(unsafe) private var prevNoisePeriod: UInt8 = 0
+  @ObservationIgnored nonisolated(unsafe) private var hapticCooldown: Int = 0
 
   /// Detection thresholds for SSG noise-based effect sounds.
-  private let minEffectVolume: UInt8 = 10       // Minimum audible volume (0-15 scale)
-  private let minPeriodDiff: Int = 6            // Minimum period change to distinguish SFX from BGM drums
-  private let cooldownFrames: Int = 8           // Frames between haptic triggers
+  nonisolated private let minEffectVolume: UInt8 = 10       // Minimum audible volume (0-15 scale)
+  nonisolated private let minPeriodDiff: Int = 6            // Minimum period change to distinguish SFX from BGM drums
+  nonisolated private let cooldownFrames: Int = 8           // Frames between haptic triggers
 
   /// Called each frame to detect SSG noise-based effect sounds and trigger haptics.
   ///
@@ -479,12 +498,16 @@ final class GameControllerManager {
   /// - Direct volume >= 10 — excludes quiet/silent noise
   /// - Noise period changed by more than 5 from previous frame — excludes BGM drums
   ///   that cycle through a few nearby values (e.g. 0→5→10)
-  func detectSSGNoiseHaptic(sound: FMSynthesis.YM2608) {
+  /// Called once per machine frame from the emulation thread, so it is
+  /// `nonisolated` and takes `hapticEnabled` as a parameter — `Settings` is
+  /// main-actor state that this path must not read. Its own counters are only
+  /// ever touched here, i.e. by that one thread.
+  nonisolated func detectSSGNoiseHaptic(sound: FMSynthesis.YM2608, hapticEnabled: Bool) {
     let period = sound.ssgNoisePeriod
     defer { prevNoisePeriod = period }
 
-    guard Settings.shared.controllerHapticEnabled,
-          haptics?.isEnabled == true else { return }
+    let haptics = self.haptics
+    guard hapticEnabled, haptics?.isEnabled == true else { return }
 
     if hapticCooldown > 0 {
       hapticCooldown -= 1

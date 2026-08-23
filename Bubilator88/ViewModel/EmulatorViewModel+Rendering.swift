@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Synchronization
 import UniformTypeIdentifiers
 import EmulatorCore
 
@@ -190,21 +191,44 @@ extension EmulatorViewModel {
     )
   }
 
-  /// Run emulation frame(s) for Metal rendering path.
+  /// One tick of the emulation loop: run `frameCount` machine frames under
+  /// `emuQueue`, unless the loop was parked in the meantime.
   ///
-  /// Called from `EmulatorMetalView.draw(in:)` on the main thread, wrapped in
-  /// `emuQueue.sync`. Everything reachable from here therefore already holds
-  /// the queue: taking it again (`emuQueue.sync`) deadlocks.
-  func runFrameForMetal(frameCount: Int = 1) {
-    if isRewinding {
+  /// The `shouldRun` re-check has to happen *inside* the critical section.
+  /// `stop()` clears the flag and then joins by taking the queue; without the
+  /// re-check, a tick that had already decided to run could queue up behind
+  /// that barrier and execute after `stop()` returned.
+  ///
+  /// **Isolation:** this is the entry point onto the emulation thread, so it
+  /// and everything it reaches are `nonisolated` — no main-actor state may be
+  /// touched from here without hopping.
+  nonisolated func runEmulationStep(frameCount: Int) {
+    emuQueue.sync {
+      guard emulationLoop.shouldRun else { return }
+      runFrameForMetal(frameCount: frameCount)
+    }
+  }
+
+  /// Run emulation frame(s) and render the result.
+  ///
+  /// Called on the emulation thread from `runEmulationStep`, which already
+  /// holds `emuQueue`: taking it again (`emuQueue.sync`) from anything
+  /// reachable here deadlocks.
+  nonisolated func runFrameForMetal(frameCount: Int = 1) {
+    // Take host input at the frame boundary, before any machine time passes.
+    // This is where key presses used to land anyway — the main thread could
+    // only run between draws — so the timing is unchanged.
+    applyPendingInput()
+    if rewindActive {
       // Reverse playback at 1/Nth the raw step rate so the buffer
       // doesn't drain in a single wall-clock second.
       if rewindStepCounter <= 0 {
         rewindStepCounter = Self.rewindStepDivider - 1
         stepRewindBack()
         renderCurrentFrame(into: &pixelBuffer, blinkCursor: false,
-                           debugTextLayerEnabled: debugTextLayerEnabled,
-                           markTextPixels: markTextPixelsForDisplay)
+                           debugTextLayerEnabled: loopSettings.debugTextLayerEnabled,
+                           markTextPixels: loopSettings.markTextPixels)
+        publishFrame()
       } else {
         rewindStepCounter -= 1
       }
@@ -237,8 +261,9 @@ extension EmulatorViewModel {
     // toggling the cursor even as T-states stop advancing.
     let blink = !(machine.debugger?.isPaused ?? false)
     renderCurrentFrame(into: &pixelBuffer, blinkCursor: blink,
-                       debugTextLayerEnabled: debugTextLayerEnabled,
-                       markTextPixels: markTextPixelsForDisplay)
+                       debugTextLayerEnabled: loopSettings.debugTextLayerEnabled,
+                       markTextPixels: loopSettings.markTextPixels)
+    publishFrame()
 
     // Snapshot recording happens after render so the thumbnail
     // captured from `pixelBuffer` matches the state we just saved.
@@ -256,7 +281,8 @@ extension EmulatorViewModel {
     #endif
 
     // SSG noise → haptic feedback detection
-    gameController.detectSSGNoiseHaptic(sound: machine.sound)
+    gameController.detectSSGNoiseHaptic(sound: machine.sound,
+                                        hapticEnabled: loopSettings.hapticEnabled)
 
     #if DEBUG
     // SSG noise state logging (for haptic feedback research)
@@ -286,19 +312,30 @@ extension EmulatorViewModel {
       machine.subSystem.diskAccess = [false, false]
       let tapeProgressSample = machine.cassette.progress
 
-      // Capture OCR snapshot if translation enabled (piggyback on 4Hz UI update)
-      let ocrPixelBuffer: [UInt8]?
-      if translationManager.isSessionActive && translationManager.shouldRunOCR() {
-        ocrPixelBuffer = Array(pixelBuffer)
-      } else {
-        ocrPixelBuffer = nil
-      }
+      // Capture OCR snapshot if translation enabled (piggyback on 4Hz UI
+      // update). `TranslationManager` is main-actor state, so the *decision*
+      // is made on the main thread one tick earlier and left here as an
+      // atomic request; only the pixel copy happens on the emulation thread.
+      let ocrPixelBuffer: [UInt8]? =
+        ocrSampleRequested.exchange(false, ordering: .relaxed)
+          ? Array(pixelBuffer) : nil
 
       DispatchQueue.main.async { [weak self] in
         guard let self else { return }
         self.drive0Access = d0
         self.drive1Access = d1
         self.tapeProgress = tapeProgressSample
+
+        // Refresh the loop's snapshot of main-actor UI settings. The display
+        // ones also have immediate hooks; this covers the rest (haptics) and
+        // acts as a backstop.
+        self.syncLoopSettings()
+
+        // Decide whether the next 4Hz tick should sample the screen for OCR.
+        if self.translationManager.isSessionActive,
+           self.translationManager.shouldRunOCR() {
+          self.ocrSampleRequested.store(true, ordering: .relaxed)
+        }
 
         // Trigger OCR translation
         if let ocrPixelBuffer {
@@ -314,15 +351,25 @@ extension EmulatorViewModel {
     }
   }
 
-  /// Access pixel buffer for Metal texture upload.
-  func withPixelBuffer<R>(_ body: (inout [UInt8]) -> R) -> R {
-    return body(&pixelBuffer)
+  /// Hand the just-rendered contents of `pixelBuffer` to the renderer,
+  /// together with the display metadata needed to interpret them.
+  ///
+  /// `is400LineMode` travels with the frame because the Metal view can no
+  /// longer read it off the live bus: that is emulation-thread state, and it
+  /// could have changed since this frame was drawn.
+  /// - Parameter counted: false for a frame rendered on the main thread while
+  ///   the loop is parked, so it does not inflate the FPS readout.
+  nonisolated func publishFrame(counted: Bool = true) {
+    framePublisher.publish(pixels: pixelBuffer,
+                           is400LineMode: machine.bus.is400LineMode,
+                           counted: counted)
   }
 
   // MARK: - Screen Rendering
 
   func renderScreen() {
     renderCurrentFrame(into: &pixelBuffer, blinkCursor: false, debugTextLayerEnabled: debugTextLayerEnabled)
+    publishFrame(counted: false)
 
     #if DEBUG
     dumpTextDMASnapshotIfRequested()

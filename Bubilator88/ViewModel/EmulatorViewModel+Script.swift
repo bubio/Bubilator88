@@ -144,10 +144,10 @@ extension EmulatorViewModel {
   }
 
   /// Call every frame, **immediately before** `machine.runFrame()` in
-  /// `runFrameForMetal`. Runs on the draw thread and touches `machine` directly,
-  /// like `tickPasteQueue` — the caller already holds `emuQueue`, so nothing
-  /// here may take it again.
-  func tickScriptPlayer() {
+  /// `runFrameForMetal`. Runs on the emulation thread and touches `machine`
+  /// directly, like `tickPasteQueue` — the caller already holds `emuQueue`, so
+  /// nothing here may take it again.
+  nonisolated func tickScriptPlayer() {
     guard let player = scriptPlayer else { return }
     let ongoing: Bool
     do {
@@ -183,8 +183,13 @@ extension EmulatorViewModel {
   /// Cancels a script in progress, for the DEBUG menu's stop and for resets.
   func cancelScriptPlayback() {
     guard let player = scriptPlayer else { return }
-    scriptPlayer = nil
-    emuQueue.sync { player.cancelLive() }
+    // `scriptPlayer` is read by the emulation loop every frame, so clearing it
+    // happens under the queue together with the cancellation — otherwise the
+    // loop could tick a player that has already been torn down.
+    emuQueue.sync {
+      scriptPlayer = nil
+      player.cancelLive()
+    }
     isPlayingScript = false
     // Rebuild driveXInfo from the mount details so that disks left in the drives
     // at cancellation stay selectable, just as after a manual mount.
@@ -242,7 +247,7 @@ extension EmulatorViewModel {
 
   /// Resolves a disk path from a script to a URL: absolute paths as-is, relative
   /// ones against the script's own directory. Same rule as `playScript`'s loader.
-  func resolveScriptDiskURL(_ path: String, scriptDir: URL) -> URL {
+  nonisolated func resolveScriptDiskURL(_ path: String, scriptDir: URL) -> URL {
     (path as NSString).isAbsolutePath
       ? URL(filePath: path)
       : scriptDir.appending(component: path)
@@ -251,9 +256,9 @@ extension EmulatorViewModel {
   /// Builds the `DriveState` a script mount corresponds to — the same shape a
   /// manual mount (`mountDiskImage`) produces, so image selection from the Disk
   /// menu keeps working. Pure ViewModel state: it touches neither `machine` nor
-  /// `emuQueue`. The latter is what makes it callable from the draw thread —
-  /// that path holds `emuQueue`, so taking it here would deadlock.
-  func makeScriptDriveState(_ mount: ScriptPlayer.DriveMount, scriptDir: URL) -> DriveState {
+  /// `emuQueue`. The latter is what makes it callable from the emulation
+  /// thread — that path holds `emuQueue`, so taking it here would deadlock.
+  nonisolated func makeScriptDriveState(_ mount: ScriptPlayer.DriveMount, scriptDir: URL) -> DriveState {
     let url = resolveScriptDiskURL(mount.path, scriptDir: scriptDir)
     let fileName = url.deletingPathExtension().lastPathComponent
     let info = makeDirectDiskInfo(allImages: mount.images, fileName: fileName,
@@ -265,13 +270,13 @@ extension EmulatorViewModel {
 
   /// Reflects a mid-playback `disk swap` / `disk select` / `disk eject` in the UI.
   ///
-  /// Called every frame from `tickScriptPlayer` on the draw thread: the drive
+  /// Called every frame from `tickScriptPlayer` on the emulation thread: the drive
   /// mounts are read and the `DriveState` built here (both are pure, and the
   /// player is only touched from this thread), while the `@Observable`
   /// assignment is dispatched to main. Drives the script never touched are left
   /// alone — unlike `rebuildDriveInfoFromScript` this never consults
   /// `machine.subSystem.drives`, which would race `machine.runFrame()`.
-  func syncScriptMountsIfChanged(player: ScriptPlayer) {
+  nonisolated func syncScriptMountsIfChanged(player: ScriptPlayer) {
     var updates: [(drive: Int, state: DriveState)] = []
     for drive in 0..<2 {
       let mount = player.driveMount(drive)
@@ -285,9 +290,14 @@ extension EmulatorViewModel {
       }
     }
     guard !updates.isEmpty else { return }
+    // `DriveState` carries `[D88Disk]`, which EmulatorCore does not declare
+    // `Sendable`. The hand-off is still a hand-off: these values are built
+    // here from copies the player returned, and this thread drops them at the
+    // end of the statement.
+    nonisolated(unsafe) let handoff = updates
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
-      for update in updates { self.applyDriveState(update.state, drive: update.drive) }
+      for update in handoff { self.applyDriveState(update.state, drive: update.drive) }
     }
   }
 

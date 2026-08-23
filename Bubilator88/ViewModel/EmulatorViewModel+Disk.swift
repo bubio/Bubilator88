@@ -143,13 +143,17 @@ extension EmulatorViewModel {
 
   /// A snapshot of one drive's display and state. A transient value object for
   /// rewriting several properties as one action on mount, switch or eject.
-  struct DriveState {
+  nonisolated struct DriveState {
     let name: String
     let fileName: String?
     let info: MountedDiskInfo?
     let writeProtected: Bool
 
-    static let empty = DriveState(name: "Empty", fileName: nil, info: nil, writeProtected: false)
+    /// `nonisolated(unsafe)` because `MountedDiskInfo` carries `[D88Disk]`,
+    /// which EmulatorCore does not declare `Sendable`. This particular value
+    /// is immutable and holds no disks at all.
+    nonisolated(unsafe) static let empty =
+      DriveState(name: "Empty", fileName: nil, info: nil, writeProtected: false)
   }
 
   /// Updates all of a drive's display properties — name, fileName, info and
@@ -503,9 +507,9 @@ extension EmulatorViewModel {
   /// manual mounts (`mountDiskImage`), save-state restore
   /// (`reconstructDiskInfo`) and post-playback rebuilds
   /// (`rebuildDriveInfoFromScript`) all share them.
-  func makeDirectDiskInfo(allImages: [D88Disk], fileName: String, imageIndex: Int,
-                          sourceURL: URL?, archiveEntryName: String? = nil,
-                          originArchiveURL: URL? = nil) -> MountedDiskInfo {
+  nonisolated func makeDirectDiskInfo(allImages: [D88Disk], fileName: String, imageIndex: Int,
+                                      sourceURL: URL?, archiveEntryName: String? = nil,
+                                      originArchiveURL: URL? = nil) -> MountedDiskInfo {
     let imageNames = allImages.enumerated().map { i, d in
       d.name.isEmpty ? (allImages.count > 1 ? "\(fileName) #\(i)" : fileName) : d.name
     }
@@ -577,7 +581,10 @@ extension EmulatorViewModel {
                  writeProtected: disk.writeProtected),
       drive: drive
     )
-    scriptRecorder?.diskSelect(drive: drive, image: index)
+    // `ScriptRecorder` is otherwise only touched on the emulation thread
+    // (key events ride the input queue), so main-thread recording of a disk
+    // operation goes through the queue.
+    emuQueue.sync { scriptRecorder?.diskSelect(drive: drive, image: index) }
   }
 
   /// Toggle the write-protect flag on the disk mounted in the specified drive.
@@ -603,7 +610,7 @@ extension EmulatorViewModel {
     }
     clearRewindBuffer()
     applyDriveState(.empty, drive: drive)
-    scriptRecorder?.diskEject(drive: drive)
+    emuQueue.sync { scriptRecorder?.diskEject(drive: drive) }
     // FDD boot is always the default; no need to revert to ROM boot
     // (eject confirmation not shown)
   }
