@@ -105,7 +105,7 @@ extension EmulatorViewModel {
     // Single reset: apply the DIP switches from the current
     // `_bootModeStorage`/Settings, then choose FDD or ROM boot from whether
     // drive 0 holds a disk. `preserveRAM: true` matches exactly the known-good
-    // path of a manual mount followed by a Cmd+E reset; `preserveRAM: false`
+    // path of a manual mount followed by a Cmd+R reset; `preserveRAM: false`
     // was never verified in this combination, so it is not used.
     //
     // **Call `reset()` before `applyBootStrap()`** — the opposite order from
@@ -117,7 +117,7 @@ extension EmulatorViewModel {
     // the reason noted there: leaving a disk-swap window open across a reset
     // causes load failures.
     //
-    // A manual mount followed by Cmd+E has human reaction time in between, so
+    // A manual mount followed by Cmd+R has human reaction time in between, so
     // the delay elapses on its own. `performLaunch` does not: it has just
     // called `stop()`, which halts the sub-CPU clock, so those 400,000 T-states
     // never pass. Calling `applyBootStrap` first would then read "no disk" and

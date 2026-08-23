@@ -124,14 +124,14 @@ struct EmulatorCommands: Commands {
         Label(viewModel.isRunning ? "Pause" : "Resume",
               systemImage: viewModel.isRunning ? "pause.fill" : "play.fill")
       }
-      .keyboardShortcut("r", modifiers: .command)
+      .keyboardShortcut("p", modifiers: .command)
 
       Button {
         viewModel.reset()
       } label: {
         Label("Reset", systemImage: "arrow.counterclockwise")
       }
-      .keyboardShortcut("e", modifiers: .command)
+      .keyboardShortcut("r", modifiers: .command)
 
       Divider()
 
