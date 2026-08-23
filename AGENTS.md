@@ -48,7 +48,10 @@ lessons), `docs/develop/BOOTTESTER.md` (CLI test harness),
 起動引数。書式は QUASI88 互換、FlipDisk 連携),
 `docs/develop/FMGEN_FORK_COMPARISON.md` (fmgen 派生版の修正と
 Bubilator の対応状況), `docs/develop/MEMORY_WAIT_STATES.md`
-（メモリウェイト仕様と実装状況。V1S の GVRAM ウェイトと M1 ウェイトは未実装).
+（メモリウェイト仕様と実装状況。V1S の GVRAM ウェイトと M1 ウェイトは未実装),
+`docs/develop/RELEASE_1_5_0_PLAN.md`
+（1.5.0 開発計画。2スレッド化 / SwiftUI モダン化 / モニタ種別 /
+GVRAM ウェイト / M1 ウェイトの依存順と検証手順）.
 人間向け AI 活用ガイド: `docs/develop/AI_WORKFLOW.md`.
 
 `docs/develop` is a private git submodule (`bubio/dev-docs`, `Bubilator88/`
