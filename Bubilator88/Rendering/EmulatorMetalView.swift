@@ -18,9 +18,13 @@ struct FilterParams {
   var persistPad: Float
 }
 
-/// MTKView subclass that drives emulation at display refresh rate and renders
-/// the pixel buffer via Metal. Follows the BubiZ-1500 pattern:
+/// MTKView subclass that presents completed emulator frames via Metal.
 /// CPU-side GVRAM→RGBA conversion, single texture upload, passthrough shader.
+///
+/// This view no longer drives emulation. The machine runs on `EmulationLoop`'s
+/// own thread at its own pace and hands finished frames over through
+/// `FramePublisher`; `draw(in:)` presents the newest one and does no GPU work
+/// at all when none arrived.
 final class EmulatorMetalView: MTKView, MTKViewDelegate {
 
   private let viewModel: EmulatorViewModel
@@ -50,13 +54,14 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   private var currentTextScanlineExempt: Bool = false
 
 
-  // Frame pacing (BubiZ-1500 style)
-  private var emulationStartTime: CFTimeInterval = 0
-  private var emulatedTime: CFTimeInterval = 0
-  private let frameInterval: CFTimeInterval = 1.0 / 60.0
+  // Frame hand-off from the emulation thread
+  /// The frame currently uploaded to the texture. Owned by this view between
+  /// `acquireLatest()` calls; also the source of the display metadata
+  /// (`is400LineMode`) that used to be read off the live bus.
+  private var currentFrame: FrameSlot?
+  private var lastPublishedCount: Int = 0
 
   // FPS measurement
-  private var fpsFrameCount: Int = 0
   private var fpsLastTime: CFTimeInterval = 0
   private var aiLastPresentedCount: Int = 0
 
@@ -264,45 +269,43 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
     if src200Buffer.count < width * h200 * 4 { src200Buffer = [UInt8](repeating: 0, count: width * h200 * 4) }
   }
 
-  private func uploadPixelBuffer() {
+  private func uploadPixelBuffer(_ frame: FrameSlot) {
     guard let texture = texture else { return }
 
     let width = ScreenRenderer.width
     let height = ScreenRenderer.height400
-    let is400 = viewModel.machine.bus.is400LineMode
+    let is400 = frame.is400LineMode
     let useFilter = currentFilter != .none
 
-    viewModel.withPixelBuffer { buffer in
-      buffer.withUnsafeBufferPointer { ptr in
-        // Always upload 640x400
-        let region400 = MTLRegion(origin: MTLOrigin(), size: MTLSize(width: width, height: height, depth: 1))
-        texture.replace(region: region400, mipmapLevel: 0, withBytes: ptr.baseAddress!, bytesPerRow: width * 4)
+    frame.pixels.withUnsafeBufferPointer { ptr in
+      // Always upload 640x400
+      let region400 = MTLRegion(origin: MTLOrigin(), size: MTLSize(width: width, height: height, depth: 1))
+      texture.replace(region: region400, mipmapLevel: 0, withBytes: ptr.baseAddress!, bytesPerRow: width * 4)
 
-        // Submit pixel data to AI upscaler (same pointer, no GPU readback)
-        if self.currentFilter.requiresAIUpscale,
-           let upscaler = self.aiUpscaler,
-           case .ready = upscaler.state {
-          upscaler.submitFrame(rgbaData: ptr, width: width, height: height)
+      // Submit pixel data to AI upscaler (same pointer, no GPU readback)
+      if self.currentFilter.requiresAIUpscale,
+         let upscaler = self.aiUpscaler,
+         case .ready = upscaler.state {
+        upscaler.submitFrame(rgbaData: ptr, width: width, height: height)
+      }
+
+      // In 200-line mode: extract even rows → 640x200 texture (for all filters)
+      if !is400 && useFilter {
+        let h200 = height / 2
+        let rowBytes = width * 4
+        src200Buffer.withUnsafeMutableBufferPointer { dst in
+          let dstBase = UnsafeMutableRawPointer(dst.baseAddress!)
+          for y in 0..<h200 {
+            dstBase.advanced(by: y * rowBytes)
+              .copyMemory(from: ptr.baseAddress!.advanced(by: y * 2 * rowBytes), byteCount: rowBytes)
+          }
         }
 
-        // In 200-line mode: extract even rows → 640x200 texture (for all filters)
-        if !is400 && useFilter {
-          let h200 = height / 2
-          let rowBytes = width * 4
-          src200Buffer.withUnsafeMutableBufferPointer { dst in
-            let dstBase = UnsafeMutableRawPointer(dst.baseAddress!)
-            for y in 0..<h200 {
-              dstBase.advanced(by: y * rowBytes)
-                .copyMemory(from: ptr.baseAddress!.advanced(by: y * 2 * rowBytes), byteCount: rowBytes)
-            }
-          }
-
-          // Upload 640x200 texture
-          if let tex200 = texture200 {
-            let region200 = MTLRegion(origin: MTLOrigin(), size: MTLSize(width: width, height: h200, depth: 1))
-            src200Buffer.withUnsafeBufferPointer { sPtr in
-              tex200.replace(region: region200, mipmapLevel: 0, withBytes: sPtr.baseAddress!, bytesPerRow: rowBytes)
-            }
+        // Upload 640x200 texture
+        if let tex200 = texture200 {
+          let region200 = MTLRegion(origin: MTLOrigin(), size: MTLSize(width: width, height: h200, depth: 1))
+          src200Buffer.withUnsafeBufferPointer { sPtr in
+            tex200.replace(region: region200, mipmapLevel: 0, withBytes: sPtr.baseAddress!, bytesPerRow: rowBytes)
           }
         }
       }
@@ -325,7 +328,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   /// Returns `nil` if resources are not yet ready (e.g. before the first
   /// `ensureTexture()`). Shared by `draw()` and `captureFilteredImage()`.
   private func selectActiveSource() -> (texture: MTLTexture, pipeline: MTLRenderPipelineState)? {
-    let is400 = viewModel.machine.bus.is400LineMode
+    let is400 = currentFrame?.is400LineMode ?? false
     let tex: MTLTexture?
     let pipe: MTLRenderPipelineState?
     if currentFilter.requiresAIUpscale, let aiTex = aiUpscaler?.latestOutputTexture() {
@@ -359,7 +362,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   ) {
     guard let paramsBuffer = filterParamsBuffer else { return }
     let ptr = paramsBuffer.contents().bindMemory(to: FilterParams.self, capacity: 1)
-    let is400 = viewModel.machine.bus.is400LineMode
+    let is400 = currentFrame?.is400LineMode ?? false
     let dims = SIMD2<Float>(Float(source.width), Float(source.height))
     let outDims = SIMD2<Float>(Float(outputWidth), Float(outputHeight))
     switch kind {
@@ -397,10 +400,8 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   // MARK: - Emulation Control
 
   func startEmulation() {
-    emulationStartTime = CACurrentMediaTime()
-    emulatedTime = 0
-    fpsFrameCount = 0
-    fpsLastTime = emulationStartTime
+    fpsLastTime = CACurrentMediaTime()
+    lastPublishedCount = viewModel.framePublisher.publishedCount
     updateDrawLoop()
   }
 
@@ -419,9 +420,18 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
 
   /// Run the internal draw loop iff the emulator is running and the window
   /// is on-screen; pause it otherwise.
+  ///
+  /// Emulation follows the same gate. It used to do so implicitly — pausing
+  /// `MTKView` stopped the callback that drove `runFrame()` — but now that
+  /// emulation has its own thread the visibility has to be handed to it
+  /// explicitly, or an occluded window would keep burning CPU. See
+  /// `EmulatorViewModel+Launch.swift` for the pitfall this preserves:
+  /// `start()` while occluded leaves the CPU parked at the reset vector, so a
+  /// URL launch brings the window to the front first.
   func updateDrawLoop() {
     let visible = window != nil && (window?.occlusionState.contains(.visible) ?? false)
     isPaused = !(viewModel.isRunning && visible)
+    viewModel.emulationLoop.setVisible(visible)
   }
 
   // MARK: - MTKViewDelegate
@@ -433,31 +443,18 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   func draw(in view: MTKView) {
     let now = CACurrentMediaTime()
 
-    // Frame pacing with speed control
-    let framesPerDraw = viewModel.cpuSpeed.framesPerDraw
+    // Emulation runs on its own thread and paces itself; this callback only
+    // presents whatever frame is finished. A draw with nothing new to show
+    // (the display refreshes faster than the machine produces frames) does no
+    // GPU work at all.
     var newFrame = false
-    let realElapsed = now - emulationStartTime
-    if emulatedTime <= realElapsed {
-      // Take `emuQueue` for the emulation step. This thread *is* the main
-      // thread, so the block runs inline — the queue is used purely as the
-      // mutual-exclusion token that `emuQueue.async` writers (debugger
-      // attach/detach, YM2608 debug masks, the Debug window's snapshot
-      // capture) already take. Without it those writers run concurrently
-      // with `machine.runFrame()`.
-      viewModel.emuQueue.sync {
-        viewModel.runFrameForMetal(frameCount: framesPerDraw)
-      }
-      fpsFrameCount += framesPerDraw
-      emulatedTime += frameInterval
+    if let slot = viewModel.framePublisher.acquireLatest() {
+      currentFrame = slot
       newFrame = true
-
-      // Catch-up safeguard: if more than 0.5s behind, jump forward
-      if realElapsed - emulatedTime > 0.5 {
-        emulatedTime = realElapsed
-      }
     }
 
-    // FPS measurement (every 0.5s)
+    // FPS measurement (every 0.5s). The readout counts *emulated* frames, so
+    // it comes from the publisher's counter rather than from draws.
     let fpsElapsed = now - fpsLastTime
     if fpsElapsed >= 0.5 {
       let measuredFPS: Double
@@ -468,9 +465,10 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
         measuredFPS = Double(presented - aiLastPresentedCount) / fpsElapsed
         aiLastPresentedCount = presented
       } else {
-        measuredFPS = Double(fpsFrameCount) / fpsElapsed
+        let published = viewModel.framePublisher.publishedCount
+        measuredFPS = Double(published - lastPublishedCount) / fpsElapsed
+        lastPublishedCount = published
       }
-      fpsFrameCount = 0
       fpsLastTime = now
       DispatchQueue.main.async { [weak self] in
         self?.viewModel.fps = measuredFPS
@@ -478,14 +476,14 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
     }
 
     // Skip GPU work if no new frame was produced
-    guard newFrame else { return }
+    guard newFrame, let frame = currentFrame else { return }
 
     // Upload pixel buffer to texture (and submit to AI upscaler if active)
     ensureTexture()
-    uploadPixelBuffer()
+    uploadPixelBuffer(frame)
 
     // Select active source texture + pipeline (shared with captureFilteredImage)
-    let is400 = viewModel.machine.bus.is400LineMode
+    let is400 = frame.is400LineMode
     guard let active = selectActiveSource(),
           let drawable = currentDrawable,
           let renderPassDescriptor = currentRenderPassDescriptor,
@@ -641,7 +639,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
 
     let srcTex = active.texture
     let pipelineState = active.pipeline
-    let is400 = viewModel.machine.bus.is400LineMode
+    let is400 = currentFrame?.is400LineMode ?? false
 
     // Determine capture size. Prefer current drawable (= what's on screen).
     // In fullscreen, use the content viewport size, not the letterboxed drawable.

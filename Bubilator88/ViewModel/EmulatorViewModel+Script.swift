@@ -183,8 +183,13 @@ extension EmulatorViewModel {
   /// Cancels a script in progress, for the DEBUG menu's stop and for resets.
   func cancelScriptPlayback() {
     guard let player = scriptPlayer else { return }
-    scriptPlayer = nil
-    emuQueue.sync { player.cancelLive() }
+    // `scriptPlayer` is read by the emulation loop every frame, so clearing it
+    // happens under the queue together with the cancellation — otherwise the
+    // loop could tick a player that has already been torn down.
+    emuQueue.sync {
+      scriptPlayer = nil
+      player.cancelLive()
+    }
     isPlayingScript = false
     // Rebuild driveXInfo from the mount details so that disks left in the drives
     // at cancellation stay selectable, just as after a manual mount.

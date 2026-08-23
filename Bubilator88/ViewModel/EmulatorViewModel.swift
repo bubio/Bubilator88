@@ -1,11 +1,13 @@
 import SwiftUI
 import MetalKit
+import Synchronization
 import EmulatorCore
 
 /// ViewModel that drives the emulator and provides screen output to SwiftUI.
 ///
-/// Machine runs on a dedicated serial queue. VRAM snapshots are rendered
-/// on the emulation queue and the resulting CGImage is delivered to main.
+/// The machine runs on `EmulationLoop`'s dedicated thread, serialized by
+/// `emuQueue`. Completed frames reach the Metal view through `FramePublisher`;
+/// host input reaches the machine through `InputEventQueue`.
 @Observable
 final class EmulatorViewModel {
 
@@ -88,6 +90,7 @@ final class EmulatorViewModel {
   var cpuSpeed: CPUSpeed = .x1 {
     didSet {
       audio.setRate(cpuSpeed.audioRate)
+      emulationLoop.setFramesPerStep(cpuSpeed.framesPerDraw)
     }
   }
 
@@ -599,15 +602,28 @@ final class EmulatorViewModel {
 
   /// All Machine access is serialized on this queue — including the run loop.
   ///
-  /// The emulation step itself executes on the main thread (the Metal draw
-  /// callback drives it), so `emuQueue` is not a worker thread: it is the
-  /// mutual-exclusion token that every Machine toucher takes. `draw(in:)`
-  /// wraps `runFrameForMetal` in `emuQueue.sync`, which is what keeps the
-  /// `emuQueue.async` writers off the running machine.
+  /// `emuQueue` is the mutual-exclusion token that every Machine toucher
+  /// takes. The emulation step runs on `EmulationLoop`'s dedicated thread and
+  /// takes it too, which is what keeps the `emuQueue.async` writers (debugger
+  /// attach/detach, YM2608 debug masks, the Debug window's snapshot capture)
+  /// off the running machine.
+  ///
+  /// Since the emulation thread split, `emuQueue.sync` from the main thread is
+  /// a **real cross-thread wait** of up to one machine frame, where it used to
+  /// run inline. Heavy operations therefore still `stop()` the loop first.
   ///
   /// **Do not call `emuQueue.sync` from anything reachable inside
   /// `runFrameForMetal`** — the queue is serial, so re-entering it deadlocks.
+  /// Equally, nothing reachable from there may *block* on the main thread:
+  /// main → emulation may wait, emulation → main must always be `async`.
   let emuQueue = DispatchQueue(label: "com.bubio.bubilator88.emu", qos: .userInteractive)
+
+  /// The emulation thread. Created in `init`, started by `start()`.
+  @ObservationIgnored private(set) var emulationLoop: EmulationLoop!
+
+  /// Completed frames handed to the Metal view. See `FramePublisher`.
+  @ObservationIgnored let framePublisher =
+    FramePublisher(pixelCount: ScreenRenderer.bufferSize400)
 
   let machine: Machine
   /// **Isolation:** used from the Metal draw path and from `emuQueue`, never
@@ -615,16 +631,26 @@ final class EmulatorViewModel {
   /// main-actor isolation. `ScreenRenderer` itself holds no cross-thread state.
   nonisolated(unsafe) let renderer = ScreenRenderer()
 
-  /// The 640×400 RGBA frame the Metal view samples.
+  /// The 640×400 RGBA frame the emulation loop renders into.
   ///
-  /// **Isolation:** written by `runFrameForMetal`, which the draw loop runs
-  /// under `emuQueue.sync`; other readers take a copy through `emuQueue.sync`
-  /// as well. `captureThumbnail()` is the one place that reads it directly,
-  /// which is safe only because state saves happen with the run loop stopped.
+  /// **Isolation:** owned by the emulation thread, which writes it under
+  /// `emuQueue` and hands finished copies to the renderer via
+  /// `framePublisher`. The Metal view never reads this buffer — it reads the
+  /// published `FrameSlot`. Other readers take a copy through `emuQueue.sync`;
+  /// `captureThumbnail()` is the one place that reads it directly, which is
+  /// safe only because state saves happen with the run loop stopped.
   @ObservationIgnored nonisolated(unsafe) var pixelBuffer: [UInt8]
 
-  /// UI update throttle counter (render thread)
+  /// UI update throttle counter (emulation thread)
   @ObservationIgnored nonisolated(unsafe) var uiUpdateCounter: Int = 0
+
+  /// Set on the main thread when the translation overlay wants a fresh screen
+  /// sample; consumed by the emulation loop on its next 4Hz tick.
+  ///
+  /// `Atomic` because `TranslationManager` is main-actor state that the
+  /// emulation thread must not touch, but the pixel copy it gates has to
+  /// happen where the pixel buffer lives.
+  @ObservationIgnored let ocrSampleRequested = Atomic<Bool>(false)
 
   /// Host input (keyboard matrix, bus mouse) posted from the main thread and
   /// applied by the emulation loop at a frame boundary. See `InputEvent`.
@@ -798,6 +824,17 @@ final class EmulatorViewModel {
       self?.fddSound.playReadAccess(drive: drive)
     }
 
+    // The emulation thread. The step takes `emuQueue` exactly as the draw
+    // callback used to, and re-checks `shouldRun` under it so `stop()` can
+    // guarantee no frame is in flight once it returns.
+    emulationLoop = EmulationLoop { [weak self] batch in
+      guard let self else { return }
+      self.emuQueue.sync {
+        guard self.emulationLoop.shouldRun else { return }
+        self.runFrameForMetal(frameCount: batch)
+      }
+    }
+
     // Wire up the write-back scheduler's writeBack closure.
     diskWriteBackScheduler.writeBack = { [weak self] drive in
       self?.performDiskWriteBack(drive: drive)
@@ -830,7 +867,13 @@ final class EmulatorViewModel {
       gameController.start(viewModel: self)
     }
 
-    // Metal path: MTKView drives frame timing via draw(in:)
+    // The emulation thread paces itself; the Metal view only presents
+    // finished frames. `startEmulation()` un-pauses the draw loop and, via
+    // `updateDrawLoop()`, feeds the current window visibility to the loop —
+    // emulation stays parked while the window is occluded, as it did when the
+    // draw loop drove it.
+    emulationLoop.setFramesPerStep(cpuSpeed.framesPerDraw)
+    emulationLoop.start()
     metalView?.startEmulation()
   }
 
@@ -851,6 +894,10 @@ final class EmulatorViewModel {
   /// instead, which also handles translation OCR and the toast.
   func stop() {
     isRunning = false
+    // Park the emulation thread and wait for the in-flight frame. Callers
+    // depend on quiescence: `captureThumbnail()` reads `pixelBuffer`
+    // directly, save/load and reset replace machine state wholesale.
+    emulationLoop.stop { [emuQueue] in emuQueue.sync {} }
     metalView?.stopEmulation()
     audio.stop()
     fddSound.stop()
@@ -899,6 +946,7 @@ final class EmulatorViewModel {
   /// draw cycle will pick up the change.
   func renderSingleFrame() {
     renderCurrentFrame(into: &pixelBuffer, blinkCursor: false)
+    publishFrame()
     metalView?.draw()
   }
 
@@ -1181,6 +1229,12 @@ final class EmulatorViewModel {
       ?? (try? Data(contentsOf: thumbnailPath(for: statePath)))
   }
 
+  /// Grab a thumbnail straight out of `pixelBuffer`.
+  ///
+  /// Safe without synchronization only because every caller has already
+  /// `stop()`ped the run loop, and `stop()` waits for the in-flight frame
+  /// before returning — so the emulation thread is parked and the buffer is
+  /// nobody else's.
   private func captureThumbnail() -> Data? {
     let srcWidth = 640
     let srcHeight = 400

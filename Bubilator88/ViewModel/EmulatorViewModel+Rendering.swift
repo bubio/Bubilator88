@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Synchronization
 import UniformTypeIdentifiers
 import EmulatorCore
 
@@ -209,6 +210,7 @@ extension EmulatorViewModel {
         renderCurrentFrame(into: &pixelBuffer, blinkCursor: false,
                            debugTextLayerEnabled: debugTextLayerEnabled,
                            markTextPixels: markTextPixelsForDisplay)
+        publishFrame()
       } else {
         rewindStepCounter -= 1
       }
@@ -243,6 +245,7 @@ extension EmulatorViewModel {
     renderCurrentFrame(into: &pixelBuffer, blinkCursor: blink,
                        debugTextLayerEnabled: debugTextLayerEnabled,
                        markTextPixels: markTextPixelsForDisplay)
+    publishFrame()
 
     // Snapshot recording happens after render so the thumbnail
     // captured from `pixelBuffer` matches the state we just saved.
@@ -290,19 +293,25 @@ extension EmulatorViewModel {
       machine.subSystem.diskAccess = [false, false]
       let tapeProgressSample = machine.cassette.progress
 
-      // Capture OCR snapshot if translation enabled (piggyback on 4Hz UI update)
-      let ocrPixelBuffer: [UInt8]?
-      if translationManager.isSessionActive && translationManager.shouldRunOCR() {
-        ocrPixelBuffer = Array(pixelBuffer)
-      } else {
-        ocrPixelBuffer = nil
-      }
+      // Capture OCR snapshot if translation enabled (piggyback on 4Hz UI
+      // update). `TranslationManager` is main-actor state, so the *decision*
+      // is made on the main thread one tick earlier and left here as an
+      // atomic request; only the pixel copy happens on the emulation thread.
+      let ocrPixelBuffer: [UInt8]? =
+        ocrSampleRequested.exchange(false, ordering: .relaxed)
+          ? Array(pixelBuffer) : nil
 
       DispatchQueue.main.async { [weak self] in
         guard let self else { return }
         self.drive0Access = d0
         self.drive1Access = d1
         self.tapeProgress = tapeProgressSample
+
+        // Decide whether the next 4Hz tick should sample the screen for OCR.
+        if self.translationManager.isSessionActive,
+           self.translationManager.shouldRunOCR() {
+          self.ocrSampleRequested.store(true, ordering: .relaxed)
+        }
 
         // Trigger OCR translation
         if let ocrPixelBuffer {
@@ -318,15 +327,22 @@ extension EmulatorViewModel {
     }
   }
 
-  /// Access pixel buffer for Metal texture upload.
-  func withPixelBuffer<R>(_ body: (inout [UInt8]) -> R) -> R {
-    return body(&pixelBuffer)
+  /// Hand the just-rendered contents of `pixelBuffer` to the renderer,
+  /// together with the display metadata needed to interpret them.
+  ///
+  /// `is400LineMode` travels with the frame because the Metal view can no
+  /// longer read it off the live bus: that is emulation-thread state, and it
+  /// could have changed since this frame was drawn.
+  func publishFrame() {
+    framePublisher.publish(pixels: pixelBuffer,
+                           is400LineMode: machine.bus.is400LineMode)
   }
 
   // MARK: - Screen Rendering
 
   func renderScreen() {
     renderCurrentFrame(into: &pixelBuffer, blinkCursor: false, debugTextLayerEnabled: debugTextLayerEnabled)
+    publishFrame()
 
     #if DEBUG
     dumpTextDMASnapshotIfRequested()

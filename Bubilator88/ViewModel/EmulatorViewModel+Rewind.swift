@@ -23,8 +23,11 @@ struct RewindSnapshot {
 /// - **Menu click** (Phase 1 fallback): jump directly to the oldest
 ///   snapshot in one shot.
 ///
-/// All ring-buffer mutation happens on the main thread (Metal draw loop
-/// + AppDelegate event monitor + menu actions), so no lock is needed.
+/// The ring buffer is touched from both sides of the emulation thread split:
+/// the loop pushes and pops snapshots, the main thread clears it and starts /
+/// stops hold mode. Every main-thread mutation therefore goes through
+/// `emuQueue`, and the `@Observable` counters the UI binds to are written back
+/// on the main thread.
 extension EmulatorViewModel {
 
   // MARK: - Tunables
@@ -53,26 +56,35 @@ extension EmulatorViewModel {
   }
 
   /// Approximate seconds of history currently buffered.
+  ///
+  /// Reads the mirrored count rather than the ring buffer itself: these are
+  /// evaluated from SwiftUI on the main thread, while the buffer belongs to
+  /// the emulation loop.
   var rewindSecondsAvailable: Double {
-    Double(rewindSnapshots.count * Self.rewindSnapshotInterval) / 60.0
+    Double(rewindSnapshotCount * Self.rewindSnapshotInterval) / 60.0
   }
 
   /// Approximate seconds the user has rewound since pressing the
   /// rewind key. Drives the strip overlay's "now" label.
   var rewindSecondsRewound: Double {
-    let popped = max(0, rewindStartSnapshotCount - rewindSnapshots.count)
+    let popped = max(0, rewindStartSnapshotCount - rewindSnapshotCount)
     return Double(popped * Self.rewindSnapshotInterval) / 60.0
   }
 
   /// Wipe the buffer. Call when the timeline is invalidated by reset,
   /// save-state load, or disk mount/eject. Also resets all hold-mode
   /// transient state so a subsequent rewind starts from a clean slate.
+  ///
+  /// Always called from the main thread, and never from inside an `emuQueue`
+  /// block, so taking the queue here is safe.
   func clearRewindBuffer() {
-    rewindSnapshots.removeAll(keepingCapacity: true)
+    emuQueue.sync {
+      rewindSnapshots.removeAll(keepingCapacity: true)
+      rewindFrameCounter = 0
+      rewindStepCounter = 0
+      rewindStartSnapshotCount = 0
+    }
     rewindSnapshotCount = 0
-    rewindFrameCounter = 0
-    rewindStepCounter = 0
-    rewindStartSnapshotCount = 0
     rewindFrozenThumbnails.removeAll(keepingCapacity: true)
   }
 
@@ -97,7 +109,7 @@ extension EmulatorViewModel {
       rewindSnapshots.removeFirst()
     }
     rewindSnapshots.append(snapshot)
-    rewindSnapshotCount = rewindSnapshots.count
+    publishRewindSnapshotCount(rewindSnapshots.count)
   }
 
   // MARK: - Phase 2: hold-to-rewind
@@ -109,14 +121,21 @@ extension EmulatorViewModel {
     if isRewinding { return }
     if !isRunning { return }  // no draw loop = nothing to rewind into
     if videoRecorder.isRecording || audioRecorder.isRecording { return }
-    if rewindSnapshots.isEmpty { return }
+    if rewindSnapshotCount == 0 { return }
     preRewindVolume = volume
     audio.setVolume(0)
-    rewindStepCounter = 0  // step on the first draw, then count down
-    rewindStartSnapshotCount = rewindSnapshots.count  // baseline for elapsed readout
-    rewindFrozenThumbnails = rewindSnapshots.compactMap { $0.thumbnail }
+    let frozen: [CGImage] = emuQueue.sync {
+      rewindStepCounter = 0  // step on the first frame, then count down
+      rewindStartSnapshotCount = rewindSnapshots.count  // baseline for elapsed readout
+      // `isRewinding` is read by the emulation loop every frame and written
+      // here, so the flip happens under the queue. The write still executes on
+      // the calling (main) thread, which is what `@Observable` requires.
+      isRewinding = true
+      return rewindSnapshots.compactMap { $0.thumbnail }
+    }
+    rewindSnapshotCount = rewindStartSnapshotCount
+    rewindFrozenThumbnails = frozen
     rewindSound.start(volume: volume)
-    isRewinding = true
   }
 
   /// End reverse playback. Restores audio, releases held PC-88 keys
@@ -125,7 +144,7 @@ extension EmulatorViewModel {
   /// remaining snapshots since they predate the new "current" state.
   func stopRewindHold() {
     if !isRewinding { return }
-    isRewinding = false
+    emuQueue.sync { isRewinding = false }
     rewindSound.stop()
     audio.setVolume(preRewindVolume)
     releaseAllKeys()
@@ -144,7 +163,7 @@ extension EmulatorViewModel {
     guard let last = rewindSnapshots.popLast() else { return }
     let raw = decompressSnapshotState(last.state)
     try? machine.loadSaveState(Array(raw))
-    rewindSnapshotCount = rewindSnapshots.count
+    publishRewindSnapshotCount(rewindSnapshots.count)
   }
 
   // MARK: - Phase 1: one-shot rewind (menu click fallback)
@@ -158,7 +177,9 @@ extension EmulatorViewModel {
                        comment: ""))
       return
     }
-    guard let oldest = rewindSnapshots.first else {
+    // The ring buffer belongs to the emulation loop, so both the read of the
+    // oldest snapshot and the load it feeds happen under the queue.
+    guard let oldest = emuQueue.sync(execute: { rewindSnapshots.first }) else {
       showToast(String(localized: "Nothing to rewind", comment: ""))
       return
     }
@@ -189,6 +210,15 @@ extension EmulatorViewModel {
   }
 
   // MARK: - Helpers
+
+  /// Mirror the ring-buffer depth into the `@Observable` counter the menus and
+  /// the strip overlay bind to. Called from the emulation thread, so the write
+  /// hops to the main thread — SwiftUI observation is not thread-safe.
+  func publishRewindSnapshotCount(_ count: Int) {
+    Task { @MainActor [weak self] in
+      self?.rewindSnapshotCount = count
+    }
+  }
 
   private func decompressSnapshotState(_ data: Data) -> Data {
     // Snapshots before any compression-failure fallback are stored
