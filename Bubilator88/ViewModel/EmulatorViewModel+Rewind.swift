@@ -128,7 +128,7 @@ extension EmulatorViewModel {
     isRewinding = false
     rewindSound.stop()
     audio.setVolume(preRewindVolume)
-    machine.keyboard.releaseAll()
+    releaseAllKeys()
     clearRewindBuffer()
   }
 
@@ -181,7 +181,7 @@ extension EmulatorViewModel {
       return
     }
     clearRewindBuffer()
-    machine.keyboard.releaseAll()
+    releaseAllKeys()
     if !isRunning { renderScreen() }
 
     let fmt = String(localized: "Rewound %.1fs", comment: "")

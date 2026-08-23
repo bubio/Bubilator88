@@ -626,8 +626,15 @@ final class EmulatorViewModel {
   /// UI update throttle counter (render thread)
   @ObservationIgnored nonisolated(unsafe) var uiUpdateCounter: Int = 0
 
-  /// Lock for keyboard state (written from main, read from emu queue).
-  private let keyboardLock = NSLock()
+  /// Host input (keyboard matrix, bus mouse) posted from the main thread and
+  /// applied by the emulation loop at a frame boundary. See `InputEvent`.
+  @ObservationIgnored let inputQueue = InputEventQueue()
+
+  /// Host-side mirrors of the queued bus-mouse settings, so the corresponding
+  /// properties read back what was last set rather than what the machine has
+  /// caught up to.
+  @ObservationIgnored var mouseEnabledMirror: Bool = false
+  @ObservationIgnored var mouseJoyModeMirror: Bool = false
 
   /// Paste queue that replays clipboard text as simulated keystrokes.
   @ObservationIgnored let pasteQueue = TextPasteQueue()
@@ -1209,7 +1216,11 @@ final class EmulatorViewModel {
     if wasRunning { stop() }
     // Capture thumbnail on main thread (pixelBuffer access)
     let thumbData = captureThumbnail()
-    emuQueue.sync {
+    // Only the serialization needs the machine; the file write must stay
+    // outside the critical section. Once the emulation loop owns its own
+    // thread, anything held inside `emuQueue` stalls emulation — and disk
+    // I/O is exactly the kind of unbounded stall to keep out of it.
+    let stateData: [UInt8] = emuQueue.sync {
       let meta = SaveMeta(
         bootMode: bootMode.rawValue,
         clock8MHz: clock8MHz,
@@ -1236,11 +1247,11 @@ final class EmulatorViewModel {
       if let metaJSON {
         extraSections.append((tag: SaveStateFileAccess.appMetaTag, data: Array(metaJSON)))
       }
-      let data = machine.createSaveState(thumbnail: thumbData.map { Array($0) },
-                                         extraSections: extraSections)
-      try? FileManager.default.createDirectory(at: Self.saveStateDir, withIntermediateDirectories: true)
-      try? Data(data).write(to: path, options: .atomic)
+      return machine.createSaveState(thumbnail: thumbData.map { Array($0) },
+                                     extraSections: extraSections)
     }
+    try? FileManager.default.createDirectory(at: Self.saveStateDir, withIntermediateDirectories: true)
+    try? Data(stateData).write(to: path, options: .atomic)
     saveStateRevision += 1
     if wasRunning { start() }
     showToast(String(localized: "State saved", comment: ""))
@@ -1522,9 +1533,7 @@ final class EmulatorViewModel {
       return
     }
     guard let key = KeyMapping.pc88Key(for: keyCode) else { return }
-    keyboardLock.lock()
-    machine.keyboard.pressKey(row: key.row, bit: key.bit)
-    keyboardLock.unlock()
+    postInput(.pressKey(key))
     // Record only real user input — ScriptPlayer/paste inject directly via
     // machine.keyboard and never reach keyDown/keyUp.
     scriptRecorder?.keyDown(key)
@@ -1532,54 +1541,95 @@ final class EmulatorViewModel {
 
   func keyUp(_ keyCode: UInt16) {
     guard let key = KeyMapping.pc88Key(for: keyCode) else { return }
-    keyboardLock.lock()
-    machine.keyboard.releaseKey(row: key.row, bit: key.bit)
-    keyboardLock.unlock()
+    postInput(.releaseKey(key))
     scriptRecorder?.keyUp(key)
   }
 
   /// Press a PC-8801 key directly (used by game controller).
   func pressKey(_ key: Keyboard.Key) {
-    keyboardLock.lock()
-    machine.keyboard.pressKey(row: key.row, bit: key.bit)
-    keyboardLock.unlock()
+    postInput(.pressKey(key))
   }
 
   /// Release a PC-8801 key directly (used by game controller).
   func releaseKey(_ key: Keyboard.Key) {
-    keyboardLock.lock()
-    machine.keyboard.releaseKey(row: key.row, bit: key.bit)
-    keyboardLock.unlock()
+    postInput(.releaseKey(key))
+  }
+
+  /// Release every held key. Used when a rewind swaps the matrix out from
+  /// under whatever the user is physically holding.
+  func releaseAllKeys() {
+    postInput(.releaseAllKeys)
   }
 
   // MARK: - Bus mouse
 
   /// Whether the mouse intercepts OPN I/O port reads.
   /// Mirrors `Settings.shared.mouseEnabled`.
+  ///
+  /// The getter reads a host-side mirror rather than `machine.mouse`: the
+  /// setter only queues the change, so the machine may not have picked it up
+  /// yet when the value is read back.
   var mouseModeEnabled: Bool {
-    get { machine.mouse.enabled }
-    set { machine.mouse.enabled = newValue }
+    get { mouseEnabledMirror }
+    set {
+      mouseEnabledMirror = newValue
+      postInput(.mouseEnabled(newValue))
+    }
   }
 
   /// Mouse read mode: false = bus mouse (strobed), true = joystick mode.
   /// Mirrors `Settings.shared.mouseJoyMode`.
   var mouseJoyMode: Bool {
-    get { machine.mouse.joyMode }
-    set { machine.mouse.joyMode = newValue }
+    get { mouseJoyModeMirror }
+    set {
+      mouseJoyModeMirror = newValue
+      postInput(.mouseJoyMode(newValue))
+    }
   }
 
   /// Feed host relative mouse movement to the emulated bus mouse.
   func injectMouseMovement(dx: Int, dy: Int) {
-    keyboardLock.lock()
-    machine.mouse.injectMovement(dx: dx, dy: dy)
-    keyboardLock.unlock()
+    postInput(.mouseMovement(dx: dx, dy: dy))
   }
 
   /// Set the emulated bus mouse left/right button state.
   func setMouseButton(left: Bool, right: Bool) {
-    keyboardLock.lock()
-    machine.mouse.setButtons(left: left, right: right)
-    keyboardLock.unlock()
+    postInput(.mouseButtons(left: left, right: right))
+  }
+
+  // MARK: - Input event plumbing
+
+  /// Queue an input event for the emulation loop.
+  ///
+  /// While the loop is parked there is no emulation thread to race with and
+  /// nothing that would drain the queue, so the event is applied inline —
+  /// keys pressed while paused still reach the matrix, as they always have.
+  private func postInput(_ event: InputEvent) {
+    inputQueue.post(event)
+    if !isRunning { applyPendingInput() }
+  }
+
+  /// Apply everything queued to the machine. Called at the frame boundary by
+  /// the emulation loop, and inline by `postInput` while the loop is parked.
+  func applyPendingInput() {
+    for event in inputQueue.drain() {
+      switch event {
+      case .pressKey(let key):
+        machine.keyboard.pressKey(row: key.row, bit: key.bit)
+      case .releaseKey(let key):
+        machine.keyboard.releaseKey(row: key.row, bit: key.bit)
+      case .releaseAllKeys:
+        machine.keyboard.releaseAll()
+      case .mouseMovement(let dx, let dy):
+        machine.mouse.injectMovement(dx: dx, dy: dy)
+      case .mouseButtons(let left, let right):
+        machine.mouse.setButtons(left: left, right: right)
+      case .mouseEnabled(let on):
+        machine.mouse.enabled = on
+      case .mouseJoyMode(let on):
+        machine.mouse.joyMode = on
+      }
+    }
   }
 }
 

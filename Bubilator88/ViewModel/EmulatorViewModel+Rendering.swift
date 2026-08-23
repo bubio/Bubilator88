@@ -196,6 +196,10 @@ extension EmulatorViewModel {
   /// `emuQueue.sync`. Everything reachable from here therefore already holds
   /// the queue: taking it again (`emuQueue.sync`) deadlocks.
   func runFrameForMetal(frameCount: Int = 1) {
+    // Take host input at the frame boundary, before any machine time passes.
+    // This is where key presses used to land anyway — the main thread could
+    // only run between draws — so the timing is unchanged.
+    applyPendingInput()
     if isRewinding {
       // Reverse playback at 1/Nth the raw step rate so the buffer
       // doesn't drain in a single wall-clock second.
