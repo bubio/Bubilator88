@@ -40,20 +40,20 @@ Platform: macOS only. Deployment targets are **not** uniform: the app target is
 
 ## Architecture
 
-Refer to `docs/develop/Bubilator88/ARCHITECTURE.md` for the full design
-document. Key docs: `docs/develop/Bubilator88/KNOWN_PITFALLS.md` (regression
-lessons), `docs/develop/Bubilator88/BOOTTESTER.md` (CLI test harness),
-`docs/develop/Bubilator88/PERSISTENCE.md` (永続化データ一覧),
-`docs/develop/Bubilator88/URL_SCHEME.md` (`bubilator88://` URL スキーム + CLI
+Refer to `docs/develop/ARCHITECTURE.md` for the full design
+document. Key docs: `docs/develop/KNOWN_PITFALLS.md` (regression
+lessons), `docs/develop/BOOTTESTER.md` (CLI test harness),
+`docs/develop/PERSISTENCE.md` (永続化データ一覧),
+`docs/develop/URL_SCHEME.md` (`bubilator88://` URL スキーム + CLI
 起動引数。書式は QUASI88 互換、FlipDisk 連携),
-`docs/develop/Bubilator88/FMGEN_FORK_COMPARISON.md` (fmgen 派生版の修正と
-Bubilator の対応状況), `docs/develop/Bubilator88/MEMORY_WAIT_STATES.md`
+`docs/develop/FMGEN_FORK_COMPARISON.md` (fmgen 派生版の修正と
+Bubilator の対応状況), `docs/develop/MEMORY_WAIT_STATES.md`
 （メモリウェイト仕様と実装状況。V1S の GVRAM ウェイトと M1 ウェイトは未実装).
-人間向け AI 活用ガイド: `docs/develop/Bubilator88/AI_WORKFLOW.md`.
+人間向け AI 活用ガイド: `docs/develop/AI_WORKFLOW.md`.
 
 `docs/develop` is a private git submodule (`bubio/dev-docs`, `Bubilator88/`
 subfolder) holding internal design notes, investigation logs, and hardware
-spec references (`docs/develop/Bubilator88/SPECS/`) that are kept out of this
+spec references (`docs/develop/SPECS/`) that are kept out of this
 public repo. It requires access to the private repo and
 `git submodule update --init` to populate; if it's empty, treat those docs as
 unavailable rather than assuming the content doesn't exist.
@@ -105,7 +105,7 @@ Key points:
   the prose: game titles, PC-8801 keytop legends (画面消去, 説明, 半角), kana that
   is itself the data, and direct quotations from QUASI88.
 - **Hardware findings are documentation.** Comments recording real-hardware
-  behaviour pair with docs/develop/Bubilator88/KNOWN_PITFALLS.md — translate or edit them faithfully
+  behaviour pair with docs/develop/KNOWN_PITFALLS.md — translate or edit them faithfully
   rather than compressing them.
 - **SwiftLint is lenient and warning-only** (`.swiftlint.yml`). Rules that fight
   the deliberate column alignment used in bit-manipulation and lookup-table code
