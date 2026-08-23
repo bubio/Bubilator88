@@ -1,0 +1,3 @@
+[submodule "docs/develop"]
+	path = docs/develop
+	url = https://github.com/bubio/dev-docs

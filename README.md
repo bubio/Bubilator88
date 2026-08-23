@@ -137,6 +137,15 @@ PC-8801 の起動には実機の ROM ファイルおよびリズム音源用 WAV
 └── 2608_RIM.WAV     YM2608 リズム音源（リムショット）
 ```
 
+## Development
+
+内部設計資料は private submodule (`docs/develop`) にあります。ビルドや実行には不要で、
+アクセス権があるコントリビューター向けです。
+
+```bash
+git submodule update --init docs/develop
+```
+
 ## Credits
 
 - **FM 合成エンジン**: [fmgen](http://retropc.net/cisc/sound/) by cisc — Swift への移植
