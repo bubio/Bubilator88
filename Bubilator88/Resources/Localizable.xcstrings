@@ -248,6 +248,83 @@
         }
       }
     },
+    "15 kHz (Standard)" : {
+      "comment" : "Settings: monitor type — 15kHz standard display",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "15 kHz (標準ディスプレイ)"
+          }
+        }
+      }
+    },
+    "24 kHz (Dedicated)" : {
+      "comment" : "Settings: monitor type — 24kHz dedicated display",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "24 kHz (専用ディスプレイ)"
+          }
+        }
+      }
+    },
+    "DIP SW1-6 on real hardware. Adds one wait state to main memory and text VRAM accesses, slowing the machine slightly. Off on a factory-default PC-8801. Applied on next reset." : {
+      "comment" : "Settings: memory wait DIP explanation",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "実機の DIP SW1-6 です。メインメモリとテキスト VRAM へのアクセスにウェイトを 1 つ加え、動作をわずかに遅くします。工場出荷時の PC-8801 では OFF です。次回のリセットで反映されます。"
+          }
+        }
+      }
+    },
+    "DIP SW1-8 on real hardware. The monitor's horizontal frequency decides the VSYNC rate: 55.4 Hz at 24 kHz, 62.4 Hz at 15 kHz — neither is 60 Hz. Applied on next reset." : {
+      "comment" : "Settings: monitor type explanation",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "実機の DIP SW1-8 です。モニタの水平周波数が VSYNC の周期を決めます: 24 kHz なら 55.4 Hz、15 kHz なら 62.4 Hz — どちらも 60 Hz ではありません。次回のリセットで反映されます。"
+          }
+        }
+      }
+    },
+    "Memory Wait" : {
+      "comment" : "Settings: memory wait DIP section header",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリウェイト"
+          }
+        }
+      }
+    },
+    "Memory wait" : {
+      "comment" : "Settings: memory wait DIP toggle label",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリウェイト"
+          }
+        }
+      }
+    },
+    "Monitor" : {
+      "comment" : "Settings: monitor type section and picker label",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モニタ"
+          }
+        }
+      }
+    },
     "© 2026 bubio. Licensed under GPL v2.0" : {
       "comment" : "About dialog copyright",
       "localizations" : {

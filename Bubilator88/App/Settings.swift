@@ -58,6 +58,17 @@ final class Settings {
     didSet { UserDefaults.standard.set(monitorType.rawValue, forKey: "monitorType") }
   }
 
+  /// Memory wait DIP (DIP SW1 bit 6). ON adds one wait state to main memory,
+  /// TVRAM and graphic-off GVRAM accesses — see `MEMORY_WAIT_STATES.md` §2.
+  ///
+  /// Like DIP SW1 bit 8 above, it has no port-0x30 representation, so it gets
+  /// its own storage instead of a bit in `dipSw1`. Software cannot read it
+  /// back at all. Off by default, matching BubiC's `DIPSWITCH_DEFAULT`.
+  /// Applied on reset.
+  var memoryWaitDip: Bool = false {
+    didSet { UserDefaults.standard.set(memoryWaitDip, forKey: "memoryWaitDip") }
+  }
+
   /// Extended RAM card count. Applied on reset (disk reload).
   /// 0 = none, 1 = 128KB, 8 = 1MB. Encoding follows QUASI88 `use_extram`.
   var extramCards: Int = 1 {
@@ -486,6 +497,9 @@ final class Settings {
     if let v = UserDefaults.standard.object(forKey: "monitorType") as? Int,
        let m = MonitorType(rawValue: v) {
       monitorType = m
+    }
+    if let v = UserDefaults.standard.object(forKey: "memoryWaitDip") as? Bool {
+      memoryWaitDip = v
     }
     if let v = UserDefaults.standard.object(forKey: "extramCards") as? Int,
        [0, 1, 8].contains(v) {
