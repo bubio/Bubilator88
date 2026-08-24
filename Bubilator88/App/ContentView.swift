@@ -431,11 +431,7 @@ struct ContentView: View {
           .monospacedDigit()
           .foregroundStyle(.secondary)
           .frame(minWidth: 40, alignment: .trailing)
-          .help(viewModel.targetFrameRate > 0
-                ? String(format: "PC-8801 VSYNC: %.2f Hz (%@ monitor)",
-                         viewModel.targetFrameRate,
-                         Settings.shared.monitorType == .khz24 ? "24 kHz" : "15 kHz")
-                : "PC-8801 VSYNC rate")
+          .help(fpsTooltip)
         Circle()
           .fill(viewModel.turboMode ? Color.orange :
             viewModel.isRunning ? Color.green : Color.gray)
@@ -444,6 +440,22 @@ struct ContentView: View {
     }
     .font(.caption)
     .lineLimit(1)
+  }
+
+  /// Tooltip for the status bar fps readout: the VSYNC rate the machine is
+  /// actually pacing to, plus the memory wait DIP state.
+  private var fpsTooltip: String {
+    let monitor = Settings.shared.monitorType == .khz24 ? "24 kHz" : "15 kHz"
+    let wait = Settings.shared.memoryWaitDip
+      ? String(localized: "Memory wait: On", comment: "Status bar fps tooltip")
+      : String(localized: "Memory wait: Off", comment: "Status bar fps tooltip")
+    guard viewModel.targetFrameRate > 0 else {
+      return String(format: String(localized: "VSYNC rate \u{2014} %@",
+                                   comment: "Status bar fps tooltip"), wait)
+    }
+    return String(format: String(localized: "VSYNC: %.2f Hz (%@ monitor) \u{2014} %@",
+                                 comment: "Status bar fps tooltip"),
+                  viewModel.targetFrameRate, monitor, wait)
   }
 
   private func driveMenu(drive: Int, name: String, info: MountedDiskInfo?) -> some View {
