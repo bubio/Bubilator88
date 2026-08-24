@@ -995,7 +995,7 @@ final class EmulatorViewModel {
   /// loop. No effect when Metal is still running — the normal
   /// draw cycle will pick up the change.
   func renderSingleFrame() {
-    renderCurrentFrame(into: &pixelBuffer, blinkCursor: false)
+    renderCurrentFrame(into: &pixelBuffer, blinkCursor: false, debugTextLayerEnabled: debugTextLayerEnabled)
     publishFrame(counted: false)
     metalView?.draw()
   }
