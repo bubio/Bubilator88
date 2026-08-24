@@ -281,13 +281,13 @@
         }
       }
     },
-    "DIP SW1-8 on real hardware. The monitor's horizontal frequency decides the VSYNC rate: 55.4 Hz at 24 kHz, 62.4 Hz at 15 kHz — neither is 60 Hz. Applied on next reset." : {
+    "DIP SW1-8 on real hardware. The monitor's horizontal frequency decides the VSYNC rate: 55.4 Hz at 24 kHz, 62.4 Hz at 15 kHz. Applied on next reset." : {
       "comment" : "Settings: monitor type explanation",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "実機の DIP SW1-8 です。モニタの水平周波数が VSYNC の周期を決めます: 24 kHz なら 55.4 Hz、15 kHz なら 62.4 Hz — どちらも 60 Hz ではありません。次回のリセットで反映されます。"
+            "value" : "実機の DIP SW1-8 です。モニタの水平周波数が VSYNC の周期を決めます: 24 kHz なら 55.4 Hz、15 kHz なら 62.4 Hz。次回のリセットで反映されます。"
           }
         }
       }
@@ -310,6 +310,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "メモリウェイト"
+          }
+        }
+      }
+    },
+    "Memory wait: Off" : {
+      "comment" : "Status bar fps tooltip",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリウェイト: OFF"
+          }
+        }
+      }
+    },
+    "Memory wait: On" : {
+      "comment" : "Status bar fps tooltip",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリウェイト: ON"
           }
         }
       }
@@ -5251,6 +5273,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "値"
+          }
+        }
+      }
+    },
+    "VSYNC rate — %@" : {
+      "comment" : "Status bar fps tooltip",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VSYNC 周波数 — %@"
+          }
+        }
+      }
+    },
+    "VSYNC: %.2f Hz (%@ monitor) — %@" : {
+      "comment" : "Status bar fps tooltip",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VSYNC: %.2f Hz (%@ モニタ) — %@"
           }
         }
       }
