@@ -1,0 +1,78 @@
+diff --git a/src/vm/z80.cpp b/src/vm/z80.cpp
+index 168d152..96a1208 100644
+--- a/src/vm/z80.cpp
++++ b/src/vm/z80.cpp
+@@ -17,6 +17,55 @@
+ #define CPU_START_ADDR	0
+ #endif
+ 
++/* ---------------------------------------------------------------------------
++	CPU T-state trace (local patch, not upstream)
++
++	Cross-emulator wait-accuracy diff against Bubilator88's BootTester.
++	One line per instruction of the primary CPU, emitted *before* the
++	instruction runs, so `total_icount` is the cumulative T-state count
++	through the previous instruction — consecutive differences give what
++	each instruction cost, memory waits included (FETCHOP / RM8 fold
++	`wait_clock` into `icount`, and `run()` accumulates `-icount`).
++
++	The column layout matches BOOTTEST_CPU_TRACE_PATH so the two logs
++	line up field for field.
++
++	Environment variables:
++		BUBIC_CPU_TRACE       — enable when set to anything but "0"
++		BUBIC_CPU_TRACE_FILE  — output path (default: bubic-cpu.trace)
++		BUBIC_CPU_TRACE_LIMIT — stop after N lines (default: unlimited)
++--------------------------------------------------------------------------- */
++
++static FILE* g_cpu_trace = NULL;
++static bool g_cpu_trace_init = false;
++static uint64_t g_cpu_trace_seq = 0;
++static uint64_t g_cpu_trace_limit = 0;
++
++static void cpu_trace_lazy_init()
++{
++	if(g_cpu_trace_init) return;
++	g_cpu_trace_init = true;
++
++	const char* enable = getenv("BUBIC_CPU_TRACE");
++	if(!enable || enable[0] == '\0' || enable[0] == '0') return;
++
++	const char* path = getenv("BUBIC_CPU_TRACE_FILE");
++	if(!path || !*path) path = "bubic-cpu.trace";
++
++	const char* limit = getenv("BUBIC_CPU_TRACE_LIMIT");
++	if(limit && *limit) g_cpu_trace_limit = strtoull(limit, NULL, 10);
++
++	g_cpu_trace = fopen(path, "w");
++	if(g_cpu_trace != NULL) {
++		// Line-buffered so a crash mid-investigation still leaves a
++		// usable partial log.
++		setvbuf(g_cpu_trace, NULL, _IOLBF, 0);
++		fprintf(stderr, "[cpu_trace] writing to %s\n", path);
++	} else {
++		fprintf(stderr, "[cpu_trace] failed to open %s\n", path);
++	}
++}
++
+ #define NMI_REQ_BIT	0x80000000
+ 
+ #define CF	0x01
+@@ -2266,6 +2315,17 @@ int Z80::run(int clock)
+ 
+ void Z80::run_one_opecode()
+ {
++	if(!g_cpu_trace_init) cpu_trace_lazy_init();
++	if(g_cpu_trace != NULL && is_primary) {
++		if(g_cpu_trace_limit == 0 || g_cpu_trace_seq < g_cpu_trace_limit) {
++			fprintf(g_cpu_trace,
++				"seq=%llu PC=%04X AF=%04X BC=%04X DE=%04X HL=%04X IX=%04X IY=%04X SP=%04X I=%02X R=%02X IFF=%d T=%llu\n",
++				(unsigned long long)g_cpu_trace_seq, PC, AF, BC, DE, HL, IX, IY, SP,
++				I, R, iff1 ? 1 : 0, (unsigned long long)total_icount);
++			g_cpu_trace_seq++;
++		}
++	}
++
+ 	if(!after_ei) {
+ #ifdef USE_DEBUGGER
+ 		if(d_debugger->now_debugging) {
