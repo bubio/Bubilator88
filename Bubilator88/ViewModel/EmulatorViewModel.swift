@@ -1131,12 +1131,21 @@ final class EmulatorViewModel {
   }
 
   func reset() {
+    // Resetting while paused would otherwise freeze the display on the
+    // instant-post-reset VRAM/CRTC state — raw, uninitialized-looking
+    // garbage that the boot ROM only clears once the CPU actually runs.
+    // While running, that instant flashes by within a frame or two before
+    // anyone sees it; while paused, nothing ever runs to clear it. Forcing
+    // the post-reset restart (without physically starting/stopping audio
+    // twice in the process — see forceRun below) means reset always leaves
+    // the machine in the same state a normal running reset does.
+    let forceRun = !isRunning
     if Settings.shared.resetAnimationEnabled,
        dissolveSession == nil,
        let snapshot = makeDissolveSnapshot() {
-      playResetDissolve(snapshot: snapshot)
+      playResetDissolve(snapshot: snapshot, forceRun: forceRun)
     } else {
-      performReset(resetTranslation: true)
+      performReset(resetTranslation: true, forceRestart: forceRun)
     }
   }
 
@@ -1146,8 +1155,8 @@ final class EmulatorViewModel {
     return NSImage(cgImage: cg, size: NSSize(width: 640, height: 400))
   }
 
-  private func playResetDissolve(snapshot: NSImage) {
-    let wasRunning = isRunning
+  private func playResetDissolve(snapshot: NSImage, forceRun: Bool) {
+    let wasRunning = isRunning || forceRun
     stop()
     cancelPendingDissolveTasks()
     dissolveSession = DissolveSession(
