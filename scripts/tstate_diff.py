@@ -19,7 +19,7 @@ Producing the two logs
       <disk.d88>
 
     BOOTTEST_USE_RUNFRAME=1 BOOTTEST_TURBO=1 BOOTTEST_FRAMES=200 \
-    BOOTTEST_DIPSW2=0x31 CLOCK_4MHZ=1 \
+    BOOTTEST_DIPSW2=0xB1 CLOCK_4MHZ=1 \
     BOOTTEST_CPU_TRACE_PATH=/tmp/bubi.trace BOOTTEST_CPU_TRACE_LIMIT=200000 \
       .build/arm64-apple-macosx/debug/BootTester <disk.d88>
 
@@ -28,11 +28,28 @@ BubiC's `BootMode`/`CPUType`/`DipSwitch` live in
 `~/Library/Application Support/BubiC-8801MA/BubiC-8801MA.ini`
 (BootMode 0=V1S 1=V1H 2=V2 3=N, CPUType 1=4MHz 2=8MHz, DipSwitch bit 0 =
 memory wait). Keep `BOOTTEST_CPU_OVERCLOCK` at 1: above that Bubilator's
-`totalTStates` counts wall-clock rather than CPU T-states.
+`totalTStates` counts wall-clock rather than CPU T-states. V1S is
+`BOOTTEST_DIPSW2=0xB1`, not `0x31` — the top two bits pick the boot mode
+(bit7 V1/V2, bit6 standard/high-speed) and getting them wrong sends the two
+emulators down different code within the first dozen instructions.
 
 Known-benign differences, skipped by this script: the R register (BubiC wraps
 it at 8 bits, Bubilator preserves bit 7 per the Z80 spec) and any register
 column other than PC.
+
+Resyncing across benign splits
+-------------------------------
+
+Not every PC split is a bug. A polling loop (`IN A,(p); AND m; JR Z,loop`)
+that samples a flag whose toggle phase isn't identical on both sides exits
+after a different number of iterations on each — the two logs re-converge
+right after the loop, just at different sequence numbers. Comparing raw
+totals through a split like that is useless (everything after is "different"
+by definition), so this script looks for a short run of matching PCs within
+a bounded window and resumes comparison there, reporting the gap as a
+"resync" rather than a hard stop. Only a split neither side recovers from
+within the window — actually different code, not just a different loop
+count — ends the comparison.
 """
 
 import argparse
@@ -40,6 +57,16 @@ import re
 import sys
 
 LINE_RE = re.compile(r"PC=([0-9A-Fa-f]{4}).*?T=(\d+)")
+
+# Consecutive PCs required to accept a resync point. Too short and an
+# incidental PC match (a shared subroutine, say) looks like realignment when
+# it isn't; too long and a genuinely short aligned stretch is missed.
+ANCHOR_LEN = 6
+
+# How far ahead of the split to search for that anchor, on each side
+# independently. Bounded so an unrecoverable split doesn't turn into an
+# O(n^2) scan of the rest of the trace.
+SEARCH_WINDOW = 20000
 
 
 def load(path, limit=None):
@@ -56,15 +83,70 @@ def load(path, limit=None):
     return out
 
 
-def deltas(rows):
-    """Cost of each instruction: the step in the cumulative count after it.
-
-    The last row has no successor, so it yields no delta.
+def find_resync(a, i, b, j):
+    """Look for the next point where both sides run the same ANCHOR_LEN PCs
+    in a row. Returns (di, dj) offsets from (i, j), or None if the window
+    closes without a match. di/dj are searched shortest-gap-first so a loop
+    that only ran one extra iteration resyncs immediately rather than at the
+    edge of the window.
     """
-    return [
-        (rows[i][0], rows[i + 1][1] - rows[i][1])
-        for i in range(len(rows) - 1)
-    ]
+    a_pcs = [p for p, _ in a[i:i + SEARCH_WINDOW]]
+    b_pcs = [p for p, _ in b[j:j + SEARCH_WINDOW]]
+    if len(a_pcs) < ANCHOR_LEN or len(b_pcs) < ANCHOR_LEN:
+        return None
+
+    # Every position in b, indexed by the ANCHOR_LEN-tuple starting there.
+    b_index = {}
+    for dj in range(len(b_pcs) - ANCHOR_LEN + 1):
+        key = tuple(b_pcs[dj:dj + ANCHOR_LEN])
+        b_index.setdefault(key, dj)  # first (shortest) offset wins
+
+    best = None
+    for di in range(len(a_pcs) - ANCHOR_LEN + 1):
+        key = tuple(a_pcs[di:di + ANCHOR_LEN])
+        dj = b_index.get(key)
+        if dj is not None:
+            gap = di + dj
+            if best is None or gap < best[2]:
+                best = (di, dj, gap)
+    return best[:2] if best else None
+
+
+def aligned_regions(a, b):
+    """Yield (a_start, b_start, length) for each stretch where a and b run
+    the same PCs in lockstep, resyncing across benign splits in between.
+    Also yields the gap sizes so the caller can report them.
+    """
+    i = j = 0
+    regions = []
+    gaps = []
+    while i < len(a) and j < len(b):
+        # Extend the current aligned run as far as PCs keep matching.
+        start_i, start_j = i, j
+        while i < len(a) and j < len(b) and a[i][0] == b[j][0]:
+            i += 1
+            j += 1
+        if i > start_i:
+            regions.append((start_i, start_j, i - start_i))
+
+        if i >= len(a) or j >= len(b):
+            break
+
+        resync = find_resync(a, i, b, j)
+        if resync is None:
+            gaps.append((i, j, None, None))  # unrecoverable
+            break
+        di, dj = resync
+        gaps.append((i, j, i + di, j + dj))
+        i += di
+        j += dj
+
+    return regions, gaps
+
+
+def deltas(rows):
+    """Cost of each instruction: the step in the cumulative count after it."""
+    return [(rows[k][0], rows[k + 1][1] - rows[k][1]) for k in range(len(rows) - 1)]
 
 
 def main():
@@ -76,6 +158,8 @@ def main():
                     help="compare at most N instructions")
     ap.add_argument("--max-report", type=int, default=20,
                     help="stop listing after N differing instructions (default 20)")
+    ap.add_argument("--no-resync", action="store_true",
+                    help="stop at the first split instead of searching past it")
     args = ap.parse_args()
 
     limit = args.limit or None
@@ -84,72 +168,83 @@ def main():
     if not a or not b:
         sys.exit(f"empty trace: bubic={len(a)} bubilator={len(b)}")
 
-    n = min(len(a), len(b))
     print(f"BubiC      : {len(a)} instructions")
     print(f"Bubilator88: {len(b)} instructions")
-    print(f"comparing  : {n}")
     print()
 
-    # A PC mismatch means the two are no longer executing the same program, so
-    # every T-state comparison past it is meaningless. Report it and stop.
-    pc_split = next((i for i in range(n) if a[i][0] != b[i][0]), None)
-    if pc_split == 0:
+    if a[0][0] != b[0][0]:
         print("PC differs from the very first instruction — the two runs are not "
               "comparable. Check the boot mode and clock on both sides.")
         return 1
 
-    horizon = pc_split if pc_split is not None else n
-    if pc_split is not None:
-        print(f"Execution paths split at instruction {pc_split}: "
-              f"BubiC PC={a[pc_split][0]:04X}, Bubilator PC={b[pc_split][0]:04X}")
-        print("T-states are only compared up to that point.")
-        print()
+    if args.no_resync:
+        n = min(len(a), len(b))
+        split = next((k for k in range(n) if a[k][0] != b[k][0]), n)
+        regions = [(0, 0, split)]
+        gaps = [] if split == n else [(split, split, None, None)]
+    else:
+        regions, gaps = aligned_regions(a, b)
 
-    da, db = deltas(a[:horizon]), deltas(b[:horizon])
-    m = min(len(da), len(db))
+    compared = sum(length for _, _, length in regions)
+    total = min(len(a), len(b))
+    print(f"compared   : {compared} / {total} instructions "
+          f"({compared / max(1, total):.1%}) across {len(regions)} aligned region(s)")
 
-    diffs = [i for i in range(m) if da[i][1] != db[i][1]]
+    for gi, gj, ri, rj in gaps:
+        if ri is None:
+            print(f"  gap at BubiC #{gi} (PC={a[gi][0]:04X}) / "
+                  f"Bubilator #{gj} (PC={b[gj][0]:04X}): no resync found within "
+                  f"{SEARCH_WINDOW} instructions — stopping here")
+        else:
+            print(f"  gap at BubiC #{gi}→#{ri} (+{ri - gi}) / "
+                  f"Bubilator #{gj}→#{rj} (+{rj - gj}): resynced, PC={a[ri][0]:04X}")
+    print()
+
+    if compared == 0:
+        print("Nothing comparable — the two runs diverge immediately.")
+        return 1
+
+    diffs = []
+    max_cost = 0
+    for a_start, b_start, length in regions:
+        da = deltas(a[a_start:a_start + length])
+        db = deltas(b[b_start:b_start + length])
+        m = min(len(da), len(db))
+        for k in range(m):
+            max_cost = max(max_cost, da[k][1])
+            if da[k][1] != db[k][1]:
+                diffs.append((a_start + k, da[k][0], da[k][1], db[k][1]))
+
     if not diffs:
-        print(f"No T-state differences across {m} instructions.")
+        print(f"No T-state differences across {compared} instructions.")
         print("Every instruction costs the same on both emulators, waits included.")
-        # An early PC split means most of the run was never compared. Saying
-        # "no differences" about 0.7% of a trace and exiting 0 would overstate
-        # it, so that case gets its own status.
-        covered = m / max(1, min(len(a), len(b)) - 1)
-        if pc_split is not None and covered < 0.5:
+        if compared / max(1, total) < 0.5:
             print()
-            print(f"Only {covered:.1%} of the trace was compared before the paths "
-                  f"split — this is not a clean bill of health.")
+            print(f"Only {compared / max(1, total):.1%} of the trace was compared — "
+                  f"this is not a clean bill of health.")
             return 2
-        # Waits above ~30T only come from GVRAM. Their absence means the run
-        # never exercised that table, whatever the agreement rate says.
-        if max((t for _, t in da), default=0) < 30:
+        if max_cost < 30:
             print()
             print("Note: no instruction cost 30T or more, so the GVRAM wait table "
                   "(68/90/114/141) was never exercised. M1 and memory-read waits "
                   "are what this run actually checked.")
         return 0
 
-    print(f"{len(diffs)} of {m} instructions differ in cost "
-          f"(first at instruction {diffs[0]}):")
+    print(f"{len(diffs)} of {compared} instructions differ in cost "
+          f"(first at instruction {diffs[0][0]}):")
     print()
     print(f"  {'#':>8}  {'PC':>4}  {'BubiC':>6}  {'Bubi':>6}  {'Δ':>5}")
-    for i in diffs[:args.max_report]:
-        pc, ta = da[i]
-        tb = db[i][1]
-        print(f"  {i:>8}  {pc:04X}  {ta:>6}  {tb:>6}  {tb - ta:>+5}")
+    for idx, pc, ta, tb in diffs[:args.max_report]:
+        print(f"  {idx:>8}  {pc:04X}  {ta:>6}  {tb:>6}  {tb - ta:>+5}")
     if len(diffs) > args.max_report:
         print(f"  … {len(diffs) - args.max_report} more")
 
-    # Which addresses account for the disagreement — a wait-table bug clusters
-    # on one region, a single mis-timed opcode clusters on one PC.
     print()
     print("Most frequent differing addresses:")
     counts = {}
-    for i in diffs:
-        pc, ta = da[i]
-        counts.setdefault((pc, db[i][1] - ta), 0)
-        counts[(pc, db[i][1] - ta)] += 1
+    for _, pc, ta, tb in diffs:
+        key = (pc, tb - ta)
+        counts[key] = counts.get(key, 0) + 1
     for (pc, delta), count in sorted(counts.items(), key=lambda kv: -kv[1])[:10]:
         print(f"  PC={pc:04X}  Δ={delta:+d}  ×{count}")
     return 1
