@@ -211,18 +211,21 @@ extension EmulatorViewModel {
   /// used a `boot` line, raw `dipsw` values, or no header at all — in which case
   /// this is a no-op. Same preset/custom branch as `performLoad`.
   func adoptScriptSetup(_ steps: [ScriptStep]) {
-    // Persist the clock only when the script stated one, so an omitted header
-    // never rewrites the user's clock setting. The display always tracks the
-    // machine's actual value.
-    clockScan: for step in steps {
+    // Persist the clock/monitor/memwait only when the script stated them, so an
+    // omitted header never rewrites the user's setting. The display always
+    // tracks the machine's actual value.
+    setupScan: for step in steps {
       switch step {
       case .clock(let mhz):
         Settings.shared.clock8MHz = (mhz == 8)
-        break clockScan
+      case .monitor(let type):
+        Settings.shared.monitorType = type
+      case .memoryWait(let v):
+        Settings.shared.memoryWaitDip = v
       case .boot, .dipsw1, .dipsw2, .diskMount:
-        continue  // still in the setup block — keep looking for a clock
+        continue  // still in the setup block — keep scanning
       default:
-        break clockScan  // the timeline has started — no clock was given
+        break setupScan  // the timeline has started
       }
     }
     syncActiveClockFromMachine()

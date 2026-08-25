@@ -40,6 +40,8 @@ extension EmulatorViewModel {
     // post-reset initial state.
     var setup = setupBootSteps()
     setup.append(.clock(mhz: clock8MHz ? 8 : 4))
+    setup.append(.monitor(Settings.shared.monitorType))
+    setup.append(.memoryWait(Settings.shared.memoryWaitDip))
     for drive in 0..<2 {
       if let info = (drive == 0 ? drive0Info : drive1Info), let path = info.sourceURL?.path {
         setup.append(.diskMount(drive: drive, path: path, image: info.currentImageIndex))
