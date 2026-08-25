@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Getting Started">
     <meta name="description" content="ROM ファイルの準備、起動、ブートモードと CPUクロックの使い方">
-    <meta name="keywords" content="ROM, セットアップ, 起動, ブートモード, CPUクロック, N88-BASIC, N80.ROM, DISK.ROM, 拡張RAM, 起動引数, コマンドライン, URL スキーム">
+    <meta name="keywords" content="ROM, セットアップ, 起動, ブートモード, CPUクロック, N88-BASIC, N80.ROM, DISK.ROM, 拡張RAM, モニタタイプ, 24kHz, 15kHz, メモリウェイト, 起動引数, コマンドライン, URL スキーム">
     <meta name="robots" content="index">
     <title>はじめに</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -97,8 +97,19 @@
     </table>
     <div class="note">純正の PC-8801-02N は 128 KB/枚で、本体には最大 4 枚 (= 512 KB) まで装着可能でした。1 MB はサードパーティの大容量カードに相当します。</div>
 
+    <h2>モニタタイプ</h2>
+    <p><strong>Bubilator88 &gt; 設定 &gt; 一般 &gt; モニタ</strong> で選択できます。実機の DIP SW1-8 に相当し、モニタの水平走査周波数によって垂直同期レートが変わります。設定変更は次回リセット時に反映されます。</p>
+    <table>
+        <tr><th>設定</th><th>説明</th></tr>
+        <tr><td>24 kHz（専用）</td><td>PC-8801 専用ディスプレイ相当。垂直同期 55.4 Hz。</td></tr>
+        <tr><td>15 kHz（標準）</td><td>汎用テレビ相当。垂直同期 62.4 Hz。デフォルト。</td></tr>
+    </table>
+
+    <h2>メモリウェイト</h2>
+    <p><strong>Bubilator88 &gt; 設定 &gt; 一般 &gt; メモリウェイト</strong> で切り替えられます。実機の DIP SW1-6 に相当し、有効にするとメインメモリとテキスト VRAM へのアクセスに 1 ウェイトが加わり、動作がわずかに遅くなります。工場出荷時の PC-8801 では無効（オフ）です。設定変更は次回リセット時に反映されます。</p>
+
     <h2>起動引数で開く</h2>
-    <p>外部のランチャーやターミナルから、ディスクとブートモードを指定して起動できます。引数の書式は QUASI88 と同じで、<code>-v2</code> / <code>-v1h</code> / <code>-v1s</code> / <code>-n</code>（ブートモード）、<code>-4mhz</code> / <code>-8mhz</code>（CPUクロック）などを、開きたいディスクのパスと並べて指定します。</p>
+    <p>外部のランチャーやターミナルから、ディスクとブートモードを指定して起動できます。引数の書式は QUASI88 と同じで、<code>-v2</code> / <code>-v1h</code> / <code>-v1s</code> / <code>-n</code>（ブートモード）、<code>-4mhz</code> / <code>-8mhz</code>（CPUクロック）、<code>-24k</code> / <code>-15k</code>（モニタタイプ）、<code>-mem_wait</code> / <code>-mem_nowait</code>（メモリウェイト）などを、開きたいディスクのパスと並べて指定します。</p>
     <p>URL スキームでも同じ引数を渡せます。<code>bubilator88://boot?arg=-v1h&amp;arg=…</code> のように、引数 1 個を <code>arg</code> 1 個で表します（パスは絶対パス、パーセントエンコーディングが必要です）。</p>
     <p>詳しい書式は、ターミナルで <code>/Applications/Bubilator88.app/Contents/MacOS/Bubilator88 -h</code> を実行すると表示されます。</p>
 

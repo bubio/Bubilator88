@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Getting Started">
     <meta name="description" content="Prepare ROM files, boot Bubilator88, and use Boot Mode and CPU Clock">
-    <meta name="keywords" content="ROM, setup, boot, Boot Mode, CPU Clock, N88-BASIC, N80.ROM, DISK.ROM, extended RAM, launch arguments, command line, URL scheme">
+    <meta name="keywords" content="ROM, setup, boot, Boot Mode, CPU Clock, N88-BASIC, N80.ROM, DISK.ROM, extended RAM, monitor type, 24kHz, 15kHz, memory wait, launch arguments, command line, URL scheme">
     <meta name="robots" content="index">
     <title>Getting Started</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -96,8 +96,19 @@
     </table>
     <div class="note">The original PC-8801-02N held 128 KB per card, with up to 4 cards (= 512 KB) supported by NEC. The 1 MB option corresponds to third-party high-capacity cards.</div>
 
+    <h2>Monitor Type</h2>
+    <p>Choose a setting from <strong>Bubilator88 &gt; Settings &gt; General &gt; Monitor</strong>. This corresponds to DIP SW1-8 on real hardware: the monitor's horizontal frequency decides the vertical sync rate. Changes take effect on the next reset.</p>
+    <table>
+        <tr><th>Setting</th><th>Description</th></tr>
+        <tr><td>24 kHz (Dedicated)</td><td>Matches a dedicated PC-8801 display. 55.4 Hz vertical sync.</td></tr>
+        <tr><td>15 kHz (Standard)</td><td>Matches a standard TV. 62.4 Hz vertical sync. Default.</td></tr>
+    </table>
+
+    <h2>Memory Wait</h2>
+    <p>Toggle this at <strong>Bubilator88 &gt; Settings &gt; General &gt; Memory Wait</strong>. This corresponds to DIP SW1-6 on real hardware: enabling it adds one wait state to main memory and text VRAM accesses, slowing the machine slightly. Off on a factory-default PC-8801. Changes take effect on the next reset.</p>
+
     <h2>Launch Arguments</h2>
-    <p>An external launcher or a terminal can start Bubilator88 with a disk and a boot mode already selected. The argument format matches QUASI88: list options such as <code>-v2</code> / <code>-v1h</code> / <code>-v1s</code> / <code>-n</code> (boot mode) and <code>-4mhz</code> / <code>-8mhz</code> (CPU clock) alongside the path of the disk to open.</p>
+    <p>An external launcher or a terminal can start Bubilator88 with a disk and a boot mode already selected. The argument format matches QUASI88: list options such as <code>-v2</code> / <code>-v1h</code> / <code>-v1s</code> / <code>-n</code> (boot mode), <code>-4mhz</code> / <code>-8mhz</code> (CPU clock), <code>-24k</code> / <code>-15k</code> (monitor type), and <code>-mem_wait</code> / <code>-mem_nowait</code> (memory wait) alongside the path of the disk to open.</p>
     <p>The same arguments can be passed through the URL scheme, one argument per <code>arg</code> item: <code>bubilator88://boot?arg=-v1h&amp;arg=…</code> (paths must be absolute and percent-encoded).</p>
     <p>For the full syntax, run <code>/Applications/Bubilator88.app/Contents/MacOS/Bubilator88 -h</code> in Terminal.</p>
 
