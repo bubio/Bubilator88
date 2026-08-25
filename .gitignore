@@ -47,10 +47,6 @@ skills-lock.json
 # Codex (.agents/)
 .agents/skills/
 
-# Help Book — generated search indexes (rebuilt by hiutil)
-**/Bubilator88.help/Contents/Resources/*/search.cshelpindex
-**/Bubilator88.help/Contents/Resources/*/search.helpindex
-
 # Ensure local Swift package is tracked
 !Packages/
 
