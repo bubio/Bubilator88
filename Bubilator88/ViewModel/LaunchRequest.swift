@@ -1,3 +1,4 @@
+import EmulatorCore
 import Foundation
 
 /// The parsed form of a launch argument list, shared by the URL scheme and the CLI.
@@ -46,6 +47,10 @@ struct LaunchRequest: Equatable {
   var clock8MHz: Bool?
   /// Boot strap (`-romboot`/`-diskboot`). nil means automatic.
   var bootStrap: BootStrap?
+  /// Monitor frequency (`-24k`/`-15k`). nil keeps the current setting.
+  var monitorType: MonitorType?
+  /// Memory wait DIP (`-mem_wait`/`-mem_nowait`). nil keeps the current setting.
+  var memoryWaitDip: Bool?
 
   /// Whether the given image file is an `.m3u` / `.m3u8` playlist. The parser
   /// guarantees a playlist is specified alone, so checking the first entry is
@@ -161,6 +166,10 @@ struct LaunchRequest: Equatable {
     case "-8mhz":     clock8MHz = true
     case "-romboot":  bootStrap = .rom
     case "-diskboot": bootStrap = .disk
+    case "-24k":        monitorType = .khz24
+    case "-15k":        monitorType = .khz15
+    case "-mem_wait":   memoryWaitDip = true
+    case "-mem_nowait": memoryWaitDip = false
     default: throw LaunchParseError.unknownOption(option)
     }
   }
@@ -317,6 +326,12 @@ struct LaunchRequest: Equatable {
     let bootStrapDesc = String(
       localized:       "boot strap override (default: automatic)",
       comment: "CLI --help: description of the -romboot/-diskboot options")
+    let monitorDesc = String(
+      localized:       "monitor frequency (default: keep current setting)",
+      comment: "CLI --help: description of the -24k/-15k options")
+    let memWaitDesc = String(
+      localized:       "memory wait (default: keep current setting)",
+      comment: "CLI --help: description of the -mem_wait/-mem_nowait options")
     let helpDesc = String(
       localized:       "show this help and exit",
       comment: "CLI --help: description of the -h/-help/--help options")
@@ -335,6 +350,8 @@ struct LaunchRequest: Equatable {
       -v2, -v1h, -v1s, -n    \(bootModeDesc)
       -4mhz, -8mhz           \(clockDesc)
       -romboot, -diskboot    \(bootStrapDesc)
+      -24k, -15k             \(monitorDesc)
+      -mem_wait, -mem_nowait \(memWaitDesc)
       -h, -help, --help      \(helpDesc)
 
     \(body)

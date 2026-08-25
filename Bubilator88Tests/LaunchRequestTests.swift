@@ -1,4 +1,5 @@
 import Testing
+import EmulatorCore
 import Foundation
 @testable import Bubilator88
 
@@ -195,11 +196,28 @@ struct LaunchRequestTests {
     #expect(try parse(["/d/a.d88"]).bootStrap == nil)
   }
 
+  @Test("モニタ周波数オプション", arguments: [
+    ("-24k", MonitorType.khz24), ("-15k", MonitorType.khz15), ("-15K", MonitorType.khz15),
+  ])
+  func monitorTypeOptions(raw: String, expected: MonitorType) throws {
+    #expect(try parse([raw, "/d/a.d88"]).monitorType == expected)
+  }
+
+  @Test("メモリウェイトオプション", arguments: [
+    ("-mem_wait", true), ("-mem_nowait", false), ("-MEM_WAIT", true),
+  ])
+  func memoryWaitDipOptions(raw: String, expected: Bool) throws {
+    #expect(try parse([raw, "/d/a.d88"]).memoryWaitDip == expected)
+  }
+
   @Test("排他オプションは最後の指定が勝つ (manual.txt:74-76)")
   func lastOptionWins() throws {
-    let req = try parse(["-v1s", "-v2", "-4mhz", "-8mhz", "/d/a.d88"])
+    let req = try parse(["-v1s", "-v2", "-4mhz", "-8mhz", "-24k", "-15k",
+                          "-mem_nowait", "-mem_wait", "/d/a.d88"])
     #expect(req.system == .n88v2)
     #expect(req.clock8MHz == true)
+    #expect(req.monitorType == .khz15)
+    #expect(req.memoryWaitDip == true)
   }
 
   @Test("オプションはファイル名の後にも書ける")
@@ -215,6 +233,8 @@ struct LaunchRequestTests {
     #expect(req.system == nil)
     #expect(req.clock8MHz == nil)
     #expect(req.bootStrap == nil)
+    #expect(req.monitorType == nil)
+    #expect(req.memoryWaitDip == nil)
   }
 
   @Test("引数なしはディスク無し + 全オプション nil")
