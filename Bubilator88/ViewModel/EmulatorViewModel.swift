@@ -439,8 +439,10 @@ final class EmulatorViewModel {
   var tapeFormat: CassetteDeck.Format?
   var tapeProgress: Double = 0
 
-  /// True when a tape image is mounted.
-  var isTapeMounted: Bool { tapeSourceURL != nil }
+  /// True when a tape image is mounted. Unlike disks, the tape bytes live
+  /// entirely inside the save state, so mount truth is the engine's own
+  /// `isLoaded` — not whether a source URL happens to be known.
+  var isTapeMounted: Bool { machine.cassette.isLoaded }
 
   /// Menu-friendly label: "name : NN%" when mounted, otherwise "Empty".
   var tapeDisplayLabel: String {
@@ -1282,6 +1284,12 @@ final class EmulatorViewModel {
     var drive1ImageIndex: Int?
     var drive0ArchiveEntry: String?
     var drive1ArchiveEntry: String?
+    /// Cassette metadata (nil fields when no tape was mounted). The tape
+    /// bytes themselves round-trip via the CMT section in the state file
+    /// proper; these are only for restoring the UI's mount display.
+    var tapeName: String?
+    var tapeSourceURL: String?
+    var tapeFormatT88: Bool?
   }
 
   /// Sidecar paths, read-only: saves stopped writing these once `AMTA` / `THMB`
@@ -1371,7 +1379,10 @@ final class EmulatorViewModel {
         drive0ImageIndex: self.drive0Info?.currentImageIndex,
         drive1ImageIndex: self.drive1Info?.currentImageIndex,
         drive0ArchiveEntry: self.drive0Info?.archiveEntryName,
-        drive1ArchiveEntry: self.drive1Info?.archiveEntryName
+        drive1ArchiveEntry: self.drive1Info?.archiveEntryName,
+        tapeName: machine.cassette.isLoaded ? self.tapeName : nil,
+        tapeSourceURL: machine.cassette.isLoaded ? self.tapeSourceURL?.absoluteString : nil,
+        tapeFormatT88: machine.cassette.isLoaded ? (self.tapeFormat == .t88) : nil
       )
       let metaJSON = try? JSONEncoder().encode(meta)
       // Thumbnail and app metadata go inside the .b88s so the file stands on
@@ -1471,6 +1482,19 @@ final class EmulatorViewModel {
     drive1Info = reconstructDiskInfo(drive: 1, meta: meta)
     drive0WriteProtected = machine.isWriteProtected(drive: 0)
     drive1WriteProtected = machine.isWriteProtected(drive: 1)
+    // Cassette bytes round-trip inside the state file itself; only the UI's
+    // mount display needs restoring here, driven off the engine's own
+    // isLoaded rather than the (possibly absent/stale) saved meta.
+    if machine.cassette.isLoaded {
+      tapeName = meta?.tapeName ?? "Tape"
+      tapeSourceURL = meta?.tapeSourceURL.flatMap { URL(string: $0) }
+      tapeFormat = (meta?.tapeFormatT88 ?? false) ? .t88 : .cmt
+    } else {
+      tapeName = "Empty"
+      tapeSourceURL = nil
+      tapeFormat = nil
+    }
+    tapeProgress = machine.cassette.progress
     activeClock8MHz = machine.clock8MHz
     renderScreen()
     clearRewindBuffer()
