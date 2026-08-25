@@ -640,7 +640,12 @@ final class EmulatorViewModel {
   let emuQueue = DispatchQueue(label: "com.bubio.bubilator88.emu", qos: .userInteractive)
 
   /// The emulation thread. Created in `init`, started by `start()`.
-  @ObservationIgnored private(set) var emulationLoop: EmulationLoop!
+  ///
+  /// `nonisolated(unsafe)`: set once during initialization and never
+  /// reassigned after, so cross-actor reads (from `runEmulationStep` on the
+  /// emulation thread) are safe. `EmulationLoop` itself is `@unchecked
+  /// Sendable` and synchronizes its own state internally.
+  @ObservationIgnored nonisolated(unsafe) private(set) var emulationLoop: EmulationLoop!
 
   /// Completed frames handed to the Metal view. See `FramePublisher`.
   @ObservationIgnored let framePublisher =
