@@ -9,38 +9,116 @@ import Foundation
 final class Settings {
   static let shared = Settings()
 
+  /// Every UserDefaults key this class owns, in one place.
+  ///
+  /// Both the `didSet` writers and the loader in `init` go through these, so a
+  /// key exists as a literal exactly once. Renaming a member is safe; changing
+  /// its string value silently discards the user's existing setting.
+  enum Keys {
+    // CPU / DIP switches
+    static let clock8MHz                 = "clock8MHz"
+    static let dipSw1                    = "dipSw1"
+    static let dipSw2Base                = "dipSw2Base"
+    static let monitorType               = "monitorType"
+    static let memoryWaitDip             = "memoryWaitDip"
+    static let extramCards               = "extramCards"
+
+    // Audio
+    static let volume                    = "volume"
+    static let pseudoStereo              = "pseudoStereo"
+    static let cdMix                     = "cdMix"
+    static let audioBufferMs             = "audioBufferMs"
+    // The only member whose key differs from its property name: the setting was
+    // renamed but the key was deliberately left alone, since changing it would
+    // discard the choice of every user who already had it set.
+    static let immersiveAudio            = "spatialAudio"
+    static let immersivePositions        = "immersivePositions"
+    static let fddSound                  = "fddSound"
+    static let fddSoundDeviceUID         = "fddSoundDeviceUID"
+    static let fddSoundVolumeLevel       = "fddSoundVolumeLevel"
+
+    // UI
+    static let showDebugMenu             = "showDebugMenu"
+    static let resetAnimationEnabled     = "resetAnimationEnabled"
+    static let showTapeInStatusBar       = "showTapeInStatusBar"
+
+    // Video
+    static let videoFilter               = "videoFilter"
+    static let scanlineEnabled           = "scanlineEnabled"
+    static let windowScale               = "windowScale"
+    static let fullscreenIntegerScaling  = "fullscreenIntegerScaling"
+
+    // Screenshot
+    static let screenshotFormat          = "screenshotFormat"
+    static let screenshotAutoSave        = "screenshotAutoSave"
+    static let screenshotDirectory       = "screenshotDirectory"
+
+    // Audio / video / script recording
+    static let recordingFormat           = "recordingFormat"
+    static let recordingSeparation       = "recordingSeparation"
+    static let recordingAutoSave         = "recordingAutoSave"
+    static let recordingDirectory        = "recordingDirectory"
+    static let videoRecordingFormat      = "videoRecordingFormat"
+    static let videoRecordingAutoSave    = "videoRecordingAutoSave"
+    static let videoRecordingDirectory   = "videoRecordingDirectory"
+    static let scriptRecordingAutoSave   = "scriptRecordingAutoSave"
+    static let scriptRecordingDirectory  = "scriptRecordingDirectory"
+
+    // Game controller / mouse
+    static let gameControllerEnabled     = "gameControllerEnabled"
+    static let controllerHapticEnabled   = "controllerHapticEnabled"
+    static let controllerMappings        = "controllerMappings"
+    static let mouseEnabled              = "mouseEnabled"
+    static let mouseJoyMode              = "mouseJoyMode"
+    static let mouseSensitivity          = "mouseSensitivity"
+
+    // Keyboard
+    static let arrowKeysAsNumpad         = "arrowKeysAsNumpad"
+    static let numberRowAsNumpad         = "numberRowAsNumpad"
+    static let wasdAsNumpad              = "wasdAsNumpad"
+    static let specialKeyMapping         = "specialKeyMapping"
+    static let keyboardLayout            = "keyboardLayout"
+
+    // Translation
+    static let translationTargetLanguage = "translationTargetLanguage"
+
+    // Recent files
+    static let recentDiskFiles           = "recentDiskFiles"
+    static let recentTapeFiles           = "recentTapeFiles"
+  }
+
   /// CPU clock mode (true = 8 MHz, false = 4 MHz).
   var clock8MHz: Bool = false {
-    didSet { UserDefaults.standard.set(clock8MHz, forKey: "clock8MHz") }
+    didSet { UserDefaults.standard.set(clock8MHz, forKey: Keys.clock8MHz) }
   }
 
   /// Master volume level (0.0–1.0).
   var volume: Float = 0.5 {
-    didSet { UserDefaults.standard.set(volume, forKey: "volume") }
+    didSet { UserDefaults.standard.set(volume, forKey: Keys.volume) }
   }
 
   /// Pseudo-stereo: chorus effect on mono FM output for stereo widening.
   var pseudoStereo: Bool = false {
-    didSet { UserDefaults.standard.set(pseudoStereo, forKey: "pseudoStereo") }
+    didSet { UserDefaults.standard.set(pseudoStereo, forKey: Keys.pseudoStereo) }
   }
 
   /// CD mix: output low-pass + stereo reverb, fitted against a 1989 game-music
   /// CD. Taste rather than hardware accuracy, so it stays opt-in.
   var cdMix: Bool = false {
-    didSet { UserDefaults.standard.set(cdMix, forKey: "cdMix") }
+    didSet { UserDefaults.standard.set(cdMix, forKey: Keys.cdMix) }
   }
 
   // MARK: - DIP Switches
 
   /// DIP switch 1 (port 0x30 read). Applied on reset.
   var dipSw1: UInt8 = 0xC3 {
-    didSet { UserDefaults.standard.set(Int(dipSw1), forKey: "dipSw1") }
+    didSet { UserDefaults.standard.set(Int(dipSw1), forKey: Keys.dipSw1) }
   }
 
   /// DIP switch 2 base value (port 0x31 read, excluding bit 3 which is dynamic).
   /// Applied on reset.
   var dipSw2Base: UInt8 = 0x71 {
-    didSet { UserDefaults.standard.set(Int(dipSw2Base), forKey: "dipSw2Base") }
+    didSet { UserDefaults.standard.set(Int(dipSw2Base), forKey: Keys.dipSw2Base) }
   }
 
   /// Attached monitor — DIP SW1 bit 8 ("CRT モード") on real hardware.
@@ -55,7 +133,7 @@ final class Settings {
   /// the emulator already reported to software before 1.5.0, so no title sees
   /// its SHG answer change.
   var monitorType: MonitorType = .khz24 {
-    didSet { UserDefaults.standard.set(monitorType.rawValue, forKey: "monitorType") }
+    didSet { UserDefaults.standard.set(monitorType.rawValue, forKey: Keys.monitorType) }
   }
 
   /// Memory wait DIP (DIP SW1 bit 6). ON adds one wait state to main memory,
@@ -66,63 +144,63 @@ final class Settings {
   /// back at all. Off by default, matching BubiC's `DIPSWITCH_DEFAULT`.
   /// Applied on reset.
   var memoryWaitDip: Bool = false {
-    didSet { UserDefaults.standard.set(memoryWaitDip, forKey: "memoryWaitDip") }
+    didSet { UserDefaults.standard.set(memoryWaitDip, forKey: Keys.memoryWaitDip) }
   }
 
   /// Extended RAM card count. Applied on reset (disk reload).
   /// 0 = none, 1 = 128KB, 8 = 1MB. Encoding follows QUASI88 `use_extram`.
   var extramCards: Int = 1 {
-    didSet { UserDefaults.standard.set(extramCards, forKey: "extramCards") }
+    didSet { UserDefaults.standard.set(extramCards, forKey: Keys.extramCards) }
   }
 
   // MARK: - UI
 
   /// Show the DEBUG menu in the menu bar.
   var showDebugMenu: Bool = false {
-    didSet { UserDefaults.standard.set(showDebugMenu, forKey: "showDebugMenu") }
+    didSet { UserDefaults.standard.set(showDebugMenu, forKey: Keys.showDebugMenu) }
   }
 
   /// Play a Thanos-style dissolve animation when the user resets the machine.
   var resetAnimationEnabled: Bool = true {
-    didSet { UserDefaults.standard.set(resetAnimationEnabled, forKey: "resetAnimationEnabled") }
+    didSet { UserDefaults.standard.set(resetAnimationEnabled, forKey: Keys.resetAnimationEnabled) }
   }
 
   // MARK: - Video Filter
 
   /// Video filter mode (raw value of VideoFilter enum).
   var videoFilter: String = "None" {
-    didSet { UserDefaults.standard.set(videoFilter, forKey: "videoFilter") }
+    didSet { UserDefaults.standard.set(videoFilter, forKey: Keys.videoFilter) }
   }
 
   /// Scanline overlay enabled (only effective with None/Linear/Bicubic filters).
   var scanlineEnabled: Bool = false {
-    didSet { UserDefaults.standard.set(scanlineEnabled, forKey: "scanlineEnabled") }
+    didSet { UserDefaults.standard.set(scanlineEnabled, forKey: Keys.scanlineEnabled) }
   }
 
   /// Window scale factor (1, 2, or 4).
   var windowScale: Int = 1 {
-    didSet { UserDefaults.standard.set(windowScale, forKey: "windowScale") }
+    didSet { UserDefaults.standard.set(windowScale, forKey: Keys.windowScale) }
   }
 
   /// Fullscreen scaling mode: true = integer scaling (pixel-perfect), false = fit to screen.
   var fullscreenIntegerScaling: Bool = false {
-    didSet { UserDefaults.standard.set(fullscreenIntegerScaling, forKey: "fullscreenIntegerScaling") }
+    didSet { UserDefaults.standard.set(fullscreenIntegerScaling, forKey: Keys.fullscreenIntegerScaling) }
   }
 
   /// Show cassette tape icon in the status bar.
   var showTapeInStatusBar: Bool = false {
-    didSet { UserDefaults.standard.set(showTapeInStatusBar, forKey: "showTapeInStatusBar") }
+    didSet { UserDefaults.standard.set(showTapeInStatusBar, forKey: Keys.showTapeInStatusBar) }
   }
 
   /// Screenshot image format.
   var screenshotFormat: String = "png" {
-    didSet { UserDefaults.standard.set(screenshotFormat, forKey: "screenshotFormat") }
+    didSet { UserDefaults.standard.set(screenshotFormat, forKey: Keys.screenshotFormat) }
   }
 
   /// Auto-save screenshots to a preset directory instead of showing
   /// NSSavePanel every time. Default is true (auto-save to ~/Pictures).
   var screenshotAutoSave: Bool = true {
-    didSet { UserDefaults.standard.set(screenshotAutoSave, forKey: "screenshotAutoSave") }
+    didSet { UserDefaults.standard.set(screenshotAutoSave, forKey: Keys.screenshotAutoSave) }
   }
 
   /// The `Ask save location every time` toggle for screenshots: the inverse of
@@ -137,9 +215,9 @@ final class Settings {
   var screenshotDirectory: String? = nil {
     didSet {
       if let dir = screenshotDirectory {
-        UserDefaults.standard.set(dir, forKey: "screenshotDirectory")
+        UserDefaults.standard.set(dir, forKey: Keys.screenshotDirectory)
       } else {
-        UserDefaults.standard.removeObject(forKey: "screenshotDirectory")
+        UserDefaults.standard.removeObject(forKey: Keys.screenshotDirectory)
       }
     }
   }
@@ -148,20 +226,20 @@ final class Settings {
 
   /// Audio recording format: "wav" (default), "alac", or "aac".
   var recordingFormat: String = "wav" {
-    didSet { UserDefaults.standard.set(recordingFormat, forKey: "recordingFormat") }
+    didSet { UserDefaults.standard.set(recordingFormat, forKey: Keys.recordingFormat) }
   }
 
   /// Audio recording channel mode: "separated" (8ch FM/SSG/ADPCM/Rhythm) or
   /// "stereo" (standard 2ch mix). AAC is always written as stereo regardless
   /// of this setting because AAC cannot encode 8-channel discrete layout.
   var recordingSeparation: String = "separated" {
-    didSet { UserDefaults.standard.set(recordingSeparation, forKey: "recordingSeparation") }
+    didSet { UserDefaults.standard.set(recordingSeparation, forKey: Keys.recordingSeparation) }
   }
 
   /// Auto-save recordings to a preset directory instead of showing
   /// NSSavePanel every time. Default is true (auto-save to ~/Music).
   var recordingAutoSave: Bool = true {
-    didSet { UserDefaults.standard.set(recordingAutoSave, forKey: "recordingAutoSave") }
+    didSet { UserDefaults.standard.set(recordingAutoSave, forKey: Keys.recordingAutoSave) }
   }
 
   /// The `Ask save location every time` toggle for audio recordings: the inverse of
@@ -176,9 +254,9 @@ final class Settings {
   var recordingDirectory: String? = nil {
     didSet {
       if let dir = recordingDirectory {
-        UserDefaults.standard.set(dir, forKey: "recordingDirectory")
+        UserDefaults.standard.set(dir, forKey: Keys.recordingDirectory)
       } else {
-        UserDefaults.standard.removeObject(forKey: "recordingDirectory")
+        UserDefaults.standard.removeObject(forKey: Keys.recordingDirectory)
       }
     }
   }
@@ -187,13 +265,13 @@ final class Settings {
 
   /// Video recording format: "proRes4444" (default).
   var videoRecordingFormat: String = "proRes4444" {
-    didSet { UserDefaults.standard.set(videoRecordingFormat, forKey: "videoRecordingFormat") }
+    didSet { UserDefaults.standard.set(videoRecordingFormat, forKey: Keys.videoRecordingFormat) }
   }
 
   /// Auto-save video recordings to a preset directory instead of showing
   /// NSOpenPanel every time. Default is true (auto-save to ~/Movies).
   var videoRecordingAutoSave: Bool = true {
-    didSet { UserDefaults.standard.set(videoRecordingAutoSave, forKey: "videoRecordingAutoSave") }
+    didSet { UserDefaults.standard.set(videoRecordingAutoSave, forKey: Keys.videoRecordingAutoSave) }
   }
 
   /// The `Ask save location every time` toggle for video recordings: the inverse of
@@ -208,9 +286,9 @@ final class Settings {
   var videoRecordingDirectory: String? = nil {
     didSet {
       if let dir = videoRecordingDirectory {
-        UserDefaults.standard.set(dir, forKey: "videoRecordingDirectory")
+        UserDefaults.standard.set(dir, forKey: Keys.videoRecordingDirectory)
       } else {
-        UserDefaults.standard.removeObject(forKey: "videoRecordingDirectory")
+        UserDefaults.standard.removeObject(forKey: Keys.videoRecordingDirectory)
       }
     }
   }
@@ -218,7 +296,7 @@ final class Settings {
   /// Auto-save recorded operation scripts (.b88script) to a preset directory
   /// instead of showing NSSavePanel every time. Default true (~/Documents).
   var scriptRecordingAutoSave: Bool = true {
-    didSet { UserDefaults.standard.set(scriptRecordingAutoSave, forKey: "scriptRecordingAutoSave") }
+    didSet { UserDefaults.standard.set(scriptRecordingAutoSave, forKey: Keys.scriptRecordingAutoSave) }
   }
 
   /// The `Ask save location every time` toggle for recorded scripts: the inverse of
@@ -233,9 +311,9 @@ final class Settings {
   var scriptRecordingDirectory: String? = nil {
     didSet {
       if let dir = scriptRecordingDirectory {
-        UserDefaults.standard.set(dir, forKey: "scriptRecordingDirectory")
+        UserDefaults.standard.set(dir, forKey: Keys.scriptRecordingDirectory)
       } else {
-        UserDefaults.standard.removeObject(forKey: "scriptRecordingDirectory")
+        UserDefaults.standard.removeObject(forKey: Keys.scriptRecordingDirectory)
       }
     }
   }
@@ -244,57 +322,57 @@ final class Settings {
 
   /// Audio ring buffer size in milliseconds (20–500).
   var audioBufferMs: Int = 100 {
-    didSet { UserDefaults.standard.set(audioBufferMs, forKey: "audioBufferMs") }
+    didSet { UserDefaults.standard.set(audioBufferMs, forKey: Keys.audioBufferMs) }
   }
 
   /// Immersive audio: place YM2608 channels in 3D space (requires compatible headphones).
   var immersiveAudio: Bool = false {
-    didSet { UserDefaults.standard.set(immersiveAudio, forKey: "spatialAudio") }
+    didSet { UserDefaults.standard.set(immersiveAudio, forKey: Keys.immersiveAudio) }
   }
 
   /// Immersive audio channel positions (x = L/R spread, z = front/back depth).
   var immersivePositions: ImmersiveAudioPositions = .defaults {
     didSet {
       if let data = try? JSONEncoder().encode(immersivePositions) {
-        UserDefaults.standard.set(data, forKey: "immersivePositions")
+        UserDefaults.standard.set(data, forKey: Keys.immersivePositions)
       }
     }
   }
 
   /// FDD access sound (synthesized seek/read sounds).
   var fddSound: Bool = true {
-    didSet { UserDefaults.standard.set(fddSound, forKey: "fddSound") }
+    didSet { UserDefaults.standard.set(fddSound, forKey: Keys.fddSound) }
   }
 
   /// Output device UID for the FDD access sound. An empty string means the
   /// system default.
   var fddSoundDeviceUID: String = "" {
-    didSet { UserDefaults.standard.set(fddSoundDeviceUID, forKey: "fddSoundDeviceUID") }
+    didSet { UserDefaults.standard.set(fddSoundDeviceUID, forKey: Keys.fddSoundDeviceUID) }
   }
 
   /// Volume level for the FDD access sound: 0=low (30%), 1=medium (60%),
   /// 2=high (100%). Defaults to high.
   var fddSoundVolumeLevel: Int = 2 {
-    didSet { UserDefaults.standard.set(fddSoundVolumeLevel, forKey: "fddSoundVolumeLevel") }
+    didSet { UserDefaults.standard.set(fddSoundVolumeLevel, forKey: Keys.fddSoundVolumeLevel) }
   }
 
   // MARK: - Game Controller
 
   /// Enable game controller input.
   var gameControllerEnabled: Bool = true {
-    didSet { UserDefaults.standard.set(gameControllerEnabled, forKey: "gameControllerEnabled") }
+    didSet { UserDefaults.standard.set(gameControllerEnabled, forKey: Keys.gameControllerEnabled) }
   }
 
   /// Enable haptic feedback on game controller during disk access.
   var controllerHapticEnabled: Bool = true {
-    didSet { UserDefaults.standard.set(controllerHapticEnabled, forKey: "controllerHapticEnabled") }
+    didSet { UserDefaults.standard.set(controllerHapticEnabled, forKey: Keys.controllerHapticEnabled) }
   }
 
   /// Per-controller-type button mappings (keyed by productCategory).
   var controllerMappings: [String: ControllerButtonMapping] = [:] {
     didSet {
       if let data = try? JSONEncoder().encode(controllerMappings) {
-        UserDefaults.standard.set(data, forKey: "controllerMappings")
+        UserDefaults.standard.set(data, forKey: Keys.controllerMappings)
       }
     }
   }
@@ -305,36 +383,36 @@ final class Settings {
   /// locked) while the window is key, and relative motion / left+right buttons
   /// are fed to the emulator via the OPN I/O ports.
   var mouseEnabled: Bool = false {
-    didSet { UserDefaults.standard.set(mouseEnabled, forKey: "mouseEnabled") }
+    didSet { UserDefaults.standard.set(mouseEnabled, forKey: Keys.mouseEnabled) }
   }
 
   /// Mouse read mode. false = bus mouse (PC-8872, strobed 4-phase nibble),
   /// true = joystick mode (mouse drives an Atari-spec joystick on the OPN
   /// port, for games like あーくしゅ that read the port as a joystick).
   var mouseJoyMode: Bool = false {
-    didSet { UserDefaults.standard.set(mouseJoyMode, forKey: "mouseJoyMode") }
+    didSet { UserDefaults.standard.set(mouseJoyMode, forKey: Keys.mouseJoyMode) }
   }
 
   /// Mouse movement sensitivity multiplier (0.5x – 3.0x).
   var mouseSensitivity: Float = 0.5 {
-    didSet { UserDefaults.standard.set(mouseSensitivity, forKey: "mouseSensitivity") }
+    didSet { UserDefaults.standard.set(mouseSensitivity, forKey: Keys.mouseSensitivity) }
   }
 
   // MARK: - Keyboard
 
   /// Map arrow keys to numpad (↑→8, ↓→2, ←→4, →→6).
   var arrowKeysAsNumpad: Bool = false {
-    didSet { UserDefaults.standard.set(arrowKeysAsNumpad, forKey: "arrowKeysAsNumpad") }
+    didSet { UserDefaults.standard.set(arrowKeysAsNumpad, forKey: Keys.arrowKeysAsNumpad) }
   }
 
   /// Map number row keys (1-0) to numpad (kp1-kp0).
   var numberRowAsNumpad: Bool = false {
-    didSet { UserDefaults.standard.set(numberRowAsNumpad, forKey: "numberRowAsNumpad") }
+    didSet { UserDefaults.standard.set(numberRowAsNumpad, forKey: Keys.numberRowAsNumpad) }
   }
 
   /// Map WASD keys to numpad (W→8, A→4, S→2, D→6).
   var wasdAsNumpad: Bool = false {
-    didSet { UserDefaults.standard.set(wasdAsNumpad, forKey: "wasdAsNumpad") }
+    didSet { UserDefaults.standard.set(wasdAsNumpad, forKey: Keys.wasdAsNumpad) }
   }
 
   /// Custom key assignments for PC-8801 special keys (STOP, COPY, etc.).
@@ -342,7 +420,7 @@ final class Settings {
   var specialKeyMapping: [String: Int] = [:] {
     didSet {
       if let data = try? JSONEncoder().encode(specialKeyMapping) {
-        UserDefaults.standard.set(data, forKey: "specialKeyMapping")
+        UserDefaults.standard.set(data, forKey: Keys.specialKeyMapping)
       }
     }
   }
@@ -351,12 +429,12 @@ final class Settings {
 
   /// Target language for translation (maximal BCP 47 identifier, e.g. "en-Latn-US").
   var translationTargetLanguage: String = "en-Latn-US" {
-    didSet { UserDefaults.standard.set(translationTargetLanguage, forKey: "translationTargetLanguage") }
+    didSet { UserDefaults.standard.set(translationTargetLanguage, forKey: Keys.translationTargetLanguage) }
   }
 
   /// Keyboard layout detection mode.
   var keyboardLayout: KeyboardLayout = .auto {
-    didSet { UserDefaults.standard.set(keyboardLayout.rawValue, forKey: "keyboardLayout") }
+    didSet { UserDefaults.standard.set(keyboardLayout.rawValue, forKey: Keys.keyboardLayout) }
   }
 
   /// Recently used disk files (max 10, newest first).
@@ -414,17 +492,17 @@ final class Settings {
 
   private func persistRecentFiles() {
     if let data = try? JSONEncoder().encode(recentDiskFiles) {
-      UserDefaults.standard.set(data, forKey: "recentDiskFiles")
+      UserDefaults.standard.set(data, forKey: Keys.recentDiskFiles)
     }
   }
 
   private func loadRecentFiles() {
-    if let data = UserDefaults.standard.data(forKey: "recentDiskFiles"),
+    if let data = UserDefaults.standard.data(forKey: Keys.recentDiskFiles),
        let entries = try? JSONDecoder().decode([RecentDiskEntry].self, from: data) {
       recentDiskFiles = entries
       rebuildRecentPaths()
     }
-    if let data = UserDefaults.standard.data(forKey: "recentTapeFiles"),
+    if let data = UserDefaults.standard.data(forKey: Keys.recentTapeFiles),
        let entries = try? JSONDecoder().decode([RecentDiskEntry].self, from: data) {
       recentTapeFiles = entries
       recentTapePaths = Set(entries.map(\.filePath))
@@ -451,7 +529,7 @@ final class Settings {
     }
     recentTapePaths = Set(recentTapeFiles.map(\.filePath))
     if let data = try? JSONEncoder().encode(recentTapeFiles) {
-      UserDefaults.standard.set(data, forKey: "recentTapeFiles")
+      UserDefaults.standard.set(data, forKey: Keys.recentTapeFiles)
     }
   }
 
@@ -459,14 +537,14 @@ final class Settings {
     recentTapeFiles.removeAll { $0.filePath == entry.filePath }
     recentTapePaths = Set(recentTapeFiles.map(\.filePath))
     if let data = try? JSONEncoder().encode(recentTapeFiles) {
-      UserDefaults.standard.set(data, forKey: "recentTapeFiles")
+      UserDefaults.standard.set(data, forKey: Keys.recentTapeFiles)
     }
   }
 
   func clearRecentTapeFiles() {
     recentTapeFiles = []
     recentTapePaths = []
-    UserDefaults.standard.removeObject(forKey: "recentTapeFiles")
+    UserDefaults.standard.removeObject(forKey: Keys.recentTapeFiles)
   }
 
   /// Abbreviate home directory in path display.
@@ -479,144 +557,144 @@ final class Settings {
   }
 
   private init() {
-    if let v = UserDefaults.standard.object(forKey: "clock8MHz") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.clock8MHz) as? Bool {
       clock8MHz = v
     }
-    if let v = UserDefaults.standard.object(forKey: "volume") {
+    if let v = UserDefaults.standard.object(forKey: Keys.volume) {
       volume = min(1.0, max(0.0, (v as? NSNumber)?.floatValue ?? 0.5))
     }
-    if let v = UserDefaults.standard.object(forKey: "pseudoStereo") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.pseudoStereo) as? Bool {
       pseudoStereo = v
     }
-    if let v = UserDefaults.standard.object(forKey: "dipSw1") as? Int {
+    if let v = UserDefaults.standard.object(forKey: Keys.dipSw1) as? Int {
       dipSw1 = UInt8(v & 0xFF)
     }
-    if let v = UserDefaults.standard.object(forKey: "dipSw2Base") as? Int {
+    if let v = UserDefaults.standard.object(forKey: Keys.dipSw2Base) as? Int {
       dipSw2Base = UInt8(v & 0xFF)
     }
-    if let v = UserDefaults.standard.object(forKey: "monitorType") as? Int,
+    if let v = UserDefaults.standard.object(forKey: Keys.monitorType) as? Int,
        let m = MonitorType(rawValue: v) {
       monitorType = m
     }
-    if let v = UserDefaults.standard.object(forKey: "memoryWaitDip") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.memoryWaitDip) as? Bool {
       memoryWaitDip = v
     }
-    if let v = UserDefaults.standard.object(forKey: "extramCards") as? Int,
+    if let v = UserDefaults.standard.object(forKey: Keys.extramCards) as? Int,
        [0, 1, 8].contains(v) {
       extramCards = v
     }
-    if let v = UserDefaults.standard.object(forKey: "showDebugMenu") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.showDebugMenu) as? Bool {
       showDebugMenu = v
     }
-    if let v = UserDefaults.standard.object(forKey: "resetAnimationEnabled") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.resetAnimationEnabled) as? Bool {
       resetAnimationEnabled = v
     }
-    if let v = UserDefaults.standard.object(forKey: "audioBufferMs") as? Int {
+    if let v = UserDefaults.standard.object(forKey: Keys.audioBufferMs) as? Int {
       audioBufferMs = max(20, min(500, v))
     }
-    if let v = UserDefaults.standard.object(forKey: "spatialAudio") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.immersiveAudio) as? Bool {
       immersiveAudio = v
     }
-    if let v = UserDefaults.standard.object(forKey: "cdMix") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.cdMix) as? Bool {
       cdMix = v
     }
-    if let v = UserDefaults.standard.object(forKey: "fddSound") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.fddSound) as? Bool {
       fddSound = v
     }
-    if let v = UserDefaults.standard.string(forKey: "fddSoundDeviceUID") {
+    if let v = UserDefaults.standard.string(forKey: Keys.fddSoundDeviceUID) {
       fddSoundDeviceUID = v
     }
-    if let v = UserDefaults.standard.object(forKey: "fddSoundVolumeLevel") as? Int {
+    if let v = UserDefaults.standard.object(forKey: Keys.fddSoundVolumeLevel) as? Int {
       fddSoundVolumeLevel = v
     }
-    if let data = UserDefaults.standard.data(forKey: "immersivePositions"),
+    if let data = UserDefaults.standard.data(forKey: Keys.immersivePositions),
        let pos = try? JSONDecoder().decode(ImmersiveAudioPositions.self, from: data) {
       immersivePositions = pos
     }
-    if let v = UserDefaults.standard.object(forKey: "gameControllerEnabled") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.gameControllerEnabled) as? Bool {
       gameControllerEnabled = v
     }
-    if let v = UserDefaults.standard.object(forKey: "controllerHapticEnabled") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.controllerHapticEnabled) as? Bool {
       controllerHapticEnabled = v
     }
-    if let data = UserDefaults.standard.data(forKey: "controllerMappings"),
+    if let data = UserDefaults.standard.data(forKey: Keys.controllerMappings),
        let m = try? JSONDecoder().decode([String: ControllerButtonMapping].self, from: data) {
       controllerMappings = m
     }
-    if let v = UserDefaults.standard.object(forKey: "mouseEnabled") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.mouseEnabled) as? Bool {
       mouseEnabled = v
     }
-    if let v = UserDefaults.standard.object(forKey: "mouseJoyMode") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.mouseJoyMode) as? Bool {
       mouseJoyMode = v
     }
-    if let v = UserDefaults.standard.object(forKey: "mouseSensitivity") {
+    if let v = UserDefaults.standard.object(forKey: Keys.mouseSensitivity) {
       mouseSensitivity = (v as? NSNumber)?.floatValue ?? 0.5
     }
-    if let v = UserDefaults.standard.object(forKey: "arrowKeysAsNumpad") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.arrowKeysAsNumpad) as? Bool {
       arrowKeysAsNumpad = v
     }
-    if let v = UserDefaults.standard.object(forKey: "numberRowAsNumpad") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.numberRowAsNumpad) as? Bool {
       numberRowAsNumpad = v
     }
-    if let v = UserDefaults.standard.object(forKey: "wasdAsNumpad") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.wasdAsNumpad) as? Bool {
       wasdAsNumpad = v
     }
-    if let data = UserDefaults.standard.data(forKey: "specialKeyMapping"),
+    if let data = UserDefaults.standard.data(forKey: Keys.specialKeyMapping),
        let m = try? JSONDecoder().decode([String: Int].self, from: data) {
       specialKeyMapping = m
     }
-    if let v = UserDefaults.standard.string(forKey: "keyboardLayout"),
+    if let v = UserDefaults.standard.string(forKey: Keys.keyboardLayout),
        let layout = KeyboardLayout(rawValue: v) {
       keyboardLayout = layout
     }
-    if let v = UserDefaults.standard.object(forKey: "windowScale") as? Int, [1, 2, 4].contains(v) {
+    if let v = UserDefaults.standard.object(forKey: Keys.windowScale) as? Int, [1, 2, 4].contains(v) {
       windowScale = v
     }
-    if let v = UserDefaults.standard.string(forKey: "screenshotFormat"),
+    if let v = UserDefaults.standard.string(forKey: Keys.screenshotFormat),
        ["png", "jpeg", "heic"].contains(v) {
       screenshotFormat = v
     }
-    if let v = UserDefaults.standard.object(forKey: "screenshotAutoSave") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.screenshotAutoSave) as? Bool {
       screenshotAutoSave = v
     }
-    screenshotDirectory = UserDefaults.standard.string(forKey: "screenshotDirectory")
-    if let v = UserDefaults.standard.string(forKey: "recordingFormat"),
+    screenshotDirectory = UserDefaults.standard.string(forKey: Keys.screenshotDirectory)
+    if let v = UserDefaults.standard.string(forKey: Keys.recordingFormat),
        ["wav", "alac", "aac"].contains(v) {
       recordingFormat = v
     }
-    if let v = UserDefaults.standard.object(forKey: "recordingAutoSave") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.recordingAutoSave) as? Bool {
       recordingAutoSave = v
     }
-    if let v = UserDefaults.standard.string(forKey: "recordingSeparation"),
+    if let v = UserDefaults.standard.string(forKey: Keys.recordingSeparation),
        ["separated", "stereo"].contains(v) {
       recordingSeparation = v
     }
-    recordingDirectory = UserDefaults.standard.string(forKey: "recordingDirectory")
-    if let v = UserDefaults.standard.string(forKey: "videoRecordingFormat"),
+    recordingDirectory = UserDefaults.standard.string(forKey: Keys.recordingDirectory)
+    if let v = UserDefaults.standard.string(forKey: Keys.videoRecordingFormat),
        ["proRes4444", "h264Mp4"].contains(v) {
       videoRecordingFormat = v
     }
-    if let v = UserDefaults.standard.object(forKey: "videoRecordingAutoSave") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.videoRecordingAutoSave) as? Bool {
       videoRecordingAutoSave = v
     }
-    videoRecordingDirectory = UserDefaults.standard.string(forKey: "videoRecordingDirectory")
-    if let v = UserDefaults.standard.object(forKey: "scriptRecordingAutoSave") as? Bool {
+    videoRecordingDirectory = UserDefaults.standard.string(forKey: Keys.videoRecordingDirectory)
+    if let v = UserDefaults.standard.object(forKey: Keys.scriptRecordingAutoSave) as? Bool {
       scriptRecordingAutoSave = v
     }
-    scriptRecordingDirectory = UserDefaults.standard.string(forKey: "scriptRecordingDirectory")
-    if let v = UserDefaults.standard.object(forKey: "fullscreenIntegerScaling") as? Bool {
+    scriptRecordingDirectory = UserDefaults.standard.string(forKey: Keys.scriptRecordingDirectory)
+    if let v = UserDefaults.standard.object(forKey: Keys.fullscreenIntegerScaling) as? Bool {
       fullscreenIntegerScaling = v
     }
-    if let v = UserDefaults.standard.string(forKey: "videoFilter") {
+    if let v = UserDefaults.standard.string(forKey: Keys.videoFilter) {
       videoFilter = v
     }
-    if let v = UserDefaults.standard.object(forKey: "scanlineEnabled") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.scanlineEnabled) as? Bool {
       scanlineEnabled = v
     }
-    if let v = UserDefaults.standard.object(forKey: "showTapeInStatusBar") as? Bool {
+    if let v = UserDefaults.standard.object(forKey: Keys.showTapeInStatusBar) as? Bool {
       showTapeInStatusBar = v
     }
-    if let v = UserDefaults.standard.string(forKey: "translationTargetLanguage") {
+    if let v = UserDefaults.standard.string(forKey: Keys.translationTargetLanguage) {
       translationTargetLanguage = v
     }
     loadRecentFiles()
