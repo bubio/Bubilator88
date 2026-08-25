@@ -92,6 +92,12 @@ extension EmulatorViewModel {
     if let clock = req.clock8MHz {
       Settings.shared.clock8MHz = clock
     }
+    if let monitorType = req.monitorType {
+      Settings.shared.monitorType = monitorType
+    }
+    if let memoryWaitDip = req.memoryWaitDip {
+      Settings.shared.memoryWaitDip = memoryWaitDip
+    }
 
     for drive in 0..<LaunchRequest.driveCount {
       if let mount = resolved.first(where: { $0.drive == drive }) {
@@ -133,6 +139,10 @@ extension EmulatorViewModel {
     let forcedBootStrap = req.bootStrap
     emuQueue.sync {
       machine.bus.dipSw1 = sw1
+      // Set before the reset: the monitor decides the CRTC's reset geometry
+      // (same constraint as EmulatorViewModel.init()).
+      machine.monitorType = Settings.shared.monitorType
+      machine.memoryWaitDip = Settings.shared.memoryWaitDip
       machine.reset(preserveRAM: true)
       switch forcedBootStrap {
       case .rom:
