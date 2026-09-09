@@ -208,6 +208,10 @@ extension EmulatorViewModel {
     }
     clearRewindBuffer()
     releaseAllKeys()
+    // The restored state carries its own cassette contents, so the mount may
+    // have changed. Refresh under the queue rather than letting the UI read the
+    // deck, and rather than waiting on the 4Hz sampler.
+    isTapeMounted = emuQueue.sync { machine.cassette.isLoaded }
     if !isRunning { renderScreen() }
 
     let fmt = String(localized: "Rewound %.1fs", comment: "")

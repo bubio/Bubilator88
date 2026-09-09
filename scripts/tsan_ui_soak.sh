@@ -22,6 +22,17 @@ cd "$(dirname "$0")/.."
 LOG="${TMPDIR:-/tmp}/bubilator88-tsan-ui-soak-$(date +%Y%m%d_%H%M%S).log"
 EXPECTED_TESTS=9
 
+# A Bubilator88 that is already running makes XCUITest fail to activate the one
+# it launches, and every test then dies on the 60s foreground wait with
+# "Failed to activate application ... (current state: Running Background)" —
+# which looks nothing like its cause. Refuse instead of killing it: the running
+# copy may be someone's session with unsaved state.
+if pgrep -f "Bubilator88.app/Contents/MacOS/Bubilator88" > /dev/null; then
+  echo "Bubilator88 is already running. Quit it first — a running instance"
+  echo "blocks XCUITest from activating the app and every test will time out."
+  exit 2
+fi
+
 echo "Log: $LOG"
 echo "Building and running with Thread Sanitizer…"
 

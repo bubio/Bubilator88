@@ -40,6 +40,9 @@ extension EmulatorViewModel {
     tapeName = url.deletingPathExtension().lastPathComponent
     tapeSourceURL = url
     tapeFormat = format
+    // Set here rather than waiting for the 4Hz sampler, so the menus and the
+    // status bar update on the same run loop turn as the mount.
+    isTapeMounted = true
   }
 
   /// Mount a previously-remembered tape via its security-scoped bookmark.
@@ -72,5 +75,6 @@ extension EmulatorViewModel {
     tapeSourceURL = nil
     tapeFormat = nil
     tapeProgress = 0
+    isTapeMounted = false
   }
 }

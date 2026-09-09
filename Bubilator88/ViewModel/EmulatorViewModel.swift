@@ -442,7 +442,19 @@ final class EmulatorViewModel {
   /// True when a tape image is mounted. Unlike disks, the tape bytes live
   /// entirely inside the save state, so mount truth is the engine's own
   /// `isLoaded` — not whether a source URL happens to be known.
-  var isTapeMounted: Bool { machine.cassette.isLoaded }
+  ///
+  /// Mirrored here rather than read straight off `machine.cassette`, which is
+  /// what this used to do. SwiftUI evaluates `ContentView.statusBar` on the
+  /// main thread at moments of its own choosing, while `stepRewindBack()`
+  /// rewrites the deck's buffer from the emulation thread — Thread Sanitizer
+  /// caught exactly that pair during a ⌘Z hold. Core state reaches the UI by
+  /// being published to it (`RELEASE_1_5_0_PLAN.md` §3.3(e)), never by the UI
+  /// reaching into the core.
+  ///
+  /// Written at mount/eject/save-state load, and refreshed by the 4Hz sampler
+  /// in `runFrameForMetal` so that changes the engine makes on its own — a
+  /// rewind restoring a state with a different tape — still show up.
+  var isTapeMounted: Bool = false
 
   /// Menu-friendly label: "name : NN%" when mounted, otherwise "Empty".
   var tapeDisplayLabel: String {
@@ -1485,7 +1497,12 @@ final class EmulatorViewModel {
     // Cassette bytes round-trip inside the state file itself; only the UI's
     // mount display needs restoring here, driven off the engine's own
     // isLoaded rather than the (possibly absent/stale) saved meta.
-    if machine.cassette.isLoaded {
+    //
+    // Reading the deck is safe at this point specifically because the loop is
+    // stopped and joined around this call — it is not safe from the UI, which
+    // is why `isTapeMounted` is a mirrored property rather than a passthrough.
+    isTapeMounted = machine.cassette.isLoaded
+    if isTapeMounted {
       tapeName = meta?.tapeName ?? "Tape"
       tapeSourceURL = meta?.tapeSourceURL.flatMap { URL(string: $0) }
       tapeFormat = (meta?.tapeFormatT88 ?? false) ? .t88 : .cmt
