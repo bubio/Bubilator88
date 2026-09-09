@@ -1,0 +1,122 @@
+name: Host Thread Tests
+
+# 1.5.0 の 2 スレッド化 (docs/develop/RELEASE_1_5_0_PLAN.md §3) で導入した
+# ホスト側の並行性契約を Thread Sanitizer 下で検証する。
+#
+# regression_compare.py は起動後画面の pixel 比較なので、スレッド安全性は
+# 一切検出できない (同 §8.1)。このワークフローが唯一の自動的な網である。
+#
+# ただし §3.4 の TSan ソークを代替するものではない。ここで回るのは
+# EmulationLoop / FramePublisher を単体で叩くテストで、実 Machine も
+# EmulatorViewModel の emuQueue.sync 26 箇所も通らない。真部分集合。
+
+on:
+  pull_request:
+    paths:
+      - "Bubilator88/**"
+      - "Bubilator88Tests/**"
+      - "Packages/EmulatorCore/**"
+      - "Bubilator88.xcodeproj/**"
+      - ".github/workflows/host-thread-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "Bubilator88/**"
+      - "Bubilator88Tests/**"
+      - "Packages/EmulatorCore/**"
+      - "Bubilator88.xcodeproj/**"
+      - ".github/workflows/host-thread-tests.yml"
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  # TSan は既定では警告をログに出すだけでプロセスを落とさない。それだと
+  # レースがあってもテストが緑になるので、必ず abort させる。
+  TSAN_OPTIONS: "halt_on_error=1"
+
+jobs:
+  thread-sanitizer:
+    runs-on: macos-26
+    timeout-minutes: 40
+
+    steps:
+      # docs/develop は private submodule なので取得しない (既定で fetch されない)。
+      - uses: actions/checkout@v7
+
+      - name: Select latest Xcode 26
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH=/Applications/Xcode.app
+          fi
+          echo "Using: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          xcodebuild -version
+
+      - name: Install Metal Toolchain
+        # Xcode 26 は Metal コンパイラをオンデマンド配布しており、
+        # ランナーイメージには既定で入っていない。
+        run: sudo xcodebuild -downloadComponent MetalToolchain
+
+      # このステップの終了コードがレース検出の唯一のゲート。TSan がレースを
+      # 報告するとプロセスが abort し、xcodebuild は TEST FAILED (exit 65) を
+      # 返す。故意のレースで実測確認済み (2026-09-09)。
+      - name: Run host concurrency tests under Thread Sanitizer
+        run: |
+          set -o pipefail
+          # 1 ファイルに 2 スイートがあるので両方を明示する。片方だけ指定すると
+          # 残りが黙って実行されないまま TEST SUCCEEDED になる。
+          xcodebuild test \
+            -scheme Bubilator88 \
+            -destination 'platform=macOS' \
+            -enableThreadSanitizer YES \
+            -only-testing:Bubilator88Tests/EmulationLoopTests \
+            -only-testing:Bubilator88Tests/FramePublisherTests \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=YES \
+            2>&1 | tee tsan-test.log
+
+      - name: Assert the expected tests actually ran
+        # xcodebuild -only-testing は指定が外れても 0 件実行のまま
+        # TEST SUCCEEDED を返す。件数を数えないと空振りに気づけない。
+        run: |
+          EXPECTED=11
+          ACTUAL=$(grep -cE "^Test case '.*' passed" tsan-test.log | tr -d ' ')
+          echo "distinct pass lines: $ACTUAL (xcodebuild may repeat each case)"
+          UNIQUE=$(grep -oE "^Test case '[^']+'" tsan-test.log | sort -u | wc -l | tr -d ' ')
+          echo "unique test cases: $UNIQUE (expected $EXPECTED)"
+          if [ "$UNIQUE" -lt "$EXPECTED" ]; then
+            echo "::error::Only $UNIQUE of $EXPECTED test cases ran. A suite name probably drifted — see RELEASE_1_5_0_PLAN.md §8.1."
+            exit 1
+          fi
+
+      - name: Look for a sanitizer crash report
+        # 補助情報のみ。**このステップはゲートではない。**
+        #
+        # 実測 (2026-09-09): 故意にデータレースを仕込んだテストを流したところ、
+        # TSan は abort し xcodebuild は exit 65 / TEST FAILED を返したが、
+        # ログに "WARNING: ThreadSanitizer" は **1 件も現れなかった** (レポートは
+        # テストプロセスの stderr に出て、xcodebuild のログには入らない)。
+        # したがってレースを捕まえているのは上の test ステップの終了コードであり、
+        # ログ grep をゲートにすると素通りする。
+        if: failure()
+        run: |
+          echo "Test step failed. Checking for a sanitizer abort in the crash reports."
+          for f in ~/Library/Logs/DiagnosticReports/Bubilator88-*.ips; do
+            [ -e "$f" ] || continue
+            if grep -q "__tsan::ReportRace" "$f"; then
+              echo "::error::Thread Sanitizer aborted the process — a data race was reported."
+              echo "--- $f ---"
+              head -c 4000 "$f"
+            fi
+          done
+
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tsan-test-log
+          path: tsan-test.log
+          retention-days: 14
