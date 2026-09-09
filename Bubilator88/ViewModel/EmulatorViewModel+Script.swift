@@ -210,6 +210,12 @@ extension EmulatorViewModel {
   /// the status bar, `Settings` and the machine always agree whether the script
   /// used a `boot` line, raw `dipsw` values, or no header at all — in which case
   /// this is a no-op. Same preset/custom branch as `performLoad`.
+  ///
+  /// **Call only with the loop stopped.** The `machine.bus` reads below take no
+  /// `emuQueue` because the single call site is `playScript`, between its
+  /// `stop()` and its `start()`; a script's `boot` / `dipsw` step writes the
+  /// same fields from the emulation thread (`RELEASE_1_5_0_PLAN.md` §3.3(e),
+  /// §9.6).
   func adoptScriptSetup(_ steps: [ScriptStep]) {
     // Persist the clock/monitor/memwait only when the script stated them, so an
     // omitted header never rewrites the user's setting. The display always
@@ -311,8 +317,22 @@ extension EmulatorViewModel {
   /// unlike a manual mount — makes image selection unavailable from the Disk
   /// menu. Assembling the same information the manual path (`mountDiskImage`)
   /// produces keeps multi-image D88 selection working afterwards.
+  /// Two of the three call sites run with the emulation loop still going — the
+  /// status bar's stop button and DEBUG ▸ Stop Script Playback, both through
+  /// `cancelScriptPlayback()`, and the playback-finished hop in
+  /// `tickScriptPlayer` — so the machine's own drive state is sampled once
+  /// under `emuQueue` rather than read straight off `machine`:
+  /// `SubSystem.commitPendingMounts()` writes `drives[i]` from the emulation
+  /// thread at the top of every sub-CPU run, which is exactly the swap-delay
+  /// case noted below (`RELEASE_1_5_0_PLAN.md` §3.3(e), §9.6). Only ever
+  /// reached from main — `tickScriptPlayer` hops through
+  /// `DispatchQueue.main.async` first — so taking the queue cannot deadlock
+  /// against `runFrameForMetal`.
   func rebuildDriveInfoFromScript(player: ScriptPlayer) {
     let scriptDir = self.scriptDir
+    let machineDriveNames: [String?] = emuQueue.sync {
+      (0..<2).map { machine.subSystem.drives[$0]?.name }
+    }
     for drive in 0..<2 {
       // Prefer what the script mounted in this drive. During the swap delay of
       // a disk swap or select, machine.subSystem.drives[drive] is briefly nil,
@@ -324,11 +344,12 @@ extension EmulatorViewModel {
         continue
       }
       scriptMountSnapshot[drive] = nil
-      // Drives the script never touched follow the machine's actual state.
-      if machine.subSystem.drives[drive] != nil {
+      // Drives the script never touched follow the machine's actual state, as
+      // sampled above — one read, so the presence check and the name can no
+      // longer disagree across a commit.
+      if let name = machineDriveNames[drive] {
         // An existing disk, e.g. a manual mount: update the name only and keep
         // driveXInfo.
-        let name = machine.subSystem.drives[drive]?.name ?? "Empty"
         if drive == 0 { drive0Name = name } else { drive1Name = name }
       } else {
         applyDriveState(.empty, drive: drive)
