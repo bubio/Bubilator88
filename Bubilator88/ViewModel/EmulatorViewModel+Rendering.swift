@@ -494,7 +494,14 @@ extension EmulatorViewModel {
     }
     // Fallback: raw unfiltered 640×400 (Metal unavailable)
     var buffer = Array(repeating: UInt8(0), count: ScreenRenderer.bufferSize400)
-    renderCurrentFrame(into: &buffer, blinkCursor: false, debugTextLayerEnabled: debugTextLayerEnabled)
+    // Reached on the main thread from a menu command, so the render has to take
+    // `emuQueue` — it reads GVRAM and text VRAM while the emulation thread is
+    // writing them (`RELEASE_1_5_0_PLAN.md` §3.3(e), §9.6).
+    let debugTextLayer = debugTextLayerEnabled
+    emuQueue.sync {
+      renderCurrentFrame(into: &buffer, blinkCursor: false,
+                         debugTextLayerEnabled: debugTextLayer)
+    }
     return createCGImage(from: buffer).flatMap { Self.imageData(from: $0, format: format) }
   }
 
