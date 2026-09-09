@@ -353,11 +353,19 @@ final class EmulatorViewModel {
   }
 
   /// Pseudo-stereo chorus effect on mono FM — persisted via Settings.
+  ///
+  /// The flag lands on `emuQueue`, like the debug masks in `+Audio.swift`.
+  /// These setters run on the main thread from the settings window while the
+  /// sound core reads the same flags to generate samples
+  /// (`RELEASE_1_5_0_PLAN.md` §3.3(c), §9.6).
   var pseudoStereo: Bool {
     get { Settings.shared.pseudoStereo }
     set {
       Settings.shared.pseudoStereo = newValue
-      machine.sound.pseudoStereoEnabled = newValue && !immersiveAudio
+      let enabled = newValue && !immersiveAudio
+      emuQueue.async { [weak self] in
+        self?.machine.sound.pseudoStereoEnabled = enabled
+      }
     }
   }
 
@@ -366,7 +374,9 @@ final class EmulatorViewModel {
     get { Settings.shared.cdMix }
     set {
       Settings.shared.cdMix = newValue
-      machine.sound.cdMixEnabled = newValue
+      emuQueue.async { [weak self] in
+        self?.machine.sound.cdMixEnabled = newValue
+      }
     }
   }
 
@@ -375,11 +385,16 @@ final class EmulatorViewModel {
     get { Settings.shared.immersiveAudio }
     set {
       Settings.shared.immersiveAudio = newValue
-      // Disable pseudo-stereo *first*, then enable immersive — avoids a
-      // brief window where both flags are true and chorus-processed FM
-      // leaks into the spatial buffer.
-      machine.sound.pseudoStereoEnabled = pseudoStereo && !newValue
-      machine.sound.immersiveOutputEnabled = newValue
+      let chorus = pseudoStereo && !newValue
+      // Both writes go in one block, in this order: disabling pseudo-stereo
+      // *first* avoids a window where both flags are true and chorus-processed
+      // FM leaks into the spatial buffer. A serial queue keeps that ordering,
+      // which two separate hops would not guarantee.
+      emuQueue.async { [weak self] in
+        guard let self else { return }
+        machine.sound.pseudoStereoEnabled = chorus
+        machine.sound.immersiveOutputEnabled = newValue
+      }
       restartAudio()
     }
   }
@@ -593,8 +608,17 @@ final class EmulatorViewModel {
   }
 
   /// Force YM2203 (OPN) mode — programs see register 0xFF as 0x00
+  ///
+  /// Set from the debug menu on the main thread; goes through `emuQueue` for
+  /// the same reason the other sound flags do (§3.3(c), §9.6). This one was
+  /// named in the plan as taking no queue at all.
   var forceOPNMode: Bool = false {
-    didSet { machine.sound.forceOPNMode = forceOPNMode }
+    didSet {
+      let value = forceOPNMode
+      emuQueue.async { [weak self] in
+        self?.machine.sound.forceOPNMode = value
+      }
+    }
   }
 
   var rhythmEnabled: Bool = true {

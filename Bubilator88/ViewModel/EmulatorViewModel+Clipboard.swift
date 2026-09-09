@@ -4,8 +4,13 @@ import EmulatorCore
 extension EmulatorViewModel {
 
   /// Copy the current text screen as Unicode text to the general pasteboard.
+  ///
+  /// The read takes `emuQueue`: this runs on the main thread from a menu
+  /// command, while the emulation thread is writing text VRAM every frame.
+  /// One delayed frame at ⌘C is not worth noticing (`RELEASE_1_5_0_PLAN.md`
+  /// §3.3(e), §9.6).
   func copyTextToPasteboard() {
-    let text = machine.copyTextAsUnicode()
+    let text = emuQueue.sync { machine.copyTextAsUnicode() }
     let pb = NSPasteboard.general
     pb.clearContents()
     pb.setString(text, forType: .string)
