@@ -427,6 +427,14 @@ final class EmulatorViewModel {
   /// Sync the status-bar clock indicator to the machine's actual clock.
   /// Used by the script-playback path (a separate file, which can't reach
   /// the file-private setter) to reflect a script-set clock.
+  ///
+  /// **Call only with the loop stopped.** Both call sites (`performLaunch`,
+  /// `adoptScriptSetup` via `playScript`) sit inside a `stop()` … `start()`
+  /// window, which is why this reads `machine` without taking `emuQueue` —
+  /// `ScriptPlayer` writes `machine.clock8MHz` from the emulation thread on a
+  /// `clock` or `reset` step. Same rule as the deck read in `performLoad`
+  /// (`RELEASE_1_5_0_PLAN.md` §3.3(e), §9.6). Calling it from a running loop
+  /// needs an `emuQueue.sync` here instead.
   func syncActiveClockFromMachine() {
     activeClock8MHz = machine.clock8MHz
   }
