@@ -327,6 +327,11 @@ extension EmulatorViewModel {
       let d1 = machine.subSystem.diskAccess[1]
       machine.subSystem.diskAccess = [false, false]
       let tapeProgressSample = machine.cassette.progress
+      // Sampled here, on the thread that owns the deck, for the same reason
+      // progress is: the UI must never read `machine.cassette` itself. A
+      // rewind can swap the mounted tape out from under the UI, and this is
+      // what notices.
+      let tapeMountedSample = machine.cassette.isLoaded
 
       // Capture OCR snapshot if translation enabled (piggyback on 4Hz UI
       // update). `TranslationManager` is main-actor state, so the *decision*
@@ -344,6 +349,7 @@ extension EmulatorViewModel {
         self.drive0Access = d0
         self.drive1Access = d1
         self.tapeProgress = tapeProgressSample
+        self.isTapeMounted = tapeMountedSample
 
         // Refresh the loop's snapshot of main-actor UI settings. The display
         // ones also have immediate hooks; this covers the rest (haptics) and
