@@ -37,6 +37,9 @@ __pycache__/
 
 # Claude Code (.claude/)
 .claude/skills/swiftui-pro
+# Third-party skill installs pulled in for the Windows C# shell work.
+.claude/skills/csharp-async
+.claude/skills/csharp-xunit
 .claude/settings.local.json
 .claude/.last-regression-pass
 skills-lock.json
@@ -61,3 +64,13 @@ skills-lock.json
 # Code-coverage artifacts left behind by test runs
 *.profraw
 *.profdata
+
+# Windows native port — packaging output of scripts/build-windows-package.ps1
+# (dotnet publish tree + the distributable zip). Rebuilt on demand; never committed.
+dist/
+
+# Stray AI-model conversion output when scripts/convert_realesrgan_onnx.py is
+# run from the repo root instead of the models/ directory. The tracked copies
+# live under models/ and models/onnx/ (Git LFS).
+/RealESRGAN_x2.onnx
+/RealESRGAN_x2plus.pth

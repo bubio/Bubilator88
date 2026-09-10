@@ -1,0 +1,134 @@
+using System;
+using System.Runtime.InteropServices;
+
+namespace Bubilator88.Windows;
+
+/// <summary>
+/// P/Invoke bindings for the Swift emulation core (Bubilator88C.dll, built from
+/// Packages/EmulatorCore/Sources/CApi/CApi.swift). This is the ONLY boundary
+/// between the managed shell and the native core — every signature here must
+/// match a <c>@_cdecl</c> export exactly.
+///
+/// All buffer-passing entry points take raw pointers so the hot path (render /
+/// audio drain) is zero-copy and allocation-free — see the GC notes in
+/// docs/WINDOWS_PORT.md. We use <see cref="LibraryImportAttribute"/> (source
+/// generated, blittable-only) to avoid the classic Marshal copy.
+/// </summary>
+internal static unsafe partial class NativeApi
+{
+    private const string Dll = "Bubilator88C";
+
+    // ROM kind selectors for b88_load_rom.
+    public const int RomN88 = 0;
+    public const int RomN80 = 1;
+    public const int RomDisk = 2;
+    public const int RomFont = 3;
+    public const int RomKanji1 = 4;
+    public const int RomKanji2 = 5;
+    public const int RomN88Ext0 = 10; // +0..+3 for banks 0..3
+
+    // DIP SW2 base values (boot mode).
+    public const int DipSw2_V2 = 0x71;
+    public const int DipSw2_V1H = 0xF1;
+    public const int DipSw2_V1S = 0xB1;
+    // DIP SW1.
+    public const int DipSw1_N88 = 0xC3;
+    public const int DipSw1_NBasic = 0xC2;
+
+    // Extended RAM capacity, for b88_install_ext_ram (matches Settings.extramCards on macOS).
+    public const int ExtRam_None = 0;
+    public const int ExtRam_128KB = 1;
+    public const int ExtRam_1MB = 8;
+
+    [LibraryImport(Dll)]
+    public static partial IntPtr b88_create();
+
+    [LibraryImport(Dll)]
+    public static partial void b88_destroy(IntPtr handle);
+
+    [LibraryImport(Dll)]
+    public static partial void b88_load_rom(IntPtr handle, int kind, byte* ptr, int len);
+
+    // index: 0=BD 1=SD 2=TOP 3=HH 4=TOM 5=RIM. ptr/len is the raw 2608_*.WAV blob.
+    [LibraryImport(Dll)]
+    public static partial void b88_load_rhythm_sample(IntPtr handle, int index, byte* ptr, int len);
+
+    [LibraryImport(Dll)]
+    public static partial int b88_mount_disk(IntPtr handle, int drive, byte* ptr, int len, int imageIndex);
+
+    [LibraryImport(Dll)]
+    public static partial void b88_eject_disk(IntPtr handle, int drive);
+
+    [LibraryImport(Dll)]
+    public static partial void b88_set_write_protect(IntPtr handle, int drive, int protected_);
+
+    [LibraryImport(Dll)]
+    public static partial void b88_set_pseudo_stereo(IntPtr handle, int enabled);
+
+    [LibraryImport(Dll)]
+    public static partial int b88_d88_probe(byte* ptr, int len, byte* outUtf8, int outCap);
+
+    [LibraryImport(Dll)]
+    public static partial void b88_set_dipsw1(IntPtr handle, int value);
+
+    [LibraryImport(Dll)]
+    public static partial void b88_apply_bootstrap(IntPtr handle, int dipsw2Base);
+
+    [LibraryImport(Dll)]
+    public static partial void b88_reset(IntPtr handle, int preserveRam);
+
+    // cards: 0=none, 1=128KB, 8=1MB. Re-installs a fresh (zeroed) buffer, so
+    // call after b88_reset, matching the macOS reset ordering.
+    [LibraryImport(Dll)]
+    public static partial void b88_install_ext_ram(IntPtr handle, int cards);
+
+    [LibraryImport(Dll)]
+    public static partial void b88_set_clock_8mhz(IntPtr handle, int on);
+
+    [LibraryImport(Dll)]
+    public static partial int b88_get_clock_8mhz(IntPtr handle);
+
+    // 1 = native 400-line, 0 = 200-line (doubled). Lets the host feed video
+    // filters the correct content resolution (640×200 vs 640×400).
+    [LibraryImport(Dll)]
+    public static partial int b88_is_400line(IntPtr handle);
+
+    // Save state. b88_save_state builds + stashes the blob and returns its length;
+    // b88_save_state_read copies it out. b88_load_state returns 1 on success.
+    [LibraryImport(Dll)]
+    public static partial int b88_save_state(IntPtr handle);
+
+    [LibraryImport(Dll)]
+    public static partial int b88_save_state_read(IntPtr handle, byte* outPtr, int outCap);
+
+    [LibraryImport(Dll)]
+    public static partial int b88_load_state(IntPtr handle, byte* ptr, int len);
+
+    [LibraryImport(Dll)]
+    public static partial int b88_run_frame(IntPtr handle);
+
+    [LibraryImport(Dll)]
+    public static partial void b88_press_key(IntPtr handle, int row, int bit);
+
+    [LibraryImport(Dll)]
+    public static partial void b88_release_key(IntPtr handle, int row, int bit);
+
+    [LibraryImport(Dll)]
+    public static partial int b88_render_rgba(IntPtr handle, byte* outPtr, int outLen, int blinkCursor);
+
+    [LibraryImport(Dll)]
+    public static partial int b88_drain_audio(IntPtr handle, float* outPtr, int maxPairs);
+
+    [LibraryImport(Dll)]
+    public static partial void b88_audio_rate_control(IntPtr handle, int fillPairs, int capacityPairs);
+
+    [LibraryImport(Dll)]
+    public static partial void b88_disk_access(IntPtr handle, int* out0, int* out1);
+
+    // Distinct seek-step (COUNT, since several steps can land in one sampled
+    // frame) / read-access (0/1 pulse) events per drive, for the two
+    // synthesized FDD sounds (mechanical click vs. buzz) — see b88_disk_access
+    // for the combined flag the status-bar LEDs use instead.
+    [LibraryImport(Dll)]
+    public static partial void b88_fdd_sound_events(IntPtr handle, int* seek0, int* seek1, int* access0, int* access1);
+}
