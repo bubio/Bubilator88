@@ -25,6 +25,15 @@ struct DisplaySettingsTab: View {
           .foregroundStyle(.secondary)
       }
 
+      Section("AI Upscale Models") {
+        ForEach(AIModelStore.downloadableModels, id: \.name) { model in
+          downloadableModelRow(model)
+        }
+        Text("Downloaded the first time its filter is selected.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+
       Section("Status Bar") {
         Toggle("Show Tape Icon", isOn: $settings.showTapeInStatusBar)
       }
@@ -87,6 +96,28 @@ struct DisplaySettingsTab: View {
     .formStyle(.grouped)
     .task {
       availableLanguages = await TranslationLanguage.fetchAvailable()
+    }
+  }
+
+  /// One row per downloadable model: which filter it serves, whether it is on
+  /// this Mac, and a Delete button once it is.
+  private func downloadableModelRow(_ model: DownloadableAIModel) -> some View {
+    let filterName = EmulatorViewModel.VideoFilter.allCases
+      .first { $0.downloadableModel == model }?.rawValue ?? model.name
+    let installed = viewModel.isAIModelInstalled(model)
+    let size = ByteCountFormatter.string(fromByteCount: model.byteCount, countStyle: .file)
+    return HStack {
+      VStack(alignment: .leading, spacing: 2) {
+        Text(filterName)
+        Text(installed ? "Downloaded" : "Not downloaded (\(size))")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+      Spacer()
+      if installed {
+        Button("Delete", role: .destructive) { viewModel.deleteAIModel(model) }
+          .disabled(viewModel.aiModelDownload != nil)
+      }
     }
   }
 }

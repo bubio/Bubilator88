@@ -1,8 +1,10 @@
 # AI Upscale Models — Provenance & Reproduction
 
-The three AI upscale filters ship as compiled CoreML models in
-`Bubilator88/Resources/`. This file records where they came from and how to
-rebuild them — which matters most for **Fast** and **Balanced**, trained locally
+Fast and Balanced ship as compiled CoreML models in `Bubilator88/Resources/`.
+Quality is too large to bundle (~31 MB zipped): its compiled model lives in
+`models/coreml/` and the app downloads it the first time the filter is selected
+(see "Distributing Quality" below). This file records where they came from and
+how to rebuild them — which matters most for **Fast** and **Balanced**, trained locally
 with **no public weights**: without the checkpoints and the converter here, a lost
 or damaged `.mlmodelc` could not be reproduced.
 
@@ -21,8 +23,9 @@ that directory went away, the defect surfaced as "Balanced looks bad."
 
 Two things came out of that, and both should stay:
 
-- `AIUpscaler` now loads **only** from the app bundle. There is no override path,
-  so what ships is what runs.
+- `AIUpscaler` loads only what `AIModelStore` resolves: the bundle, or for
+  Quality, the download whose SHA-256 matches the manifest compiled into the
+  app. There is no free-form override path, so what ships is what runs.
 - A larger student landing *further* from its teacher than a smaller one is a
   reliable smell test. Balanced sat at 14–28/255 from Real-ESRGAN where Fast sat
   at 5–9; after the correct export, Balanced matches Fast's range.
@@ -33,6 +36,9 @@ Two things came out of that, and both should stay:
 models/
 ├── SRVGGNet_x2_lite.pth   source-of-truth — Fast     (self-trained)  [LFS]
 ├── SRVGGNet_x2.pth        source-of-truth — Balanced (self-trained)  [LFS]
+├── coreml/
+│   └── RealESRGAN_x2.mlmodelc  Quality, compiled — the downloadable model
+├── onnx/                  Windows shell forms of all three            [LFS]
 └── PROVENANCE.md          this file
 ```
 
@@ -44,6 +50,27 @@ them (`convert_srvggnet_onnx.py`'s ONNX entry point, `convert_realesrgan_onnx.py
 `feature/windows-native-port` branch, which is shelved. The `.pth` files are the
 same source-of-truth on both sides, so a CoreML model rebuilt from here stays
 consistent with the ONNX built from there.
+
+## Distributing Quality
+
+The app never bundles Quality. It carries a manifest entry in
+`Bubilator88/Rendering/AIModelStore.swift` — URL, SHA-256 and exact byte count
+of a zip — and installs the download only if both match, under
+`~/Library/Application Support/Bubilator88/DownloadedModels/<name>-<sha12>/`.
+
+To publish a new Quality model:
+
+```bash
+scripts/package_ai_model.sh RealESRGAN_x2      # → build/models/*.zip + sha256 + bytes
+gh release create models-v2 build/models/RealESRGAN_x2.mlmodelc.zip \
+    --title "AI models v2" --notes "..." --latest=false
+```
+
+then paste the printed values into the manifest. Use a **new** `models-v*` tag
+rather than replacing the asset on an existing one: shipped apps pin the old hash
+and must keep finding the old file. `release.yml` ignores `models-*` tags, so
+publishing one does not build a DMG or bump the Homebrew cask — but that holds
+only for tags on a commit that already carries the exclusion.
 
 ## Model architectures
 

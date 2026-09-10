@@ -168,15 +168,42 @@ final class EmulatorViewModel {
       default: return nil
       }
     }
+
+    /// The model this filter needs when it is not bundled and must be
+    /// downloaded first. Nil for every filter that works out of the box.
+    var downloadableModel: DownloadableAIModel? {
+      aiModelName.flatMap(AIModelStore.downloadableModel(named:))
+    }
   }
 
+  /// Selecting a filter whose model has not been downloaded does not switch to
+  /// it: the setting keeps its current value and the download sheet opens
+  /// instead. The switch happens once the model is installed.
+  ///
+  /// While that sheet is up the filter is frozen. The menu cannot express it —
+  /// `.disabled` on an inline Picker in a menu, or on its items, leaves them
+  /// enabled — so the setter refuses the change instead.
   var videoFilter: VideoFilter {
     get { VideoFilter(rawValue: Settings.shared.videoFilter) ?? .none }
     set {
+      if aiModelDownload != nil { return }
+      if let model = newValue.downloadableModel, !AIModelStore.shared.isInstalled(model) {
+        requestAIModelDownload(for: newValue)
+        return
+      }
       Settings.shared.videoFilter = newValue.rawValue
       pushVideoFilterToMetalView()
     }
   }
+
+  /// The model download in progress or awaiting confirmation. Drives the
+  /// download sheet; nil when none is showing.
+  var aiModelDownload: AIModelDownloadSession?
+  @ObservationIgnored var aiModelDownloadTask: Task<Void, Never>?
+  /// Bumped whenever a downloadable model is installed or removed. Installed
+  /// state lives on disk, where Observation cannot see it; reading this
+  /// makes a view re-evaluate `isAIModelInstalled` when it changes.
+  var aiModelStoreRevision: Int = 0
 
   var scanlineEnabled: Bool {
     get { Settings.shared.scanlineEnabled }
@@ -943,6 +970,12 @@ final class EmulatorViewModel {
     // Take write notifications from SubSystem and schedule them with debouncing.
     machine.subSystem.onDiskWritten = { [weak self] drive in
       self?.diskDirtyNotification(drive: drive)
+    }
+
+    // The saved filter can name a model that is not on this Mac — removed
+    // outside the app, or saved by a version that still bundled it.
+    if let model = videoFilter.downloadableModel, !AIModelStore.shared.isInstalled(model) {
+      Settings.shared.videoFilter = VideoFilter.none.rawValue
     }
   }
 

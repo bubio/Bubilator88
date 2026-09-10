@@ -17,6 +17,8 @@ struct EmulatorCommands: Commands {
               systemImage: viewModel.isRunning ? "pause.fill" : "play.fill")
       }
       .keyboardShortcut("p", modifiers: .command)
+      // Emulation stays paused while an AI model downloads.
+      .disabled(viewModel.aiModelDownload != nil)
 
       Button {
         viewModel.reset()

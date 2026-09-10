@@ -172,9 +172,10 @@ def main():
     print(f"\nDone! Saved to {output_path} ({total_size / 1024 / 1024:.1f} MB)")
     print()
     print("Next steps:")
-    print(f"  xcrun coremlcompiler compile {output_path} .")
-    print("  mkdir -p ~/Library/Application\\ Support/Bubilator88/Models/")
-    print("  cp -r RealESRGAN_x2.mlmodelc ~/Library/Application\\ Support/Bubilator88/Models/")
+    print(f"  xcrun coremlcompiler compile {output_path} models/coreml/")
+    print("  scripts/package_ai_model.sh RealESRGAN_x2")
+    print("  # publish the zip on a new models-v* release, then update the")
+    print("  # manifest in Bubilator88/Rendering/AIModelStore.swift")
 
 
 if __name__ == "__main__":

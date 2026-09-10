@@ -92,13 +92,15 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
 
   private(set) var loadedModelName: String = ""
 
-  /// Load a named ML model from the app bundle.
+  /// Load a named ML model, as resolved by `AIModelStore`.
   ///
-  /// The bundle is the only place looked. An earlier version preferred
-  /// `~/Library/Application Support/Bubilator88/Models/`, and that override
+  /// Each filter has exactly one possible file: the bundled model, or for a
+  /// downloadable one, the install whose hash matches `AIModelStore`'s
+  /// manifest. An earlier version preferred a free-form
+  /// `~/Library/Application Support/Bubilator88/Models/` override, and it
   /// silently shadowed the bundle for over a year while the bundled Balanced
   /// model was a mis-export — nothing surfaced which file was actually running.
-  /// Ship one model per filter, from `Resources`, always.
+  /// Never add a lookup that is not pinned by the manifest.
   func loadModel(named modelName: String) async {
     // Skip if already loaded
     if case .ready = state, loadedModelName == modelName { return }
@@ -107,10 +109,9 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
     releaseResources()
     model = nil
 
-    for ext in ["mlmodelc", "mlpackage"] {
-      if let bundleURL = Bundle.main.url(forResource: modelName, withExtension: ext) {
-        if await tryLoadModel(from: bundleURL, name: modelName) { return }
-      }
+    if let url = AIModelStore.shared.modelURL(named: modelName),
+       await tryLoadModel(from: url, name: modelName) {
+      return
     }
 
     state = .unavailable
@@ -125,7 +126,7 @@ nonisolated final class AIUpscaler: @unchecked Sendable {
       self.model = loadedModel
       self.loadedModelName = name
       self.state = .ready
-      NSLog("[AIUpscaler] Model loaded: %@ (%@)", name, url.lastPathComponent)
+      NSLog("[AIUpscaler] Model loaded: %@ (%@)", name, url.path)
       return true
     } catch {
       NSLog("[AIUpscaler] Failed to load model from \(url.path): \(error)")
