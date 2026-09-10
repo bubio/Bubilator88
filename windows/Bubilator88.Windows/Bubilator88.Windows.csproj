@@ -32,6 +32,12 @@
          background GC keeps any Gen0 collection sub-millisecond. -->
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+
+    <!-- .NET サテライトアセンブリのローカライズは英語のみ (UI 文字列は
+         アプリ側が自前で持っており、BCL の翻訳リソースは使わない)。
+         WindowsAppSDK の *.mui はこの設定の対象外なので、
+         scripts\build-windows-package.ps1 の prune ステップで削る。 -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
