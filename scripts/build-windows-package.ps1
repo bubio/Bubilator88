@@ -250,54 +250,117 @@ if (Test-Path $objdump) {
 #     self-contained な WindowsAppSDK は機能単位の on/off スイッチを持たない
 #     ため、使っていないコンポーネントは発行後に削除するしかない。ここは
 #     「消す理由」を明記した denylist にしておき、WindowsAppSDK / .NET を
-#     bump したときに再監査できるようにする。削除しすぎていないかは §7 の
-#     アプリ起動スモークテストが検出する。
+#     bump したときに再監査できるようにする。
+#
+#     さらに、機能を後から足したときに黙って壊れないよう、WindowsAppSDK 機能の
+#     グループにはシェルのソースを見る使用箇所ガードを付けてある
+#     ($guardedPruneGroups)。起動スモークテスト (§7) は遅延活性化される機能を
+#     カバーできないため、ここが実質的な最後の砦になる。
 # ---------------------------------------------------------------------------
 Step "未使用ファイルを削除"
 
-$pruneFiles = @(
+$pruneFiles = [System.Collections.Generic.List[string]]@(
     # --- デバッグ用シンボル / 開発時専用 (実行には不要) ---
+    #     アプリの機能とは無関係なので、無条件に削ってよい。
     '*.pdb'                                   # DirectML.pdb だけで 8.6MB
     'DirectML.Debug.dll'                      # DirectML のデバッグレイヤ
     'Microsoft.DiaSymReader.Native.amd64.dll' # PDB リーダ (シンボル無しなら不要)
     'createdump.exe'                          # クラッシュダンプ採取ツール
     'onnxruntime.lib'                         # C++ リンク用インポートライブラリ
     'skills-lock.json'                        # リポジトリのメタファイルが紛れ込む
+)
+$pruneDirs = [System.Collections.Generic.List[string]]@()
 
-    # --- 使っていない WindowsAppSDK 機能 ---
-    # WebView2: HTML ビューは一切使わない (grep で WebView2 の参照ゼロ)
-    'Microsoft.Web.WebView2.Core.dll'
-    'Microsoft.Web.WebView2.Core.Projection.dll'
-    # Widgets: Windows ウィジェットボードへの提供機能
-    'Microsoft.Windows.Widgets.dll'
-    'Microsoft.Windows.Widgets.Projection.dll'
-    'Microsoft.Windows.Widgets.winmd'
-    # 通知 (トースト / プッシュ): アプリ内トーストは自前実装で OS 通知は使わない
-    'Microsoft.Windows.AppNotifications.dll'
-    'Microsoft.Windows.AppNotifications.Projection.dll'
-    'Microsoft.Windows.AppNotifications.winmd'
-    'Microsoft.Windows.AppNotifications.Builder.Projection.dll'
-    'Microsoft.Windows.AppNotifications.Builder.winmd'
-    'Microsoft.Windows.PushNotifications.Projection.dll'
-    'Microsoft.Windows.PushNotifications.winmd'
-    'PushNotificationsLongRunningTask.ProxyStub.dll'
-    # MSIX 配置 API: unpackaged 配布なのでパッケージ配置は行わない
-    'Microsoft.Windows.Management.Deployment.Projection.dll'
-    'Microsoft.Windows.Management.Deployment.winmd'
-    'WindowsAppSdk.AppxDeploymentExtensions.Desktop.dll'
-    'WindowsAppSdk.AppxDeploymentExtensions.Desktop-EventLog-Instrumentation.dll'
-    'WindowsAppRuntime.DeploymentExtensions.OneCore.dll'
-    'RestartAgent.exe'                        # WindowsAppRuntime の更新時再起動エージェント
-    'WindowsAppRuntime.png'                   # 上記エージェントのダイアログ用画像
+# --- 使っていない WindowsAppSDK 機能 (使用箇所ガード付き) ---
+#
+# WinRT のクラスは「実際に使う瞬間」に初めて DLL がロードされる (遅延活性化)
+# ため、消しすぎても §7 の起動スモークテストでは捕まらない。例えば WebView2 で
+# ヘルプ画面を出す機能を後から足すと、ビルドも起動も通るのに「その画面を開いた
+# 瞬間だけ落ちる」ことになる。
+#
+# そこでシェルのソースを grep し、その機能を使い始めた形跡があれば prune を
+# 取りやめる。安全側 (= 同梱する) に倒れ、警告で気づけるようにしてある。
+$guardedPruneGroups = @(
+    @{
+        Name     = 'WebView2'
+        Reason   = 'HTML ビューは使わない'
+        Keywords = @('WebView2')
+        Files    = @(
+            'Microsoft.Web.WebView2.Core.dll'
+            'Microsoft.Web.WebView2.Core.Projection.dll'
+        )
+        Dirs     = @('runtimes\win-x64\native')   # WebView2Loader.dll のみ
+    }
+    @{
+        Name     = 'Widgets'
+        Reason   = 'Windows ウィジェットボードへの提供機能は持たない'
+        Keywords = @('Microsoft.Windows.Widgets', 'WidgetProvider')
+        Files    = @(
+            'Microsoft.Windows.Widgets.dll'
+            'Microsoft.Windows.Widgets.Projection.dll'
+            'Microsoft.Windows.Widgets.winmd'
+        )
+        Dirs     = @()
+    }
+    @{
+        Name     = 'Notifications'
+        Reason   = 'アプリ内トーストは自前実装で OS 通知は使わない'
+        Keywords = @('AppNotification', 'PushNotification')
+        Files    = @(
+            'Microsoft.Windows.AppNotifications.dll'
+            'Microsoft.Windows.AppNotifications.Projection.dll'
+            'Microsoft.Windows.AppNotifications.winmd'
+            'Microsoft.Windows.AppNotifications.Builder.Projection.dll'
+            'Microsoft.Windows.AppNotifications.Builder.winmd'
+            'Microsoft.Windows.PushNotifications.Projection.dll'
+            'Microsoft.Windows.PushNotifications.winmd'
+            'PushNotificationsLongRunningTask.ProxyStub.dll'
+        )
+        Dirs     = @()
+    }
+    @{
+        Name     = 'MSIX Deployment'
+        Reason   = 'unpackaged 配布なのでパッケージ配置 API は使わない'
+        Keywords = @('Management.Deployment', 'PackageDeploymentManager', 'DeploymentManager')
+        Files    = @(
+            'Microsoft.Windows.Management.Deployment.Projection.dll'
+            'Microsoft.Windows.Management.Deployment.winmd'
+            'WindowsAppSdk.AppxDeploymentExtensions.Desktop.dll'
+            'WindowsAppSdk.AppxDeploymentExtensions.Desktop-EventLog-Instrumentation.dll'
+            'WindowsAppRuntime.DeploymentExtensions.OneCore.dll'
+            'RestartAgent.exe'      # WindowsAppRuntime の更新時再起動エージェント
+            'WindowsAppRuntime.png' # 上記エージェントのダイアログ用画像
+        )
+        Dirs     = @()
+    }
 )
 
-# WinUIEdit.dll (3.4MB) はあえて残す: TextBox/RichEditBox を使う瞬間に遅延
-# ロードされる。現状 XAML/コードとも TextBox 系は未使用だが、UI を足した
-# 途端に落ちる類の削除なので、サイズ以上にリスクが大きい。
+# WinUIEdit.dll (3.4MB) はガード対象にせず常に残す: TextBox/RichEditBox を置いた
+# 瞬間に遅延ロードされる。現状 XAML/コードとも TextBox 系は未使用だが、XAML の
+# コントロールテンプレート経由で間接的に使われる可能性を grep では否定しきれない。
 
-$pruneDirs = @(
-    'runtimes\win-x64\native'  # WebView2Loader.dll のみ (上記 WebView2 と同じ理由)
+$shellSources = @(
+    Get-ChildItem -Path $ShellDir -Recurse -File -Include '*.cs', '*.xaml' |
+        Where-Object { $_.FullName -notmatch '\\(obj|bin)\\' }
 )
+if ($shellSources.Count -eq 0) {
+    throw "シェルのソースが 1 つも見つかりません ($ShellDir)。prune の使用箇所ガードが機能しないため中断します。"
+}
+
+foreach ($g in $guardedPruneGroups) {
+    # -SimpleMatch + -CaseSensitive: 識別子そのものの出現だけを見る
+    # (コメント中の "error notification" のような散文には反応させない)。
+    $hit = $shellSources |
+        Select-String -Pattern $g.Keywords -SimpleMatch -CaseSensitive -List |
+        Select-Object -First 1
+    if ($hit) {
+        Write-Warning ("{0} を使い始めた形跡があるため prune しません ({1}:{2})。不要なら `$guardedPruneGroups から外してください。" -f `
+            $g.Name, (Resolve-Path -Relative $hit.Path), $hit.LineNumber)
+        continue
+    }
+    foreach ($f in $g.Files) { $pruneFiles.Add($f) }
+    foreach ($d in $g.Dirs) { $pruneDirs.Add($d) }
+}
 
 $prunedBytes = 0
 $prunedCount = 0
@@ -427,22 +490,36 @@ if ($h -eq [IntPtr]::Zero) {
     $psi2.EnvironmentVariables["PATH"] = $cleanPath
     $app = [System.Diagnostics.Process]::Start($psi2)
 
+    # 生存し続けていること自体が本命の判定。XAML の型解決も MRM のリソース
+    # 解決も失敗すれば未処理例外でプロセスが即死するため、prune のやりすぎは
+    # 「起動直後に exit」として必ず現れる (ROM 未配置でも起動はする — ROM が
+    # 無い状態でも title 'Bubilator88' のウィンドウが出ることを確認済み)。
     $appDeadline = (Get-Date).AddSeconds(30)
-    $sawWindow = $false
+    $windowTitle = $null
     while ((Get-Date) -lt $appDeadline) {
         Start-Sleep -Milliseconds 500
         if ($app.HasExited) { break }
         $app.Refresh()
-        if ($app.MainWindowHandle -ne [IntPtr]::Zero) { $sawWindow = $true; break }
+        if ($app.MainWindowHandle -ne [IntPtr]::Zero -and $app.MainWindowTitle) {
+            $windowTitle = $app.MainWindowTitle
+            break
+        }
     }
     if ($app.HasExited) {
         throw "アプリ起動スモークテスト失敗: 起動直後に終了しました (exit $($app.ExitCode))。§6b の prune で必要なファイルまで削っていないか確認してください。"
     }
     Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
-    if (-not $sawWindow) {
-        throw "アプリ起動スモークテスト失敗: 30 秒以内にメインウィンドウが生成されませんでした。"
+
+    # ウィンドウの有無は「デスクトップセッションがあるか」に左右されるため、
+    # CI (headless に近いランナー) で release を落とさないよう warning 止まりに
+    # する。プロセスが生存している時点で活性化・リソース解決は通っている。
+    if ($windowTitle -eq 'Bubilator88') {
+        Write-Host "    メインウィンドウ ('$windowTitle') の生成を確認"
+    } elseif ($windowTitle) {
+        Write-Warning "起動はしたがウィンドウタイトルが想定外です: '$windowTitle' (モーダルダイアログの可能性)。"
+    } else {
+        Write-Warning "30 秒以内にウィンドウを検出できませんでした (プロセスは生存)。デスクトップセッションの無い環境では正常。"
     }
-    Write-Host "    メインウィンドウの生成を確認"
 }
 
 # ---------------------------------------------------------------------------

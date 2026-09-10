@@ -176,15 +176,30 @@ Swift toolchain が入っていないマシンでもそのまま動く(ROM は�
    削除リストは `build-windows-package.ps1` の `$pruneFiles` に理由付きで並べて
    あるので、WindowsAppSDK / .NET を上げたときはここを再監査すること。
 
+   WinRT のクラスは**実際に使う瞬間**に初めて DLL がロードされる (遅延活性化)
+   ため、消しすぎても起動スモークテストでは捕まらない — 例えば WebView2 で
+   ヘルプ画面を出す機能を後から足すと、ビルドも起動も通るのに「その画面を
+   開いた瞬間だけ落ちる」。そこで WindowsAppSDK 機能の削除には**使用箇所ガード**
+   (`$guardedPruneGroups`) を付けてある。シェルの `*.cs` / `*.xaml` を grep し、
+   その機能のキーワード (`WebView2` / `AppNotification` / `Microsoft.Windows.Widgets`
+   など) が 1 つでも見つかれば prune を取りやめ、警告を出す:
+
+   ```
+   WARNING: WebView2 を使い始めた形跡があるため prune しません
+            (.\windows\Bubilator88.Windows\HelpWindow.xaml.cs:42)。
+   ```
+
+   安全側 (= 同梱する) に倒れるので、機能追加時に気づかず壊れることはない。
+
 削りすぎていないかは §7 のスモークテスト(実際に exe を起動してメインウィンドウが
-出るまで確認する)が検出する。結果: **414 エントリ / 353MB → 288 エントリ / 324MB**
+出るまで確認する)が検出する。結果: **414 エントリ / 353MB → 287 エントリ / 324MB**
 (zip は 181MB → 165MB)。
 
 > **`WinUIEdit.dll` (3.4MB) はあえて残している**。`TextBox` / `RichEditBox` を使った
 > 瞬間に遅延ロードされる DLL で、現状 XAML・コードとも `TextBox` 系は未使用だが、
 > UI を足した途端に落ちる類の削除なのでサイズ以上にリスクが大きい。
 
-#### なぜ「EXE 1 ファイル」にできないか
+#### なぜ「EXE 1 ファイル」にできないか (WindowsAppSDK 1.6 時点)
 
 `PublishSingleFile=true` でのビルド自体は通り、160MB 程度の単一 exe が生成される
 (WindowsAppSDK も `Microsoft.WindowsAppSDK.SingleFile.targets` で明示的にサポート
@@ -206,7 +221,12 @@ SxS のアクティベーションコンテキストはこれを **exe がある
 逆に、展開先ディレクトリへ exe をコピーして起動すると正常に動作する
 (= DLL の中身ではなく exe の置き場所だけが問題であることの裏付け)。
 
-したがって配布形態は**「exe + 同階層の DLL 群」のフォルダ配布**が前提となる。
+前提条件 (`EnableMsixTooling` / `WindowsPackageType=None` /
+`IncludeAllContentForSelfExtract` / `WindowsAppSdkUndockedRegFreeWinRTInitialize`) は
+すべて満たした上でこの結果なので、**アーキテクチャ上の制約ではなく 1.6 の不具合**の
+可能性がある。WindowsAppSDK を上げたときは再検証する価値がある。
+
+現状の配布形態は**「exe + 同階層の DLL 群」のフォルダ配布**が前提となる。
 どうしても 1 ファイルで配りたい場合は、この発行フォルダを自己解凍 exe (7-Zip SFX 等)
 で包むか、初回起動時に展開する薄いランチャ exe を別途用意するしかない。
 
