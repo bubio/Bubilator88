@@ -87,17 +87,6 @@
         }
       }
     },
-    "“%@” needs an additional model (%@). It is downloaded once and kept for later use." : {
-      "comment" : "AI model download prompt. %1 video filter name, %2 download size (e.g. \"31 MB\")",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「%1$@」には追加のモデル (%2$@) が必要です。ダウンロードは初回のみで、以降は保存したものを使います。"
-          }
-        }
-      }
-    },
     "\"%1$@\" has no entry %2$ld (it contains %3$ld entries)." : {
       "comment" : "Error: the entry number given in the launch arguments is past the end of the playlist. %1 playlist path, %2 requested 1-based entry number, %3 number of entries",
       "localizations" : {
@@ -1758,6 +1747,17 @@
         }
       }
     },
+    "Download the model for “%@” (%@)?" : {
+      "comment" : "AI model download prompt. %1 video filter name, %2 download size (e.g. \"31 MB\")",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「%1$@」のモデル (%2$@) をダウンロードしますか？"
+          }
+        }
+      }
+    },
     "Download AI Model" : {
       "comment" : "Title of the AI model download sheet",
       "localizations" : {
@@ -1871,17 +1871,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "空"
-          }
-        }
-      }
-    },
-    "Emulation pauses while the model downloads." : {
-      "comment" : "Note in the AI model download sheet",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ダウンロード中はエミュレーションを一時停止します。"
           }
         }
       }

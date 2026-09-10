@@ -19,8 +19,8 @@ struct AIModelDownloadSession: Identifiable {
   let filter: EmulatorViewModel.VideoFilter
   let model: DownloadableAIModel
   var phase: Phase = .confirm
-  /// Whether emulation was running when the download started, so it can
-  /// resume afterwards. Only meaningful once a download has been started.
+  /// Whether emulation was running when the sheet opened, so it can resume
+  /// when the sheet closes.
   var resumeAfterwards = false
 }
 
@@ -28,22 +28,20 @@ extension EmulatorViewModel {
 
   /// Opens the download sheet for `filter`'s model. Called by the
   /// `videoFilter` setter instead of switching to a filter it cannot show yet.
+  /// Emulation is paused for as long as the sheet is up, prompt included.
   func requestAIModelDownload(for filter: VideoFilter) {
     guard aiModelDownload == nil, let model = filter.downloadableModel else { return }
-    aiModelDownload = AIModelDownloadSession(filter: filter, model: model)
+    var session = AIModelDownloadSession(filter: filter, model: model)
+    session.resumeAfterwards = isRunning
+    pause()
+    aiModelDownload = session
   }
 
-  /// Starts (or retries) the transfer. Emulation is paused for the duration
-  /// and the displayed filter is left as it was until the model is installed.
+  /// Starts (or retries) the transfer. The displayed filter is left as it
+  /// was until the model is installed.
   func startAIModelDownload() {
     guard var session = aiModelDownload else { return }
     if case .downloading = session.phase { return }
-    // A retry keeps the flag from the first attempt: emulation is already
-    // paused by then, and was left paused on purpose.
-    if case .confirm = session.phase {
-      session.resumeAfterwards = isRunning
-      pause()
-    }
     session.phase = .downloading(receivedBytes: 0)
     aiModelDownload = session
 
@@ -66,7 +64,7 @@ extension EmulatorViewModel {
   }
 
   /// Abandons the download (or the prompt) and closes the sheet. The filter
-  /// stays where it was; emulation resumes if the download had paused it.
+  /// stays where it was; emulation resumes if the sheet had paused it.
   func cancelAIModelDownload() {
     aiModelDownloadTask?.cancel()
     aiModelDownloadTask = nil

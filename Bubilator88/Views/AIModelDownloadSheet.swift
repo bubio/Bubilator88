@@ -23,11 +23,8 @@ struct AIModelDownloadSheet: View {
 
       switch session.phase {
       case .confirm:
-        Text("“\(session.filter.rawValue)” needs an additional model (\(totalSize)). It is downloaded once and kept for later use.")
+        Text("Download the model for “\(session.filter.rawValue)” (\(totalSize))?")
           .fixedSize(horizontal: false, vertical: true)
-        Text("Emulation pauses while the model downloads.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
         buttons {
           Button("Cancel", role: .cancel) { viewModel.cancelAIModelDownload() }
             .keyboardShortcut(.cancelAction)
