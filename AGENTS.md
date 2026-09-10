@@ -46,6 +46,8 @@ lessons), `docs/develop/BOOTTESTER.md` (CLI test harness),
 `docs/develop/PERSISTENCE.md` (永続化データ一覧),
 `docs/develop/URL_SCHEME.md` (`bubilator88://` URL スキーム + CLI
 起動引数。書式は QUASI88 互換、FlipDisk 連携),
+`docs/develop/AI_MODEL_DOWNLOAD.md` (Quality AI モデルのオンデマンド
+ダウンロード。配布タグ `models-v*` の運用、マニフェスト、UX、Windows 版計画),
 `docs/develop/FMGEN_FORK_COMPARISON.md` (fmgen 派生版の修正と
 Bubilator の対応状況), `docs/develop/MEMORY_WAIT_STATES.md`
 （メモリウェイト仕様と実装状況。M1 / メイン RAM / TVRAM / GVRAM の 4 分類は

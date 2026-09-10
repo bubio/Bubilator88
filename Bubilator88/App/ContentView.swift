@@ -196,6 +196,14 @@ struct ContentView: View {
     .sheet(isPresented: $viewModel.showingSaveStateSheet) {
       SaveStateSheetView(viewModel: viewModel)
     }
+    // Any dismissal goes through `cancelAIModelDownload()`, which also
+    // resumes emulation if the download paused it.
+    .sheet(item: Binding(
+      get: { viewModel.aiModelDownload },
+      set: { if $0 == nil { viewModel.cancelAIModelDownload() } }
+    )) { _ in
+      AIModelDownloadSheet(viewModel: viewModel)
+    }
     .alert(
       viewModel.alertTitle,
       isPresented: $viewModel.alertIsPresented

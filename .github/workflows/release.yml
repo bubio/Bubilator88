@@ -17,7 +17,11 @@ jobs:
   build:
     # Windows 版のリリース (タグ `win-v*`, release-windows.yml が担当) は無視する。
     # 両リリース系統は独立に発火する — 詳細は release-windows.yml 冒頭コメント参照。
-    if: github.event_name == 'workflow_dispatch' || !startsWith(github.event.release.tag_name, 'win-')
+    # AI モデル配布用のリリース (タグ `models-v*`, models/PROVENANCE.md) も同様。
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (!startsWith(github.event.release.tag_name, 'win-') &&
+       !startsWith(github.event.release.tag_name, 'models-'))
     runs-on: macos-26
     timeout-minutes: 40
     outputs:

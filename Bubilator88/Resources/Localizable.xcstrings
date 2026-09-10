@@ -161,6 +161,17 @@
     "%@ ✓" : {
 
     },
+    "%@ of %@" : {
+      "comment" : "Download progress. %1 bytes received so far, %2 total size (both formatted, e.g. \"12 MB\")",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ / %2$@"
+          }
+        }
+      }
+    },
     "%@:" : {
 
     },
@@ -661,6 +672,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI超解像"
+          }
+        }
+      }
+    },
+    "AI Upscale Models" : {
+      "comment" : "Settings section title for downloadable AI upscale models",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 超解像モデル"
           }
         }
       }
@@ -1386,6 +1408,17 @@
         }
       }
     },
+    "Could Not Delete Model" : {
+      "comment" : "Alert title when deleting a downloaded AI model fails",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モデルを削除できませんでした"
+          }
+        }
+      }
+    },
     "CPU" : {
       "localizations" : {
         "ja" : {
@@ -1531,6 +1564,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "音量を下げる"
+          }
+        }
+      }
+    },
+    "Delete" : {
+      "comment" : "Button that deletes a downloaded AI model",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除"
           }
         }
       }
@@ -1688,6 +1732,61 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "2倍 (x2)"
+          }
+        }
+      }
+    },
+    "Download" : {
+      "comment" : "Button that starts an AI model download",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダウンロード"
+          }
+        }
+      }
+    },
+    "Download the model for “%@” (%@)?" : {
+      "comment" : "AI model download prompt. %1 video filter name, %2 download size (e.g. \"31 MB\")",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「%1$@」のモデル (%2$@) をダウンロードしますか？"
+          }
+        }
+      }
+    },
+    "Download AI Model" : {
+      "comment" : "Title of the AI model download sheet",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI モデルのダウンロード"
+          }
+        }
+      }
+    },
+    "Downloaded" : {
+      "comment" : "Status of an AI model that is on this Mac",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダウンロード済み"
+          }
+        }
+      }
+    },
+    "Downloaded the first time its filter is selected." : {
+      "comment" : "Footnote in the AI Upscale Models settings section",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対応するフィルタを初めて選んだときにダウンロードされます。"
           }
         }
       }
@@ -3147,6 +3246,17 @@
         }
       }
     },
+    "Not downloaded (%@)" : {
+      "comment" : "Status of an AI model that has not been downloaded. %@ is its download size, e.g. \"31 MB\"",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未ダウンロード (%@)"
+          }
+        }
+      }
+    },
     "Nothing to rewind" : {
       "localizations" : {
         "ja" : {
@@ -3861,6 +3971,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "実行を再開"
+          }
+        }
+      }
+    },
+    "Retry" : {
+      "comment" : "Button that retries a failed AI model download",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再試行"
           }
         }
       }
@@ -5041,12 +5162,78 @@
         }
       }
     },
+    "The downloaded file could not be extracted (status %d)." : {
+      "comment" : "AI model download error. The value is the unzip tool's exit status",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダウンロードしたファイルを展開できませんでした (ステータス %d)。"
+          }
+        }
+      }
+    },
+    "The downloaded file does not contain the expected model." : {
+      "comment" : "AI model download error",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダウンロードしたファイルに目的のモデルが含まれていません。"
+          }
+        }
+      }
+    },
+    "The downloaded file has the wrong size (%lld bytes, expected %lld)." : {
+      "comment" : "AI model download error. Both values are byte counts",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダウンロードしたファイルのサイズが正しくありません (%1$lld バイト、期待値 %2$lld バイト)。"
+          }
+        }
+      }
+    },
+    "The downloaded file is damaged (checksum mismatch)." : {
+      "comment" : "AI model download error",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダウンロードしたファイルが破損しています (チェックサム不一致)。"
+          }
+        }
+      }
+    },
+    "The model could not be downloaded." : {
+      "comment" : "Shown in the AI model download sheet when a download fails",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モデルをダウンロードできませんでした。"
+          }
+        }
+      }
+    },
     "The next instruction to run, at the current PC" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "現在の PC にある、次に実行される命令"
+          }
+        }
+      }
+    },
+    "The server returned HTTP %lld." : {
+      "comment" : "AI model download error. The value is an HTTP status code",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サーバが HTTP %lld を返しました。"
           }
         }
       }
