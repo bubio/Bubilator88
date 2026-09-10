@@ -180,9 +180,9 @@ final class EmulatorViewModel {
   /// it: the setting keeps its current value and the download sheet opens
   /// instead. The switch happens once the model is installed.
   ///
-  /// While that sheet is up the filter is frozen. The View menu greys its
-  /// filter items out for that; the setter refuses the change as well so no
-  /// other path can slip one through.
+  /// While that sheet is up the filter is frozen. The menu cannot express it —
+  /// `.disabled` on an inline Picker in a menu, or on its items, leaves them
+  /// enabled — so the setter refuses the change instead.
   var videoFilter: VideoFilter {
     get { VideoFilter(rawValue: Settings.shared.videoFilter) ?? .none }
     set {
