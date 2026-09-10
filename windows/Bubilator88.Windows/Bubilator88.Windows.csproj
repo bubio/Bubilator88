@@ -1,0 +1,91 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>Bubilator88.Windows</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Explorer/taskbar/shortcut icon (Win32 resource baked into the exe).
+         The titlebar icon is set separately at runtime via AppWindow.SetIcon
+         (see MainWindow.xaml.cs) since unpackaged WinUI3 apps don't derive it
+         from this resource. Regenerate from docs\AppIcon.png via
+         scripts\convert-png-to-ico.ps1. -->
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <Platforms>x64;arm64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+
+    <!-- Unpackaged, self-contained: ships as a plain exe + Bubilator88C.dll,
+         matching the "native exe + DLL" deployment goal. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!-- GC tuning for the 60 Hz render/audio loop. The emulation hot loop is
+         entirely native (Bubilator88C.dll); the managed side per frame only
+         calls run/render/drain and is written allocation-free. Concurrent
+         background GC keeps any Gen0 collection sub-millisecond. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.*" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.*" />
+    <!-- Thin native bindings: D3D11 + DXGI + runtime HLSL compile + XAudio2. -->
+    <PackageReference Include="Vortice.Direct3D11" Version="3.6.*" />
+    <PackageReference Include="Vortice.DXGI" Version="3.6.*" />
+    <PackageReference Include="Vortice.D3DCompiler" Version="3.6.*" />
+    <PackageReference Include="Vortice.XAudio2" Version="3.6.*" />
+    <!-- Output-device enumeration for the FDD Sound "Output Device" picker
+         (mirrors macOS AudioDeviceList.swift, which uses CoreAudio directly).
+         Only NAudio.CoreAudioApi.MMDeviceEnumerator is used — no NAudio audio
+         engine/playback code is pulled into the hot path. -->
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+    <!-- AI upscale (Quality / Real-ESRGAN x2). DirectML EP runs the ONNX model on
+         any DX12 GPU; the package brings onnxruntime.dll + DirectML.dll into the
+         output. Mirrors the macOS CoreML AI filter. -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.*" />
+  </ItemGroup>
+
+  <!-- Copied to the output root so MainWindow.xaml.cs can find it at runtime
+       (AppWindow.SetIcon needs a loose .ico file, not just the exe's embedded
+       Win32 resource set via ApplicationIcon above). -->
+  <ItemGroup>
+    <Content Include="Assets\AppIcon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- The Swift core DLL is built separately (see windows/README.md). The
+       Link metadata places it at the OUTPUT ROOT (next to the exe) so the
+       P/Invoke loader finds it — without Link it would land in a native\
+       subfolder and fail with ERROR_MOD_NOT_FOUND (0x8007007E). -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)native\Bubilator88C.dll')">
+    <None Include="native\Bubilator88C.dll">
+      <Link>Bubilator88C.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- AI upscale models, shared cross-platform from the repo's models\onnx\ folder
+       (the same canonical location a future Linux shell would use):
+         SRVGGNet_x2_lite.onnx  (Fast)      ] self-trained, committed via Git LFS
+         SRVGGNet_x2.onnx       (Balanced)  ]  (run `git lfs pull`)
+         RealESRGAN_x2.onnx     (Quality)   regenerable from public weights
+       Each is Linked to the output ROOT next to the exe, where AiUpscaler finds it
+       by name. Any missing/LFS-pointer model → that AI filter degrades to Bicubic.
+       Regenerate with scripts\convert_srvggnet_onnx.py / convert_realesrgan_onnx.py. -->
+  <ItemGroup>
+    <None Include="..\..\models\onnx\*.onnx">
+      <Link>%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

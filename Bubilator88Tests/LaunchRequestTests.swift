@@ -213,7 +213,7 @@ struct LaunchRequestTests {
   @Test("排他オプションは最後の指定が勝つ (manual.txt:74-76)")
   func lastOptionWins() throws {
     let req = try parse(["-v1s", "-v2", "-4mhz", "-8mhz", "-24k", "-15k",
-                          "-mem_nowait", "-mem_wait", "/d/a.d88"])
+                         "-mem_nowait", "-mem_wait", "/d/a.d88"])
     #expect(req.system == .n88v2)
     #expect(req.clock8MHz == true)
     #expect(req.monitorType == .khz15)

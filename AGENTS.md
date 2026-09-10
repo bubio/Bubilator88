@@ -98,6 +98,40 @@ Key points:
 - **Persist reusable scripts** — when creating Python/Shell scripts for analysis, conversion, or debugging, save reusable ones to `scripts/` rather than regenerating each time
 - **EmulatorCore/Sources を変更したら、コミット前に `/regression` (scripts/regression_compare.py) を実行** — true regression があれば ship しない
 
+## Windows Native Port
+
+`windows/` holds a C# + WinUI 3 shell that drives the same EmulatorCore through a
+C ABI DLL (`Packages/EmulatorCore/Sources/CApi/`, built as the `Bubilator88C`
+product). It lives in `main` alongside the macOS app rather than in a fork: the
+emulation core is the product, so every accuracy fix is a Windows fix too, and a
+fork would turn each one into a permanent cherry-pick.
+
+The Windows-specific footprint inside the Swift package is deliberately tiny —
+the `CApi` target (new files only), the `Bubilator88C` product in
+`Package.swift`, and one `#if os(Windows)` in `Peripherals/UPD1990A.swift`.
+No emulation logic is conditional on the platform, and it must stay that way.
+
+Rules:
+
+- **EmulatorCore is macOS-first.** Accuracy decisions are judged by the macOS
+  regression suite. Never bend the core's design for the Windows shell.
+- **The Windows shell may lag.** Core features can land without a C# counterpart.
+- **The C ABI is additive-only.** Do not change the signature or semantics of an
+  existing `b88_*` function; add a new one instead. Shipped Windows binaries and
+  the source tree drift apart between releases.
+- **A red `ci-windows.yml` does not block macOS work.** It records that Windows
+  broke and which commit did it; fixing it can wait for the next Windows release.
+- After touching `Sources/CApi/`, run `scripts/check-capi-exports.sh`. Swift's
+  `@_cdecl` does not emit `__declspec(dllexport)`, so `Bubilator88C.def` is the
+  real export list — forget an entry and the build still succeeds while the DLL
+  silently loses the symbol.
+
+`ci-windows.yml` runs on `main` pushes and PRs that touch
+`Packages/EmulatorCore/**`, `windows/**` or `models/onnx/**` — the only places
+that can break Windows. `release-windows.yml` builds the distributable on
+`win-v*` tags, independent of the macOS release. Details and the current parity
+gaps: `windows/README.md`, `docs/develop/WINDOWS_PORT.md`.
+
 ## Code Style
 
 - **2-space indentation.** Enforced by SwiftFormat via `scripts/format_all.sh`;

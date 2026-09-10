@@ -4,17 +4,16 @@ name: Release (Windows)
 #
 # `release: published` は「default branch (main) にあるワークフロー定義」だけを
 # 見て発火する仕様のため、このファイル自体 (と release.yml 側の win- ガード) は
-# main に置く必要がある。一方 Windows 移植本体 (windows/, scripts/) は
-# feature/windows-native-port ブランチにのみ存在し main にはマージしない方針
-# (CLAUDE.md) — これは矛盾しない。実行時の actions/checkout は github.ref
-# (= タグ ref, 例: refs/tags/win-v1.2.3) をチェックアウトするので、ワークフロー
-# の「定義」は main から読まれつつ、実際にビルドするコード一式はタグが打たれた
-# feature/windows-native-port 側のコミットから取得される。ref を明示指定する
-# 必要はない。
+# main に置く必要がある。Windows 移植本体 (windows/, scripts/, CApi) も main に
+# 同居している。
 #
 # タグ名 `win-v*` で「これは Windows 版のリリースである」ことを判別する。
 # タグを打つ側の意思だけで macOS だけ/Windows だけ/両方リリース、が独立して
 # 成り立つ (release.yml 側は逆に `win-` で始まるタグを無視する)。
+#
+# 日常的なビルド健全性チェックは ci-windows.yml が担当する (main への push /
+# PR のうち EmulatorCore・windows・models/onnx を触ったものだけ)。方針は
+# AGENTS.md「Windows Native Port」節。
 
 on:
   release:
