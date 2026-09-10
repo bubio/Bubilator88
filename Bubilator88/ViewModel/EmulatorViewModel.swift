@@ -179,14 +179,9 @@ final class EmulatorViewModel {
   /// Selecting a filter whose model has not been downloaded does not switch to
   /// it: the setting keeps its current value and the download sheet opens
   /// instead. The switch happens once the model is installed.
-  ///
-  /// While that sheet is up the filter is frozen. The menu cannot express it —
-  /// `.disabled` on an inline Picker in a menu, or on its items, leaves them
-  /// enabled — so the setter refuses the change instead.
   var videoFilter: VideoFilter {
     get { VideoFilter(rawValue: Settings.shared.videoFilter) ?? .none }
     set {
-      if aiModelDownload != nil { return }
       if let model = newValue.downloadableModel, !AIModelStore.shared.isInstalled(model) {
         requestAIModelDownload(for: newValue)
         return

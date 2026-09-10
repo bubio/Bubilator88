@@ -20,7 +20,7 @@ struct AIModelDownloadSession: Identifiable {
   let model: DownloadableAIModel
   var phase: Phase = .confirm
   /// Whether emulation was running when the sheet opened, so it can resume
-  /// when the sheet closes.
+  /// when the sheet closes. Resuming is a no-op if the user already did.
   var resumeAfterwards = false
 }
 
@@ -28,7 +28,11 @@ extension EmulatorViewModel {
 
   /// Opens the download sheet for `filter`'s model. Called by the
   /// `videoFilter` setter instead of switching to a filter it cannot show yet.
-  /// Emulation is paused for as long as the sheet is up, prompt included.
+  /// Emulation is paused when the sheet opens, so the game does not run on
+  /// unattended during the download. That is a courtesy, not a requirement:
+  /// anything the user does meanwhile — resuming, resetting, switching
+  /// filters — is accepted as usual. Selecting the filter again while the
+  /// sheet is up is what the `aiModelDownload == nil` guard stops.
   func requestAIModelDownload(for filter: VideoFilter) {
     guard aiModelDownload == nil, let model = filter.downloadableModel else { return }
     var session = AIModelDownloadSession(filter: filter, model: model)
