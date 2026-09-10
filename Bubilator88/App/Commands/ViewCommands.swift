@@ -57,12 +57,19 @@ struct ViewCommands: Commands {
 
       Divider()
 
-      Picker("Video Filter", selection: $viewModel.videoFilter) {
+      // Toggles rather than an inline Picker: the menu items SwiftUI builds
+      // from an inline Picker ignore `.disabled`, on the Picker and on its
+      // items alike, and the filter must be frozen while the AI model
+      // download sheet is up.
+      Section("Video Filter") {
         ForEach(EmulatorViewModel.VideoFilter.allCases, id: \.self) { filter in
-          Text(filter.rawValue).tag(filter)
+          Toggle(filter.rawValue, isOn: Binding(
+            get: { viewModel.videoFilter == filter },
+            set: { if $0 { viewModel.videoFilter = filter } }
+          ))
+          .disabled(viewModel.aiModelDownload != nil)
         }
       }
-      .pickerStyle(.inline)
 
       Divider()
 
