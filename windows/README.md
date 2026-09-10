@@ -149,14 +149,66 @@ pwsh scripts\build-windows-package.ps1 -Version 1.2.3
 ```
 
 コア DLL のビルド → AI モデル (Git LFS) の実体化確認 → `dotnet publish`(win-x64,
-self-contained)→ Swift ランタイム DLL 一式のバンドル → スモークテスト(Swift を
-PATH から外した状態で `Bubilator88C.dll` がロードできるかを検証)→ zip 化 + SHA256
+self-contained)→ Swift ランタイム DLL のバンドル → 未使用ファイルの prune →
+スモークテスト(Swift を PATH から外した状態で `Bubilator88C.dll` がロードでき、
+かつアプリが起動してウィンドウが出るかを検証)→ zip 化 + SHA256
 算出、まで一括で行う。`dist\Bubilator88-Windows-x64-<Version>.zip` に出力され、
 Swift toolchain が入っていないマシンでもそのまま動く(ROM は同梱しない、従来通り
 ユーザが `%LOCALAPPDATA%\Bubilator88\` に配置)。CI (`.github/workflows/release-windows.yml`)
 もこのスクリプトを呼ぶ。主なオプション: `-SkipCoreBuild`(既存 DLL を使い回す)/
 `-RunCoreTests`(`swift test` を先に実行)/ `-SwiftRuntimeBin`(Runtimes ディレクトリの
-自動検出に失敗する場合の明示指定)。
+自動検出に失敗する場合の明示指定)/ `-SkipSmokeTest`(ロード検証とアプリ起動検証を
+飛ばす。GUI を起動できない環境向け)。
+
+#### 配布物のスリム化 (§6 / §6b)
+
+配布フォルダのファイル数とサイズを抑えるため、スクリプトは 2 段階で削る:
+
+1. **Swift ランタイムは依存クロージャのみ** — `Runtimes\...\usr\bin\*.dll` を全部
+   コピーせず、`Bubilator88C.dll` の PE インポートテーブルを `llvm-objdump -p`
+   (Swift toolchain 同梱) で再帰的に辿り、実際に静的依存する DLL だけを入れる
+   (32 個 → 17 個)。`FoundationNetworking` / `FoundationXML` / `swiftDistributed`
+   などは EmulatorCore が import していないので落ちる。
+2. **未使用ファイルの prune** — デバッグシンボル (`*.pdb`、`DirectML.pdb` だけで
+   8.6MB)、未使用の WindowsAppSDK 機能 (WebView2 / Widgets / 通知 / MSIX 配置)、
+   英語以外の `*.mui` ロケールフォルダ (84 個) を削除する。self-contained な
+   WindowsAppSDK には機能単位の on/off スイッチが無いため、発行後に削るしかない。
+   削除リストは `build-windows-package.ps1` の `$pruneFiles` に理由付きで並べて
+   あるので、WindowsAppSDK / .NET を上げたときはここを再監査すること。
+
+削りすぎていないかは §7 のスモークテスト(実際に exe を起動してメインウィンドウが
+出るまで確認する)が検出する。結果: **414 エントリ / 353MB → 288 エントリ / 324MB**
+(zip は 181MB → 165MB)。
+
+> **`WinUIEdit.dll` (3.4MB) はあえて残している**。`TextBox` / `RichEditBox` を使った
+> 瞬間に遅延ロードされる DLL で、現状 XAML・コードとも `TextBox` 系は未使用だが、
+> UI を足した途端に落ちる類の削除なのでサイズ以上にリスクが大きい。
+
+#### なぜ「EXE 1 ファイル」にできないか
+
+`PublishSingleFile=true` でのビルド自体は通り、160MB 程度の単一 exe が生成される
+(WindowsAppSDK も `Microsoft.WindowsAppSDK.SingleFile.targets` で明示的にサポート
+していると謳っている)。**が、unpackaged + self-contained の構成では起動しない**:
+
+```
+System.Runtime.InteropServices.COMException (0x80040111): ClassFactory は要求されたクラスを提供できません
+   at WinRT.ActivationFactory.Get(String typeName, Guid iid)
+   at Microsoft.UI.Xaml.Application.Start(...)
+```
+
+原因は WinUI3 の**登録不要 (reg-free) WinRT 活性化**。`obj\...\Manifests\app.manifest`
+に 1808 個の `<winrtv1:activatableClass>` が生成され、それぞれ
+`<asmv3:file name="Microsoft.ui.xaml.dll">` のような**ファイル名だけ**の参照になっている。
+SxS のアクティベーションコンテキストはこれを **exe があるディレクトリ**基準で解決する
+仕様で、single-file では実体が `%TEMP%\.net\<app>\<hash>\` に展開されるため見つからない。
+`MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY` (SDK の自動初期化子が
+`AppContext.BaseDirectory` を入れる) を展開先に向け直しても SxS 側の解決には効かない。
+逆に、展開先ディレクトリへ exe をコピーして起動すると正常に動作する
+(= DLL の中身ではなく exe の置き場所だけが問題であることの裏付け)。
+
+したがって配布形態は**「exe + 同階層の DLL 群」のフォルダ配布**が前提となる。
+どうしても 1 ファイルで配りたい場合は、この発行フォルダを自己解凍 exe (7-Zip SFX 等)
+で包むか、初回起動時に展開する薄いランチャ exe を別途用意するしかない。
 
 ## 実装済み機能
 

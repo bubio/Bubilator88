@@ -32,6 +32,17 @@
          background GC keeps any Gen0 collection sub-millisecond. -->
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+
+    <!-- 配布サイズ削減。Release publish に .pdb を出さない (クラッシュダンプの
+         シンボル化は同一コミットを手元でビルドし直せば足りる)。Debug ビルドは
+         従来どおりデバッグ可能なまま。 -->
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+    <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
+    <!-- .NET サテライトアセンブリのローカライズは英語のみ (UI 文字列は
+         アプリ側が自前で持っており、BCL の翻訳リソースは使わない)。
+         WindowsAppSDK の *.mui はこの設定の対象外なので、
+         scripts\build-windows-package.ps1 の prune ステップで削る。 -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
