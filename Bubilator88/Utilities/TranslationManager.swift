@@ -6,7 +6,7 @@ import SwiftUI
 // diagnostics are downgraded rather than worked around.
 @preconcurrency import Translation
 import Vision
-import EmulatorCore  // re-exports Logging (swift-log)
+import Logging
 
 // `nonisolated` so background OCR work can log; `Logger` is Sendable.
 nonisolated private let ocrLog = Logger(label: "App.OCR")

@@ -1,6 +1,6 @@
 import Foundation
 import CryptoKit
-import EmulatorCore  // re-exports Logging (swift-log)
+import Logging
 
 /// Keeps D88 files extracted from an archive (ZIP/LZH/CAB/RAR) in a disk cache,
 /// so they can be reused as the destination for write-through write-back.

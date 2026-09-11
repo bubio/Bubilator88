@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import EmulatorCore
+import FMSynthesis
 
 // MARK: - Audio Debug
 

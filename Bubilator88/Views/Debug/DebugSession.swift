@@ -1,5 +1,8 @@
 import SwiftUI
 import EmulatorCore
+import FMSynthesis
+import Peripherals
+import Z80
 
 /// Owns the live state for the Debug Window.
 ///

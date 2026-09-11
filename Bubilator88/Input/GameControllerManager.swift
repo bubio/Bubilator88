@@ -1,5 +1,6 @@
 import GameController
 import EmulatorCore
+import FMSynthesis
 import AppKit
 
 // MARK: - Button Mapping
