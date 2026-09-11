@@ -4,15 +4,15 @@ import AppKit
 
 // MARK: - Button Mapping
 
-/// Codable wrapper for Keyboard.Key (row, bit).
+/// Codable wrapper for PC88Key (row, bit).
 struct MappedKey: Codable, Equatable, Hashable {
   let row: Int
   let bit: Int
-  init(_ key: Keyboard.Key) { self.row = key.row; self.bit = key.bit }
-  var key: Keyboard.Key { Keyboard.Key(row, bit) }
+  init(_ key: PC88Key) { self.row = key.row; self.bit = key.bit }
+  var key: PC88Key { PC88Key(row, bit) }
 
   /// Sentinel for "no key assigned".
-  static let none = MappedKey(Keyboard.Key(-1, -1))
+  static let none = MappedKey(PC88Key(-1, -1))
   var isNone: Bool { row < 0 }
 }
 
@@ -258,7 +258,7 @@ struct ControllerButtonMapping: Codable, Equatable {
     ControllerButton.buttonX.rawValue: .hostShortcut(HostShortcut(keyCode: 0x24, modifierFlagsRaw: 0, displayKey: "↩")),     // kVK_Return (newline / alternate confirm)
     ControllerButton.buttonY.rawValue: .hostShortcut(HostShortcut(keyCode: 0x06, modifierFlagsRaw: 0, displayKey: "Z")),     // kVK_ANSI_Z (action / jump)
     ControllerButton.leftShoulder.rawValue: .hostShortcut(HostShortcut(keyCode: 0x07, modifierFlagsRaw: 0, displayKey: "X")),// kVK_ANSI_X (second action)
-    ControllerButton.rightShoulder.rawValue: .pc88Key(MappedKey(Keyboard.shift)),                                            // SHIFT (dash / modifier)
+    ControllerButton.rightShoulder.rawValue: .pc88Key(MappedKey(PC88Key.shift)),                                            // SHIFT (dash / modifier)
     ControllerButton.leftTrigger.rawValue: .hostShortcut(HostShortcut(keyCode: 0x06, modifierFlagsRaw: 1048576, displayKey: "Z")),  // ⌘Z (hold to rewind)
     ControllerButton.rightTrigger.rawValue: .hostShortcut(HostShortcut(keyCode: 0x30, modifierFlagsRaw: 131072, displayKey: "Tab")), // ⇧Tab
     ControllerButton.buttonStart.rawValue: .none,   // STOP is deliberately unassigned, so a stray press cannot break into BASIC
@@ -287,111 +287,111 @@ struct PC88KeyChoice: Identifiable, Hashable {
 
   static let allChoices: [PC88KeyChoice] = [
     // Most useful for games first
-    PC88KeyChoice(name: "Space", key: MappedKey(Keyboard.space)),
-    PC88KeyChoice(name: "Return", key: MappedKey(Keyboard.Key(1, 7))),
-    PC88KeyChoice(name: "ESC", key: MappedKey(Keyboard.esc)),
-    PC88KeyChoice(name: "STOP", key: MappedKey(Keyboard.stop)),
-    PC88KeyChoice(name: "COPY", key: MappedKey(Keyboard.copy)),
+    PC88KeyChoice(name: "Space", key: MappedKey(PC88Key.space)),
+    PC88KeyChoice(name: "Return", key: MappedKey(PC88Key(1, 7))),
+    PC88KeyChoice(name: "ESC", key: MappedKey(PC88Key.esc)),
+    PC88KeyChoice(name: "STOP", key: MappedKey(PC88Key.stop)),
+    PC88KeyChoice(name: "COPY", key: MappedKey(PC88Key.copy)),
     // Arrows
-    PC88KeyChoice(name: "Up", key: MappedKey(Keyboard.up)),
-    PC88KeyChoice(name: "Down", key: MappedKey(Keyboard.down)),
-    PC88KeyChoice(name: "Left", key: MappedKey(Keyboard.left)),
-    PC88KeyChoice(name: "Right", key: MappedKey(Keyboard.right)),
+    PC88KeyChoice(name: "Up", key: MappedKey(PC88Key.up)),
+    PC88KeyChoice(name: "Down", key: MappedKey(PC88Key.down)),
+    PC88KeyChoice(name: "Left", key: MappedKey(PC88Key.left)),
+    PC88KeyChoice(name: "Right", key: MappedKey(PC88Key.right)),
     // Function keys
-    PC88KeyChoice(name: "F1", key: MappedKey(Keyboard.f1)),
-    PC88KeyChoice(name: "F2", key: MappedKey(Keyboard.f2)),
-    PC88KeyChoice(name: "F3", key: MappedKey(Keyboard.f3)),
-    PC88KeyChoice(name: "F4", key: MappedKey(Keyboard.f4)),
-    PC88KeyChoice(name: "F5", key: MappedKey(Keyboard.f5)),
-    PC88KeyChoice(name: "F6", key: MappedKey(Keyboard.f6)),
-    PC88KeyChoice(name: "F7", key: MappedKey(Keyboard.f7)),
-    PC88KeyChoice(name: "F8", key: MappedKey(Keyboard.f8)),
-    PC88KeyChoice(name: "F9", key: MappedKey(Keyboard.f9)),
-    PC88KeyChoice(name: "F10", key: MappedKey(Keyboard.f10)),
+    PC88KeyChoice(name: "F1", key: MappedKey(PC88Key.f1)),
+    PC88KeyChoice(name: "F2", key: MappedKey(PC88Key.f2)),
+    PC88KeyChoice(name: "F3", key: MappedKey(PC88Key.f3)),
+    PC88KeyChoice(name: "F4", key: MappedKey(PC88Key.f4)),
+    PC88KeyChoice(name: "F5", key: MappedKey(PC88Key.f5)),
+    PC88KeyChoice(name: "F6", key: MappedKey(PC88Key.f6)),
+    PC88KeyChoice(name: "F7", key: MappedKey(PC88Key.f7)),
+    PC88KeyChoice(name: "F8", key: MappedKey(PC88Key.f8)),
+    PC88KeyChoice(name: "F9", key: MappedKey(PC88Key.f9)),
+    PC88KeyChoice(name: "F10", key: MappedKey(PC88Key.f10)),
     // Modifiers
-    PC88KeyChoice(name: "Shift", key: MappedKey(Keyboard.shift)),
-    PC88KeyChoice(name: "Ctrl", key: MappedKey(Keyboard.ctrl)),
-    PC88KeyChoice(name: "GRPH", key: MappedKey(Keyboard.grph)),
-    PC88KeyChoice(name: "KANA", key: MappedKey(Keyboard.kana)),
-    PC88KeyChoice(name: "CAPS", key: MappedKey(Keyboard.capsLock)),
+    PC88KeyChoice(name: "Shift", key: MappedKey(PC88Key.shift)),
+    PC88KeyChoice(name: "Ctrl", key: MappedKey(PC88Key.ctrl)),
+    PC88KeyChoice(name: "GRPH", key: MappedKey(PC88Key.grph)),
+    PC88KeyChoice(name: "KANA", key: MappedKey(PC88Key.kana)),
+    PC88KeyChoice(name: "CAPS", key: MappedKey(PC88Key.capsLock)),
     // Numpad
-    PC88KeyChoice(name: "KP 0", key: MappedKey(Keyboard.kp0)),
-    PC88KeyChoice(name: "KP 1", key: MappedKey(Keyboard.kp1)),
-    PC88KeyChoice(name: "KP 2", key: MappedKey(Keyboard.kp2)),
-    PC88KeyChoice(name: "KP 3", key: MappedKey(Keyboard.kp3)),
-    PC88KeyChoice(name: "KP 4", key: MappedKey(Keyboard.kp4)),
-    PC88KeyChoice(name: "KP 5", key: MappedKey(Keyboard.kp5)),
-    PC88KeyChoice(name: "KP 6", key: MappedKey(Keyboard.kp6)),
-    PC88KeyChoice(name: "KP 7", key: MappedKey(Keyboard.kp7)),
-    PC88KeyChoice(name: "KP 8", key: MappedKey(Keyboard.kp8)),
-    PC88KeyChoice(name: "KP 9", key: MappedKey(Keyboard.kp9)),
-    PC88KeyChoice(name: "KP *", key: MappedKey(Keyboard.kpMultiply)),
-    PC88KeyChoice(name: "KP +", key: MappedKey(Keyboard.kpPlus)),
-    PC88KeyChoice(name: "KP -", key: MappedKey(Keyboard.kpMinus)),
-    PC88KeyChoice(name: "KP /", key: MappedKey(Keyboard.kpDivide)),
-    PC88KeyChoice(name: "KP .", key: MappedKey(Keyboard.kpPeriod)),
-    PC88KeyChoice(name: "KP =", key: MappedKey(Keyboard.kpEqual)),
-    PC88KeyChoice(name: "KP Return", key: MappedKey(Keyboard.kpReturn)),
+    PC88KeyChoice(name: "KP 0", key: MappedKey(PC88Key.kp0)),
+    PC88KeyChoice(name: "KP 1", key: MappedKey(PC88Key.kp1)),
+    PC88KeyChoice(name: "KP 2", key: MappedKey(PC88Key.kp2)),
+    PC88KeyChoice(name: "KP 3", key: MappedKey(PC88Key.kp3)),
+    PC88KeyChoice(name: "KP 4", key: MappedKey(PC88Key.kp4)),
+    PC88KeyChoice(name: "KP 5", key: MappedKey(PC88Key.kp5)),
+    PC88KeyChoice(name: "KP 6", key: MappedKey(PC88Key.kp6)),
+    PC88KeyChoice(name: "KP 7", key: MappedKey(PC88Key.kp7)),
+    PC88KeyChoice(name: "KP 8", key: MappedKey(PC88Key.kp8)),
+    PC88KeyChoice(name: "KP 9", key: MappedKey(PC88Key.kp9)),
+    PC88KeyChoice(name: "KP *", key: MappedKey(PC88Key.kpMultiply)),
+    PC88KeyChoice(name: "KP +", key: MappedKey(PC88Key.kpPlus)),
+    PC88KeyChoice(name: "KP -", key: MappedKey(PC88Key.kpMinus)),
+    PC88KeyChoice(name: "KP /", key: MappedKey(PC88Key.kpDivide)),
+    PC88KeyChoice(name: "KP .", key: MappedKey(PC88Key.kpPeriod)),
+    PC88KeyChoice(name: "KP =", key: MappedKey(PC88Key.kpEqual)),
+    PC88KeyChoice(name: "KP Return", key: MappedKey(PC88Key.kpReturn)),
     // Letters
-    PC88KeyChoice(name: "A", key: MappedKey(Keyboard.a)),
-    PC88KeyChoice(name: "B", key: MappedKey(Keyboard.b)),
-    PC88KeyChoice(name: "C", key: MappedKey(Keyboard.c)),
-    PC88KeyChoice(name: "D", key: MappedKey(Keyboard.d)),
-    PC88KeyChoice(name: "E", key: MappedKey(Keyboard.e)),
-    PC88KeyChoice(name: "F", key: MappedKey(Keyboard.f)),
-    PC88KeyChoice(name: "G", key: MappedKey(Keyboard.g)),
-    PC88KeyChoice(name: "H", key: MappedKey(Keyboard.h)),
-    PC88KeyChoice(name: "I", key: MappedKey(Keyboard.i)),
-    PC88KeyChoice(name: "J", key: MappedKey(Keyboard.j)),
-    PC88KeyChoice(name: "K", key: MappedKey(Keyboard.k)),
-    PC88KeyChoice(name: "L", key: MappedKey(Keyboard.l)),
-    PC88KeyChoice(name: "M", key: MappedKey(Keyboard.m)),
-    PC88KeyChoice(name: "N", key: MappedKey(Keyboard.n)),
-    PC88KeyChoice(name: "O", key: MappedKey(Keyboard.o)),
-    PC88KeyChoice(name: "P", key: MappedKey(Keyboard.p)),
-    PC88KeyChoice(name: "Q", key: MappedKey(Keyboard.q)),
-    PC88KeyChoice(name: "R", key: MappedKey(Keyboard.r)),
-    PC88KeyChoice(name: "S", key: MappedKey(Keyboard.s)),
-    PC88KeyChoice(name: "T", key: MappedKey(Keyboard.t)),
-    PC88KeyChoice(name: "U", key: MappedKey(Keyboard.u)),
-    PC88KeyChoice(name: "V", key: MappedKey(Keyboard.v)),
-    PC88KeyChoice(name: "W", key: MappedKey(Keyboard.w)),
-    PC88KeyChoice(name: "X", key: MappedKey(Keyboard.x)),
-    PC88KeyChoice(name: "Y", key: MappedKey(Keyboard.y)),
-    PC88KeyChoice(name: "Z", key: MappedKey(Keyboard.z)),
+    PC88KeyChoice(name: "A", key: MappedKey(PC88Key.a)),
+    PC88KeyChoice(name: "B", key: MappedKey(PC88Key.b)),
+    PC88KeyChoice(name: "C", key: MappedKey(PC88Key.c)),
+    PC88KeyChoice(name: "D", key: MappedKey(PC88Key.d)),
+    PC88KeyChoice(name: "E", key: MappedKey(PC88Key.e)),
+    PC88KeyChoice(name: "F", key: MappedKey(PC88Key.f)),
+    PC88KeyChoice(name: "G", key: MappedKey(PC88Key.g)),
+    PC88KeyChoice(name: "H", key: MappedKey(PC88Key.h)),
+    PC88KeyChoice(name: "I", key: MappedKey(PC88Key.i)),
+    PC88KeyChoice(name: "J", key: MappedKey(PC88Key.j)),
+    PC88KeyChoice(name: "K", key: MappedKey(PC88Key.k)),
+    PC88KeyChoice(name: "L", key: MappedKey(PC88Key.l)),
+    PC88KeyChoice(name: "M", key: MappedKey(PC88Key.m)),
+    PC88KeyChoice(name: "N", key: MappedKey(PC88Key.n)),
+    PC88KeyChoice(name: "O", key: MappedKey(PC88Key.o)),
+    PC88KeyChoice(name: "P", key: MappedKey(PC88Key.p)),
+    PC88KeyChoice(name: "Q", key: MappedKey(PC88Key.q)),
+    PC88KeyChoice(name: "R", key: MappedKey(PC88Key.r)),
+    PC88KeyChoice(name: "S", key: MappedKey(PC88Key.s)),
+    PC88KeyChoice(name: "T", key: MappedKey(PC88Key.t)),
+    PC88KeyChoice(name: "U", key: MappedKey(PC88Key.u)),
+    PC88KeyChoice(name: "V", key: MappedKey(PC88Key.v)),
+    PC88KeyChoice(name: "W", key: MappedKey(PC88Key.w)),
+    PC88KeyChoice(name: "X", key: MappedKey(PC88Key.x)),
+    PC88KeyChoice(name: "Y", key: MappedKey(PC88Key.y)),
+    PC88KeyChoice(name: "Z", key: MappedKey(PC88Key.z)),
     // Numbers
-    PC88KeyChoice(name: "0", key: MappedKey(Keyboard.key0)),
-    PC88KeyChoice(name: "1", key: MappedKey(Keyboard.key1)),
-    PC88KeyChoice(name: "2", key: MappedKey(Keyboard.key2)),
-    PC88KeyChoice(name: "3", key: MappedKey(Keyboard.key3)),
-    PC88KeyChoice(name: "4", key: MappedKey(Keyboard.key4)),
-    PC88KeyChoice(name: "5", key: MappedKey(Keyboard.key5)),
-    PC88KeyChoice(name: "6", key: MappedKey(Keyboard.key6)),
-    PC88KeyChoice(name: "7", key: MappedKey(Keyboard.key7)),
-    PC88KeyChoice(name: "8", key: MappedKey(Keyboard.key8)),
-    PC88KeyChoice(name: "9", key: MappedKey(Keyboard.key9)),
+    PC88KeyChoice(name: "0", key: MappedKey(PC88Key.key0)),
+    PC88KeyChoice(name: "1", key: MappedKey(PC88Key.key1)),
+    PC88KeyChoice(name: "2", key: MappedKey(PC88Key.key2)),
+    PC88KeyChoice(name: "3", key: MappedKey(PC88Key.key3)),
+    PC88KeyChoice(name: "4", key: MappedKey(PC88Key.key4)),
+    PC88KeyChoice(name: "5", key: MappedKey(PC88Key.key5)),
+    PC88KeyChoice(name: "6", key: MappedKey(PC88Key.key6)),
+    PC88KeyChoice(name: "7", key: MappedKey(PC88Key.key7)),
+    PC88KeyChoice(name: "8", key: MappedKey(PC88Key.key8)),
+    PC88KeyChoice(name: "9", key: MappedKey(PC88Key.key9)),
     // Symbols
-    PC88KeyChoice(name: "@", key: MappedKey(Keyboard.at)),
-    PC88KeyChoice(name: "-", key: MappedKey(Keyboard.minus)),
-    PC88KeyChoice(name: "^", key: MappedKey(Keyboard.caret)),
-    PC88KeyChoice(name: "[", key: MappedKey(Keyboard.leftBracket)),
-    PC88KeyChoice(name: "]", key: MappedKey(Keyboard.rightBracket)),
-    PC88KeyChoice(name: ";", key: MappedKey(Keyboard.semicolon)),
-    PC88KeyChoice(name: ":", key: MappedKey(Keyboard.colon)),
-    PC88KeyChoice(name: ",", key: MappedKey(Keyboard.comma)),
-    PC88KeyChoice(name: ".", key: MappedKey(Keyboard.period)),
-    PC88KeyChoice(name: "/", key: MappedKey(Keyboard.slash)),
-    PC88KeyChoice(name: "_", key: MappedKey(Keyboard.underscore)),
-    PC88KeyChoice(name: "\\", key: MappedKey(Keyboard.yen)),
+    PC88KeyChoice(name: "@", key: MappedKey(PC88Key.at)),
+    PC88KeyChoice(name: "-", key: MappedKey(PC88Key.minus)),
+    PC88KeyChoice(name: "^", key: MappedKey(PC88Key.caret)),
+    PC88KeyChoice(name: "[", key: MappedKey(PC88Key.leftBracket)),
+    PC88KeyChoice(name: "]", key: MappedKey(PC88Key.rightBracket)),
+    PC88KeyChoice(name: ";", key: MappedKey(PC88Key.semicolon)),
+    PC88KeyChoice(name: ":", key: MappedKey(PC88Key.colon)),
+    PC88KeyChoice(name: ",", key: MappedKey(PC88Key.comma)),
+    PC88KeyChoice(name: ".", key: MappedKey(PC88Key.period)),
+    PC88KeyChoice(name: "/", key: MappedKey(PC88Key.slash)),
+    PC88KeyChoice(name: "_", key: MappedKey(PC88Key.underscore)),
+    PC88KeyChoice(name: "\\", key: MappedKey(PC88Key.yen)),
     // Editing
-    PC88KeyChoice(name: "TAB", key: MappedKey(Keyboard.tab)),
-    PC88KeyChoice(name: "BS", key: MappedKey(Keyboard.bs)),
-    PC88KeyChoice(name: "DEL", key: MappedKey(Keyboard.del)),
-    PC88KeyChoice(name: "INS", key: MappedKey(Keyboard.ins)),
-    PC88KeyChoice(name: "CLR/HOME", key: MappedKey(Keyboard.clr)),
-    PC88KeyChoice(name: "HELP", key: MappedKey(Keyboard.help)),
-    PC88KeyChoice(name: "ROLL UP", key: MappedKey(Keyboard.rollUp)),
-    PC88KeyChoice(name: "ROLL DOWN", key: MappedKey(Keyboard.rollDown)),
+    PC88KeyChoice(name: "TAB", key: MappedKey(PC88Key.tab)),
+    PC88KeyChoice(name: "BS", key: MappedKey(PC88Key.bs)),
+    PC88KeyChoice(name: "DEL", key: MappedKey(PC88Key.del)),
+    PC88KeyChoice(name: "INS", key: MappedKey(PC88Key.ins)),
+    PC88KeyChoice(name: "CLR/HOME", key: MappedKey(PC88Key.clr)),
+    PC88KeyChoice(name: "HELP", key: MappedKey(PC88Key.help)),
+    PC88KeyChoice(name: "ROLL UP", key: MappedKey(PC88Key.rollUp)),
+    PC88KeyChoice(name: "ROLL DOWN", key: MappedKey(PC88Key.rollDown)),
   ]
 
   /// Fast reverse lookup: MappedKey → display name.
@@ -472,7 +472,7 @@ final class GameControllerManager {
   private(set) var activeControllerInfo: ConnectedControllerInfo?
 
   /// Keys currently held by controller (released on disconnect to prevent stuck keys).
-  private var pressedKeys: Set<Keyboard.Key> = []
+  private var pressedKeys: Set<PC88Key> = []
 
   /// Analog stick state for hysteresis-based deadzone.
   private var stickState: (up: Bool, down: Bool, left: Bool, right: Bool) = (false, false, false, false)
@@ -774,7 +774,7 @@ final class GameControllerManager {
   }
 
   /// Pass-through for PC-88 key events from a controller button.
-  private func handlePC88Key(_ key: Keyboard.Key, pressed: Bool) {
+  private func handlePC88Key(_ key: PC88Key, pressed: Bool) {
     guard let vm = viewModel else { return }
     if pressed {
       pressedKeys.insert(key)

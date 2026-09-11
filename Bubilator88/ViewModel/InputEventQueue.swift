@@ -13,8 +13,8 @@ import Foundation
 nonisolated enum InputEvent {
   /// `record` marks real user input, which a script recording captures.
   /// Injected keys (paste queue, script playback, game controller) pass false.
-  case pressKey(Keyboard.Key, record: Bool)
-  case releaseKey(Keyboard.Key, record: Bool)
+  case pressKey(PC88Key, record: Bool)
+  case releaseKey(PC88Key, record: Bool)
   case releaseAllKeys
   case mouseMovement(dx: Int, dy: Int)
   case mouseButtons(left: Bool, right: Bool)

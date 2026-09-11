@@ -21,11 +21,11 @@ struct SoftwareKeyboardView: View {
   let viewModel: EmulatorViewModel
 
   /// Normal keys currently held down (for highlight).
-  @State private var pressedKeys: Set<Keyboard.Key> = []
+  @State private var pressedKeys: Set<PC88Key> = []
   /// Sticky modifiers: released after the next normal keypress.
-  @State private var latchedModifiers: Set<Keyboard.Key> = []
+  @State private var latchedModifiers: Set<PC88Key> = []
   /// Locked modifiers: held until explicitly toggled off.
-  @State private var lockedModifiers: Set<Keyboard.Key> = []
+  @State private var lockedModifiers: Set<PC88Key> = []
 
   private static let padding: CGFloat = 12
 
@@ -37,15 +37,15 @@ struct SoftwareKeyboardView: View {
   }
 
   /// A modifier is active when latched (sticky) or locked.
-  private func modifierActive(_ key: Keyboard.Key) -> Bool {
+  private func modifierActive(_ key: PC88Key) -> Bool {
     latchedModifiers.contains(key) || lockedModifiers.contains(key)
   }
   /// KANA active → keycaps show their kana legend.
-  private var kanaActive: Bool { modifierActive(Keyboard.kana) }
+  private var kanaActive: Bool { modifierActive(PC88Key.kana) }
   /// SHIFT active → keycaps show their shifted (or small-kana) legend.
-  private var shiftActive: Bool { modifierActive(Keyboard.shift) }
+  private var shiftActive: Bool { modifierActive(PC88Key.shift) }
   /// GRPH active → keycaps show their graphic-character glyph.
-  private var graphActive: Bool { modifierActive(Keyboard.grph) }
+  private var graphActive: Bool { modifierActive(PC88Key.grph) }
 
   /// Resolve a key's GRPH graphic glyph from the loaded FontROM, but only when
   /// GRPH is active and the key has a graphic character. Returns nil otherwise

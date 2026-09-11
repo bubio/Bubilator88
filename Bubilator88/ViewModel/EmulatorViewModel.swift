@@ -481,7 +481,7 @@ final class EmulatorViewModel {
   /// source URL (for save-state metadata / recent reload), and format.
   var tapeName: String = "Empty"
   var tapeSourceURL: URL?
-  var tapeFormat: CassetteDeck.Format?
+  var tapeFormat: TapeFormat?
   var tapeProgress: Double = 0
 
   /// True when a tape image is mounted. Unlike disks, the tape bytes live
@@ -1773,7 +1773,7 @@ final class EmulatorViewModel {
   func keyDown(_ keyCode: UInt16) {
     // ESC during an in-flight clipboard paste cancels the paste and is
     // swallowed, matching X88000M. Otherwise ESC reaches the emulator
-    // normally (Keyboard.esc at row 9 / bit 7).
+    // normally (PC88Key.esc at row 9 / bit 7).
     if keyCode == 0x35 && !pasteQueue.isEmpty {
       cancelPasteQueue()
       return
@@ -1790,12 +1790,12 @@ final class EmulatorViewModel {
   }
 
   /// Press a PC-8801 key directly (used by game controller).
-  func pressKey(_ key: Keyboard.Key) {
+  func pressKey(_ key: PC88Key) {
     postInput(.pressKey(key, record: false))
   }
 
   /// Release a PC-8801 key directly (used by game controller).
-  func releaseKey(_ key: Keyboard.Key) {
+  func releaseKey(_ key: PC88Key) {
     postInput(.releaseKey(key, record: false))
   }
 

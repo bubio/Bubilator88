@@ -35,7 +35,7 @@ extension EmulatorViewModel {
     pasteQueueLock.unlock()
 
     for action in actions {
-      let key = Keyboard.Key(action.row, action.bit)
+      let key = PC88Key(action.row, action.bit)
       apply(action.down ? .pressKey(key, record: false)
         : .releaseKey(key, record: false))
     }
@@ -55,7 +55,7 @@ extension EmulatorViewModel {
     pasteQueueLock.unlock()
 
     for action in actions {
-      let key = Keyboard.Key(action.row, action.bit)
+      let key = PC88Key(action.row, action.bit)
       apply(action.down ? .pressKey(key, record: false)
         : .releaseKey(key, record: false))
     }
