@@ -355,7 +355,7 @@ final class EmulatorViewModel {
     didSet {
       let clamped = [1, 2, 4].contains(cpuOverclock) ? cpuOverclock : 1
       if clamped != cpuOverclock { cpuOverclock = clamped; return }
-      emuQueue.sync { machine.cpuOverclock = clamped }
+      emuQueue.sync { pc88.cpuOverclock = clamped }
     }
   }
 
@@ -386,7 +386,7 @@ final class EmulatorViewModel {
       Settings.shared.pseudoStereo = newValue
       let enabled = newValue && !immersiveAudio
       emuQueue.async { [weak self] in
-        self?.machine.sound.pseudoStereoEnabled = enabled
+        self?.pc88.pseudoStereoEnabled = enabled
       }
     }
   }
@@ -397,7 +397,7 @@ final class EmulatorViewModel {
     set {
       Settings.shared.cdMix = newValue
       emuQueue.async { [weak self] in
-        self?.machine.sound.cdMixEnabled = newValue
+        self?.pc88.cdMixEnabled = newValue
       }
     }
   }
@@ -414,8 +414,8 @@ final class EmulatorViewModel {
       // which two separate hops would not guarantee.
       emuQueue.async { [weak self] in
         guard let self else { return }
-        machine.sound.pseudoStereoEnabled = chorus
-        machine.sound.immersiveOutputEnabled = newValue
+        pc88.pseudoStereoEnabled = chorus
+        pc88.immersiveOutputEnabled = newValue
       }
       restartAudio()
     }
@@ -458,7 +458,7 @@ final class EmulatorViewModel {
   /// (`RELEASE_1_5_0_PLAN.md` §3.3(e), §9.6). Calling it from a running loop
   /// needs an `emuQueue.sync` here instead.
   func syncActiveClockFromMachine() {
-    activeClock8MHz = machine.clock8MHz
+    activeClock8MHz = pc88.clock8MHz
   }
 
   /// Mounted disk names for UI display
@@ -646,7 +646,7 @@ final class EmulatorViewModel {
     didSet {
       let value = forceOPNMode
       emuQueue.async { [weak self] in
-        self?.machine.sound.forceOPNMode = value
+        self?.pc88.forceOPNMode = value
       }
     }
   }
@@ -720,7 +720,9 @@ final class EmulatorViewModel {
     FramePublisher(pixelCount: ScreenRenderer.bufferSize400)
 
   let pc88: PC88
-  /// `pc88.machine`, for everything not yet moved onto the `PC88` API.
+  /// `pc88.machine`. For the debugger and development tools only (DebugSession,
+  /// the debug panes, memory dumps, haptics' SSG probe); everything else goes
+  /// through `pc88`.
   let machine: Machine
 
   /// The 640×400 RGBA frame the emulation loop renders into.
@@ -922,18 +924,18 @@ final class EmulatorViewModel {
     self.machine = pc88.machine
     self.pixelBuffer = Array(repeating: 0, count: ScreenRenderer.bufferSize400)
     activeClock8MHz = clock8MHz
-    machine.bus.dipSw1 = _bootModeStorage.dipSw1
+    pc88.dipSw1 = _bootModeStorage.dipSw1
     // Drive 0 is always empty at init → ROM boot (bit 3 = 1)
-    machine.bus.dipSw2 = _bootModeStorage.dipSw2 | 0x08
+    pc88.dipSw2 = _bootModeStorage.dipSw2 | 0x08
     // Set before the reset: the monitor decides the CRTC's reset geometry.
-    machine.monitorType = Settings.shared.monitorType
-    machine.memoryWaitDip = Settings.shared.memoryWaitDip
-    machine.reset()
-    machine.clock8MHz = clock8MHz
-    machine.sound.immersiveOutputEnabled = Settings.shared.immersiveAudio
-    machine.sound.pseudoStereoEnabled = pseudoStereo && !immersiveAudio
-    machine.sound.cdMixEnabled = Settings.shared.cdMix
-    audio.sound = machine.sound
+    pc88.monitorType = Settings.shared.monitorType
+    pc88.memoryWaitDip = Settings.shared.memoryWaitDip
+    pc88.reset()
+    pc88.clock8MHz = clock8MHz
+    pc88.immersiveOutputEnabled = Settings.shared.immersiveAudio
+    pc88.pseudoStereoEnabled = pseudoStereo && !immersiveAudio
+    pc88.cdMixEnabled = Settings.shared.cdMix
+    audio.pc88 = pc88
     audio.recorder = audioRecorder
     audio.videoRecorder = videoRecorder
 
@@ -958,7 +960,7 @@ final class EmulatorViewModel {
     }
 
     // Take write notifications from SubSystem and schedule them with debouncing.
-    machine.subSystem.onDiskWritten = { [weak self] drive in
+    pc88.onDiskWritten = { [weak self] drive in
       self?.diskDirtyNotification(drive: drive)
     }
 
@@ -1286,14 +1288,14 @@ final class EmulatorViewModel {
       // BASIC. When a disk is mounted, clear bit 3 for normal IPL boot.
       // (Machine.applyBootStrap is the single source of truth shared with
       // ScriptPlayer / BootTester.)
-      machine.bus.dipSw1 = sw1
-      machine.applyBootStrap(base: sw2Base)
+      pc88.dipSw1 = sw1
+      pc88.applyBootStrap(base: sw2Base)
       // Like the DIP switches, the monitor type only takes effect on reset.
-      machine.monitorType = monitorType
-      machine.memoryWaitDip = memoryWaitDip
-      machine.reset(preserveRAM: true)
-      machine.clock8MHz = use8MHz
-      machine.cpuOverclock = cpuOverclock
+      pc88.monitorType = monitorType
+      pc88.memoryWaitDip = memoryWaitDip
+      pc88.reset(preserveRAM: true)
+      pc88.clock8MHz = use8MHz
+      pc88.cpuOverclock = cpuOverclock
     }
     activeClock8MHz = use8MHz
     if romLoaded { loadROMs() }
@@ -1434,9 +1436,9 @@ final class EmulatorViewModel {
       let meta = SaveMeta(
         bootMode: bootMode.rawValue,
         clock8MHz: clock8MHz,
-        monitorType: machine.monitorType.rawValue,
-        disk0: machine.subSystem.drives[0]?.name,
-        disk1: machine.subSystem.drives[1]?.name,
+        monitorType: pc88.monitorType.rawValue,
+        disk0: pc88.mountedDisk(drive: 0)?.name,
+        disk1: pc88.mountedDisk(drive: 1)?.name,
         drive0Name: self.drive0Name == "Empty" ? nil : self.drive0Name,
         drive1Name: self.drive1Name == "Empty" ? nil : self.drive1Name,
         drive0FileName: self.drive0FileName,
@@ -1447,9 +1449,9 @@ final class EmulatorViewModel {
         drive1ImageIndex: self.drive1Info?.currentImageIndex,
         drive0ArchiveEntry: self.drive0Info?.archiveEntryName,
         drive1ArchiveEntry: self.drive1Info?.archiveEntryName,
-        tapeName: machine.cassette.isLoaded ? self.tapeName : nil,
-        tapeSourceURL: machine.cassette.isLoaded ? self.tapeSourceURL?.absoluteString : nil,
-        tapeFormatT88: machine.cassette.isLoaded ? (self.tapeFormat == .t88) : nil
+        tapeName: pc88.isTapeLoaded ? self.tapeName : nil,
+        tapeSourceURL: pc88.isTapeLoaded ? self.tapeSourceURL?.absoluteString : nil,
+        tapeFormatT88: pc88.isTapeLoaded ? (self.tapeFormat == .t88) : nil
       )
       let metaJSON = try? JSONEncoder().encode(meta)
       // Thumbnail and app metadata go inside the .b88s so the file stands on
@@ -1461,8 +1463,8 @@ final class EmulatorViewModel {
       if let metaJSON {
         extraSections.append((tag: SaveStateFileAccess.appMetaTag, data: Array(metaJSON)))
       }
-      return machine.createSaveState(thumbnail: thumbData.map { Array($0) },
-                                     extraSections: extraSections)
+      return pc88.createSaveState(thumbnail: thumbData.map { Array($0) },
+                                  extraSections: extraSections)
     }
     try? FileManager.default.createDirectory(at: Self.saveStateDir, withIntermediateDirectories: true)
     try? Data(stateData).write(to: path, options: .atomic)
@@ -1490,7 +1492,7 @@ final class EmulatorViewModel {
     var loadError: Error?
     emuQueue.sync {
       do {
-        try machine.loadSaveState(Array(fileData))
+        try pc88.loadSaveState(Array(fileData))
       } catch {
         loadError = error
       }
@@ -1508,7 +1510,7 @@ final class EmulatorViewModel {
     // metadata predates 1.5.0, when port 0x40 bit 1 always read 0 — so its
     // geometry was programmed for a 24kHz monitor.
     let restoredMonitor = meta?.monitorType.flatMap(MonitorType.init(rawValue:)) ?? .khz24
-    emuQueue.sync { machine.monitorType = restoredMonitor }
+    emuQueue.sync { pc88.monitorType = restoredMonitor }
     // Mirror it into Settings the way `clock8MHz` is mirrored, so the picker
     // agrees with the machine and the next Reset does not silently change the
     // frame rate back.
@@ -1528,27 +1530,27 @@ final class EmulatorViewModel {
           let sw1 = mode.dipSw1
           let sw2 = mode.dipSw2
           emuQueue.sync {
-            machine.bus.dipSw1 = sw1
-            machine.bus.dipSw2 = sw2
+            pc88.dipSw1 = sw1
+            pc88.dipSw2 = sw2
           }
         }
       }
       Settings.shared.clock8MHz = meta.clock8MHz
-      drive0Name = meta.drive0Name ?? machine.subSystem.drives[0]?.name ?? "Empty"
-      drive1Name = meta.drive1Name ?? machine.subSystem.drives[1]?.name ?? "Empty"
+      drive0Name = meta.drive0Name ?? pc88.mountedDisk(drive: 0)?.name ?? "Empty"
+      drive1Name = meta.drive1Name ?? pc88.mountedDisk(drive: 1)?.name ?? "Empty"
       drive0FileName = meta.drive0FileName
       drive1FileName = meta.drive1FileName
     } else {
-      drive0Name = machine.subSystem.drives[0]?.name ?? "Empty"
-      drive1Name = machine.subSystem.drives[1]?.name ?? "Empty"
+      drive0Name = pc88.mountedDisk(drive: 0)?.name ?? "Empty"
+      drive1Name = pc88.mountedDisk(drive: 1)?.name ?? "Empty"
       drive0FileName = nil
       drive1FileName = nil
     }
     // Reconstruct MountedDiskInfo from saved source URL or restored disk
     drive0Info = reconstructDiskInfo(drive: 0, meta: meta)
     drive1Info = reconstructDiskInfo(drive: 1, meta: meta)
-    drive0WriteProtected = machine.isWriteProtected(drive: 0)
-    drive1WriteProtected = machine.isWriteProtected(drive: 1)
+    drive0WriteProtected = pc88.isWriteProtected(drive: 0)
+    drive1WriteProtected = pc88.isWriteProtected(drive: 1)
     // Cassette bytes round-trip inside the state file itself; only the UI's
     // mount display needs restoring here, driven off the engine's own
     // isLoaded rather than the (possibly absent/stale) saved meta.
@@ -1556,7 +1558,7 @@ final class EmulatorViewModel {
     // Reading the deck is safe at this point specifically because the loop is
     // stopped and joined around this call — it is not safe from the UI, which
     // is why `isTapeMounted` is a mirrored property rather than a passthrough.
-    isTapeMounted = machine.cassette.isLoaded
+    isTapeMounted = pc88.isTapeLoaded
     if isTapeMounted {
       tapeName = meta?.tapeName ?? "Tape"
       tapeSourceURL = meta?.tapeSourceURL.flatMap { URL(string: $0) }
@@ -1566,8 +1568,8 @@ final class EmulatorViewModel {
       tapeSourceURL = nil
       tapeFormat = nil
     }
-    tapeProgress = machine.cassette.progress
-    activeClock8MHz = machine.clock8MHz
+    tapeProgress = pc88.tapeProgress
+    activeClock8MHz = pc88.clock8MHz
     renderScreen()
     clearRewindBuffer()
     if wasRunning { start() }
@@ -1594,7 +1596,7 @@ final class EmulatorViewModel {
   /// For archives, re-extract the relevant entry from the archive.
   /// Otherwise, build minimal info from the restored single disk.
   private func reconstructDiskInfo(drive: Int, meta: SaveMeta?) -> MountedDiskInfo? {
-    guard let disk = machine.subSystem.drives[drive] else { return nil }
+    guard let disk = pc88.mountedDisk(drive: drive) else { return nil }
     let fileName = (drive == 0 ? drive0FileName : drive1FileName) ?? "Disk"
     let savedURLString = drive == 0 ? meta?.drive0SourceURL : meta?.drive1SourceURL
     let savedImageIndex = drive == 0 ? meta?.drive0ImageIndex : meta?.drive1ImageIndex
@@ -1871,23 +1873,23 @@ final class EmulatorViewModel {
   nonisolated func apply(_ event: InputEvent) {
     switch event {
     case .pressKey(let key, let record):
-      machine.keyboard.pressKey(row: key.row, bit: key.bit)
+      pc88.pressKey(key)
       // Only real user input is recorded; the script player and the paste
       // queue inject keys that a recording must not capture.
       if record { scriptRecorder?.keyDown(key) }
     case .releaseKey(let key, let record):
-      machine.keyboard.releaseKey(row: key.row, bit: key.bit)
+      pc88.releaseKey(key)
       if record { scriptRecorder?.keyUp(key) }
     case .releaseAllKeys:
-      machine.keyboard.releaseAll()
+      pc88.releaseAllKeys()
     case .mouseMovement(let dx, let dy):
-      machine.mouse.injectMovement(dx: dx, dy: dy)
+      pc88.moveMouse(dx: dx, dy: dy)
     case .mouseButtons(let left, let right):
-      machine.mouse.setButtons(left: left, right: right)
+      pc88.setMouseButtons(left: left, right: right)
     case .mouseEnabled(let on):
-      machine.mouse.enabled = on
+      pc88.mouseEnabled = on
     case .mouseJoyMode(let on):
-      machine.mouse.joyMode = on
+      pc88.mouseJoystickMode = on
     }
   }
 }

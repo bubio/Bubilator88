@@ -20,7 +20,7 @@ extension EmulatorViewModel {
     // N88-BASIC ROM
     let n88Path = appSupport.appending(component: "N88.ROM")
     if let data = try? Data(contentsOf: n88Path) {
-      machine.loadN88BasicROM(Array(data))
+      pc88.loadROM(.n88Basic, data: Array(data))
       romLoaded = true
     } else {
       showAlert(
@@ -31,31 +31,31 @@ extension EmulatorViewModel {
 
     // N-BASIC ROM (optional — needed for N88-BASIC boot sequence)
     if let data = try? Data(contentsOf: appSupport.appending(component: "N80.ROM")) {
-      machine.loadNBasicROM(Array(data))
+      pc88.loadROM(.nBasic, data: Array(data))
     }
 
     // Font ROM (optional — built-in ASCII font used as fallback)
     let fontPath = appSupport.appending(component: "FONT.ROM")
     if let data = try? Data(contentsOf: fontPath) {
-      machine.loadFontROM(Array(data))
+      pc88.loadROM(.font, data: Array(data))
     }
 
     // Kanji ROM Level 1 (optional)
     let kanji1Path = appSupport.appending(component: "KANJI1.ROM")
     if let data = try? Data(contentsOf: kanji1Path) {
-      machine.loadKanjiROM1(Array(data))
+      pc88.loadROM(.kanji1, data: Array(data))
     }
 
     // Kanji ROM Level 2 (optional)
     let kanji2Path = appSupport.appending(component: "KANJI2.ROM")
     if let data = try? Data(contentsOf: kanji2Path) {
-      machine.loadKanjiROM2(Array(data))
+      pc88.loadROM(.kanji2, data: Array(data))
     }
 
     // DISK.ROM (sub-CPU firmware, 8KB)
     let diskROMPath = appSupport.appending(component: "DISK.ROM")
     if let data = try? Data(contentsOf: diskROMPath) {
-      machine.loadDiskROM(Array(data))
+      pc88.loadROM(.disk, data: Array(data))
     }
 
     // N88 Extended ROM banks (0-3, 8KB each)
@@ -63,14 +63,14 @@ extension EmulatorViewModel {
       let primary = appSupport.appending(component: "N88_\(bank).ROM")
       let alt = appSupport.appending(component: "N88EXT\(bank).ROM")
       if let data = try? Data(contentsOf: primary) {
-        machine.loadN88ExtROM(bank: bank, data: Array(data))
+        pc88.loadROM(.n88Ext(bank: bank), data: Array(data))
       } else if let data = try? Data(contentsOf: alt) {
-        machine.loadN88ExtROM(bank: bank, data: Array(data))
+        pc88.loadROM(.n88Ext(bank: bank), data: Array(data))
       }
     }
 
     // Install extended RAM (capacity from Settings; default 128KB).
-    machine.installExtRAM(cards: Settings.shared.extramCards, banksPerCard: 4)
+    pc88.installExtRAM(cards: Settings.shared.extramCards, banksPerCard: 4)
 
     // YM2608 rhythm WAV samples (fmgen format: signed 16-bit PCM)
     let rhythmFiles = ["2608_BD.WAV", "2608_SD.WAV", "2608_TOP.WAV",
@@ -79,7 +79,7 @@ extension EmulatorViewModel {
       let path = appSupport.appending(component: filename)
       if let wavData = try? Data(contentsOf: path),
          let (samples, sampleRate) = parseWAV(wavData) {
-        machine.loadRhythmSample(index: index, data: samples, sampleRate: sampleRate)
+        pc88.loadRhythmSample(index: index, data: samples, sampleRate: sampleRate)
       }
     }
   }
@@ -453,7 +453,7 @@ extension EmulatorViewModel {
   private func mountDiskImageDirect(_ req: DirectMountRequest) {
     diskWriteBackScheduler.flushNow(drive: req.drive)
     emuQueue.sync {
-      machine.mountDisk(drive: req.drive, disk: req.disk)
+      pc88.mountDisk(drive: req.drive, disk: req.disk)
     }
     clearRewindBuffer()
     let info = MountedDiskInfo(sourceURL: req.sourceURL,
@@ -552,7 +552,7 @@ extension EmulatorViewModel {
     let displayName = info.imageNames[info.currentImageIndex]
     diskWriteBackScheduler.flushNow(drive: drive)
     emuQueue.sync {
-      machine.mountDisk(drive: drive, disk: disk)
+      pc88.mountDisk(drive: drive, disk: disk)
     }
     clearRewindBuffer()
     applyDriveState(
@@ -570,7 +570,7 @@ extension EmulatorViewModel {
     diskWriteBackScheduler.flushNow(drive: drive)
     let disk = info.allImages[index]
     emuQueue.sync {
-      machine.mountDisk(drive: drive, disk: disk)
+      pc88.mountDisk(drive: drive, disk: disk)
     }
     clearRewindBuffer()
     var updated = info
@@ -594,7 +594,7 @@ extension EmulatorViewModel {
     guard name != "Empty" else { return }
     let newValue = !(drive == 0 ? drive0WriteProtected : drive1WriteProtected)
     emuQueue.sync {
-      machine.setWriteProtect(drive: drive, protected: newValue)
+      pc88.setWriteProtect(drive: drive, protected: newValue)
     }
     if drive == 0 {
       drive0WriteProtected = newValue
@@ -606,7 +606,7 @@ extension EmulatorViewModel {
   func ejectDisk(drive: Int) {
     diskWriteBackScheduler.flushNow(drive: drive)
     emuQueue.sync {
-      machine.ejectDisk(drive: drive)
+      pc88.ejectDisk(drive: drive)
     }
     clearRewindBuffer()
     applyDriveState(.empty, drive: drive)
@@ -832,12 +832,7 @@ extension EmulatorViewModel {
     // Clearing dirty up front means a write that arrives while this one is in
     // flight is guaranteed to be written back on the scheduler's next firing.
     // dirty is restored only if the write fails.
-    let snapshot: [UInt8]? = emuQueue.sync { () -> [UInt8]? in
-      guard let disk = machine.subSystem.drives[drive], disk.dirty,
-            let bytes = disk.serialize() else { return nil }
-      machine.subSystem.drives[drive]?.dirty = false
-      return bytes
-    }
+    let snapshot: [UInt8]? = emuQueue.sync { pc88.takeDirtyDiskImage(drive: drive) }
     guard let bankBytes = snapshot else { return }
 
     let info = (drive == 0 ? drive0Info : drive1Info)
@@ -866,7 +861,7 @@ extension EmulatorViewModel {
     } catch {
       // Write failed: restore dirty so it can be retried, and fall back to recovery.
       emuQueue.sync {
-        machine.subSystem.drives[drive]?.dirty = true
+        pc88.markDiskDirty(drive: drive)
       }
       DiskWriteBackIO.writeBankToRecovery(
         bankBytes: bankBytes,
