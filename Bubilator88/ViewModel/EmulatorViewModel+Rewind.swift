@@ -1,6 +1,6 @@
 import Foundation
 import CoreGraphics
-import EmulatorCore
+import Bubilator88Core
 
 /// One queued snapshot. `state` is LZ4-compressed bytes (≈3-5x smaller
 /// than raw save-state output for typical PC-88 RAM contents — most of

@@ -1,9 +1,9 @@
-import EmulatorCore
+import Bubilator88Core
 import SwiftUI
 
 /// On-screen PC-8801 keyboard. Clicking a key drives the emulated keyboard
 /// matrix through `EmulatorViewModel.pressKey/releaseKey` (the same path the
-/// game controller uses), so no EmulatorCore changes are required.
+/// game controller uses), so no Bubilator88Core changes are required.
 ///
 /// Layout is coordinate-based (see `PC88KeyboardLayout`) so it can reproduce the
 /// The original PC-8801 keyboard's L-shaped RETURN, dual SHIFT, long SPACE bar, center

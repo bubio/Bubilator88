@@ -1,5 +1,5 @@
 import CoreGraphics
-import EmulatorCore
+import Bubilator88Core
 
 /// PC-8801 keyboard layout for the on-screen keyboard.
 ///

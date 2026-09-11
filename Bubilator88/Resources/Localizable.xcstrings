@@ -147,7 +147,7 @@
       }
     },
     "%@ <byte>" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -370,7 +370,7 @@
       }
     },
     "<drive> <path> [image <index>]" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -856,7 +856,7 @@
       }
     },
     "boot <mode> (N88-V2 / N88-V1H / N88-V1S / N-BASIC)" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -1275,7 +1275,7 @@
       }
     },
     "clock must be 4 or 8." : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -1650,7 +1650,7 @@
       }
     },
     "disk eject <drive>" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -1672,7 +1672,7 @@
       }
     },
     "disk is missing arguments." : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -1684,7 +1684,7 @@
       }
     },
     "disk select <drive> <index>" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -1812,7 +1812,7 @@
       }
     },
     "Drive must be 0 or 1: %@" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -2008,7 +2008,7 @@
       }
     },
     "Expected the image keyword: %@" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -2543,7 +2543,7 @@
 
     },
     "Image index %1$@ is out of range (%2$@ has %3$@ image(s))." : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -2555,7 +2555,7 @@
       }
     },
     "Image index %1$@ is out of range (drive %2$@ has %3$@ image(s))." : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -2701,7 +2701,7 @@
       }
     },
     "Invalid duration in seconds: %@" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -2713,7 +2713,7 @@
       }
     },
     "Invalid frame count: %@" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -2725,7 +2725,7 @@
       }
     },
     "Invalid image index: %@" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -2737,7 +2737,7 @@
       }
     },
     "Invalid value for %1$@ (0x00-0xFF): %2$@" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -2798,7 +2798,7 @@
       }
     },
     "key <name> <down|up|tap [hold]>" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -2810,7 +2810,7 @@
       }
     },
     "key down takes no extra arguments." : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -2822,7 +2822,7 @@
       }
     },
     "key tap [hold]" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -2834,7 +2834,7 @@
       }
     },
     "key up takes no extra arguments." : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -3142,7 +3142,7 @@
       }
     },
     "No file is mounted in drive %@ (disk select)." : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -3235,7 +3235,7 @@
       }
     },
     "Not a valid D88 image: %@" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -3881,7 +3881,7 @@
       }
     },
     "reset [cold|warm]" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -3904,7 +3904,7 @@
       }
     },
     "reset must be cold or warm: %@" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -5047,7 +5047,7 @@
 
     },
     "tap hold must be at least 1: %@" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -5151,7 +5151,7 @@
       }
     },
     "The disk path is empty." : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -5331,7 +5331,7 @@
       }
     },
     "Unclosed quote." : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -5353,7 +5353,7 @@
       }
     },
     "Unknown boot mode: %@" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -5365,7 +5365,7 @@
       }
     },
     "Unknown key action: %@" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -5377,7 +5377,7 @@
       }
     },
     "Unknown key name: %@" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -5400,7 +5400,7 @@
       }
     },
     "Unknown verb: %@" : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
@@ -5584,7 +5584,7 @@
 
     },
     "wait takes exactly one argument (e.g. wait 90, wait 1.5s)." : {
-      "comment" : "EmulatorCore script error, looked up at runtime by ScriptErrorLocalization",
+      "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {

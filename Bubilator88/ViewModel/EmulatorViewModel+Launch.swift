@@ -1,5 +1,5 @@
 import AppKit
-import EmulatorCore
+import Bubilator88Core
 
 // MARK: - Launch arguments (URL scheme / CLI, QUASI88-compatible)
 //

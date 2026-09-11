@@ -5,7 +5,7 @@ import os
 /// A swift-log ``LogHandler`` that forwards everything to the unified logging
 /// system (`os_log`), so log output shows up in Console.app and `log stream`.
 ///
-/// EmulatorCore is a platform-agnostic Swift package and logs through swift-log.
+/// Bubilator88Core is a platform-agnostic Swift package and logs through swift-log.
 /// Without a bootstrap, swift-log falls back to writing to standard output,
 /// which nobody sees when the app runs from Finder — the emulator core's FDC,
 /// bus and sub-CPU logs were effectively invisible outside BootTester. Install
@@ -23,9 +23,9 @@ struct OSLogHandler: LogHandler {
   var metadata: Logging.Logger.Metadata = [:]
   var logLevel: Logging.Logger.Level = .info
 
-  /// - Parameter label: The swift-log label, e.g. `EmulatorCore.UPD765A`. Its
+  /// - Parameter label: The swift-log label, e.g. `Bubilator88Core.UPD765A`. Its
   ///   last dot-separated component becomes the os_log category, so the core's
-  ///   `EmulatorCore.Machine` and the app's `App.DiskCache` both read cleanly in
+  ///   `Bubilator88Core.Machine` and the app's `App.DiskCache` both read cleanly in
   ///   Console.app.
   init(label: String) {
     let category = label.split(separator: ".").last.map(String.init) ?? label
@@ -90,7 +90,7 @@ private let loggingBootstrap: Void = {
 /// Routes swift-log through ``OSLogHandler`` for the whole process.
 ///
 /// **Must run before the first `Logger` is constructed anywhere**, including
-/// inside EmulatorCore: a `Logger` captures its handler at construction time,
+/// inside Bubilator88Core: a `Logger` captures its handler at construction time,
 /// so one built before the bootstrap keeps swift-log's default handler and
 /// writes to standard output forever.
 ///

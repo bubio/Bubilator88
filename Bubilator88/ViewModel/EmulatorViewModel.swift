@@ -1,7 +1,7 @@
 import SwiftUI
 import MetalKit
 import Synchronization
-@_spi(Debug) import EmulatorCore
+@_spi(Debug) import Bubilator88Core
 
 /// ViewModel that drives the emulator and provides screen output to SwiftUI.
 ///

@@ -1,7 +1,7 @@
 ## Critical Rules (re-injected after context compaction)
 - Strict incremental TDD: each phase must compile and pass tests before proceeding
 - No speculative behavior: if uncertain, document with TODO, do not guess
-- EmulatorCore is pure Swift, no platform APIs
+- Bubilator88Core is pure Swift, no platform APIs
 - BIOS files at `~/Library/Application Support/Bubilator88/` — never bundle them
 - Run `cd Packages/EmulatorCore && swift test` for unit tests
 - Run `python3 scripts/regression_compare.py` for pixel regression (the

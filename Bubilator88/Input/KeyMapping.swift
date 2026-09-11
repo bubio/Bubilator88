@@ -1,4 +1,4 @@
-import EmulatorCore
+import Bubilator88Core
 import Foundation
 
 /// Maps macOS virtual key codes to PC-8801 keyboard matrix positions.

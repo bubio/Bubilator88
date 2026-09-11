@@ -1,4 +1,4 @@
-import EmulatorCore
+import Bubilator88Core
 import Foundation
 
 /// Centralized persistent settings backed by UserDefaults.

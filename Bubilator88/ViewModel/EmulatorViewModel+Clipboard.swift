@@ -1,5 +1,5 @@
 import AppKit
-import EmulatorCore
+import Bubilator88Core
 
 extension EmulatorViewModel {
 

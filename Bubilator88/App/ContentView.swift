@@ -1,6 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
-import EmulatorCore
+import Bubilator88Core
 import Translation
 
 extension UTType {

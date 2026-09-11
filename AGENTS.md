@@ -15,7 +15,7 @@ Bubilator88 is a **behavioral emulator** for the NEC PC-8801-FA computer, built 
 # Build
 xcodebuild -scheme Bubilator88 -configuration Debug build
 
-# Run EmulatorCore unit tests (primary test suite)
+# Run Bubilator88Core unit tests (primary test suite)
 cd Packages/EmulatorCore && swift test
 
 # Run app-level tests (UI tests, template test)
@@ -66,7 +66,7 @@ unavailable rather than assuming the content doesn't exist.
 
 Key points:
 
-**Layer structure:** EmulatorCore (pure Swift, no platform APIs) ← App (SwiftUI/AppKit). Lower layers must never depend on upper layers.
+**Layer structure:** Bubilator88Core (pure Swift, no platform APIs) ← App (SwiftUI/AppKit). Lower layers must never depend on upper layers.
 
 **Core components:**
 - **Machine** — orchestrator that owns all components and drives time via `tick()`
@@ -102,7 +102,7 @@ Key points:
 
 ## Windows Native Port
 
-`windows/` holds a C# + WinUI 3 shell that drives the same EmulatorCore through a
+`windows/` holds a C# + WinUI 3 shell that drives the same Bubilator88Core through a
 C ABI DLL (`Packages/EmulatorCore/Sources/CApi/`, built as the `Bubilator88C`
 product). It lives in `main` alongside the macOS app rather than in a fork: the
 emulation core is the product, so every accuracy fix is a Windows fix too, and a
@@ -115,7 +115,7 @@ No emulation logic is conditional on the platform, and it must stay that way.
 
 Rules:
 
-- **EmulatorCore is macOS-first.** Accuracy decisions are judged by the macOS
+- **Bubilator88Core is macOS-first.** Accuracy decisions are judged by the macOS
   regression suite. Never bend the core's design for the Windows shell.
 - **The Windows shell may lag.** Core features can land without a C# counterpart.
 - **The C ABI is additive-only.** Do not change the signature or semantics of an
@@ -182,7 +182,7 @@ list keys the compiler extracted but the catalog lacks. It reads the
 (`Text("FM \(ch + 1): muted")` → `"FM %lld: muted"`). Guessing those by hand
 ships strings that silently never resolve.
 
-EmulatorCore itself has no localization. `Script.swift` / `ScriptPlayer.swift`
+Bubilator88Core itself has no localization. `Script.swift` / `ScriptPlayer.swift`
 therefore raise errors carrying an English **format string plus arguments**, and
 the app layer translates them through the catalog
 (`ViewModel/ScriptErrorLocalization.swift`) — the format string doubles as the
@@ -193,7 +193,7 @@ catalog key.
 Both layers log through **swift-log**. `Bubilator88/Utilities/OSLogHandler.swift`
 bridges it to `os_log` under the subsystem `com.bubio.Bubilator88`, with the
 swift-log label's last component as the category
-(`EmulatorCore.UPD765A` → `UPD765A`). `bootstrapLogging()` is called from
+(`Bubilator88Core.UPD765A` → `UPD765A`). `bootstrapLogging()` is called from
 `AppDelegate.init()` — the earliest hook available, and it must stay ahead of the
 first `Logger` construction anywhere, because a `Logger` captures its handler for
 good at construction time.
@@ -202,6 +202,6 @@ good at construction time.
 log stream --level debug --predicate 'subsystem == "com.bubio.Bubilator88"'
 ```
 
-Name loggers `App.<Component>` in the app layer and `EmulatorCore.<Component>` in
+Name loggers `App.<Component>` in the app layer and `Bubilator88Core.<Component>` in
 the core. DEBUG builds admit `.debug`; release starts at `.info`. `print()` is
 reserved for BootTester, which is a CLI writing to stdout on purpose.

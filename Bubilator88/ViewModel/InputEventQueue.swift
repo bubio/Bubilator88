@@ -1,4 +1,4 @@
-import EmulatorCore
+import Bubilator88Core
 import Foundation
 
 /// A host input event, queued on the main thread and applied to the machine

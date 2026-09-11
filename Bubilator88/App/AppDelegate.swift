@@ -39,7 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     super.init()
     // Earliest hook in the process: `@NSApplicationDelegateAdaptor` is the
     // first stored property of `Bubilator88App`, so this runs before the view
-    // model — and therefore before EmulatorCore builds its loggers. See
+    // model — and therefore before Bubilator88Core builds its loggers. See
     // bootstrapLogging() for why that ordering matters.
     bootstrapLogging()
   }

@@ -1,11 +1,11 @@
-import EmulatorCore
+import Bubilator88Core
 import Foundation
 
 /// Reads individual sections out of a `.b88s` file without loading the whole
 /// state into memory.
 ///
 /// A save state is 0.5–3 MB, but the slot picker only wants the thumbnail and
-/// the metadata JSON. EmulatorCore performs no file I/O (it must stay pure
+/// the metadata JSON. Bubilator88Core performs no file I/O (it must stay pure
 /// Swift for the Windows port), so the seeking lives here: this reads the
 /// 64-byte header, then the section table, then the one section asked for.
 ///

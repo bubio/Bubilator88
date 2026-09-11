@@ -1,5 +1,5 @@
 import SwiftUI
-import EmulatorCore
+import Bubilator88Core
 
 struct DiskImagePickerView: View {
   let images: [D88Disk]

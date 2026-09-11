@@ -12,7 +12,7 @@ name: Release (Windows)
 # 成り立つ (release.yml 側は逆に `win-` で始まるタグを無視する)。
 #
 # 日常的なビルド健全性チェックは ci-windows.yml が担当する (main への push /
-# PR のうち EmulatorCore・windows・models/onnx を触ったものだけ)。方針は
+# PR のうち Bubilator88Core・windows・models/onnx を触ったものだけ)。方針は
 # AGENTS.md「Windows Native Port」節。
 
 on:

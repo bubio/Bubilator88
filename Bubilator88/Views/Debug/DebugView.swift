@@ -1,5 +1,5 @@
 import SwiftUI
-@_spi(Debug) import EmulatorCore
+@_spi(Debug) import Bubilator88Core
 
 /// Root view for the Debug Window. Owns the ``DebugSession`` lifecycle
 /// — starting polling on appear and detaching on disappear so the
