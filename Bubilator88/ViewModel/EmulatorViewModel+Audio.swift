@@ -1,14 +1,13 @@
 import Foundation
 import AppKit
-import EmulatorCore
-import FMSynthesis
+@_spi(Debug) import EmulatorCore
 
 // MARK: - Audio Debug
 
 extension EmulatorViewModel {
 
-  var debugAudioMask: YM2608.DebugOutputMask {
-    var mask: YM2608.DebugOutputMask = []
+  var debugAudioMask: PC88.DebugOutputMask {
+    var mask: PC88.DebugOutputMask = []
     if fmEnabled { mask.insert(.fm) }
     if ssgEnabled { mask.insert(.ssg) }
     if adpcmEnabled { mask.insert(.adpcm) }
@@ -25,17 +24,17 @@ extension EmulatorViewModel {
     let mask = debugAudioMask
     emuQueue.async { [weak self] in
       guard let self else { return }
-      machine.sound.debugOutputMask = mask
+      pc88.debugOutputMask = mask
     }
   }
 
-  /// Apply a per-channel mute mask to the YM2608 on the emu queue.
+  /// Apply a per-channel mute mask to the OPNA on the emu queue.
   ///
   /// Not persisted across app launches, but survives emulator reset so the
   /// user's selection in the debug pane is not lost.
-  func applyDebugChannelMask(_ mask: YM2608.DebugChannelMask) {
+  func applyDebugChannelMask(_ mask: PC88.DebugChannelMask) {
     emuQueue.async { [weak self] in
-      self?.machine.sound.debugChannelMask = mask
+      self?.pc88.debugChannelMask = mask
     }
   }
 

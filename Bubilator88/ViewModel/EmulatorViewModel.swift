@@ -662,18 +662,18 @@ final class EmulatorViewModel {
   /// while the window is visible, keeping the hot path fast otherwise.
   let debugger = Debugger()
 
-  /// Attach the debugger to Machine. Call when opening the debug window.
+  /// Attach the debugger to the machine. Call when opening the debug window.
   func attachDebugger() {
-    emuQueue.async { [machine, debugger] in
-      machine.debugger = debugger
+    emuQueue.async { [pc88, debugger] in
+      pc88.debugger = debugger
     }
   }
 
-  /// Detach the debugger from Machine. Call when closing the debug
+  /// Detach the debugger from the machine. Call when closing the debug
   /// window so the hot path returns to full speed.
   func detachDebugger() {
-    emuQueue.async { [machine] in
-      machine.debugger = nil
+    emuQueue.async { [pc88] in
+      pc88.debugger = nil
     }
   }
 
@@ -717,13 +717,11 @@ final class EmulatorViewModel {
 
   /// Completed frames handed to the Metal view. See `FramePublisher`.
   @ObservationIgnored let framePublisher =
-    FramePublisher(pixelCount: ScreenRenderer.bufferSize400)
+    FramePublisher(pixelCount: PC88.frameBufferSize)
 
+  /// The emulated machine. The debugger and development tools reach its
+  /// internals through the `@_spi(Debug)` members (PC88+Debug.swift).
   let pc88: PC88
-  /// `pc88.machine`. For the debugger and development tools only (DebugSession,
-  /// the debug panes, memory dumps, haptics' SSG probe); everything else goes
-  /// through `pc88`.
-  let machine: Machine
 
   /// The 640×400 RGBA frame the emulation loop renders into.
   ///
@@ -921,8 +919,7 @@ final class EmulatorViewModel {
 
   init() {
     self.pc88 = PC88()
-    self.machine = pc88.machine
-    self.pixelBuffer = Array(repeating: 0, count: ScreenRenderer.bufferSize400)
+    self.pixelBuffer = Array(repeating: 0, count: PC88.frameBufferSize)
     activeClock8MHz = clock8MHz
     pc88.dipSw1 = _bootModeStorage.dipSw1
     // Drive 0 is always empty at init → ROM boot (bit 3 = 1)

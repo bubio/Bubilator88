@@ -1,6 +1,5 @@
 import SwiftUI
-import EmulatorCore
-import FMSynthesis
+@_spi(Debug) import EmulatorCore
 
 /// Audio debug pane — two-column HSplitView: Activity/Mute | Spectrum.
 ///
@@ -22,7 +21,7 @@ struct AudioPane: View {
 
   // MARK: - Mute state (ephemeral — resets to all-on when the debug window closes)
 
-  @State private var muteMask: YM2608.DebugChannelMask = .all
+  @State private var muteMask: PC88.DebugChannelMask = .all
 
   // MARK: - Spectrum state
 
@@ -48,7 +47,7 @@ struct AudioPane: View {
             .controlSize(.mini)
             .help("Unmute every channel")
             Button("All Off") {
-              muteMask = YM2608.DebugChannelMask(fm: 0, ssg: 0, rhythm: 0, adpcm: false)
+              muteMask = PC88.DebugChannelMask(fm: 0, ssg: 0, rhythm: 0, adpcm: false)
               viewModel.applyDebugChannelMask(muteMask)
             }
             .controlSize(.mini)
@@ -264,17 +263,18 @@ struct AudioPane: View {
   }
 
   private func pollOnce() {
-    let machine = viewModel.machine
+    let pc88 = viewModel.pc88
     // Use DispatchQueue.main.async instead of Task { @MainActor } to avoid
     // per-poll Task allocation overhead at the 100 ms polling rate.
     viewModel.emuQueue.async {
-      let fm    = machine.sound.fmKeyOnMask
-      let vols  = (machine.sound.ssgVolume[0],
-                   machine.sound.ssgVolume[1],
-                   machine.sound.ssgVolume[2])
-      let mixer = machine.sound.ssgMixer
-      let rhy   = machine.sound.rhythmKeyOn
-      let adc   = machine.sound.adpcmPlaying
+      let state = pc88.soundState
+      let fm    = state.fmKeyOn
+      let vols  = (state.ssgVolume[0],
+                   state.ssgVolume[1],
+                   state.ssgVolume[2])
+      let mixer = state.ssgMixer
+      let rhy   = state.rhythmKeyOn
+      let adc   = state.adpcmPlaying
       DispatchQueue.main.async {
         fmKeyOn     = fm
         ssgVolume   = vols

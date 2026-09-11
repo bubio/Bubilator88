@@ -1,5 +1,5 @@
 import SwiftUI
-import EmulatorCore
+@_spi(Debug) import EmulatorCore
 
 struct DisassemblyPane: View {
   let snapshot: MachineSnapshot

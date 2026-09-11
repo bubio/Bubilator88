@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
-import EmulatorCore
+@_spi(Debug) import EmulatorCore
 
 /// GVRAM visualiser pane for the Debug Window.
 ///

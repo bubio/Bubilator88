@@ -1,12 +1,12 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
-import EmulatorCore
+@_spi(Debug) import EmulatorCore
 
 /// Text-VRAM visualiser pane for the Debug Window.
 ///
-/// Renders the 80×25 (or 80×20) text layer via `ScreenRenderer.renderTextOverlay()`
-/// into a 640×200 image displayed in the pane. The CRTC cursor position is
+/// Shows the 80×25 (or 80×20) text layer, rendered by `PC88.captureTextVRAM`
+/// into a 640×200 image. The CRTC cursor position is
 /// highlighted using an inverted block. An optional attribute-decode panel
 /// shows per-character codes and attribute bit fields for debugging games that
 /// use the text layer for UI chrome.
