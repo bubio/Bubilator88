@@ -8,16 +8,16 @@ struct KeyMappingTests {
 
   @Test("letter keys A-Z map to correct PC-8801 keys")
   func letterKeys() {
-    let mappings: [(UInt16, Keyboard.Key)] = [
-      (0x00, Keyboard.a), (0x0B, Keyboard.b), (0x08, Keyboard.c),
-      (0x02, Keyboard.d), (0x0E, Keyboard.e), (0x03, Keyboard.f),
-      (0x05, Keyboard.g), (0x04, Keyboard.h), (0x22, Keyboard.i),
-      (0x26, Keyboard.j), (0x28, Keyboard.k), (0x25, Keyboard.l),
-      (0x2E, Keyboard.m), (0x2D, Keyboard.n), (0x1F, Keyboard.o),
-      (0x23, Keyboard.p), (0x0C, Keyboard.q), (0x0F, Keyboard.r),
-      (0x01, Keyboard.s), (0x11, Keyboard.t), (0x20, Keyboard.u),
-      (0x09, Keyboard.v), (0x0D, Keyboard.w), (0x07, Keyboard.x),
-      (0x10, Keyboard.y), (0x06, Keyboard.z),
+    let mappings: [(UInt16, PC88Key)] = [
+      (0x00, PC88Key.a), (0x0B, PC88Key.b), (0x08, PC88Key.c),
+      (0x02, PC88Key.d), (0x0E, PC88Key.e), (0x03, PC88Key.f),
+      (0x05, PC88Key.g), (0x04, PC88Key.h), (0x22, PC88Key.i),
+      (0x26, PC88Key.j), (0x28, PC88Key.k), (0x25, PC88Key.l),
+      (0x2E, PC88Key.m), (0x2D, PC88Key.n), (0x1F, PC88Key.o),
+      (0x23, PC88Key.p), (0x0C, PC88Key.q), (0x0F, PC88Key.r),
+      (0x01, PC88Key.s), (0x11, PC88Key.t), (0x20, PC88Key.u),
+      (0x09, PC88Key.v), (0x0D, PC88Key.w), (0x07, PC88Key.x),
+      (0x10, PC88Key.y), (0x06, PC88Key.z),
     ]
     for (keyCode, expected) in mappings {
       #expect(KeyMapping.pc88Key(for: keyCode, options: .standard) == expected,
@@ -29,11 +29,11 @@ struct KeyMappingTests {
 
   @Test("number keys 0-9 map correctly")
   func numberKeys() {
-    let mappings: [(UInt16, Keyboard.Key)] = [
-      (0x1D, Keyboard.key0), (0x12, Keyboard.key1), (0x13, Keyboard.key2),
-      (0x14, Keyboard.key3), (0x15, Keyboard.key4), (0x17, Keyboard.key5),
-      (0x16, Keyboard.key6), (0x1A, Keyboard.key7), (0x1C, Keyboard.key8),
-      (0x19, Keyboard.key9),
+    let mappings: [(UInt16, PC88Key)] = [
+      (0x1D, PC88Key.key0), (0x12, PC88Key.key1), (0x13, PC88Key.key2),
+      (0x14, PC88Key.key3), (0x15, PC88Key.key4), (0x17, PC88Key.key5),
+      (0x16, PC88Key.key6), (0x1A, PC88Key.key7), (0x1C, PC88Key.key8),
+      (0x19, PC88Key.key9),
     ]
     for (keyCode, expected) in mappings {
       #expect(KeyMapping.pc88Key(for: keyCode, options: .standard) == expected)
@@ -44,70 +44,70 @@ struct KeyMappingTests {
 
   @Test("symbol keys map correctly")
   func symbolKeys() {
-    #expect(KeyMapping.pc88Key(for: 0x1B, options: .standard) == Keyboard.minus)
-    #expect(KeyMapping.pc88Key(for: 0x18, options: .standard) == Keyboard.caret)
-    #expect(KeyMapping.pc88Key(for: 0x21, options: .standard) == Keyboard.leftBracket)
-    #expect(KeyMapping.pc88Key(for: 0x1E, options: .standard) == Keyboard.rightBracket)
-    #expect(KeyMapping.pc88Key(for: 0x29, options: .standard) == Keyboard.semicolon)
-    #expect(KeyMapping.pc88Key(for: 0x27, options: .standard) == Keyboard.colon)
-    #expect(KeyMapping.pc88Key(for: 0x2B, options: .standard) == Keyboard.comma)
-    #expect(KeyMapping.pc88Key(for: 0x2F, options: .standard) == Keyboard.period)
-    #expect(KeyMapping.pc88Key(for: 0x2C, options: .standard) == Keyboard.slash)
-    #expect(KeyMapping.pc88Key(for: 0x2A, options: .standard) == Keyboard.yen)
-    #expect(KeyMapping.pc88Key(for: 0x32, options: .standard) == Keyboard.at)
+    #expect(KeyMapping.pc88Key(for: 0x1B, options: .standard) == PC88Key.minus)
+    #expect(KeyMapping.pc88Key(for: 0x18, options: .standard) == PC88Key.caret)
+    #expect(KeyMapping.pc88Key(for: 0x21, options: .standard) == PC88Key.leftBracket)
+    #expect(KeyMapping.pc88Key(for: 0x1E, options: .standard) == PC88Key.rightBracket)
+    #expect(KeyMapping.pc88Key(for: 0x29, options: .standard) == PC88Key.semicolon)
+    #expect(KeyMapping.pc88Key(for: 0x27, options: .standard) == PC88Key.colon)
+    #expect(KeyMapping.pc88Key(for: 0x2B, options: .standard) == PC88Key.comma)
+    #expect(KeyMapping.pc88Key(for: 0x2F, options: .standard) == PC88Key.period)
+    #expect(KeyMapping.pc88Key(for: 0x2C, options: .standard) == PC88Key.slash)
+    #expect(KeyMapping.pc88Key(for: 0x2A, options: .standard) == PC88Key.yen)
+    #expect(KeyMapping.pc88Key(for: 0x32, options: .standard) == PC88Key.at)
   }
 
   // MARK: - Control keys
 
   @Test("control keys map correctly")
   func controlKeys() {
-    #expect(KeyMapping.pc88Key(for: 0x24, options: .standard) == Keyboard.Key(1, 7))  // Return
-    #expect(KeyMapping.pc88Key(for: 0x31, options: .standard) == Keyboard.space)
-    #expect(KeyMapping.pc88Key(for: 0x35, options: .standard) == Keyboard.esc)
-    #expect(KeyMapping.pc88Key(for: 0x33, options: .standard) == Keyboard.del)
-    #expect(KeyMapping.pc88Key(for: 0x30, options: .standard) == Keyboard.tab)
-    #expect(KeyMapping.pc88Key(for: 0x39, options: .standard) == Keyboard.capsLock)
+    #expect(KeyMapping.pc88Key(for: 0x24, options: .standard) == PC88Key(1, 7))  // Return
+    #expect(KeyMapping.pc88Key(for: 0x31, options: .standard) == PC88Key.space)
+    #expect(KeyMapping.pc88Key(for: 0x35, options: .standard) == PC88Key.esc)
+    #expect(KeyMapping.pc88Key(for: 0x33, options: .standard) == PC88Key.del)
+    #expect(KeyMapping.pc88Key(for: 0x30, options: .standard) == PC88Key.tab)
+    #expect(KeyMapping.pc88Key(for: 0x39, options: .standard) == PC88Key.capsLock)
   }
 
   // MARK: - Modifiers
 
   @Test("left and right shift both map to shift")
   func shiftKeys() {
-    #expect(KeyMapping.pc88Key(for: 0x38, options: .standard) == Keyboard.shift)
-    #expect(KeyMapping.pc88Key(for: 0x3C, options: .standard) == Keyboard.shift)
+    #expect(KeyMapping.pc88Key(for: 0x38, options: .standard) == PC88Key.shift)
+    #expect(KeyMapping.pc88Key(for: 0x3C, options: .standard) == PC88Key.shift)
   }
 
   @Test("left and right control both map to ctrl")
   func ctrlKeys() {
-    #expect(KeyMapping.pc88Key(for: 0x3B, options: .standard) == Keyboard.ctrl)
-    #expect(KeyMapping.pc88Key(for: 0x3E, options: .standard) == Keyboard.ctrl)
+    #expect(KeyMapping.pc88Key(for: 0x3B, options: .standard) == PC88Key.ctrl)
+    #expect(KeyMapping.pc88Key(for: 0x3E, options: .standard) == PC88Key.ctrl)
   }
 
   @Test("left and right option both map to grph")
   func grphKeys() {
-    #expect(KeyMapping.pc88Key(for: 0x3A, options: .standard) == Keyboard.grph)
-    #expect(KeyMapping.pc88Key(for: 0x3D, options: .standard) == Keyboard.grph)
+    #expect(KeyMapping.pc88Key(for: 0x3A, options: .standard) == PC88Key.grph)
+    #expect(KeyMapping.pc88Key(for: 0x3D, options: .standard) == PC88Key.grph)
   }
 
   // MARK: - Arrow keys
 
   @Test("arrow keys map correctly")
   func arrowKeys() {
-    #expect(KeyMapping.pc88Key(for: 0x7E, options: .standard) == Keyboard.up)
-    #expect(KeyMapping.pc88Key(for: 0x7D, options: .standard) == Keyboard.down)
-    #expect(KeyMapping.pc88Key(for: 0x7B, options: .standard) == Keyboard.left)
-    #expect(KeyMapping.pc88Key(for: 0x7C, options: .standard) == Keyboard.right)
+    #expect(KeyMapping.pc88Key(for: 0x7E, options: .standard) == PC88Key.up)
+    #expect(KeyMapping.pc88Key(for: 0x7D, options: .standard) == PC88Key.down)
+    #expect(KeyMapping.pc88Key(for: 0x7B, options: .standard) == PC88Key.left)
+    #expect(KeyMapping.pc88Key(for: 0x7C, options: .standard) == PC88Key.right)
   }
 
   // MARK: - Function keys
 
   @Test("function keys F1-F10 map correctly")
   func functionKeys() {
-    let mappings: [(UInt16, Keyboard.Key)] = [
-      (0x7A, Keyboard.f1), (0x78, Keyboard.f2), (0x63, Keyboard.f3),
-      (0x76, Keyboard.f4), (0x60, Keyboard.f5), (0x61, Keyboard.f6),
-      (0x62, Keyboard.f7), (0x64, Keyboard.f8), (0x65, Keyboard.f9),
-      (0x6D, Keyboard.f10),
+    let mappings: [(UInt16, PC88Key)] = [
+      (0x7A, PC88Key.f1), (0x78, PC88Key.f2), (0x63, PC88Key.f3),
+      (0x76, PC88Key.f4), (0x60, PC88Key.f5), (0x61, PC88Key.f6),
+      (0x62, PC88Key.f7), (0x64, PC88Key.f8), (0x65, PC88Key.f9),
+      (0x6D, PC88Key.f10),
     ]
     for (keyCode, expected) in mappings {
       #expect(KeyMapping.pc88Key(for: keyCode, options: .standard) == expected)
@@ -118,15 +118,15 @@ struct KeyMappingTests {
 
   @Test("numpad keys map correctly")
   func numpadKeys() {
-    let mappings: [(UInt16, Keyboard.Key)] = [
-      (0x52, Keyboard.kp0), (0x53, Keyboard.kp1), (0x54, Keyboard.kp2),
-      (0x55, Keyboard.kp3), (0x56, Keyboard.kp4), (0x57, Keyboard.kp5),
-      (0x58, Keyboard.kp6), (0x59, Keyboard.kp7), (0x5B, Keyboard.kp8),
-      (0x5C, Keyboard.kp9),
-      (0x43, Keyboard.kpMultiply), (0x45, Keyboard.kpPlus),
-      (0x4E, Keyboard.kpMinus), (0x41, Keyboard.kpPeriod),
-      (0x4B, Keyboard.kpDivide), (0x4C, Keyboard.kpReturn),
-      (0x51, Keyboard.kpEqual),
+    let mappings: [(UInt16, PC88Key)] = [
+      (0x52, PC88Key.kp0), (0x53, PC88Key.kp1), (0x54, PC88Key.kp2),
+      (0x55, PC88Key.kp3), (0x56, PC88Key.kp4), (0x57, PC88Key.kp5),
+      (0x58, PC88Key.kp6), (0x59, PC88Key.kp7), (0x5B, PC88Key.kp8),
+      (0x5C, PC88Key.kp9),
+      (0x43, PC88Key.kpMultiply), (0x45, PC88Key.kpPlus),
+      (0x4E, PC88Key.kpMinus), (0x41, PC88Key.kpPeriod),
+      (0x4B, PC88Key.kpDivide), (0x4C, PC88Key.kpReturn),
+      (0x51, PC88Key.kpEqual),
     ]
     for (keyCode, expected) in mappings {
       #expect(KeyMapping.pc88Key(for: keyCode, options: .standard) == expected)
@@ -137,12 +137,12 @@ struct KeyMappingTests {
 
   @Test("special keys map correctly")
   func specialKeys() {
-    #expect(KeyMapping.pc88Key(for: 0x73, options: .standard) == Keyboard.clr)       // Home → CLR
-    #expect(KeyMapping.pc88Key(for: 0x77, options: .standard) == Keyboard.stop)      // End → STOP
-    #expect(KeyMapping.pc88Key(for: 0x74, options: .standard) == Keyboard.rollUp)    // PageUp → ROLL UP
-    #expect(KeyMapping.pc88Key(for: 0x79, options: .standard) == Keyboard.rollDown)  // PageDown → ROLL DOWN
-    #expect(KeyMapping.pc88Key(for: 0x72, options: .standard) == Keyboard.ins)       // Help/Insert → INS
-    #expect(KeyMapping.pc88Key(for: 0x75, options: .standard) == Keyboard.bs)        // ForwardDelete → BS
+    #expect(KeyMapping.pc88Key(for: 0x73, options: .standard) == PC88Key.clr)       // Home → CLR
+    #expect(KeyMapping.pc88Key(for: 0x77, options: .standard) == PC88Key.stop)      // End → STOP
+    #expect(KeyMapping.pc88Key(for: 0x74, options: .standard) == PC88Key.rollUp)    // PageUp → ROLL UP
+    #expect(KeyMapping.pc88Key(for: 0x79, options: .standard) == PC88Key.rollDown)  // PageDown → ROLL DOWN
+    #expect(KeyMapping.pc88Key(for: 0x72, options: .standard) == PC88Key.ins)       // Help/Insert → INS
+    #expect(KeyMapping.pc88Key(for: 0x75, options: .standard) == PC88Key.bs)        // ForwardDelete → BS
   }
 
   // MARK: - Unmapped

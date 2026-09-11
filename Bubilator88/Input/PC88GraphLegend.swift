@@ -22,38 +22,38 @@ import EmulatorCore
 /// diagram shows symbols on them that are ambiguous between operator labels and
 /// GRPH graphics, so they are left unassigned rather than guessed.
 enum PC88GraphLegend {
-  static let codes: [Keyboard.Key: UInt8] = [
+  static let codes: [PC88Key: UInt8] = [
     // ── Number row: 年月日時分秒 on 5–0, left bar-graphs, 円 on ¥ ──
-    Keyboard.key5: 0xF2, Keyboard.key6: 0xF3, Keyboard.key7: 0xF4,
-    Keyboard.key8: 0xF5, Keyboard.key9: 0xF6, Keyboard.key0: 0xF7,
-    Keyboard.minus: 0x8C, Keyboard.caret: 0x8B, Keyboard.yen: 0xF1,
+    PC88Key.key5: 0xF2, PC88Key.key6: 0xF3, PC88Key.key7: 0xF4,
+    PC88Key.key8: 0xF5, PC88Key.key9: 0xF6, PC88Key.key0: 0xF7,
+    PC88Key.minus: 0x8C, PC88Key.caret: 0x8B, PC88Key.yen: 0xF1,
 
     // ── QWERTY row ──
-    Keyboard.q: 0x9E, Keyboard.w: 0x9F,          // rounded arcs ╭ ╮
-    Keyboard.e: 0xE4, Keyboard.r: 0xE5,          // filled triangles ◢ ◣ (▲)
-    Keyboard.t: 0xEE, Keyboard.y: 0xEF, Keyboard.u: 0xF0,  // ／ ＼ ✕
-    Keyboard.i: 0xE8, Keyboard.o: 0xE9,          // ♠ ♥
-    Keyboard.p: 0x8D, Keyboard.at: 0x8C,         // left bar-graphs
+    PC88Key.q: 0x9E, PC88Key.w: 0x9F,          // rounded arcs ╭ ╮
+    PC88Key.e: 0xE4, PC88Key.r: 0xE5,          // filled triangles ◢ ◣ (▲)
+    PC88Key.t: 0xEE, PC88Key.y: 0xEF, PC88Key.u: 0xF0,  // ／ ＼ ✕
+    PC88Key.i: 0xE8, PC88Key.o: 0xE9,          // ♠ ♥
+    PC88Key.p: 0x8D, PC88Key.at: 0x8C,         // left bar-graphs
 
     // ── Home row ──
-    Keyboard.a: 0x9C, Keyboard.s: 0x9D,          // rounded arcs ╰ ╯
-    Keyboard.d: 0xE6, Keyboard.f: 0xE7,          // filled triangles ◥ ◤ (▽)
-    Keyboard.g: 0xEC, Keyboard.h: 0xED,          // ● ○
-    Keyboard.j: 0xEA, Keyboard.k: 0xEB,          // ◆ ♣
-    Keyboard.l: 0x8E, Keyboard.semicolon: 0x8A,  // left bar-graphs
-    Keyboard.colon: 0x94,                        // top horizontal line ─
+    PC88Key.a: 0x9C, PC88Key.s: 0x9D,          // rounded arcs ╰ ╯
+    PC88Key.d: 0xE6, PC88Key.f: 0xE7,          // filled triangles ◥ ◤ (▽)
+    PC88Key.g: 0xEC, PC88Key.h: 0xED,          // ● ○
+    PC88Key.j: 0xEA, PC88Key.k: 0xEB,          // ◆ ♣
+    PC88Key.l: 0x8E, PC88Key.semicolon: 0x8A,  // left bar-graphs
+    PC88Key.colon: 0x94,                       // top horizontal line ─
 
     // ── Bottom letter row: bottom bar-graphs (height 1–8) + thin bars ──
-    Keyboard.z: 0x80, Keyboard.x: 0x81, Keyboard.c: 0x82, Keyboard.v: 0x83,
-    Keyboard.b: 0x84, Keyboard.n: 0x85, Keyboard.m: 0x86, Keyboard.comma: 0x87,
-    Keyboard.period: 0x88, Keyboard.slash: 0x97,   // │ left-edge / right-edge bars
+    PC88Key.z: 0x80, PC88Key.x: 0x81, PC88Key.c: 0x82, PC88Key.v: 0x83,
+    PC88Key.b: 0x84, PC88Key.n: 0x85, PC88Key.m: 0x86, PC88Key.comma: 0x87,
+    PC88Key.period: 0x88, PC88Key.slash: 0x97,   // │ left-edge / right-edge bars
 
     // ── Keypad: box-drawing grid (single-line + double-line middle row) ──
-    Keyboard.kp7: 0x98, Keyboard.kp8: 0x91, Keyboard.kp9: 0x99,   // ┌ ┬ ┐
-    Keyboard.kp4: 0xE1, Keyboard.kp5: 0xE2, Keyboard.kp6: 0xE3,   // ╞ ╪ ╡
-    Keyboard.kp1: 0x93, Keyboard.kp2: 0x8F, Keyboard.kp3: 0x92,   // ├ ┼ ┤
-    Keyboard.kp0: 0x9A, Keyboard.kpComma: 0x90, Keyboard.kpPeriod: 0x9B,  // └ ┴ ┘
+    PC88Key.kp7: 0x98, PC88Key.kp8: 0x91, PC88Key.kp9: 0x99,   // ┌ ┬ ┐
+    PC88Key.kp4: 0xE1, PC88Key.kp5: 0xE2, PC88Key.kp6: 0xE3,   // ╞ ╪ ╡
+    PC88Key.kp1: 0x93, PC88Key.kp2: 0x8F, PC88Key.kp3: 0x92,   // ├ ┼ ┤
+    PC88Key.kp0: 0x9A, PC88Key.kpComma: 0x90, PC88Key.kpPeriod: 0x9B,  // └ ┴ ┘
     // Keypad operator column: the box-drawing grid extends rightward.
-    Keyboard.kpMultiply: 0x95, Keyboard.kpPlus: 0xE0, Keyboard.kpEqual: 0x96,  // ─ ═ │
+    PC88Key.kpMultiply: 0x95, PC88Key.kpPlus: 0xE0, PC88Key.kpEqual: 0x96,  // ─ ═ │
   ]
 }

@@ -33,7 +33,7 @@ extension EmulatorViewModel {
       tapeData = first.data
     }
 
-    let format: CassetteDeck.Format = emuQueue.sync {
+    let format: TapeFormat = emuQueue.sync {
       pc88.mountTape(data: tapeData)
     }
     Settings.shared.addRecentTapeFile(url: url)

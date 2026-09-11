@@ -8,7 +8,7 @@ import EmulatorCore
 struct PC88KeyCap: Identifiable {
   let id: Int
   /// Matrix position (row, bit).
-  let key: Keyboard.Key?
+  let key: PC88Key?
   /// Primary keycap label, e.g. "A", "1", "SPACE". "\n" = two lines.
   /// Ignored when `symbolName` is set.
   let label: String

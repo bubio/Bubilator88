@@ -8,7 +8,7 @@ namespace Bubilator88.Windows;
 /// Maps Windows virtual keys to the PC-8801 15-row keyboard matrix.
 ///
 /// The matrix (row, bit) coordinates are the single source of truth defined in
-/// Packages/EmulatorCore/Sources/Peripherals/Keyboard.swift. This table is a
+/// Packages/EmulatorCore/Sources/PC88Types/PC88Key.swift. This table is a
 /// fresh authoring for Windows VirtualKey codes (the macOS Carbon keyCode table
 /// in Input/KeyMapping.swift is a different code space and is NOT reused).
 ///

@@ -4,7 +4,7 @@ import Foundation
 /// Maps macOS virtual key codes to PC-8801 keyboard matrix positions.
 ///
 /// macOS key codes are defined in Carbon/Events.h (kVK_* constants).
-/// Each maps to a Keyboard.Key (row, bit) for the PC-8801 matrix.
+/// Each maps to a PC88Key (row, bit) for the PC-8801 matrix.
 /// `nonisolated`: pure lookup tables with no UI state, so the target's
 /// default-MainActor isolation does not apply.
 nonisolated enum KeyMapping {
@@ -42,11 +42,11 @@ nonisolated enum KeyMapping {
   }
 
   @MainActor
-  static func pc88Key(for macKeyCode: UInt16) -> Keyboard.Key? {
+  static func pc88Key(for macKeyCode: UInt16) -> PC88Key? {
     pc88Key(for: macKeyCode, options: .current)
   }
 
-  static func pc88Key(for macKeyCode: UInt16, options: Options) -> Keyboard.Key? {
+  static func pc88Key(for macKeyCode: UInt16, options: Options) -> PC88Key? {
     // Arrow keys → numpad override
     if options.arrowKeysAsNumpad, let key = arrowToNumpad[macKeyCode] {
       return key
@@ -80,7 +80,7 @@ nonisolated enum KeyMapping {
   private static func resolvedSpecialKey(
     for macKeyCode: UInt16,
     mapping: [String: Int]
-  ) -> Keyboard.Key? {
+  ) -> PC88Key? {
     for sk in PC88SpecialKey.allCases {
       let code: UInt16
       if let custom = mapping[sk.rawValue] {
@@ -97,35 +97,35 @@ nonisolated enum KeyMapping {
 
   // MARK: - Arrow Keys → Numpad
 
-  private static let arrowToNumpad: [UInt16: Keyboard.Key] = [
-    0x7E: Keyboard.kp8,    // ↑ → kp8
-    0x7D: Keyboard.kp2,    // ↓ → kp2
-    0x7B: Keyboard.kp4,    // ← → kp4
-    0x7C: Keyboard.kp6,    // → → kp6
+  private static let arrowToNumpad: [UInt16: PC88Key] = [
+    0x7E: PC88Key.kp8,    // ↑ → kp8
+    0x7D: PC88Key.kp2,    // ↓ → kp2
+    0x7B: PC88Key.kp4,    // ← → kp4
+    0x7C: PC88Key.kp6,    // → → kp6
   ]
 
   // MARK: - Number Row → Numpad
 
-  private static let numberToNumpad: [UInt16: Keyboard.Key] = [
-    0x1D: Keyboard.kp0,    // 0 → kp0
-    0x12: Keyboard.kp1,    // 1 → kp1
-    0x13: Keyboard.kp2,    // 2 → kp2
-    0x14: Keyboard.kp3,    // 3 → kp3
-    0x15: Keyboard.kp4,    // 4 → kp4
-    0x17: Keyboard.kp5,    // 5 → kp5
-    0x16: Keyboard.kp6,    // 6 → kp6
-    0x1A: Keyboard.kp7,    // 7 → kp7
-    0x1C: Keyboard.kp8,    // 8 → kp8
-    0x19: Keyboard.kp9,    // 9 → kp9
+  private static let numberToNumpad: [UInt16: PC88Key] = [
+    0x1D: PC88Key.kp0,    // 0 → kp0
+    0x12: PC88Key.kp1,    // 1 → kp1
+    0x13: PC88Key.kp2,    // 2 → kp2
+    0x14: PC88Key.kp3,    // 3 → kp3
+    0x15: PC88Key.kp4,    // 4 → kp4
+    0x17: PC88Key.kp5,    // 5 → kp5
+    0x16: PC88Key.kp6,    // 6 → kp6
+    0x1A: PC88Key.kp7,    // 7 → kp7
+    0x1C: PC88Key.kp8,    // 8 → kp8
+    0x19: PC88Key.kp9,    // 9 → kp9
   ]
 
   // MARK: - WASD → Numpad
 
-  private static let wasdToNumpad: [UInt16: Keyboard.Key] = [
-    0x0D: Keyboard.kp8,    // W → kp8
-    0x00: Keyboard.kp4,    // A → kp4
-    0x01: Keyboard.kp2,    // S → kp2
-    0x02: Keyboard.kp6,    // D → kp6
+  private static let wasdToNumpad: [UInt16: PC88Key] = [
+    0x0D: PC88Key.kp8,    // W → kp8
+    0x00: PC88Key.kp4,    // A → kp4
+    0x01: PC88Key.kp2,    // S → kp2
+    0x02: PC88Key.kp6,    // D → kp6
   ]
 
   // MARK: - JIS Symbol Overrides
@@ -139,126 +139,126 @@ nonisolated enum KeyMapping {
   //   0x2A     \            ]            ]
   //   0x32     `            (none)       (removed — no JIS equivalent)
 
-  private static let jisSymbolOverrides: [UInt16: Keyboard.Key] = [
-    0x21: Keyboard.at,              // JIS @ → PC88 @
-    0x1E: Keyboard.leftBracket,     // JIS [ → PC88 [
-    0x2A: Keyboard.rightBracket,    // JIS ] → PC88 ]
+  private static let jisSymbolOverrides: [UInt16: PC88Key] = [
+    0x21: PC88Key.at,              // JIS @ → PC88 @
+    0x1E: PC88Key.leftBracket,     // JIS [ → PC88 [
+    0x2A: PC88Key.rightBracket,    // JIS ] → PC88 ]
   ]
 
   // MARK: - Base Key Map
 
   // macOS virtual key codes → PC-8801 matrix position
   // Note: Special keys (STOP, COPY, etc.) are handled by PC88SpecialKey, not here.
-  private static let keyMap: [UInt16: Keyboard.Key] = [
+  private static let keyMap: [UInt16: PC88Key] = [
     // Letters (A-Z)
-    0x00: Keyboard.a,       // kVK_ANSI_A
-    0x0B: Keyboard.b,       // kVK_ANSI_B
-    0x08: Keyboard.c,       // kVK_ANSI_C
-    0x02: Keyboard.d,       // kVK_ANSI_D
-    0x0E: Keyboard.e,       // kVK_ANSI_E
-    0x03: Keyboard.f,       // kVK_ANSI_F
-    0x05: Keyboard.g,       // kVK_ANSI_G
-    0x04: Keyboard.h,       // kVK_ANSI_H
-    0x22: Keyboard.i,       // kVK_ANSI_I
-    0x26: Keyboard.j,       // kVK_ANSI_J
-    0x28: Keyboard.k,       // kVK_ANSI_K
-    0x25: Keyboard.l,       // kVK_ANSI_L
-    0x2E: Keyboard.m,       // kVK_ANSI_M
-    0x2D: Keyboard.n,       // kVK_ANSI_N
-    0x1F: Keyboard.o,       // kVK_ANSI_O
-    0x23: Keyboard.p,       // kVK_ANSI_P
-    0x0C: Keyboard.q,       // kVK_ANSI_Q
-    0x0F: Keyboard.r,       // kVK_ANSI_R
-    0x01: Keyboard.s,       // kVK_ANSI_S
-    0x11: Keyboard.t,       // kVK_ANSI_T
-    0x20: Keyboard.u,       // kVK_ANSI_U
-    0x09: Keyboard.v,       // kVK_ANSI_V
-    0x0D: Keyboard.w,       // kVK_ANSI_W
-    0x07: Keyboard.x,       // kVK_ANSI_X
-    0x10: Keyboard.y,       // kVK_ANSI_Y
-    0x06: Keyboard.z,       // kVK_ANSI_Z
+    0x00: PC88Key.a,       // kVK_ANSI_A
+    0x0B: PC88Key.b,       // kVK_ANSI_B
+    0x08: PC88Key.c,       // kVK_ANSI_C
+    0x02: PC88Key.d,       // kVK_ANSI_D
+    0x0E: PC88Key.e,       // kVK_ANSI_E
+    0x03: PC88Key.f,       // kVK_ANSI_F
+    0x05: PC88Key.g,       // kVK_ANSI_G
+    0x04: PC88Key.h,       // kVK_ANSI_H
+    0x22: PC88Key.i,       // kVK_ANSI_I
+    0x26: PC88Key.j,       // kVK_ANSI_J
+    0x28: PC88Key.k,       // kVK_ANSI_K
+    0x25: PC88Key.l,       // kVK_ANSI_L
+    0x2E: PC88Key.m,       // kVK_ANSI_M
+    0x2D: PC88Key.n,       // kVK_ANSI_N
+    0x1F: PC88Key.o,       // kVK_ANSI_O
+    0x23: PC88Key.p,       // kVK_ANSI_P
+    0x0C: PC88Key.q,       // kVK_ANSI_Q
+    0x0F: PC88Key.r,       // kVK_ANSI_R
+    0x01: PC88Key.s,       // kVK_ANSI_S
+    0x11: PC88Key.t,       // kVK_ANSI_T
+    0x20: PC88Key.u,       // kVK_ANSI_U
+    0x09: PC88Key.v,       // kVK_ANSI_V
+    0x0D: PC88Key.w,       // kVK_ANSI_W
+    0x07: PC88Key.x,       // kVK_ANSI_X
+    0x10: PC88Key.y,       // kVK_ANSI_Y
+    0x06: PC88Key.z,       // kVK_ANSI_Z
 
     // Numbers (0-9)
-    0x1D: Keyboard.key0,    // kVK_ANSI_0
-    0x12: Keyboard.key1,    // kVK_ANSI_1
-    0x13: Keyboard.key2,    // kVK_ANSI_2
-    0x14: Keyboard.key3,    // kVK_ANSI_3
-    0x15: Keyboard.key4,    // kVK_ANSI_4
-    0x17: Keyboard.key5,    // kVK_ANSI_5
-    0x16: Keyboard.key6,    // kVK_ANSI_6
-    0x1A: Keyboard.key7,    // kVK_ANSI_7
-    0x1C: Keyboard.key8,    // kVK_ANSI_8
-    0x19: Keyboard.key9,    // kVK_ANSI_9
+    0x1D: PC88Key.key0,    // kVK_ANSI_0
+    0x12: PC88Key.key1,    // kVK_ANSI_1
+    0x13: PC88Key.key2,    // kVK_ANSI_2
+    0x14: PC88Key.key3,    // kVK_ANSI_3
+    0x15: PC88Key.key4,    // kVK_ANSI_4
+    0x17: PC88Key.key5,    // kVK_ANSI_5
+    0x16: PC88Key.key6,    // kVK_ANSI_6
+    0x1A: PC88Key.key7,    // kVK_ANSI_7
+    0x1C: PC88Key.key8,    // kVK_ANSI_8
+    0x19: PC88Key.key9,    // kVK_ANSI_9
 
     // Symbols
-    0x1B: Keyboard.minus,       // kVK_ANSI_Minus → PC88 -
-    0x18: Keyboard.caret,       // kVK_ANSI_Equal → PC88 ^ (caret)
-    0x21: Keyboard.leftBracket, // kVK_ANSI_LeftBracket → PC88 [
-    0x1E: Keyboard.rightBracket,// kVK_ANSI_RightBracket → PC88 ]
-    0x29: Keyboard.semicolon,   // kVK_ANSI_Semicolon
-    0x27: Keyboard.colon,       // kVK_ANSI_Quote → PC88 :
-    0x2B: Keyboard.comma,       // kVK_ANSI_Comma
-    0x2F: Keyboard.period,      // kVK_ANSI_Period
-    0x2C: Keyboard.slash,       // kVK_ANSI_Slash
-    0x2A: Keyboard.yen,         // kVK_ANSI_Backslash → PC88 ¥
-    0x32: Keyboard.at,          // kVK_ANSI_Grave → PC88 @
+    0x1B: PC88Key.minus,       // kVK_ANSI_Minus → PC88 -
+    0x18: PC88Key.caret,       // kVK_ANSI_Equal → PC88 ^ (caret)
+    0x21: PC88Key.leftBracket, // kVK_ANSI_LeftBracket → PC88 [
+    0x1E: PC88Key.rightBracket,// kVK_ANSI_RightBracket → PC88 ]
+    0x29: PC88Key.semicolon,   // kVK_ANSI_Semicolon
+    0x27: PC88Key.colon,       // kVK_ANSI_Quote → PC88 :
+    0x2B: PC88Key.comma,       // kVK_ANSI_Comma
+    0x2F: PC88Key.period,      // kVK_ANSI_Period
+    0x2C: PC88Key.slash,       // kVK_ANSI_Slash
+    0x2A: PC88Key.yen,         // kVK_ANSI_Backslash → PC88 ¥
+    0x32: PC88Key.at,          // kVK_ANSI_Grave → PC88 @
 
     // Control keys
-    0x24: Keyboard.Key(1, 7),   // kVK_Return → RETURN (numpad row, but maps to main return)
-    0x31: Keyboard.space,       // kVK_Space
-    0x35: Keyboard.esc,         // kVK_Escape
-    0x33: Keyboard.del,         // kVK_Delete (backspace) → PC88 DEL
-    0x30: Keyboard.tab,         // kVK_Tab
-    0x39: Keyboard.capsLock,    // kVK_CapsLock
+    0x24: PC88Key(1, 7),       // kVK_Return → RETURN (numpad row, but maps to main return)
+    0x31: PC88Key.space,       // kVK_Space
+    0x35: PC88Key.esc,         // kVK_Escape
+    0x33: PC88Key.del,         // kVK_Delete (backspace) → PC88 DEL
+    0x30: PC88Key.tab,         // kVK_Tab
+    0x39: PC88Key.capsLock,    // kVK_CapsLock
 
     // Modifier keys
-    0x38: Keyboard.shift,       // kVK_Shift
-    0x3C: Keyboard.shift,       // kVK_RightShift
-    0x3B: Keyboard.ctrl,        // kVK_Control
-    0x3E: Keyboard.ctrl,        // kVK_RightControl
-    0x3A: Keyboard.grph,        // kVK_Option → PC88 GRPH
-    0x3D: Keyboard.grph,        // kVK_RightOption → PC88 GRPH
+    0x38: PC88Key.shift,       // kVK_Shift
+    0x3C: PC88Key.shift,       // kVK_RightShift
+    0x3B: PC88Key.ctrl,        // kVK_Control
+    0x3E: PC88Key.ctrl,        // kVK_RightControl
+    0x3A: PC88Key.grph,        // kVK_Option → PC88 GRPH
+    0x3D: PC88Key.grph,        // kVK_RightOption → PC88 GRPH
 
     // Arrow keys
-    0x7E: Keyboard.up,          // kVK_UpArrow
-    0x7D: Keyboard.down,        // kVK_DownArrow
-    0x7B: Keyboard.left,        // kVK_LeftArrow
-    0x7C: Keyboard.right,       // kVK_RightArrow
+    0x7E: PC88Key.up,          // kVK_UpArrow
+    0x7D: PC88Key.down,        // kVK_DownArrow
+    0x7B: PC88Key.left,        // kVK_LeftArrow
+    0x7C: PC88Key.right,       // kVK_RightArrow
 
     // Function keys
-    0x7A: Keyboard.f1,          // kVK_F1
-    0x78: Keyboard.f2,          // kVK_F2
-    0x63: Keyboard.f3,          // kVK_F3
-    0x76: Keyboard.f4,          // kVK_F4
-    0x60: Keyboard.f5,          // kVK_F5
-    0x61: Keyboard.f6,          // kVK_F6
-    0x62: Keyboard.f7,          // kVK_F7
-    0x64: Keyboard.f8,          // kVK_F8
-    0x65: Keyboard.f9,          // kVK_F9
-    0x6D: Keyboard.f10,         // kVK_F10
+    0x7A: PC88Key.f1,          // kVK_F1
+    0x78: PC88Key.f2,          // kVK_F2
+    0x63: PC88Key.f3,          // kVK_F3
+    0x76: PC88Key.f4,          // kVK_F4
+    0x60: PC88Key.f5,          // kVK_F5
+    0x61: PC88Key.f6,          // kVK_F6
+    0x62: PC88Key.f7,          // kVK_F7
+    0x64: PC88Key.f8,          // kVK_F8
+    0x65: PC88Key.f9,          // kVK_F9
+    0x6D: PC88Key.f10,         // kVK_F10
 
     // Numpad
-    0x52: Keyboard.kp0,         // kVK_ANSI_Keypad0
-    0x53: Keyboard.kp1,         // kVK_ANSI_Keypad1
-    0x54: Keyboard.kp2,         // kVK_ANSI_Keypad2
-    0x55: Keyboard.kp3,         // kVK_ANSI_Keypad3
-    0x56: Keyboard.kp4,         // kVK_ANSI_Keypad4
-    0x57: Keyboard.kp5,         // kVK_ANSI_Keypad5
-    0x58: Keyboard.kp6,         // kVK_ANSI_Keypad6
-    0x59: Keyboard.kp7,         // kVK_ANSI_Keypad7
-    0x5B: Keyboard.kp8,         // kVK_ANSI_Keypad8
-    0x5C: Keyboard.kp9,         // kVK_ANSI_Keypad9
-    0x43: Keyboard.kpMultiply,  // kVK_ANSI_KeypadMultiply
-    0x45: Keyboard.kpPlus,      // kVK_ANSI_KeypadPlus
-    0x4E: Keyboard.kpMinus,     // kVK_ANSI_KeypadMinus
-    0x41: Keyboard.kpPeriod,    // kVK_ANSI_KeypadDecimal
-    0x4B: Keyboard.kpDivide,    // kVK_ANSI_KeypadDivide
-    0x4C: Keyboard.kpReturn,    // kVK_ANSI_KeypadEnter
-    0x51: Keyboard.kpEqual,     // kVK_ANSI_KeypadEquals
+    0x52: PC88Key.kp0,         // kVK_ANSI_Keypad0
+    0x53: PC88Key.kp1,         // kVK_ANSI_Keypad1
+    0x54: PC88Key.kp2,         // kVK_ANSI_Keypad2
+    0x55: PC88Key.kp3,         // kVK_ANSI_Keypad3
+    0x56: PC88Key.kp4,         // kVK_ANSI_Keypad4
+    0x57: PC88Key.kp5,         // kVK_ANSI_Keypad5
+    0x58: PC88Key.kp6,         // kVK_ANSI_Keypad6
+    0x59: PC88Key.kp7,         // kVK_ANSI_Keypad7
+    0x5B: PC88Key.kp8,         // kVK_ANSI_Keypad8
+    0x5C: PC88Key.kp9,         // kVK_ANSI_Keypad9
+    0x43: PC88Key.kpMultiply,  // kVK_ANSI_KeypadMultiply
+    0x45: PC88Key.kpPlus,      // kVK_ANSI_KeypadPlus
+    0x4E: PC88Key.kpMinus,     // kVK_ANSI_KeypadMinus
+    0x41: PC88Key.kpPeriod,    // kVK_ANSI_KeypadDecimal
+    0x4B: PC88Key.kpDivide,    // kVK_ANSI_KeypadDivide
+    0x4C: PC88Key.kpReturn,    // kVK_ANSI_KeypadEnter
+    0x51: PC88Key.kpEqual,     // kVK_ANSI_KeypadEquals
 
     // JIS-specific keys
-    0x5D: Keyboard.yen,         // kVK_JIS_Yen → PC88 ¥
-    0x5E: Keyboard.underscore,  // kVK_JIS_Underscore → PC88 _
+    0x5D: PC88Key.yen,         // kVK_JIS_Yen → PC88 ¥
+    0x5E: PC88Key.underscore,  // kVK_JIS_Underscore → PC88 _
   ]
 }
 
@@ -279,15 +279,15 @@ nonisolated enum PC88SpecialKey: String, CaseIterable, Identifiable {
   var id: String { rawValue }
   var displayName: String { rawValue }
 
-  var pc88Key: Keyboard.Key {
+  var pc88Key: PC88Key {
     switch self {
-    case .stop:     return Keyboard.stop
-    case .copy:     return Keyboard.copy
-    case .clrHome:  return Keyboard.clr
-    case .ins:      return Keyboard.ins
-    case .bs:       return Keyboard.bs
-    case .rollUp:   return Keyboard.rollUp
-    case .rollDown: return Keyboard.rollDown
+    case .stop:     return PC88Key.stop
+    case .copy:     return PC88Key.copy
+    case .clrHome:  return PC88Key.clr
+    case .ins:      return PC88Key.ins
+    case .bs:       return PC88Key.bs
+    case .rollUp:   return PC88Key.rollUp
+    case .rollDown: return PC88Key.rollDown
     }
   }
 
