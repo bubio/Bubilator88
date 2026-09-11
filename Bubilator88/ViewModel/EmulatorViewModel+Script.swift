@@ -299,11 +299,7 @@ extension EmulatorViewModel {
       }
     }
     guard !updates.isEmpty else { return }
-    // `DriveState` carries `[D88Disk]`, which Bubilator88Core does not declare
-    // `Sendable`. The hand-off is still a hand-off: these values are built
-    // here from copies the player returned, and this thread drops them at the
-    // end of the statement.
-    nonisolated(unsafe) let handoff = updates
+    let handoff = updates
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
       for update in handoff { self.applyDriveState(update.state, drive: update.drive) }

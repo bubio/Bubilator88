@@ -14,21 +14,23 @@ import Foundation
 /// The converter keeps a small buffer of un-committed roman letters. `feed`
 /// returns the katakana that became final as a result of the new character;
 /// `pending` exposes the still-ambiguous tail for an on-screen indicator.
-public struct RomajiKanaConverter {
+///
+/// `nonisolated`: plain string state with no UI in it, like `KeyMapping`.
+nonisolated struct RomajiKanaConverter {
 
   /// Un-committed roman letters (always lowercased). Exposed via `pending`.
   private var buffer: String = ""
 
-  public init() {}
+  init() {}
 
   /// The roman letters typed so far that have not yet resolved to kana.
   /// Used to render the IME-style pending overlay.
-  public var pending: String { buffer }
+  var pending: String { buffer }
 
   /// Feed one typed character. Returns any katakana that became final.
   /// Characters outside a–z and `-` are not expected here (callers filter
   /// them and use `flush()` first); if one arrives it is dropped.
-  public mutating func feed(_ c: Character) -> String {
+  mutating func feed(_ c: Character) -> String {
     let lower = Character(c.lowercased())
     guard lower.isLetter || lower == "-" else { return "" }
     buffer.append(lower)
@@ -39,7 +41,7 @@ public struct RomajiKanaConverter {
   /// non-romaji key, or the mode turns off). A lone `n` becomes `ﾝ`; an exact
   /// table match commits; anything else (an incomplete cluster like `ky`) is
   /// discarded.
-  public mutating func flush() -> String {
+  mutating func flush() -> String {
     defer { buffer = "" }
     if buffer == "n" { return "ﾝ" }
     if let kana = Self.table[buffer] { return kana }
@@ -49,14 +51,14 @@ public struct RomajiKanaConverter {
   /// Delete the last un-committed roman letter. Returns true if something was
   /// removed (so the caller swallows the Backspace instead of sending it to
   /// the emulator).
-  public mutating func backspace() -> Bool {
+  mutating func backspace() -> Bool {
     guard !buffer.isEmpty else { return false }
     buffer.removeLast()
     return true
   }
 
   /// Discard the pending buffer without emitting anything.
-  public mutating func reset() { buffer = "" }
+  mutating func reset() { buffer = "" }
 
   // MARK: - Core state machine
 

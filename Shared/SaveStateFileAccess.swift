@@ -32,12 +32,10 @@ enum SaveStateFileAccess {
     guard let header = try? handle.read(upToCount: SaveStateFile.headerSize),
           header.count == SaveStateFile.headerSize else { return nil }
 
-    // Section count lives at 0x3C, the last field of the header.
-    var pos = SaveStateFile.headerSize - 4
-    guard let rawCount = SaveStateFile.readU32LE(Array(header), at: &pos),
-          rawCount <= maxSectionCount else { return nil }
+    guard let sectionCount = try? SaveStateFile.parseHeader(Array(header)).sectionCount,
+          sectionCount <= maxSectionCount else { return nil }
 
-    let tableSize = Int(rawCount) * SaveStateFile.sectionEntrySize
+    let tableSize = sectionCount * SaveStateFile.sectionEntrySize
     guard let table = try? handle.read(upToCount: tableSize),
           table.count == tableSize else { return nil }
 
@@ -51,7 +49,7 @@ enum SaveStateFileAccess {
     return data
   }
 
-  /// When the state was written, from the header timestamp at offset 0x08.
+  /// When the state was written, from the header timestamp.
   ///
   /// The file's own modification date usually says the same thing, but the
   /// header survives copying with tools that do not preserve dates.
@@ -60,18 +58,8 @@ enum SaveStateFileAccess {
     defer { try? handle.close() }
     guard let header = try? handle.read(upToCount: SaveStateFile.headerSize),
           header.count == SaveStateFile.headerSize else { return nil }
-
-    var magicPos = 0
-    guard SaveStateFile.readU32LE(Array(header), at: &magicPos) == SaveStateFile.magic else {
-      return nil
-    }
-    // Timestamp is a Double written as its little-endian bit pattern.
-    var bits: UInt64 = 0
-    for i in (8..<16).reversed() {
-      bits = (bits << 8) | UInt64(header[i])
-    }
-    let seconds = Double(bitPattern: bits)
-    guard seconds.isFinite, seconds > 0 else { return nil }
+    guard let seconds = try? SaveStateFile.parseHeader(Array(header)).timestamp,
+          seconds.isFinite, seconds > 0 else { return nil }
     return Date(timeIntervalSince1970: seconds)
   }
 }

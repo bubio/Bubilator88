@@ -1,5 +1,5 @@
 import Testing
-@_spi(Debug) @testable import Bubilator88Core
+@testable import Bubilator88
 
 @Suite("RomajiKanaConverter Tests")
 struct RomajiKanaConverterTests {
