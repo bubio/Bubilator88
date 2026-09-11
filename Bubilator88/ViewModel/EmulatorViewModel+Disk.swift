@@ -149,10 +149,7 @@ extension EmulatorViewModel {
     let info: MountedDiskInfo?
     let writeProtected: Bool
 
-    /// `nonisolated(unsafe)` because `MountedDiskInfo` carries `[D88Disk]`,
-    /// which Bubilator88Core does not declare `Sendable`. This particular value
-    /// is immutable and holds no disks at all.
-    nonisolated(unsafe) static let empty =
+    static let empty =
       DriveState(name: "Empty", fileName: nil, info: nil, writeProtected: false)
   }
 
@@ -272,12 +269,8 @@ extension EmulatorViewModel {
 
     func mountSlot(_ slot: (disk: D88Disk, name: String, entryName: String),
                    drive: Int, imageIndex: Int) {
-      // Bind the name first: `slot` is a tuple carrying a non-Sendable D88Disk,
-      // and capturing it in the main-actor-isolated `flatMap` closure would
-      // send it across isolation. The entry name alone is a String.
-      let entryName = slot.entryName
       let entryURL = cacheDir.flatMap {
-        cache.cachedEntryURL(in: $0, entryName: entryName)
+        cache.cachedEntryURL(in: $0, entryName: slot.entryName)
       }
       mountDiskImageDirect(DirectMountRequest(
         disk: slot.disk, name: slot.name, drive: drive,

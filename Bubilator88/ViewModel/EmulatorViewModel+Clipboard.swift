@@ -29,15 +29,14 @@ extension EmulatorViewModel {
   /// Any keys the queue had pressed down are released here so the emulator's
   /// keyboard matrix doesn't end up with a stuck key after the cancel.
   func cancelPasteQueue() {
-    var actions: [TextPasteQueue.KeyAction] = []
+    var events: [TextPasteQueue.KeyEvent] = []
     pasteQueueLock.lock()
-    pasteQueue.cancel { actions.append($0) }
+    pasteQueue.cancel { events.append($0) }
     pasteQueueLock.unlock()
 
-    for action in actions {
-      let key = PC88Key(action.row, action.bit)
-      apply(action.down ? .pressKey(key, record: false)
-        : .releaseKey(key, record: false))
+    for event in events {
+      apply(event.down ? .pressKey(event.key, record: false)
+        : .releaseKey(event.key, record: false))
     }
   }
 
@@ -49,15 +48,14 @@ extension EmulatorViewModel {
   /// directly rather than posted — they are already at the frame boundary, and
   /// injected keys must not be captured by a script recording.
   nonisolated func tickPasteQueue() {
-    var actions: [TextPasteQueue.KeyAction] = []
+    var events: [TextPasteQueue.KeyEvent] = []
     pasteQueueLock.lock()
-    pasteQueue.tick { actions.append($0) }
+    pasteQueue.tick { events.append($0) }
     pasteQueueLock.unlock()
 
-    for action in actions {
-      let key = PC88Key(action.row, action.bit)
-      apply(action.down ? .pressKey(key, record: false)
-        : .releaseKey(key, record: false))
+    for event in events {
+      apply(event.down ? .pressKey(event.key, record: false)
+        : .releaseKey(event.key, record: false))
     }
   }
 }

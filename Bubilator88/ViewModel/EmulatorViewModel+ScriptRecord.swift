@@ -123,7 +123,7 @@ extension EmulatorViewModel {
   /// Turns the current boot mode into setup steps. The three n88 modes emit
   /// `boot`, letting playback derive bit 3. N-BASIC and Custom carry app-specific
   /// DIPSW values and so emit raw `dipsw1`/`dipsw2` instead, because
-  /// Bubilator88Core.BootMode and the app's BootMode disagree on N-BASIC's DIPSW2.
+  /// the core's BootMode (PC88Types) and the app's BootMode disagree on N-BASIC's DIPSW2.
   private func setupBootSteps() -> [ScriptStep] {
     switch bootMode {
     case .n88v2:  return [.boot(.n88v2)]
