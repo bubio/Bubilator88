@@ -1,5 +1,6 @@
 import SwiftUI
 import EmulatorCore
+import FMSynthesis
 
 /// Audio debug pane — two-column HSplitView: Activity/Mute | Spectrum.
 ///

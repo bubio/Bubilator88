@@ -1,4 +1,4 @@
-import EmulatorCore  // re-exports Logging (swift-log)
+import Logging
 import Foundation
 import os
 

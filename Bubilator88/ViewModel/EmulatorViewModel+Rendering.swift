@@ -3,6 +3,8 @@ import AppKit
 import Synchronization
 import UniformTypeIdentifiers
 @_spi(Debug) import EmulatorCore
+import FMSynthesis
+import Logging
 
 // `nonisolated` so the nonisolated snapshot writers can log; `Logger` is Sendable.
 nonisolated private let renderLog = Logger(label: "App.Rendering")

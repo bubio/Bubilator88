@@ -56,7 +56,7 @@ final class AudioOutput {
 
   /// Compute ring buffer size from Settings.audioBufferMs (power of 2, stereo pairs).
   private static func ringBufferSize(forMs ms: Int) -> Int {
-    let sampleRate = YM2608.sampleRate
+    let sampleRate = PC88.audioSampleRate
     let rawSize = ms * sampleRate * 2 / 1000
     let size = max(4096, rawSize)
     var p = 1
@@ -66,7 +66,7 @@ final class AudioOutput {
 
   /// Compute mono ring buffer size (power of 2).
   private static func monoRingBufferSize(forMs ms: Int) -> Int {
-    let sampleRate = YM2608.sampleRate
+    let sampleRate = PC88.audioSampleRate
     let rawSize = ms * sampleRate / 1000
     let size = max(2048, rawSize)
     var p = 1
@@ -154,7 +154,7 @@ final class AudioOutput {
 
     let format = AVAudioFormat(
       commonFormat: .pcmFormatFloat32,
-      sampleRate: Double(YM2608.sampleRate),
+      sampleRate: Double(PC88.audioSampleRate),
       channels: 2,
       interleaved: false
     )!
@@ -214,7 +214,7 @@ final class AudioOutput {
 
     let monoFormat = AVAudioFormat(
       commonFormat: .pcmFormatFloat32,
-      sampleRate: Double(YM2608.sampleRate),
+      sampleRate: Double(PC88.audioSampleRate),
       channels: 1,
       interleaved: false
     )!
