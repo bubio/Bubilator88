@@ -168,7 +168,7 @@ Swift toolchain が入っていないマシンでもそのまま動く(ROM は�
    コピーせず、`Bubilator88C.dll` の PE インポートテーブルを `llvm-objdump -p`
    (Swift toolchain 同梱) で再帰的に辿り、実際に静的依存する DLL だけを入れる
    (32 個 → 17 個)。`FoundationNetworking` / `FoundationXML` / `swiftDistributed`
-   などは EmulatorCore が import していないので落ちる。
+   などは Bubilator88Core が import していないので落ちる。
 2. **未使用ファイルの prune** — デバッグシンボル (`*.pdb`、`DirectML.pdb` だけで
    8.6MB)、未使用の WindowsAppSDK 機能 (WebView2 / Widgets / 通知 / MSIX 配置)、
    英語以外の `*.mui` ロケールフォルダ (84 個) を削除する。self-contained な
@@ -254,7 +254,7 @@ SxS のアクティベーションコンテキストはこれを **exe がある
 
 ## 未実装(後続 / 別実装枠)
 
-- 触覚フィードバック(SSGノイズ検出→振動。EmulatorCore の CApi 拡張が必要なため別PRで対応予定)
+- 触覚フィードバック(SSGノイズ検出→振動。Bubilator88Core の CApi 拡張が必要なため別PRで対応予定)
 - コントローラーのモデル別マッピング / ブランド別アイコン表示(`Windows.Gaming.Input.Gamepad` は
   製品識別情報を提供しないため、v1 は単一のグローバルマッピング)
 - マウスロック(`ClipCursor` + RAWINPUT 相対デルタ)

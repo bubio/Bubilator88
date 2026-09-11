@@ -1,10 +1,10 @@
-import EmulatorCore
+import Bubilator88Core
 import Foundation
 import Testing
 
 @testable import Bubilator88
 
-/// Guards the contract between EmulatorCore's script errors and the String
+/// Guards the contract between Bubilator88Core's script errors and the String
 /// Catalog.
 ///
 /// The core throws an English format string that the app looks up as a catalog
@@ -13,7 +13,7 @@ import Testing
 /// as an untranslated string in the Japanese UI.
 struct ScriptErrorLocalizationTests {
 
-  /// Every format string EmulatorCore can throw. Keep in step with Script.swift
+  /// Every format string Bubilator88Core can throw. Keep in step with Script.swift
   /// and ScriptPlayer.swift.
   static let coreFormats: [String] = [
     "key <name> <down|up|tap [hold]>",

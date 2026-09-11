@@ -1,4 +1,4 @@
-import EmulatorCore
+import Bubilator88Core
 
 /// Maps each keyboard matrix key to the PC-8801 graphic-character **code** it
 /// produces when GRPH is held. The software keyboard resolves that code through

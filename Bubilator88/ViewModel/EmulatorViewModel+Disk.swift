@@ -1,6 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
-import EmulatorCore
+import Bubilator88Core
 
 // MARK: - ROM Loading & Disk Operations
 
@@ -150,7 +150,7 @@ extension EmulatorViewModel {
     let writeProtected: Bool
 
     /// `nonisolated(unsafe)` because `MountedDiskInfo` carries `[D88Disk]`,
-    /// which EmulatorCore does not declare `Sendable`. This particular value
+    /// which Bubilator88Core does not declare `Sendable`. This particular value
     /// is immutable and holds no disks at all.
     nonisolated(unsafe) static let empty =
       DriveState(name: "Empty", fileName: nil, info: nil, writeProtected: false)

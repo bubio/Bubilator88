@@ -1,5 +1,5 @@
 import AVFoundation
-import EmulatorCore
+import Bubilator88Core
 import Synchronization
 
 /// CoreAudio output for YM2608 emulator sound.

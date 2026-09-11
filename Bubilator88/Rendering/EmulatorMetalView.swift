@@ -1,5 +1,5 @@
 import MetalKit
-import EmulatorCore
+import Bubilator88Core
 
 /// Uniform buffer matching the Metal FilterParams struct.
 struct FilterParams {

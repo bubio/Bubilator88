@@ -1,5 +1,5 @@
 import GameController
-@_spi(Debug) import EmulatorCore
+@_spi(Debug) import Bubilator88Core
 import AppKit
 
 // MARK: - Button Mapping

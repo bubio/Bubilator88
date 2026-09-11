@@ -1,4 +1,4 @@
-import EmulatorCore
+import Bubilator88Core
 import Foundation
 
 /// The parsed form of a launch argument list, shared by the URL scheme and the CLI.

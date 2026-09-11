@@ -1,5 +1,5 @@
 import Foundation
-@_spi(Debug) import EmulatorCore
+@_spi(Debug) import Bubilator88Core
 
 /// Immutable snapshot of Machine state, captured on the emulator queue
 /// and consumed by SwiftUI views on the main actor.

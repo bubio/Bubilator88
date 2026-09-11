@@ -1,6 +1,6 @@
 import Testing
 @testable import Bubilator88
-import EmulatorCore
+import Bubilator88Core
 
 struct KeyMappingTests {
 

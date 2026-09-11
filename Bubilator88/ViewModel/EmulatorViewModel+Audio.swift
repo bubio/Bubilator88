@@ -1,6 +1,6 @@
 import Foundation
 import AppKit
-@_spi(Debug) import EmulatorCore
+@_spi(Debug) import Bubilator88Core
 
 // MARK: - Audio Debug
 

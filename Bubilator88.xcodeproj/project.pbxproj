@@ -7,12 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B616EC4B2F550F2200D819FE /* EmulatorCore in Frameworks */ = {isa = PBXBuildFile; productRef = B6AA00022F4BF001002BAE55 /* EmulatorCore */; };
+		B616EC4B2F550F2200D819FE /* Bubilator88Core in Frameworks */ = {isa = PBXBuildFile; productRef = B6AA00022F4BF001002BAE55 /* Bubilator88Core */; };
 		B6D1000000000000000000F1 /* Logging in Frameworks */ = {isa = PBXBuildFile; productRef = B6D1000000000000000000F0 /* Logging */; };
 		B6C1000000000000000000ED /* Bubilator88QuickLook.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B6C1000000000000000000E2 /* Bubilator88QuickLook.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		B6C1000000000000000000F1 /* EmulatorCore in Frameworks */ = {isa = PBXBuildFile; productRef = B6C1000000000000000000F0 /* EmulatorCore */; };
+		B6C1000000000000000000F1 /* Bubilator88Core in Frameworks */ = {isa = PBXBuildFile; productRef = B6C1000000000000000000F0 /* Bubilator88Core */; };
 		B6C2000000000000000000ED /* Bubilator88QuickLookPreview.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B6C2000000000000000000E2 /* Bubilator88QuickLookPreview.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		B6C2000000000000000000F1 /* EmulatorCore in Frameworks */ = {isa = PBXBuildFile; productRef = B6C2000000000000000000F0 /* EmulatorCore */; };
+		B6C2000000000000000000F1 /* Bubilator88Core in Frameworks */ = {isa = PBXBuildFile; productRef = B6C2000000000000000000F0 /* Bubilator88Core */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -141,7 +141,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B616EC4B2F550F2200D819FE /* EmulatorCore in Frameworks */,
+				B616EC4B2F550F2200D819FE /* Bubilator88Core in Frameworks */,
 				B6D1000000000000000000F1 /* Logging in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -164,7 +164,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B6C1000000000000000000F1 /* EmulatorCore in Frameworks */,
+				B6C1000000000000000000F1 /* Bubilator88Core in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -172,7 +172,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B6C2000000000000000000F1 /* EmulatorCore in Frameworks */,
+				B6C2000000000000000000F1 /* Bubilator88Core in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -231,7 +231,7 @@
 			);
 			name = Bubilator88;
 			packageProductDependencies = (
-				B6AA00022F4BF001002BAE55 /* EmulatorCore */,
+				B6AA00022F4BF001002BAE55 /* Bubilator88Core */,
 				B6D1000000000000000000F0 /* Logging */,
 			);
 			productName = Bubilator88;
@@ -302,7 +302,7 @@
 			);
 			name = Bubilator88QuickLook;
 			packageProductDependencies = (
-				B6C1000000000000000000F0 /* EmulatorCore */,
+				B6C1000000000000000000F0 /* Bubilator88Core */,
 			);
 			productName = Bubilator88QuickLook;
 			productReference = B6C1000000000000000000E2 /* Bubilator88QuickLook.appex */;
@@ -326,7 +326,7 @@
 			);
 			name = Bubilator88QuickLookPreview;
 			packageProductDependencies = (
-				B6C2000000000000000000F0 /* EmulatorCore */,
+				B6C2000000000000000000F0 /* Bubilator88Core */,
 			);
 			productName = Bubilator88QuickLookPreview;
 			productReference = B6C2000000000000000000E2 /* Bubilator88QuickLookPreview.appex */;
@@ -971,17 +971,17 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		B6AA00022F4BF001002BAE55 /* EmulatorCore */ = {
+		B6AA00022F4BF001002BAE55 /* Bubilator88Core */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = EmulatorCore;
+			productName = Bubilator88Core;
 		};
-		B6C1000000000000000000F0 /* EmulatorCore */ = {
+		B6C1000000000000000000F0 /* Bubilator88Core */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = EmulatorCore;
+			productName = Bubilator88Core;
 		};
-		B6C2000000000000000000F0 /* EmulatorCore */ = {
+		B6C2000000000000000000F0 /* Bubilator88Core */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = EmulatorCore;
+			productName = Bubilator88Core;
 		};
 		B6D1000000000000000000F0 /* Logging */ = {
 			isa = XCSwiftPackageProductDependency;

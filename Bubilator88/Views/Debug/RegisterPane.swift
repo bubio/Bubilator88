@@ -1,5 +1,5 @@
 import SwiftUI
-import EmulatorCore
+import Bubilator88Core
 
 struct RegisterPane: View {
   let snapshot: MachineSnapshot

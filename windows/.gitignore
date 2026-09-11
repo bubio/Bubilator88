@@ -4,7 +4,7 @@ Bubilator88.Windows/obj/
 Bubilator88.Windows.Tests/bin/
 Bubilator88.Windows.Tests/obj/
 
-# The Swift core DLL is a build output of the EmulatorCore package, copied here
+# The Swift core DLL is a build output of the Bubilator88Core package, copied here
 # by hand (see README.md). Don't commit it.
 Bubilator88.Windows/native/*.dll
 

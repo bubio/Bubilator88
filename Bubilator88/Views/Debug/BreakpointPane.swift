@@ -1,5 +1,5 @@
 import SwiftUI
-@_spi(Debug) import EmulatorCore
+@_spi(Debug) import Bubilator88Core
 
 struct BreakpointPane: View {
   @Bindable var session: DebugSession

@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 import Synchronization
 import UniformTypeIdentifiers
-@_spi(Debug) import EmulatorCore
+@_spi(Debug) import Bubilator88Core
 import Logging
 
 // `nonisolated` so the nonisolated snapshot writers can log; `Logger` is Sendable.

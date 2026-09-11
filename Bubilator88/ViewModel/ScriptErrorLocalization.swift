@@ -1,9 +1,9 @@
-import EmulatorCore
+import Bubilator88Core
 import Foundation
 
-/// Localizes the errors EmulatorCore throws while parsing and replaying scripts.
+/// Localizes the errors Bubilator88Core throws while parsing and replaying scripts.
 ///
-/// EmulatorCore is a platform-agnostic package with no localization of its own,
+/// Bubilator88Core is a platform-agnostic package with no localization of its own,
 /// so `ScriptError` and `ScriptPlayer.RuntimeError` carry an English format
 /// string plus its arguments rather than a finished sentence. That format string
 /// doubles as the String Catalog key — which works because English is the source

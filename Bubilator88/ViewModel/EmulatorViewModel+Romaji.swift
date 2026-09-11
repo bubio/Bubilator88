@@ -1,9 +1,9 @@
 import AppKit
-import EmulatorCore
+import Bubilator88Core
 
 /// Host-side romaji → half-width katakana IME. Converted kana is fed into the
 /// existing `pasteQueue`, which already knows how to press the right matrix key
-/// with the KANA modifier and correct timing — so no EmulatorCore change is
+/// with the KANA modifier and correct timing — so no Bubilator88Core change is
 /// needed and the result matches real KANA-mode typing.
 ///
 /// Ordering: kana is injected through `pasteQueue` (async, ~200ms/char), while

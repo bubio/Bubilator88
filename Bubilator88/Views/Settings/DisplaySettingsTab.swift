@@ -1,4 +1,4 @@
-import EmulatorCore
+import Bubilator88Core
 import SwiftUI
 import Translation
 

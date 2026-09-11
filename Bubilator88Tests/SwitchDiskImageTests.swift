@@ -1,7 +1,7 @@
 import Testing
 import Foundation
 @testable import Bubilator88
-import EmulatorCore
+import Bubilator88Core
 
 /// Related to docs/DISK_WRITEBACK_PLAN.md §7 — ensures that on a multi-entry
 /// .d88, write-back after `switchDiskImage` lands in the correct bank.

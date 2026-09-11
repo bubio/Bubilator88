@@ -3,10 +3,10 @@ name: CI (Windows)
 # Windows ビルドの継続的な健全性チェック。
 #
 # 背景 (方針):
-#   Windows 移植は main に同居させる。共有コードは EmulatorCore (Swift) だけで、
+#   Windows 移植は main に同居させる。共有コードは Bubilator88Core (Swift) だけで、
 #   Windows 固有の変更は Sources/CApi/ の追加と数箇所の #if os(Windows) に
 #   閉じている。したがって macOS 側の作業が Windows を壊しうるのは
-#   EmulatorCore を触ったときだけ — そのときだけこのジョブを回す。
+#   Bubilator88Core を触ったときだけ — そのときだけこのジョブを回す。
 #
 #   このジョブが赤くても macOS の開発は止めない。Windows シェルは遅れてよい、
 #   というのが明示的な方針 (AGENTS.md「Windows Native Port」節)。
@@ -79,7 +79,7 @@ jobs:
         shell: bash
         run: ./scripts/check-capi-exports.sh
 
-      # EmulatorCore のユニットテストを Windows 上でも回す。
+      # Bubilator88Core のユニットテストを Windows 上でも回す。
       # ビルドが通っても壊れうる差分 (セーブステート形式、時刻/ロケール依存、
       # エンディアン以外の Foundation 差異) はここでしか捕まらない。
       - name: Build & test (Windows)

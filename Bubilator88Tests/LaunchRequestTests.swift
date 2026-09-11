@@ -1,5 +1,5 @@
 import Testing
-import EmulatorCore
+import Bubilator88Core
 import Foundation
 @testable import Bubilator88
 

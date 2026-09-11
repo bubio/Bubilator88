@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     1. Swift toolchain の所在と runtime DLL ディレクトリを検出
-    2. (任意) swift test で EmulatorCore の回帰を確認
+    2. (任意) swift test で Bubilator88Core の回帰を確認
     3. swift build -c release --product Bubilator88C → native\Bubilator88C.dll に配置
     4. AI モデル (models/onnx/*.onnx) が Git LFS ポインタのままでないか確認
     5. dotnet publish (win-x64, self-contained) でシェルを発行
@@ -108,10 +108,10 @@ if (-not (Test-Path (Join-Path $SwiftRuntimeBin 'swiftCore.dll'))) {
 Write-Host "    Swift runtime bin: $SwiftRuntimeBin"
 
 # ---------------------------------------------------------------------------
-# 2. (任意) EmulatorCore のユニットテスト
+# 2. (任意) Bubilator88Core のユニットテスト
 # ---------------------------------------------------------------------------
 if ($RunCoreTests) {
-    Step "swift test (EmulatorCore)"
+    Step "swift test (Bubilator88Core)"
     Push-Location $CoreDir
     try {
         & swift test

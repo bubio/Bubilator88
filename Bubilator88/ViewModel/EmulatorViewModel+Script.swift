@@ -1,6 +1,6 @@
 import AppKit
 import UniformTypeIdentifiers
-import EmulatorCore
+import Bubilator88Core
 
 // MARK: - Timeline script playback (live mode)
 //
@@ -299,7 +299,7 @@ extension EmulatorViewModel {
       }
     }
     guard !updates.isEmpty else { return }
-    // `DriveState` carries `[D88Disk]`, which EmulatorCore does not declare
+    // `DriveState` carries `[D88Disk]`, which Bubilator88Core does not declare
     // `Sendable`. The hand-off is still a hand-off: these values are built
     // here from copies the player returned, and this thread drops them at the
     // end of the statement.

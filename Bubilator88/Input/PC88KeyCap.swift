@@ -1,5 +1,5 @@
 import CoreGraphics
-import EmulatorCore
+import Bubilator88Core
 
 /// A single visual key on the software keyboard, positioned on a grid.
 ///
