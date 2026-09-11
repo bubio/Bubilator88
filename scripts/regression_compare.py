@@ -144,6 +144,7 @@ def run_shot_into(scenario_name, disk, clock_8mhz, dipsw2, turbo,
     env["BOOTTEST_FRAMES"] = str(frames)
     env["BOOTTEST_SCREENSHOT_PATH"] = str(out_path)
     env["BOOTTEST_IGNORE_CRASH"] = "1"
+    env["BOOTTEST_MAX_WALL_SECONDS"] = "120"  # FRDemo needs ~25s; 30s is too tight
     env["BOOTTEST_DIPSW2"] = dipsw2
     if scenario_name in VIRTUAL_RTC_SCENARIOS:
         env["BOOTTEST_VIRTUAL_RTC"] = "1"

@@ -89,6 +89,13 @@ SCENARIOS = [
 
     ("TheHospital", "ザ・病院.D88", False, DIPSW2_V1S, 8,
      [("TheHospital.ppm", 28, [(15, "SPACE")])]),
+
+    # The only 200-line monochrome capture (the fisherman scene, colored by
+    # text attributes); every other scenario is color or 400-line mono.
+    # 160s is just after the scene starts: BootTester aborts a run after 30s
+    # of wall-clock time, which the debug build hits around 186s here.
+    ("FRDemo", "PC-8801mkIIFR DEMO.d88", False, DIPSW2_V2, 8,
+     [("FRDemo.ppm", 160, [])]),
 ]
 
 
@@ -102,6 +109,7 @@ def run_shot(scenario_name, disk, clock_8mhz, dipsw2, turbo,
     env["BOOTTEST_FRAMES"] = str(frames)
     env["BOOTTEST_SCREENSHOT_PATH"] = str(out_path)
     env["BOOTTEST_IGNORE_CRASH"] = "1"
+    env["BOOTTEST_MAX_WALL_SECONDS"] = "120"  # FRDemo needs ~25s; 30s is too tight
     env["BOOTTEST_DIPSW2"] = dipsw2
     if scenario_name in VIRTUAL_RTC_SCENARIOS:
         env["BOOTTEST_VIRTUAL_RTC"] = "1"
