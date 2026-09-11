@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 import Synchronization
 import UniformTypeIdentifiers
-import EmulatorCore
+@_spi(Debug) import EmulatorCore
 
 // `nonisolated` so the nonisolated snapshot writers can log; `Logger` is Sendable.
 nonisolated private let renderLog = Logger(label: "App.Rendering")
@@ -10,83 +10,6 @@ nonisolated private let renderLog = Logger(label: "App.Rendering")
 // MARK: - Rendering
 
 extension EmulatorViewModel {
-
-  // MARK: - Palette Helpers
-
-  nonisolated static func attributeGraphAttributes(
-    from attrData: [UInt8],
-    textDisplayMode: Pc88Bus.TextDisplayMode,
-    textRows: Int,
-    reverseDisplay: Bool
-  ) -> [UInt8] {
-    guard textDisplayMode == .disabled else { return attrData }
-    let defaultAttr: UInt8 = 0xE0 | (reverseDisplay ? 0x01 : 0x00)
-    return Array(
-      repeating: defaultAttr,
-      count: max(textRows, 1) * ScreenRenderer.textCols80
-    )
-  }
-
-  nonisolated static func effectiveTextDisplayEnabled(
-    busTextDisplayEnabled: Bool,
-    debugTextLayerEnabled: Bool
-  ) -> Bool {
-    busTextDisplayEnabled && debugTextLayerEnabled
-  }
-
-  nonisolated static func port52BackgroundColor(_ value: UInt8) -> (r: UInt8, g: UInt8, b: UInt8) {
-    (
-      r: (value & 0x20) != 0 ? 0xFF : 0x00,
-      g: (value & 0x40) != 0 ? 0xFF : 0x00,
-      b: (value & 0x10) != 0 ? 0xFF : 0x00
-    )
-  }
-
-  nonisolated static func effectiveRenderPalette(
-    busPalette: [(b: UInt8, r: UInt8, g: UInt8)],
-    graphicsColorMode: Bool,
-    graphicsDisplayEnabled: Bool,
-    analogPalette: Bool,
-    borderColor: UInt8
-  ) -> [(r: UInt8, g: UInt8, b: UInt8)] {
-    let programmablePalette = ScreenRenderer.expandPalette(busPalette)
-    let backgroundColor = Self.port52BackgroundColor(borderColor)
-    var palette = (graphicsColorMode || analogPalette)
-      ? programmablePalette
-      : ScreenRenderer.defaultPalette
-    if !graphicsColorMode {
-      palette[0] = backgroundColor
-    }
-    // BubiC forces palette index 0 to black while color graphics output is disabled.
-    // Without this, transient graphics-off frames inherit the programmable palette[0]
-    // and can flash as a full-screen color instead of black.
-    if graphicsColorMode && !graphicsDisplayEnabled {
-      palette[0] = ScreenRenderer.defaultPalette[0]
-    }
-    return palette
-  }
-
-  nonisolated static func effectiveTextPalette(
-    busPalette: [(b: UInt8, r: UInt8, g: UInt8)],
-    graphicsColorMode: Bool,
-    analogPalette: Bool,
-    borderColor: UInt8
-  ) -> [(r: UInt8, g: UInt8, b: UInt8)] {
-    let programmablePalette = ScreenRenderer.expandPalette(busPalette)
-    let backgroundColor = Self.port52BackgroundColor(borderColor)
-    // BubiC keeps text colors on the fixed digital palette except in analog
-    // attribute-graphics mode. Entry 0 is still special: hi-color tracks the
-    // programmable palette 0, while non-hi-color uses the port 0x52 background.
-    var palette = analogPalette && !graphicsColorMode
-      ? programmablePalette
-      : ScreenRenderer.defaultPalette
-    if graphicsColorMode {
-      palette[0] = programmablePalette[0]
-    } else {
-      palette[0] = backgroundColor
-    }
-    return palette
-  }
 
   // MARK: - Frame Rendering
 
@@ -99,99 +22,9 @@ extension EmulatorViewModel {
     debugTextLayerEnabled: Bool = true,
     markTextPixels: Bool = false
   ) {
-    let graphicsPalette = Self.effectiveRenderPalette(
-      busPalette: machine.bus.palette,
-      graphicsColorMode: machine.bus.graphicsColorMode,
-      graphicsDisplayEnabled: machine.bus.graphicsDisplayEnabled,
-      analogPalette: machine.bus.analogPalette,
-      borderColor: machine.bus.borderColor
-    )
-    let textPalette = Self.effectiveTextPalette(
-      busPalette: machine.bus.palette,
-      graphicsColorMode: machine.bus.graphicsColorMode,
-      analogPalette: machine.bus.analogPalette,
-      borderColor: machine.bus.borderColor
-    )
-    let planes = machine.bus.renderGVRAMPlanes()
-    let is400 = machine.bus.is400LineMode
-    let textData = machine.bus.readTextVRAM()
-    let attrData = machine.bus.readTextAttributes()
-    let attributeGraphAttrData = Self.attributeGraphAttributes(
-      from: attrData,
-      textDisplayMode: machine.bus.textDisplayMode,
-      textRows: Int(machine.crtc.linesPerScreen),
-      reverseDisplay: machine.crtc.reverseDisplay
-    )
-    let crtcLines = Int(machine.crtc.linesPerScreen)
-
-    if machine.bus.graphicsColorMode {
-      renderer.renderDoubled(
-        blueVRAM: planes.blue,
-        redVRAM: planes.red,
-        greenVRAM: planes.green,
-        palette: graphicsPalette,
-        into: &pixelBuffer
-      )
-    } else if is400 {
-      renderer.renderAttributeGraph400(
-        blueVRAM: planes.blue,
-        redVRAM: planes.red,
-        attrData: attributeGraphAttrData,
-        palette: graphicsPalette,
-        columns80: machine.bus.columns80,
-        textRows: crtcLines,
-        graphicsDisplayEnabled: machine.bus.graphicsDisplayEnabled,
-        into: &pixelBuffer
-      )
-    } else {
-      renderer.renderAttributeGraph200(
-        blueVRAM: planes.blue,
-        redVRAM: planes.red,
-        greenVRAM: planes.green,
-        attrData: attributeGraphAttrData,
-        palette: graphicsPalette,
-        columns80: machine.bus.columns80,
-        textRows: crtcLines,
-        graphicsDisplayEnabled: machine.bus.graphicsDisplayEnabled,
-        into: &pixelBuffer
-      )
-    }
-
-    let cursorVisible: Bool
-    if blinkCursor {
-      // BubiC pc88.cpp:4179-4181 — cursor toggles twice per blinkRate
-      // window (≈ rate/2 cadence), so the visible cursor blinks roughly
-      // 2× faster than the attribute BLINK rate.
-      cursorVisible = machine.crtc.cursorEnabled && !machine.crtc.blinkCursorOff
-    } else {
-      cursorVisible = machine.crtc.cursorEnabled
-    }
-
-    renderer.renderTextOverlay(
-      textData: textData,
-      attrData: attrData,
-      fontROM: machine.fontROM,
-      palette: textPalette,
-      displayEnabled: Self.effectiveTextDisplayEnabled(
-        busTextDisplayEnabled: machine.bus.textDisplayEnabled,
-        debugTextLayerEnabled: debugTextLayerEnabled
-      ),
-      columns80: machine.bus.columns80,
-      colorMode: machine.bus.colorMode,
-      attributeGraphMode: machine.bus.graphicsDisplayEnabled && !machine.bus.graphicsColorMode,
-      textRows: crtcLines,
-      cursorX: machine.crtc.cursorX,
-      cursorY: machine.crtc.cursorY,
-      cursorVisible: cursorVisible,
-      cursorBlock: (machine.crtc.cursorMode & 0x02) != 0,
-      // Always true: the pixel buffer is 640×400 regardless of display mode
-      // (200-line output is line-doubled into it), so text is drawn at the
-      // 400-line cell height to match. Nothing to do with the monitor type.
-      is400Line: true,
-      skipLine: machine.crtc.skipLine,
-      markTextPixels: markTextPixels,
-      into: &pixelBuffer
-    )
+    pc88.render(into: &pixelBuffer, blinkCursor: blinkCursor,
+                textLayerEnabled: debugTextLayerEnabled,
+                markTextPixels: markTextPixels)
   }
 
   /// One tick of the emulation loop: run `frameCount` machine frames under
@@ -323,9 +156,9 @@ extension EmulatorViewModel {
     uiUpdateCounter += 1
     if uiUpdateCounter >= 15 {
       uiUpdateCounter = 0
-      let d0 = machine.subSystem.diskAccess[0]
-      let d1 = machine.subSystem.diskAccess[1]
-      machine.subSystem.diskAccess = [false, false]
+      let diskActivity = pc88.takeDiskActivity()
+      let d0 = diskActivity[0]
+      let d1 = diskActivity[1]
       let tapeProgressSample = machine.cassette.progress
       // Sampled here, on the thread that owns the deck, for the same reason
       // progress is: the UI must never read `machine.cassette` itself. A
