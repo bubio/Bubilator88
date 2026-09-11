@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
-import EmulatorCore
+@_spi(Debug) import EmulatorCore
 
 /// Instruction trace ring buffer viewer.
 ///

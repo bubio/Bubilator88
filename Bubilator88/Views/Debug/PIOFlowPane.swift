@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
-import EmulatorCore
+@_spi(Debug) import EmulatorCore
 
 /// PIO 8255 data-flow log viewer.
 ///

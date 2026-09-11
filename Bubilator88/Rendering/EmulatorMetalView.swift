@@ -227,8 +227,8 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   private func ensureTexture() {
     guard let device = self.device else { return }
 
-    let width = ScreenRenderer.width       // 640
-    let height = ScreenRenderer.height400  // 400
+    let width = PC88.frameWidth       // 640
+    let height = PC88.frameHeight  // 400
     let h200 = height / 2                  // 200
 
     func ensureTex(_ tex: inout MTLTexture?, w: Int, h: Int) {
@@ -272,8 +272,8 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   private func uploadPixelBuffer(_ frame: FrameSlot) {
     guard let texture = texture else { return }
 
-    let width = ScreenRenderer.width
-    let height = ScreenRenderer.height400
+    let width = PC88.frameWidth
+    let height = PC88.frameHeight
     let is400 = frame.is400LineMode
     let useFilter = currentFilter != .none
 

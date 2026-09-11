@@ -3,7 +3,6 @@ import AppKit
 import Synchronization
 import UniformTypeIdentifiers
 @_spi(Debug) import EmulatorCore
-import FMSynthesis
 import Logging
 
 // `nonisolated` so the nonisolated snapshot writers can log; `Logger` is Sendable.
@@ -97,7 +96,7 @@ extension EmulatorViewModel {
     // mid-frame, tear the run loop down the same way the user
     // Pause button does. This ensures the cursor blink (which
     // uses wall-clock time, not T-states) also freezes.
-    if let dbg = machine.debugger, dbg.isPaused {
+    if let dbg = pc88.debugger, dbg.isPaused {
       Task { @MainActor [weak self] in
         self?.pause()
       }
@@ -110,7 +109,7 @@ extension EmulatorViewModel {
     // Skip the wall-clock cursor blink when the debugger has
     // pinned execution. Otherwise the 60Hz Metal loop would keep
     // toggling the cursor even as T-states stop advancing.
-    let blink = !(machine.debugger?.isPaused ?? false)
+    let blink = !(pc88.debugger?.isPaused ?? false)
     renderCurrentFrame(into: &pixelBuffer, blinkCursor: blink,
                        debugTextLayerEnabled: loopSettings.debugTextLayerEnabled,
                        markTextPixels: loopSettings.markTextPixels)
@@ -132,13 +131,14 @@ extension EmulatorViewModel {
     #endif
 
     // SSG noise → haptic feedback detection
-    gameController.detectSSGNoiseHaptic(sound: machine.sound,
+    let soundState = pc88.soundState
+    gameController.detectSSGNoiseHaptic(sound: soundState,
                                         hapticEnabled: loopSettings.hapticEnabled)
 
     #if DEBUG
     // SSG noise state logging (for haptic feedback research)
     do {
-      let snd = machine.sound
+      let snd = soundState
       let mixer = snd.ssgMixer
       let noiseA = (mixer & 0x08) == 0
       let noiseB = (mixer & 0x10) == 0
@@ -149,7 +149,7 @@ extension EmulatorViewModel {
         let volC = noiseC ? (snd.ssgVolume[2] & 0x1F) : 0
         let maxVol = max(volA, max(volB, volC))
         let envMode = (snd.ssgVolume[0] & 0x10) != 0 || (snd.ssgVolume[1] & 0x10) != 0 || (snd.ssgVolume[2] & 0x10) != 0
-        renderLog.debug("[SSG] noise: A=\(noiseA ? "ON" : "  ") B=\(noiseB ? "ON" : "  ") C=\(noiseC ? "ON" : "  ") | period=\(snd.ssgNoisePeriod) | vol=\(volA)/\(volB)/\(volC) max=\(maxVol) | envShape=\(String(format:"%02X",snd.ssgEnvShape)) envPeriod=\(snd.ssgEnvPeriod) envMode=\(envMode)")
+        renderLog.debug("[SSG] noise: A=\(noiseA ? "ON" : "  ") B=\(noiseB ? "ON" : "  ") C=\(noiseC ? "ON" : "  ") | period=\(snd.ssgNoisePeriod) | vol=\(volA)/\(volB)/\(volC) max=\(maxVol) | envShape=\(String(format:"%02X",snd.ssgEnvelopeShape)) envPeriod=\(snd.ssgEnvelopePeriod) envMode=\(envMode)")
       }
     }
     #endif
@@ -328,7 +328,7 @@ extension EmulatorViewModel {
       return Self.imageData(from: cgImage, format: format)
     }
     // Fallback: raw unfiltered 640×400 (Metal unavailable)
-    var buffer = Array(repeating: UInt8(0), count: ScreenRenderer.bufferSize400)
+    var buffer = Array(repeating: UInt8(0), count: PC88.frameBufferSize)
     // Reached on the main thread from a menu command, so the render has to take
     // `emuQueue` — it reads GVRAM and text VRAM while the emulation thread is
     // writing them (`RELEASE_1_5_0_PLAN.md` §3.3(e), §9.6).
@@ -341,8 +341,8 @@ extension EmulatorViewModel {
   }
 
   nonisolated func createCGImage(from pixelBuffer: [UInt8]) -> CGImage? {
-    let width = ScreenRenderer.width
-    let height = ScreenRenderer.height400
+    let width = PC88.frameWidth
+    let height = PC88.frameHeight
     let bytesPerRow = width * 4
     let colorSpace = CGColorSpaceCreateDeviceRGB()
 
@@ -383,7 +383,7 @@ extension EmulatorViewModel {
     guard response == .OK, let url = panel.url else { return }
     do {
       let files = try MemoryDump.write(
-        machine: machine,
+        pc88: pc88,
         to: url,
         metadata: [
           "boot_mode": bootMode.rawValue,
@@ -407,7 +407,7 @@ extension EmulatorViewModel {
   func dumpTextDMASnapshotToDefaultPath() {
     let payload = """
     trigger: menu
-    \(machine.bus.textDMADebugSnapshot().debugReport())
+    \(pc88.textDMADebugSnapshot().debugReport())
     """
 
     do {
@@ -432,7 +432,7 @@ extension EmulatorViewModel {
     }
     guard let triggerReason else { return }
 
-    let report = machine.bus.textDMADebugSnapshot().debugReport()
+    let report = pc88.textDMADebugSnapshot().debugReport()
     let payload = """
     trigger: \(triggerReason)
     \(report)

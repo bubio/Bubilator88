@@ -1,8 +1,5 @@
 import SwiftUI
-import EmulatorCore
-import FMSynthesis
-import Peripherals
-import Z80
+@_spi(Debug) import EmulatorCore
 
 /// Owns the live state for the Debug Window.
 ///
@@ -198,11 +195,11 @@ final class DebugSession {
     let pinnedMain: UInt16? = (focusedCPU == .main && !disasmFollowsPC) ? disasmPinnedAddress : nil
     let pinnedSub:  UInt16? = (focusedCPU == .sub  && !disasmFollowsPC) ? disasmPinnedAddress : nil
     let disasmEnabled = settings.disasmEnabled
-    let machine = viewModel.machine
+    let pc88 = viewModel.pc88
     let debugger = self.debugger
     viewModel.emuQueue.async { [weak self] in
       let snap = Self.captureSnapshot(
-        machine: machine,
+        pc88: pc88,
         debugger: debugger,
         hexBase: hexBase,
         hexCount: hexCount,
@@ -227,7 +224,7 @@ final class DebugSession {
   /// of the live PC — used when the user has clicked a row in the
   /// Trace pane to navigate back in history.
   nonisolated private static func captureSnapshot(
-    machine: Machine,
+    pc88: PC88,
     debugger: Debugger,
     hexBase: UInt16,
     hexCount: Int,
@@ -235,10 +232,8 @@ final class DebugSession {
     pinnedSubDisasm: UInt16?,
     disasmEnabled: Bool
   ) -> MachineSnapshot {
-    let cpu = machine.cpu
-    let bus = machine.bus
-    let sub = machine.subSystem.subCpu
-    let subBus = machine.subSystem.subBus
+    let cpu = pc88.registers(of: .main)
+    let sub = pc88.registers(of: .sub)
 
     let mainBase = clampedBase(pc: pinnedMainDisasm ?? cpu.pc)
     let subBase  = clampedBase(pc: pinnedSubDisasm  ?? sub.pc)
@@ -249,12 +244,12 @@ final class DebugSession {
       mainDisasm = readWindow(
         base: mainBase,
         length: disasmWindowBytes,
-        read: bus.memRead
+        read: { pc88.readMemory(.main, $0) }
       )
       subDisasm = readWindow(
         base: subBase,
         length: disasmWindowBytes,
-        read: subBus.memRead
+        read: { pc88.readMemory(.sub, $0) }
       )
     } else {
       // Disasm disabled: skip the 128 bus reads and hand the pane an
@@ -266,7 +261,7 @@ final class DebugSession {
     let hex = readWindow(
       base: hexBase,
       length: hexCount,
-      read: bus.memRead
+      read: { pc88.readMemory(.main, $0) }
     )
 
     return MachineSnapshot(
@@ -284,7 +279,7 @@ final class DebugSession {
       subAF2: sub.af2, subBC2: sub.bc2, subDE2: sub.de2, subHL2: sub.hl2,
       subI: sub.i, subR: sub.r,
       subHalted: sub.halted, subIff1: sub.iff1, subIff2: sub.iff2, subIM: sub.im,
-      totalTStates: machine.totalTStates,
+      totalTStates: pc88.totalTStates,
       debuggerRunState: debugger.runState,
       mainDisasmWindow: mainDisasm,
       subDisasmWindow: subDisasm,
@@ -341,7 +336,7 @@ final class DebugSession {
     }
     let vm = viewModel
     vm.emuQueue.async { [weak self] in
-      _ = vm.machine.tick()
+      vm.pc88.stepInstruction(.main)
       Task { @MainActor [weak self] in
         guard let self else { return }
         vm.renderSingleFrame()
@@ -360,7 +355,7 @@ final class DebugSession {
     }
     let vm = viewModel
     vm.emuQueue.async { [weak self] in
-      _ = vm.machine.subSystem.runSubCPU(maxTStates: 1)
+      vm.pc88.stepInstruction(.sub)
       Task { @MainActor [weak self] in
         guard let self else { return }
         vm.renderSingleFrame()
@@ -410,7 +405,7 @@ final class DebugSession {
 
   /// Expanded 8-entry palette at capture time (index = (G<<2)|(R<<1)|B).
   /// Used by GVRAMPane Composite mode to apply the hardware palette.
-  var gvramPalette: [(r: UInt8, g: UInt8, b: UInt8)] = ScreenRenderer.defaultPalette
+  var gvramPalette: [(r: UInt8, g: UInt8, b: UInt8)] = Array(repeating: (0, 0, 0), count: 8)
 
   /// Monotonically-increasing counter bumped after each GVRAM capture.
   /// GVRAMPane observes this to know when to rebuild its CGImage.
@@ -420,18 +415,16 @@ final class DebugSession {
   /// emulator queue and publish them back to the main actor.
   /// Increments `gvramVersion` on completion.
   func captureGVRAM() {
-    let machine = viewModel.machine
+    let pc88 = viewModel.pc88
     viewModel.emuQueue.async { [weak self] in
-      let planes   = machine.bus.renderGVRAMPlanes()
-      let is400    = machine.bus.is400LineMode
-      let palette  = ScreenRenderer.expandPalette(machine.bus.palette)
+      let capture = pc88.captureGVRAM()
       Task { @MainActor [weak self] in
         guard let self else { return }
-        self.gvramBlue        = planes.blue
-        self.gvramRed         = planes.red
-        self.gvramGreen       = planes.green
-        self.gvram400LineMode = is400
-        self.gvramPalette     = palette
+        self.gvramBlue        = capture.blue
+        self.gvramRed         = capture.red
+        self.gvramGreen       = capture.green
+        self.gvram400LineMode = capture.is400LineMode
+        self.gvramPalette     = capture.palette
         self.gvramVersion &+= 1
       }
     }
@@ -477,72 +470,24 @@ final class DebugSession {
   /// All font rendering runs on the emu queue so `FontROM` is accessed from its
   /// home thread; only the finished `Data` is transferred back to main.
   func captureTextVRAM() {
-    let machine = viewModel.machine
+    let pc88 = viewModel.pc88
     viewModel.emuQueue.async { [weak self] in
-      let chars     = machine.bus.readTextVRAM()
-      let attrs     = machine.bus.readTextAttributes()
-      let cols      = machine.bus.columns80 ? 80 : 40
-      let rows      = Int(machine.crtc.linesPerScreen)
-      let cx        = machine.crtc.cursorX
-      let cy        = machine.crtc.cursorY
-      let cen       = machine.crtc.cursorEnabled
-      let is400Line = machine.bus.is400LineMode
-      let skipLine  = machine.crtc.skipLine
-      let colorMode = machine.bus.colorMode
-      let palette   = ScreenRenderer.expandPalette(machine.bus.palette)
-
-      let imgHeight = is400Line ? ScreenRenderer.height400 : ScreenRenderer.height
-
-      // Pre-fill with dark gray so the text background is distinguishable
-      // from GVRAM-masked black. renderTextOverlay writes only foreground
-      // RGB pixels; alpha-channel (0xFF) and unfilled cells keep this colour.
-      //
-      // Performance: pack RGBA as UInt32 and fill in one pass with 32-bit
-      // writes instead of the previous two-pass (init 0xFF + stride RGB loop).
-      // On little-endian: byte[0]=R byte[1]=G byte[2]=B byte[3]=A
-      let pixelCount = 640 * imgHeight
-      let bgGray: UInt8 = 0x1A
-      let bgPixel = UInt32(bgGray)
-        | (UInt32(bgGray) << 8)
-        | (UInt32(bgGray) << 16)
-        | (UInt32(0xFF)   << 24)
-      var buffer = [UInt8](repeating: 0, count: pixelCount * 4)
-      buffer.withUnsafeMutableBytes { raw in
-        let u32 = raw.bindMemory(to: UInt32.self)
-        for i in 0..<pixelCount { u32[i] = bgPixel }
-      }
-      let renderer = ScreenRenderer()
-      renderer.renderTextOverlay(
-        textData:           chars,
-        attrData:           attrs,
-        fontROM:            machine.fontROM,
-        palette:            palette,
-        displayEnabled:     true,
-        columns80:          cols == 80,
-        colorMode:          colorMode,
-        attributeGraphMode: false,
-        textRows:           rows,
-        cursorX:            cx,
-        cursorY:            cy,
-        cursorVisible:      cen,
-        cursorBlock:        true,
-        is400Line:          is400Line,
-        skipLine:           skipLine,
-        into:               &buffer
-      )
-      let imageData = Data(buffer)
+      // Dark grey behind the text, so text cells stand out from graphics
+      // masked to black.
+      let capture = pc88.captureTextVRAM(backgroundGray: 0x1A)
+      let imageData = Data(capture.image)
 
       Task { @MainActor [weak self] in
         guard let self else { return }
         self.textVRAMImageData     = imageData
-        self.textVRAMHireso        = is400Line
-        self.textVRAMChars         = chars
-        self.textVRAMAttrs         = attrs
-        self.textVRAMCols          = cols
-        self.textVRAMRows          = rows
-        self.textVRAMCursorX       = cx
-        self.textVRAMCursorY       = cy
-        self.textVRAMCursorEnabled = cen
+        self.textVRAMHireso        = capture.is400LineMode
+        self.textVRAMChars         = capture.characters
+        self.textVRAMAttrs         = capture.attributes
+        self.textVRAMCols          = capture.columns
+        self.textVRAMRows          = capture.rows
+        self.textVRAMCursorX       = capture.cursorX
+        self.textVRAMCursorY       = capture.cursorY
+        self.textVRAMCursorEnabled = capture.cursorEnabled
         self.textVRAMVersion      &+= 1
       }
     }

@@ -1,6 +1,5 @@
 import GameController
-import EmulatorCore
-import FMSynthesis
+@_spi(Debug) import EmulatorCore
 import AppKit
 
 // MARK: - Button Mapping
@@ -503,7 +502,7 @@ final class GameControllerManager {
   /// `nonisolated` and takes `hapticEnabled` as a parameter — `Settings` is
   /// main-actor state that this path must not read. Its own counters are only
   /// ever touched here, i.e. by that one thread.
-  nonisolated func detectSSGNoiseHaptic(sound: FMSynthesis.YM2608, hapticEnabled: Bool) {
+  nonisolated func detectSSGNoiseHaptic(sound: PC88.SoundState, hapticEnabled: Bool) {
     let period = sound.ssgNoisePeriod
     defer { prevNoisePeriod = period }
 
