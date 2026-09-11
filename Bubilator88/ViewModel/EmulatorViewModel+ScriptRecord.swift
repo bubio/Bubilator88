@@ -54,9 +54,9 @@ extension EmulatorViewModel {
     stop()
     let use8 = clock8MHz
     emuQueue.sync {
-      machine.reset(preserveRAM: false)
-      machine.applyBootStrap()  // re-derive bit 3 from the current drive state (disk boot)
-      machine.clock8MHz = use8
+      pc88.reset(preserveRAM: false)
+      pc88.applyBootStrap()  // re-derive bit 3 from the current drive state (disk boot)
+      pc88.clock8MHz = use8
     }
 
     let recorder = ScriptRecorder(setup: setup)

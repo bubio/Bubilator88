@@ -101,7 +101,7 @@ extension EmulatorViewModel {
     if rewindFrameCounter < Self.rewindSnapshotInterval { return }
     rewindFrameCounter = 0
 
-    let raw = Data(machine.createSaveState())
+    let raw = Data(pc88.createSaveState())
     let compressed = (try? (raw as NSData).compressed(using: .lz4) as Data) ?? raw
     let thumb = captureRewindThumbnail()
     let snapshot = RewindSnapshot(state: compressed, thumbnail: thumb)
@@ -167,7 +167,7 @@ extension EmulatorViewModel {
   nonisolated func stepRewindBack() {
     guard let last = rewindSnapshots.popLast() else { return }
     let raw = decompressSnapshotState(last.state)
-    try? machine.loadSaveState(Array(raw))
+    try? pc88.loadSaveState(Array(raw))
     publishRewindSnapshotCount()
   }
 
@@ -196,7 +196,7 @@ extension EmulatorViewModel {
     var loadError: Error?
     emuQueue.sync {
       do {
-        try machine.loadSaveState(Array(raw))
+        try pc88.loadSaveState(Array(raw))
       } catch {
         loadError = error
       }
@@ -211,7 +211,7 @@ extension EmulatorViewModel {
     // The restored state carries its own cassette contents, so the mount may
     // have changed. Refresh under the queue rather than letting the UI read the
     // deck, and rather than waiting on the 4Hz sampler.
-    isTapeMounted = emuQueue.sync { machine.cassette.isLoaded }
+    isTapeMounted = emuQueue.sync { pc88.isTapeLoaded }
     if !isRunning { renderScreen() }
 
     let fmt = String(localized: "Rewound %.1fs", comment: "")

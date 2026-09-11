@@ -22,12 +22,12 @@ final class AudioOutput {
   private var srcNode: AVAudioSourceNode?
   private var varispeed: AVAudioUnitVarispeed?
 
-  /// Reference to YM2608 for pulling audio samples.
+  /// The machine whose audio `drainSamples()` pulls.
   ///
   /// **Isolation:** `nonisolated(unsafe)` because the render callback and the
   /// emulation thread read it. Wired once during setup, before `start()` puts
   /// any thread on the audio path, and not reassigned afterwards.
-  nonisolated(unsafe) weak var sound: YM2608?
+  nonisolated(unsafe) weak var pc88: PC88?
 
   /// Multichannel recorder tap. When set and actively recording, each
   /// drainSamples() call forwards a copy of FM/SSG/ADPCM/Rhythm/Mix buffers.
@@ -345,9 +345,10 @@ final class AudioOutput {
 
   // MARK: - Drain Samples
 
-  /// Transfer samples from YM2608 buffers into ring buffer(s).
+  /// Transfer the samples generated since the last call into ring buffer(s).
   nonisolated func drainSamples() {
-    guard let sound = sound else { return }
+    guard let pc88 else { return }
+    let samples = pc88.takeAudioSamples()
 
     // Tap for recording BEFORE draining. For separated mode, per-channel
     // buffers are only populated when immersiveOutputEnabled == true, which
@@ -356,42 +357,32 @@ final class AudioOutput {
       switch recorder.mode {
       case .separated:
         recorder.appendChannels(
-          fm:     sound.fmSpatialBuffer,
-          ssg:    sound.ssgSpatialBuffer,
-          adpcm:  sound.adpcmSpatialBuffer,
-          rhythm: sound.rhythmSpatialBuffer
+          fm:     samples.fm,
+          ssg:    samples.ssg,
+          adpcm:  samples.adpcm,
+          rhythm: samples.rhythm
         )
       case .stereo:
-        recorder.appendStereo(sound.audioBuffer)
+        recorder.appendStereo(samples.stereo)
       }
     }
 
     // Video recorder audio tap (stereo only). Mutually exclusive with
     // AudioRecorder by UI policy, so both branches won't run together.
     if let video = videoRecorder, video.isRecordingFlag {
-      video.appendStereo(sound.audioBuffer)
+      video.appendStereo(samples.stereo)
     }
 
     if spatialEnabled {
-      drainSpatialSamples(sound)
+      drainSpatialSamples(samples, from: pc88)
     } else {
-      drainStereoSamples(sound)
+      drainStereoSamples(samples.stereo, from: pc88)
     }
   }
 
   /// Drain standard stereo interleaved samples.
-  private nonisolated func drainStereoSamples(_ sound: YM2608) {
-    let samples = sound.audioBuffer
-    // Clear per-channel buffers if they were filled for recording; otherwise
-    // they would grow without bound while spatialEnabled == false.
-    if sound.immersiveOutputEnabled {
-      sound.fmSpatialBuffer.removeAll(keepingCapacity: true)
-      sound.ssgSpatialBuffer.removeAll(keepingCapacity: true)
-      sound.adpcmSpatialBuffer.removeAll(keepingCapacity: true)
-      sound.rhythmSpatialBuffer.removeAll(keepingCapacity: true)
-    }
+  private nonisolated func drainStereoSamples(_ samples: [Float], from pc88: PC88) {
     guard !samples.isEmpty else { return }
-    sound.audioBuffer.removeAll(keepingCapacity: true)
 
     bufferLock.lock()
     guard ringBuffer.count > 0 else { bufferLock.unlock(); return }
@@ -416,25 +407,15 @@ final class AudioOutput {
 
     bufferLock.unlock()
 
-    adaptiveRate(sound: sound, fill: fill, capacity: ringBuffer.count / 2)
+    pc88.adjustAudioRate(bufferedFrames: fill, capacityFrames: ringBuffer.count / 2)
   }
 
   /// Split per-channel stereo buffers into L/R mono ring buffers for spatial nodes.
   ///
   /// Buffer layout: [FM-L, FM-R, SSG-L, SSG-R, ADPCM-L, ADPCM-R, Rhythm-L, Rhythm-R]
   /// Each stereo spatial buffer [L,R,L,R,...] is deinterleaved into two mono streams.
-  private nonisolated func drainSpatialSamples(_ sound: YM2608) {
-    let stereoBuffers = [
-      sound.fmSpatialBuffer,
-      sound.ssgSpatialBuffer,
-      sound.adpcmSpatialBuffer,
-      sound.rhythmSpatialBuffer,
-    ]
-    sound.audioBuffer.removeAll(keepingCapacity: true)
-    sound.fmSpatialBuffer.removeAll(keepingCapacity: true)
-    sound.ssgSpatialBuffer.removeAll(keepingCapacity: true)
-    sound.adpcmSpatialBuffer.removeAll(keepingCapacity: true)
-    sound.rhythmSpatialBuffer.removeAll(keepingCapacity: true)
+  private nonisolated func drainSpatialSamples(_ samples: PC88.AudioSamples, from pc88: PC88) {
+    let stereoBuffers = [samples.fm, samples.ssg, samples.adpcm, samples.rhythm]
 
     guard !stereoBuffers[0].isEmpty else { return }
 
@@ -475,18 +456,6 @@ final class AudioOutput {
 
     bufferLock.unlock()
 
-    adaptiveRate(sound: sound, fill: fill, capacity: spatialRingBuffers[0].count)
-  }
-
-  /// Adaptive audio rate: adjust cpuClockHz to keep ring buffer near 50% fill.
-  private nonisolated func adaptiveRate(sound: YM2608, fill: Int, capacity: Int) {
-    let targetFill = capacity / 2
-    let error = fill - targetFill
-    let baseClock = sound.clock8MHz
-      ? YM2608.baseCpuClockHz8MHz
-      : YM2608.baseCpuClockHz4MHz
-    let maxAdj = baseClock / 200
-    let adj = max(-maxAdj, min(maxAdj, error * 16))
-    sound.cpuClockHz = baseClock + adj
+    pc88.adjustAudioRate(bufferedFrames: fill, capacityFrames: spatialRingBuffers[0].count)
   }
 }

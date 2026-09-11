@@ -34,7 +34,7 @@ extension EmulatorViewModel {
     }
 
     let format: CassetteDeck.Format = emuQueue.sync {
-      machine.mountTape(data: tapeData)
+      pc88.mountTape(data: tapeData)
     }
     Settings.shared.addRecentTapeFile(url: url)
     tapeName = url.deletingPathExtension().lastPathComponent
@@ -61,7 +61,7 @@ extension EmulatorViewModel {
   /// Rewind tape to the beginning (keep it loaded).
   func rewindTape() {
     emuQueue.sync {
-      machine.rewindTape()
+      pc88.rewindTape()
     }
     tapeProgress = 0
   }
@@ -69,7 +69,7 @@ extension EmulatorViewModel {
   /// Eject the currently-loaded tape.
   func ejectTape() {
     emuQueue.sync {
-      machine.ejectTape()
+      pc88.ejectTape()
     }
     tapeName = "Empty"
     tapeSourceURL = nil

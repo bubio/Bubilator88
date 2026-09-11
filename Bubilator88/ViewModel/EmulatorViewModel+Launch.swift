@@ -138,22 +138,22 @@ extension EmulatorViewModel {
     // omitting them falls back to deciding from whether a disk is present.
     let forcedBootStrap = req.bootStrap
     emuQueue.sync {
-      machine.bus.dipSw1 = sw1
+      pc88.dipSw1 = sw1
       // Set before the reset: the monitor decides the CRTC's reset geometry
       // (same constraint as EmulatorViewModel.init()).
-      machine.monitorType = Settings.shared.monitorType
-      machine.memoryWaitDip = Settings.shared.memoryWaitDip
-      machine.reset(preserveRAM: true)
+      pc88.monitorType = Settings.shared.monitorType
+      pc88.memoryWaitDip = Settings.shared.memoryWaitDip
+      pc88.reset(preserveRAM: true)
       switch forcedBootStrap {
       case .rom:
-        machine.bus.dipSw2 = Machine.resolvedBootStrap(base: sw2Base, hasDiskInDrive0: false)
+        pc88.dipSw2 = PC88.resolvedBootStrap(base: sw2Base, hasDiskInDrive0: false)
       case .disk:
-        machine.bus.dipSw2 = Machine.resolvedBootStrap(base: sw2Base, hasDiskInDrive0: true)
+        pc88.dipSw2 = PC88.resolvedBootStrap(base: sw2Base, hasDiskInDrive0: true)
       case nil:
-        machine.applyBootStrap(base: sw2Base)
+        pc88.applyBootStrap(base: sw2Base)
       }
-      machine.clock8MHz = use8MHz
-      machine.cpuOverclock = cpuOverclock
+      pc88.clock8MHz = use8MHz
+      pc88.cpuOverclock = cpuOverclock
     }
     syncActiveClockFromMachine()
     if romLoaded { loadROMs() }

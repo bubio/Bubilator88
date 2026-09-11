@@ -121,7 +121,7 @@ extension EmulatorViewModel {
     let needsImmersive = (effectiveSeparation == .separated)
     if needsImmersive {
       emuQueue.async { [weak self] in
-        self?.machine.sound.immersiveOutputEnabled = true
+        self?.pc88.immersiveOutputEnabled = true
       }
     }
 
@@ -138,7 +138,7 @@ extension EmulatorViewModel {
       if needsImmersive {
         let restore = Settings.shared.immersiveAudio
         emuQueue.async { [weak self] in
-          self?.machine.sound.immersiveOutputEnabled = restore
+          self?.pc88.immersiveOutputEnabled = restore
         }
       }
     }
@@ -151,7 +151,7 @@ extension EmulatorViewModel {
     audioRecorder.stop()
     let restore = Settings.shared.immersiveAudio
     emuQueue.async { [weak self] in
-      self?.machine.sound.immersiveOutputEnabled = restore
+      self?.pc88.immersiveOutputEnabled = restore
     }
     if let url {
       NSWorkspace.shared.activateFileViewerSelecting([url])

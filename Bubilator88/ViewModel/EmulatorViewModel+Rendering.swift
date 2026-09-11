@@ -47,7 +47,7 @@ extension EmulatorViewModel {
       // changes when software reprograms the CRTC (a 20-row screen on a 24kHz
       // monitor is 56.4Hz, a 25-row one 55.4Hz) — reading it here keeps the
       // pacer correct without the host having to be told.
-      let rate = machine.frameRate
+      let rate = pc88.frameRate
       if rate > 0 {
         emulationLoop.setFrameInterval(1.0 / rate)
         if abs(rate - publishedFrameRate) > 0.01 {
@@ -86,7 +86,7 @@ extension EmulatorViewModel {
     for _ in 0..<frameCount {
       tickPasteQueue()
       tickScriptPlayer()
-      machine.runFrame()
+      pc88.runFrame()
       // Advance the recording clock in lockstep with machine frames.
       if let r = scriptRecorder { r.frameIndex += 1 }
     }
@@ -159,12 +159,12 @@ extension EmulatorViewModel {
       let diskActivity = pc88.takeDiskActivity()
       let d0 = diskActivity[0]
       let d1 = diskActivity[1]
-      let tapeProgressSample = machine.cassette.progress
+      let tapeProgressSample = pc88.tapeProgress
       // Sampled here, on the thread that owns the deck, for the same reason
       // progress is: the UI must never read `machine.cassette` itself. A
       // rewind can swap the mounted tape out from under the UI, and this is
       // what notices.
-      let tapeMountedSample = machine.cassette.isLoaded
+      let tapeMountedSample = pc88.isTapeLoaded
 
       // Capture OCR snapshot if translation enabled (piggyback on 4Hz UI
       // update). `TranslationManager` is main-actor state, so the *decision*
@@ -219,7 +219,7 @@ extension EmulatorViewModel {
   ///   the loop is parked, so it does not inflate the FPS readout.
   nonisolated func publishFrame(counted: Bool = true) {
     framePublisher.publish(pixels: pixelBuffer,
-                           is400LineMode: machine.bus.is400LineMode,
+                           is400LineMode: pc88.is400LineMode,
                            counted: counted)
   }
 

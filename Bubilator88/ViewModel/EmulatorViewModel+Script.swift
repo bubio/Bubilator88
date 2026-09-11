@@ -109,10 +109,10 @@ extension EmulatorViewModel {
     cancelPasteQueue()
     self.scriptDir = scriptDir
 
-    let player = ScriptPlayer(machine: machine, loader: loader)
+    let player = ScriptPlayer(pc88: pc88, loader: loader)
     var setupError: Error?
     emuQueue.sync {
-      machine.reset(preserveRAM: false)
+      pc88.reset(preserveRAM: false)
       do {
         try player.beginLive(steps)
       } catch {
@@ -239,8 +239,8 @@ extension EmulatorViewModel {
     // Boot mode: map the machine's DIPSW back onto a preset. On a match adopt
     // that mode's canonical DIPSW; otherwise take the raw values as Custom.
     // Same shape as performLoad.
-    let sw1 = machine.bus.dipSw1
-    let sw2 = machine.bus.dipSw2
+    let sw1 = pc88.dipSw1
+    let sw2 = pc88.dipSw2
     let preset = BootModePreset.from(dipSw1: sw1, dipSw2Base: sw2)
     if preset == .custom {
       _bootModeStorage = .custom
@@ -331,7 +331,7 @@ extension EmulatorViewModel {
   func rebuildDriveInfoFromScript(player: ScriptPlayer) {
     let scriptDir = self.scriptDir
     let machineDriveNames: [String?] = emuQueue.sync {
-      (0..<2).map { machine.subSystem.drives[$0]?.name }
+      (0..<2).map { pc88.mountedDisk(drive: $0)?.name }
     }
     for drive in 0..<2 {
       // Prefer what the script mounted in this drive. During the swap delay of

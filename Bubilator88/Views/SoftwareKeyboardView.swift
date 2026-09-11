@@ -52,7 +52,7 @@ struct SoftwareKeyboardView: View {
   /// (including when no font ROM is loaded and the glyph would be blank).
   private func graphGlyph(for cap: PC88KeyCap) -> [UInt8]? {
     guard graphActive, let code = cap.graphCode else { return nil }
-    let glyph = viewModel.machine.fontROM.glyph(for: code)
+    let glyph = viewModel.pc88.glyph(for: code)
     return glyph.contains(where: { $0 != 0 }) ? glyph : nil
   }
 

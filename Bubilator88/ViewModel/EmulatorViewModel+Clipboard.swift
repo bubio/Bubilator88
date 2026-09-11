@@ -10,7 +10,7 @@ extension EmulatorViewModel {
   /// One delayed frame at ⌘C is not worth noticing (`RELEASE_1_5_0_PLAN.md`
   /// §3.3(e), §9.6).
   func copyTextToPasteboard() {
-    let text = emuQueue.sync { machine.copyTextAsUnicode() }
+    let text = emuQueue.sync { pc88.copyTextAsUnicode() }
     let pb = NSPasteboard.general
     pb.clearContents()
     pb.setString(text, forType: .string)
