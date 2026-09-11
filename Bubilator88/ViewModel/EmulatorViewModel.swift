@@ -1,7 +1,7 @@
 import SwiftUI
 import MetalKit
 import Synchronization
-import EmulatorCore
+@_spi(Debug) import EmulatorCore
 
 /// ViewModel that drives the emulator and provides screen output to SwiftUI.
 ///
@@ -719,11 +719,9 @@ final class EmulatorViewModel {
   @ObservationIgnored let framePublisher =
     FramePublisher(pixelCount: ScreenRenderer.bufferSize400)
 
+  let pc88: PC88
+  /// `pc88.machine`, for everything not yet moved onto the `PC88` API.
   let machine: Machine
-  /// **Isolation:** used from the Metal draw path and from `emuQueue`, never
-  /// from the main actor as such, so it opts out of this target's default
-  /// main-actor isolation. `ScreenRenderer` itself holds no cross-thread state.
-  nonisolated(unsafe) let renderer = ScreenRenderer()
 
   /// The 640×400 RGBA frame the emulation loop renders into.
   ///
@@ -920,7 +918,8 @@ final class EmulatorViewModel {
   // MARK: - Init
 
   init() {
-    self.machine = Machine()
+    self.pc88 = PC88()
+    self.machine = pc88.machine
     self.pixelBuffer = Array(repeating: 0, count: ScreenRenderer.bufferSize400)
     activeClock8MHz = clock8MHz
     machine.bus.dipSw1 = _bootModeStorage.dipSw1
@@ -938,16 +937,12 @@ final class EmulatorViewModel {
     audio.recorder = audioRecorder
     audio.videoRecorder = videoRecorder
 
-    // FDD sound callbacks (wrap existing SubSystem callbacks)
-    let originalOnSeekStep = machine.subSystem.fdc.onSeekStep
-    machine.subSystem.fdc.onSeekStep = { [weak self] drive, track in
-      originalOnSeekStep?(drive, track)
-      self?.fddSound.playSeekStep(drive: drive)
-    }
-    let originalOnDiskAccess = machine.subSystem.fdc.onDiskAccess
-    machine.subSystem.fdc.onDiskAccess = { [weak self] drive in
-      originalOnDiskAccess?(drive)
-      self?.fddSound.playReadAccess(drive: drive)
+    // FDD sounds, played as the drive mechanism events happen.
+    pc88.onFDDEvent = { [weak self] drive, event in
+      switch event {
+      case .seekStep: self?.fddSound.playSeekStep(drive: drive)
+      case .access:   self?.fddSound.playReadAccess(drive: drive)
+      }
     }
 
     // The emulation thread. The step takes `emuQueue` exactly as the draw
