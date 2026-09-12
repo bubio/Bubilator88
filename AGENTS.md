@@ -43,7 +43,8 @@ The emulation core is the public Swift package
 [bubio/Bubilator88Core](https://github.com/bubio/Bubilator88Core). The Xcode
 project depends on it remotely, pinned in
 `Bubilator88.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`
-(by revision until 1.0.0 is tagged). The core repository deliberately carries
+(requirement: up to next major from the version in `project.pbxproj`). The core
+repository deliberately carries
 no agent instructions or tooling: this file, the scripts, the regression suite
 and `docs/develop` all stay here and apply to core work too.
 
@@ -56,12 +57,15 @@ and `docs/develop` all stay here and apply to core work too.
   one and core edits build straight into the app. Never drag the core into the
   project itself — that rewrites `project.pbxproj`.
 - **Opening the bare project builds the pinned core**, which is fine for app-only
-  work. Once the pin is a version tag, a Debug build of it is about ten times
-  slower (tags drop the core's Debug `-O`; see the core's README), so use the
-  workspace for anything that runs the machine.
-- **Changing both sides**: commit and push the core first, then bump the pin
-  here (change the revision in `project.pbxproj` and resolve, or update the
-  package in Xcode) in the same PR as the app change that needs it.
+  work. A Debug build of a tagged core is about ten times slower (tags drop the
+  core's Debug `-O`; see the core's README), so use the workspace for anything
+  that runs the machine.
+- **Changing both sides**: merge the core change, tag a release with the core's
+  Release Tag workflow (patch for fixes, minor for new API), then update the
+  pin here in the same PR as the app change that needs it — raise
+  `minimumVersion` in `project.pbxproj` when the app needs the new version, and
+  run `xcodebuild -resolvePackageDependencies` so `Package.resolved` follows.
+  The Windows workflows build whatever `Package.resolved` pins.
 - **Core commits are made in the core clone** (`git -C ../Bubilator88Core …`)
   and its pull requests go to bubio/Bubilator88Core. Refer to this repository's
   pull requests there as `bubio/Bubilator88#N`.
