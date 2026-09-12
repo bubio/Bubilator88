@@ -59,7 +59,7 @@ jobs:
     steps:
       # AI モデル (Git LFS) は取得しない。ビルド検証には不要で、
       # csproj のコピーはポインタファイルでも成立するため -SkipModelCheck で回す。
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ./.github/actions/checkout-core
 
