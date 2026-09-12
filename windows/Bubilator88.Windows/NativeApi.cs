@@ -5,7 +5,7 @@ namespace Bubilator88.Windows;
 
 /// <summary>
 /// P/Invoke bindings for the Swift emulation core (Bubilator88C.dll, built from
-/// Packages/EmulatorCore/Sources/CApi/CApi.swift). This is the ONLY boundary
+/// Sources/CApi/CApi.swift in bubio/Bubilator88Core). This is the ONLY boundary
 /// between the managed shell and the native core — every signature here must
 /// match a <c>@_cdecl</c> export exactly.
 ///

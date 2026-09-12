@@ -1,5 +1,8 @@
 {
   "permissions": {
+    "additionalDirectories": [
+      "../Bubilator88Core"
+    ],
     "allow": [
       "Bash(swift test:*)",
       "Bash(swift build:*)",
@@ -49,7 +52,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "FILE=$(cat /dev/stdin | jq -r '.tool_input.file_path // .tool_input.filePath // empty'); if echo \"$FILE\" | grep -qE 'Packages/EmulatorCore/.*\\.swift$'; then cd \"$CLAUDE_PROJECT_DIR/Packages/EmulatorCore\" && swift build 2>&1 | tail -20; fi",
+            "command": "FILE=$(cat /dev/stdin | jq -r '.tool_input.file_path // .tool_input.filePath // empty'); CORE=$(cd \"${BUBILATOR88_CORE_DIR:-$CLAUDE_PROJECT_DIR/../Bubilator88Core}\" 2>/dev/null && pwd -P) || exit 0; case \"$FILE\" in \"$CORE\"/*.swift) cd \"$CORE\" && swift build 2>&1 | tail -20 ;; esac",
             "timeout": 120,
             "statusMessage": "Swift build checking..."
           }

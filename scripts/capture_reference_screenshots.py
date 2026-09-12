@@ -16,7 +16,9 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-CORE_DIR = REPO / "Packages" / "EmulatorCore"
+# The core lives in its own repository (bubio/Bubilator88Core), cloned next to
+# this one. Set BUBILATOR88_CORE_DIR to use a clone somewhere else.
+CORE_DIR = Path(os.environ.get("BUBILATOR88_CORE_DIR", REPO.parent / "Bubilator88Core"))
 BOOTTESTER = CORE_DIR / ".build" / "arm64-apple-macosx" / "debug" / "BootTester"
 TEST_DIR = Path("/Volumes/CrucialX6/roms/PC88/TEST")
 SS_DIR = TEST_DIR / "SS"

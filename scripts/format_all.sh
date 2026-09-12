@@ -20,6 +20,11 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# The core is its own repository (bubio/Bubilator88Core), cloned next to this
+# one. It has no .swiftformat of its own, so the configuration is always passed
+# explicitly below.
+CORE_DIR="${BUBILATOR88_CORE_DIR:-$REPO_ROOT/../Bubilator88Core}"
+
 if ! command -v swiftformat >/dev/null 2>&1; then
   echo "swiftformat not found. Install it with:  brew install swiftformat" >&2
   exit 1
@@ -29,9 +34,12 @@ DEFAULT_TARGETS=(
   "Bubilator88"
   "Bubilator88Tests"
   "Bubilator88UITests"
-  "Packages/EmulatorCore/Sources"
-  "Packages/EmulatorCore/Tests"
 )
+if [ -d "$CORE_DIR" ]; then
+  DEFAULT_TARGETS+=("$CORE_DIR/Sources" "$CORE_DIR/Tests")
+else
+  echo "note: core clone not found at $CORE_DIR; skipping it" >&2
+fi
 
 mode="format"
 targets=()
@@ -52,11 +60,11 @@ if [ "$mode" = "check" ]; then
   echo "Checking Swift formatting in: ${targets[*]}"
   # Paths must precede --lint; SwiftFormat otherwise reads the next path as a
   # value for the flag.
-  swiftformat "${targets[@]}" --lint
+  swiftformat "${targets[@]}" --config "$REPO_ROOT/.swiftformat" --lint
   echo "Formatting OK."
 else
   echo "Formatting: ${targets[*]}"
-  swiftformat "${targets[@]}"
+  swiftformat "${targets[@]}" --config "$REPO_ROOT/.swiftformat"
   echo
   echo "Done. Verify the diff is whitespace-only:"
   echo "  git diff --ignore-all-space --stat   # must be empty"

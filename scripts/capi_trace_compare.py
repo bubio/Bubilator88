@@ -9,9 +9,10 @@ behaviour did not move: frames, audio, FDD events, the disk lamp, save states.
 
 Usage:
   # build the baseline and the candidate first, e.g.
+  # (in the core clone, ../Bubilator88Core)
   #   git worktree add /tmp/base main
-  #   (cd /tmp/base/Packages/EmulatorCore && swift build -c release --product Bubilator88C)
-  #   (cd Packages/EmulatorCore && swift build -c release --product Bubilator88C)
+  #   (cd /tmp/base && swift build -c release --product Bubilator88C)
+  #   swift build -c release --product Bubilator88C
   scripts/capi_trace_compare.py BASE.dylib NEW.dylib [disk.d88] [--frames N]
 
 Uses the ROMs and rhythm WAVs in ~/Library/Application Support/Bubilator88/.

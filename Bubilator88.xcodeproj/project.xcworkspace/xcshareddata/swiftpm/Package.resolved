@@ -1,6 +1,14 @@
 {
-  "originHash" : "4665d202c48f2cb1fe2a7e975b2e7bae15380fec89eb80adea7386c68fbce22c",
+  "originHash" : "0b9cd1c401040d428b3e100f8703a70b74e34c65eddb31d42e35ea8de1b52a8e",
   "pins" : [
+    {
+      "identity" : "bubilator88core",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/bubio/Bubilator88Core.git",
+      "state" : {
+        "revision" : "f72758e570b14a3006698ef16b8f7110032e5271"
+      }
+    },
     {
       "identity" : "swift-log",
       "kind" : "remoteSourceControl",

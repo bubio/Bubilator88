@@ -41,6 +41,9 @@ jobs:
         with:
           lfs: true
 
+      # コアは別リポジトリ。アプリの Package.resolved と同じ revision を使う。
+      - uses: ./.github/actions/checkout-core
+
       - name: Setup Swift ${{ env.SWIFT_VERSION }}
         uses: SwiftyLab/setup-swift@v1
         with:

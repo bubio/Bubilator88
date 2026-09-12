@@ -1,0 +1,33 @@
+name: Checkout Bubilator88Core
+description: >-
+  Check out the core (bubio/Bubilator88Core) at the revision the Xcode project
+  resolves, into ./Bubilator88Core, and point BUBILATOR88_CORE_DIR at it.
+
+# アプリが使うコアのコミットは Package.resolved の 1 か所で決まる。Windows の
+# DLL ビルドと check-capi-exports.sh もそれに揃えるため、ここで読んで checkout する。
+# 置き場所はワークスペースの中 (actions/checkout はワークスペースの外に置けない)。
+# スクリプトは既定で ../Bubilator88Core を見るので、環境変数で差し替える。
+
+runs:
+  using: composite
+  steps:
+    - name: Read the pinned revision
+      id: pin
+      shell: pwsh
+      run: |
+        $resolved = Get-Content -Raw 'Bubilator88.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved' | ConvertFrom-Json
+        $pin = $resolved.pins | Where-Object { $_.identity -eq 'bubilator88core' }
+        if (-not $pin) { throw 'Package.resolved has no pin for bubilator88core' }
+        Write-Host "Bubilator88Core @ $($pin.state.revision)"
+        "revision=$($pin.state.revision)" >> $env:GITHUB_OUTPUT
+
+    - uses: actions/checkout@v7
+      with:
+        repository: bubio/Bubilator88Core
+        ref: ${{ steps.pin.outputs.revision }}
+        path: Bubilator88Core
+
+    - name: Export BUBILATOR88_CORE_DIR
+      shell: pwsh
+      run: |
+        "BUBILATOR88_CORE_DIR=$(Join-Path $env:GITHUB_WORKSPACE 'Bubilator88Core')" >> $env:GITHUB_ENV

@@ -139,6 +139,19 @@ PC-8801 の起動には実機の ROM ファイルおよびリズム音源用 WAV
 
 ## Development
 
+エミュレーションコアは別リポジトリの Swift パッケージ
+[Bubilator88Core](https://github.com/bubio/Bubilator88Core) です。
+`Bubilator88.xcodeproj` を開けば、固定されたバージョンのコアを取得してビルドできます。
+
+コアも一緒に編集するときは、このリポジトリと同じ階層にコアを clone し、
+`Bubilator88Dev.xcworkspace` を開きます。手元のコアがリモートより優先されます。
+
+```bash
+git clone https://github.com/bubio/Bubilator88.git
+git clone https://github.com/bubio/Bubilator88Core.git
+open Bubilator88/Bubilator88Dev.xcworkspace
+```
+
 内部設計資料は private submodule (`docs/develop`) にあります。ビルドや実行には不要で、
 アクセス権があるコントリビューター向けです。
 
@@ -149,8 +162,8 @@ git submodule update --init docs/develop
 ## Credits
 
 - **FM 合成エンジン**: [fmgen](http://retropc.net/cisc/sound/) by cisc — Swift への移植
-  (利用条件は `Packages/EmulatorCore/Sources/FMSynthesis/fmgen-readme.txt`、
-  改変内容は同ディレクトリの `fmgen-changes.md` を参照)
+  (利用条件は [Bubilator88Core](https://github.com/bubio/Bubilator88Core) の
+  `Sources/FMSynthesis/fmgen-readme.txt`、改変内容は同ディレクトリの `fmgen-changes.md` を参照)
 - **参考エミュレーター**: [QUASI88](https://www.eonet.ne.jp/~showtime/quasi88/) by S.Fukunaga — ビヘイビアリファレンスとして参照
 - **参考エミュレーター**: [common source code project](https://takeda-toshiya.my.coocan.jp/common/index.html) by Takeda Toshiya — BubiC-8801MA として参照
 - **参考エミュレーター**: [X88000](https://quagma.sakura.ne.jp/manuke/x88000.html) by Manuke — Z80 未文書化命令や細部の実装リファレンスとして参照

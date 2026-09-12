@@ -9,12 +9,12 @@ BootTester でディスクイメージを実行して結果を報告せよ。
 
 引数なしの場合、N88-BASICコールドブートテスト:
 ```bash
-cd Packages/EmulatorCore && swift run -c release BootTester
+cd ../Bubilator88Core && swift run -c release BootTester
 ```
 
 ディスクパスが指定された場合、600フレーム+スクリーンショット付き:
 ```bash
-cd Packages/EmulatorCore && BOOTTEST_FRAMES=600 BOOTTEST_SCREENSHOT_PATH=/tmp/boottest_result.ppm swift run -c release BootTester "$ARGUMENTS"
+cd ../Bubilator88Core && BOOTTEST_FRAMES=600 BOOTTEST_SCREENSHOT_PATH=/tmp/boottest_result.ppm swift run -c release BootTester "$ARGUMENTS"
 ```
 
 実行後:

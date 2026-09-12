@@ -372,7 +372,7 @@
 			mainGroup = B62EED5F2F4BE8160011A29B;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				B6AA00012F4BF000002BAE55 /* XCLocalSwiftPackageReference "Packages/EmulatorCore" */,
+				B6AA00012F4BF000002BAE55 /* XCRemoteSwiftPackageReference "Bubilator88Core" */,
 				B6D1000000000000000000E0 /* XCRemoteSwiftPackageReference "swift-log" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -952,14 +952,15 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		B6AA00012F4BF000002BAE55 /* XCLocalSwiftPackageReference "Packages/EmulatorCore" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/EmulatorCore;
-		};
-/* End XCLocalSwiftPackageReference section */
-
 /* Begin XCRemoteSwiftPackageReference section */
+		B6AA00012F4BF000002BAE55 /* XCRemoteSwiftPackageReference "Bubilator88Core" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/bubio/Bubilator88Core.git";
+			requirement = {
+				kind = revision;
+				revision = f72758e570b14a3006698ef16b8f7110032e5271;
+			};
+		};
 		B6D1000000000000000000E0 /* XCRemoteSwiftPackageReference "swift-log" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/apple/swift-log.git";
@@ -973,14 +974,17 @@
 /* Begin XCSwiftPackageProductDependency section */
 		B6AA00022F4BF001002BAE55 /* Bubilator88Core */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = B6AA00012F4BF000002BAE55 /* XCRemoteSwiftPackageReference "Bubilator88Core" */;
 			productName = Bubilator88Core;
 		};
 		B6C1000000000000000000F0 /* Bubilator88Core */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = B6AA00012F4BF000002BAE55 /* XCRemoteSwiftPackageReference "Bubilator88Core" */;
 			productName = Bubilator88Core;
 		};
 		B6C2000000000000000000F0 /* Bubilator88Core */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = B6AA00012F4BF000002BAE55 /* XCRemoteSwiftPackageReference "Bubilator88Core" */;
 			productName = Bubilator88Core;
 		};
 		B6D1000000000000000000F0 /* Logging */ = {

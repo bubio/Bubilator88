@@ -50,13 +50,15 @@ skills-lock.json
 # Codex (.agents/)
 .agents/skills/
 
-# Ensure local Swift package is tracked
-!Packages/
-
 # Pin dependency versions in the repo (override the global "Package.resolved" rule).
-# Both resolution files must agree: SPM builds (swift build/test, BootTester,
-# regression) read the package's copy, Xcode builds read the workspace's copy.
+# The project's copy pins the core (bubio/Bubilator88Core) that the app builds;
+# the core's own copy lives in the core repository.
 !Package.resolved
+
+# The local-override workspace resolves against ../Bubilator88Core; whatever
+# Xcode records for it is per-machine, never the pin.
+Bubilator88Dev.xcworkspace/xcshareddata/swiftpm/
+Bubilator88Dev.xcworkspace/xcuserdata/
 
 # SwiftUI source folder (not a build dir — override global [Dd]ebug/ rule)
 !Bubilator88/Views/Debug/
