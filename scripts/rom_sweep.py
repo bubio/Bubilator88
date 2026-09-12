@@ -23,7 +23,9 @@ from pathlib import Path
 ROM_DIR = Path("/Volumes/CrucialX6/roms/PC8801 ROM 1240本")
 OUT_BASE = Path("/Volumes/CrucialX6/temp")
 REPO = Path(__file__).resolve().parent.parent
-CORE_DIR = REPO / "Packages" / "EmulatorCore"
+# The core lives in its own repository (bubio/Bubilator88Core), cloned next to
+# this one. Set BUBILATOR88_CORE_DIR to use a clone somewhere else.
+CORE_DIR = Path(os.environ.get("BUBILATOR88_CORE_DIR", REPO.parent / "Bubilator88Core"))
 BOOTTESTER = CORE_DIR / ".build" / "arm64-apple-macosx" / "release" / "BootTester"
 
 TURBO = 8

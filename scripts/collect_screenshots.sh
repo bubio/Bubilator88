@@ -12,12 +12,13 @@
 #   interval    スクリーンショット間隔 (default: 120 = 2秒ごと)
 #
 # Prerequisites:
-#   cd Packages/EmulatorCore && swift build
+#   cd ../Bubilator88Core && swift build   (the core clone next to this repo)
 #
 # Environment:
 #   KEY_PATTERN    キー入力パターン (none/return/space/mixed, default: none)
 #   PARALLEL       並列数 (default: 4)
 #   SKIP_EXISTING  1=既存ファイルがあるゲームはスキップ (default: 1)
+#   BUBILATOR88_CORE_DIR  コアの clone (default: このリポジトリの隣の Bubilator88Core)
 
 set -euo pipefail
 
@@ -31,11 +32,12 @@ SKIP_EXISTING="${SKIP_EXISTING:-1}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-BOOTTESTER="$PROJECT_DIR/Packages/EmulatorCore/.build/debug/BootTester"
+CORE_DIR="${BUBILATOR88_CORE_DIR:-$PROJECT_DIR/../Bubilator88Core}"
+BOOTTESTER="$CORE_DIR/.build/debug/BootTester"
 
 if [ ! -x "$BOOTTESTER" ]; then
     echo "BootTester not found. Building..."
-    (cd "$PROJECT_DIR/Packages/EmulatorCore" && swift build)
+    (cd "$CORE_DIR" && swift build)
 fi
 
 mkdir -p "$OUTPUT_DIR"

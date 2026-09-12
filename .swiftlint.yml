@@ -12,17 +12,16 @@
 # so every `xcodebuild` invocation — CI, scripts, and anyone typing the command
 # by hand — would have needed -skipPackagePluginValidation forever.
 
+# The core (bubio/Bubilator88Core, cloned next to this repository) is linted
+# with this same configuration by scripts/lint.sh.
 included:
   - Bubilator88
   - Bubilator88Tests
   - Bubilator88UITests
-  - Packages/EmulatorCore/Sources
-  - Packages/EmulatorCore/Tests
 
 excluded:
   - .build
   - DerivedData
-  - Packages/EmulatorCore/.build
   - Bubilator88/Resources
 
 disabled_rules:

@@ -5,7 +5,8 @@
 # `git diff --ignore-all-space` reports as empty. Style enforcement beyond
 # whitespace is SwiftLint's job (see .swiftlint.yml).
 #
-# Run with scripts/format_all.sh.
+# Run with scripts/format_all.sh, which also applies this file to the core
+# clone (bubio/Bubilator88Core) next to this repository.
 
 --swiftversion 6.1
 
@@ -19,4 +20,4 @@
 --rules indent,trailingSpace
 --trimwhitespace always
 
---exclude .build,DerivedData,Packages/EmulatorCore/.build
+--exclude .build,DerivedData

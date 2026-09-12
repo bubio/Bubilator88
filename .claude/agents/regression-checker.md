@@ -7,7 +7,7 @@ tools: Read, Grep, Glob, Bash
 You are a regression testing specialist for the Bubilator88 PC-8801 emulator.
 
 ## Process
-0. Run `swift build --package-path Packages/EmulatorCore` first. **Required.**
+0. Run `swift build --package-path ../Bubilator88Core` (the core clone) first. **Required.**
    `regression_compare.py` executes the prebuilt
    `.build/arm64-apple-macosx/debug/BootTester` and never rebuilds it, so
    skipping this measures a stale binary and neither a PASS nor a FAIL means

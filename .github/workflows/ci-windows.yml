@@ -8,6 +8,10 @@ name: CI (Windows)
 #   閉じている。したがって macOS 側の作業が Windows を壊しうるのは
 #   Bubilator88Core を触ったときだけ — そのときだけこのジョブを回す。
 #
+#   コアは別リポジトリ (bubio/Bubilator88Core)。このリポジトリでコアが変わるのは
+#   Package.resolved の revision を上げたときなので、それをトリガーにする。
+#   checkout するコアも同じ revision (.github/actions/checkout-core)。
+#
 #   このジョブが赤くても macOS の開発は止めない。Windows シェルは遅れてよい、
 #   というのが明示的な方針 (AGENTS.md「Windows Native Port」節)。
 #   赤は「Windows が壊れたことが記録された」という意味であり、
@@ -19,7 +23,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'Packages/EmulatorCore/**'
+      - 'Bubilator88.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved'
+      - '.github/actions/checkout-core/**'
       - 'windows/**'
       - 'models/onnx/**'
       - 'scripts/build-windows-package.ps1'
@@ -27,7 +32,8 @@ on:
       - '.github/workflows/ci-windows.yml'
   pull_request:
     paths:
-      - 'Packages/EmulatorCore/**'
+      - 'Bubilator88.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved'
+      - '.github/actions/checkout-core/**'
       - 'windows/**'
       - 'models/onnx/**'
       - 'scripts/build-windows-package.ps1'
@@ -56,6 +62,8 @@ jobs:
       # AI モデル (Git LFS) は取得しない。ビルド検証には不要で、
       # csproj のコピーはポインタファイルでも成立するため -SkipModelCheck で回す。
       - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/checkout-core
 
       - name: Setup Swift ${{ env.SWIFT_VERSION }}
         uses: SwiftyLab/setup-swift@v1

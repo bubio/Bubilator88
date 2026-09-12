@@ -35,7 +35,9 @@ AI モデル (3種) は全 OS 共有の `../../models/onnx/*.onnx` から csproj
 いずれも Git LFS 管理。source-of-truth と再生成は `../../models/PROVENANCE.md`。
 ```
 
-コア側の C ABI シムは `../Packages/EmulatorCore/Sources/CApi/CApi.swift`。
+コアは別リポジトリ [bubio/Bubilator88Core](https://github.com/bubio/Bubilator88Core)。
+このリポジトリと同じ階層に clone しておく (後述)。C ABI シムはその
+`Sources/CApi/CApi.swift`。
 
 ## 前提ツール
 
@@ -51,9 +53,14 @@ AI モデル (3種) は全 OS 共有の `../../models/onnx/*.onnx` から csproj
 ```powershell
 git lfs install            # マシンごとに一度 (LFS フックを有効化)
 git clone git@github.com:bubio/Bubilator88.git
+git clone git@github.com:bubio/Bubilator88Core.git   # コア。Bubilator88 と同じ階層に置く
 cd Bubilator88
 git lfs pull               # AI モデル実体 (models/onnx/*.onnx, 計 ~67MB) を取得
 ```
+
+コアの置き場所を変えたときは `BUBILATOR88_CORE_DIR` に設定する
+(`scripts/build-windows-package.ps1` と `scripts/check-capi-exports.sh` が見る)。
+リリースと CI は、macOS アプリの `Package.resolved` が固定している revision のコアを使う。
 
 > **LFS 注意**: AI モデルは `models/onnx/*.onnx`(Git LFS 管理)。`git lfs pull` 前は
 > ~133 バイトの**ポインタ**なので、そのままビルドするとモデルが壊れたまま同梱される。
@@ -67,10 +74,10 @@ git lfs pull               # AI モデル実体 (models/onnx/*.onnx, 計 ~67MB) 
 ### 1. コア DLL をビルド
 
 ```powershell
-cd Packages\EmulatorCore
+cd ..\Bubilator88Core     # このリポジトリの隣に clone したコア
 swift build -c release --product Bubilator88C
 # 成果物 (例): .build\release\Bubilator88C.dll を shell の native\ にコピー
-Copy-Item .build\release\Bubilator88C.dll ..\..\windows\Bubilator88.Windows\native\
+Copy-Item .build\release\Bubilator88C.dll ..\Bubilator88\windows\Bubilator88.Windows\native\
 ```
 
 まずコア健全性を確認(macOS と同じ結果になるはず):

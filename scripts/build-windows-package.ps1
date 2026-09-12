@@ -58,7 +58,13 @@ Set-StrictMode -Version Latest
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$CoreDir = Join-Path $RepoRoot 'Packages\EmulatorCore'
+# コアは別リポジトリ (bubio/Bubilator88Core)。既定ではこのリポジトリの隣に
+# clone してある前提。BUBILATOR88_CORE_DIR で差し替えられる (CI はこちら)。
+$CoreDir = if ($env:BUBILATOR88_CORE_DIR) { $env:BUBILATOR88_CORE_DIR } else { Join-Path $RepoRoot '..\Bubilator88Core' }
+if (-not (Test-Path (Join-Path $CoreDir 'Package.swift'))) {
+    throw "Bubilator88Core が '$CoreDir' に見つかりません。このリポジトリの隣に clone するか、BUBILATOR88_CORE_DIR を設定してください。"
+}
+$CoreDir = (Resolve-Path $CoreDir).Path
 $ShellDir = Join-Path $RepoRoot 'windows\Bubilator88.Windows'
 $NativeDir = Join-Path $ShellDir 'native'
 if (-not $OutputDir) { $OutputDir = Join-Path $RepoRoot 'dist' }

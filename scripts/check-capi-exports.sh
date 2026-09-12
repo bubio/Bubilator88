@@ -16,8 +16,10 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-swift_src="$repo_root/Packages/EmulatorCore/Sources/CApi/CApi.swift"
-def_file="$repo_root/Packages/EmulatorCore/Sources/CApi/Bubilator88C.def"
+# コアは別リポジトリ (bubio/Bubilator88Core)。既定では隣の clone を見る。
+core_dir="${BUBILATOR88_CORE_DIR:-$repo_root/../Bubilator88Core}"
+swift_src="$core_dir/Sources/CApi/CApi.swift"
+def_file="$core_dir/Sources/CApi/Bubilator88C.def"
 
 for f in "$swift_src" "$def_file"; do
     [ -f "$f" ] || { echo "error: $f が見つかりません" >&2; exit 2; }

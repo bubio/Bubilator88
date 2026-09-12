@@ -15,8 +15,8 @@ Bubilator88 is a **behavioral emulator** for the NEC PC-8801-FA computer, built 
 # Build
 xcodebuild -scheme Bubilator88 -configuration Debug build
 
-# Run Bubilator88Core unit tests (primary test suite)
-cd Packages/EmulatorCore && swift test
+# Run Bubilator88Core unit tests (primary test suite; the core clone, see below)
+cd ../Bubilator88Core && swift test
 
 # Run app-level tests (UI tests, template test)
 xcodebuild test -scheme Bubilator88 -configuration Debug
@@ -26,17 +26,48 @@ xcodebuild test -scheme Bubilator88 -only-testing:Bubilator88UITests -configurat
 
 # Format (2-space indent) and lint
 scripts/format_all.sh          # or --check to verify without writing
-scripts/lint.sh                # whole repo, including Packages/EmulatorCore
+scripts/lint.sh                # whole repo, plus the core clone
 ```
 
 Lint is not wired into the build; run `scripts/lint.sh`, which covers the app
-and `Packages/EmulatorCore` alike. See the Code Style section for why there is
-no build tool plugin.
+and the core clone alike. See the Code Style section for why there is no build
+tool plugin.
 
 Platform: macOS only. Deployment targets are **not** uniform: the app target is
-26.0, the project and test targets are 26.2, and `Package.swift` declares
-`.macOS(.v15)`. Pure Xcode project with a local Swift package at
-`Packages/EmulatorCore/`.
+26.0, the project and test targets are 26.2, and the core's `Package.swift`
+declares `.macOS(.v15)`.
+
+## The Core Is a Separate Repository
+
+The emulation core is the public Swift package
+[bubio/Bubilator88Core](https://github.com/bubio/Bubilator88Core). The Xcode
+project depends on it remotely, pinned in
+`Bubilator88.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`
+(by revision until 1.0.0 is tagged). The core repository deliberately carries
+no agent instructions or tooling: this file, the scripts, the regression suite
+and `docs/develop` all stay here and apply to core work too.
+
+- **Clone it next to this repository**: `../Bubilator88Core`. Everything here
+  looks there by default (`BUBILATOR88_CORE_DIR` overrides it). The folder name
+  must stay `Bubilator88Core`: Xcode matches a local override to the remote
+  package by the folder name.
+- **Develop in `Bubilator88Dev.xcworkspace`**, not the bare project. It lists
+  the project and `../Bubilator88Core`, so the local core overrides the remote
+  one and core edits build straight into the app. Never drag the core into the
+  project itself — that rewrites `project.pbxproj`.
+- **Opening the bare project builds the pinned core**, which is fine for app-only
+  work. Once the pin is a version tag, a Debug build of it is about ten times
+  slower (tags drop the core's Debug `-O`; see the core's README), so use the
+  workspace for anything that runs the machine.
+- **Changing both sides**: commit and push the core first, then bump the pin
+  here (change the revision in `project.pbxproj` and resolve, or update the
+  package in Xcode) in the same PR as the app change that needs it.
+- **Core commits are made in the core clone** (`git -C ../Bubilator88Core …`)
+  and its pull requests go to bubio/Bubilator88Core. Refer to this repository's
+  pull requests there as `bubio/Bubilator88#N`.
+- **Release tags on the core come only from its Release Tag workflow**
+  (`scripts/tag-release.sh` in the core repository), never a hand-made
+  `git tag`.
 
 ## Architecture
 
@@ -98,15 +129,16 @@ Key points:
 - BIOS files are never bundled — loaded from `~/Library/Application Support/Bubilator88/`
 - No additional LSI-level classes unless explicitly justified
 - **Persist reusable scripts** — when creating Python/Shell scripts for analysis, conversion, or debugging, save reusable ones to `scripts/` rather than regenerating each time
-- **EmulatorCore/Sources を変更したら、コミット前に `/regression` (scripts/regression_compare.py) を実行** — true regression があれば ship しない
+- **Bubilator88Core の Sources/ を変更したら、コミット前に `/regression` (scripts/regression_compare.py) を実行** — true regression があれば ship しない
 
 ## Windows Native Port
 
 `windows/` holds a C# + WinUI 3 shell that drives the same Bubilator88Core through a
-C ABI DLL (`Packages/EmulatorCore/Sources/CApi/`, built as the `Bubilator88C`
-product). It lives in `main` alongside the macOS app rather than in a fork: the
-emulation core is the product, so every accuracy fix is a Windows fix too, and a
-fork would turn each one into a permanent cherry-pick.
+C ABI DLL (`Sources/CApi/` in the core, built as the `Bubilator88C` product).
+It lives in `main` alongside the macOS app rather than in a fork: the emulation
+core is the product, so every accuracy fix is a Windows fix too, and a fork
+would turn each one into a permanent cherry-pick. Windows builds use the same
+core revision as the macOS app (`.github/actions/checkout-core`).
 
 The Windows-specific footprint inside the Swift package is deliberately tiny —
 the `CApi` target (new files only), the `Bubilator88C` product in
@@ -128,9 +160,9 @@ Rules:
   real export list — forget an entry and the build still succeeds while the DLL
   silently loses the symbol.
 
-`ci-windows.yml` runs on `main` pushes and PRs that touch
-`Packages/EmulatorCore/**`, `windows/**` or `models/onnx/**` — the only places
-that can break Windows. `release-windows.yml` builds the distributable on
+`ci-windows.yml` runs on `main` pushes and PRs that change the core pin
+(`Package.resolved`), `windows/**` or `models/onnx/**` — the only places that
+can break Windows. `release-windows.yml` builds the distributable on
 `win-v*` tags, independent of the macOS release. Details and the current parity
 gaps: `windows/README.md`, `docs/develop/WINDOWS_PORT.md`.
 
@@ -156,9 +188,11 @@ gaps: `windows/README.md`, `docs/develop/WINDOWS_PORT.md`.
   defaults for the GUI, `~/Library/org.swift.swiftpm/security/plugins.json` for
   the CLI) and cannot be committed, so every `xcodebuild` invocation on every
   machine would have needed `-skipPackagePluginValidation` forever. Adding it to
-  `Packages/EmulatorCore/Package.swift` was never viable either: that manifest is
-  also built on Windows (`.github/workflows/release-windows.yml`) and
-  SwiftLintPlugins ships macOS-only binary artifacts.
+  the core's `Package.swift` was never viable either: that manifest is also
+  built on Windows (`.github/workflows/release-windows.yml`) and
+  SwiftLintPlugins ships macOS-only binary artifacts. The core has no lint or
+  format configuration of its own; `scripts/lint.sh` and
+  `scripts/format_all.sh` apply this repository's to it.
 - **`git blame`**: run `git config blame.ignoreRevsFile .git-blame-ignore-revs`
   once so the whole-tree reindent does not mask real authorship.
 
