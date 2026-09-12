@@ -958,7 +958,7 @@
 			repositoryURL = "https://github.com/bubio/Bubilator88Core.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
+				minimumVersion = 1.0.1;
 			};
 		};
 		B6D1000000000000000000E0 /* XCRemoteSwiftPackageReference "swift-log" */ = {

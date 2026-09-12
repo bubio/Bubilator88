@@ -4,7 +4,7 @@ description: >-
   resolves, into ./Bubilator88Core, and point BUBILATOR88_CORE_DIR at it.
 
 # アプリが使うコアのコミットは Package.resolved の 1 か所で決まる。Windows の
-# DLL ビルドと check-capi-exports.sh もそれに揃えるため、ここで読んで checkout する。
+# DLL ビルドもそれに揃えるため、ここで読んで checkout する。
 # 置き場所はワークスペースの中 (actions/checkout はワークスペースの外に置けない)。
 # スクリプトは既定で ../Bubilator88Core を見るので、環境変数で差し替える。
 
