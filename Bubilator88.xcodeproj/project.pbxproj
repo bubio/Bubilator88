@@ -957,8 +957,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/bubio/Bubilator88Core.git";
 			requirement = {
-				kind = revision;
-				revision = f72758e570b14a3006698ef16b8f7110032e5271;
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
 			};
 		};
 		B6D1000000000000000000E0 /* XCRemoteSwiftPackageReference "swift-log" */ = {
