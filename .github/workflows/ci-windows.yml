@@ -28,7 +28,6 @@ on:
       - 'windows/**'
       - 'models/onnx/**'
       - 'scripts/build-windows-package.ps1'
-      - 'scripts/check-capi-exports.sh'
       - '.github/workflows/ci-windows.yml'
   pull_request:
     paths:
@@ -37,7 +36,6 @@ on:
       - 'windows/**'
       - 'models/onnx/**'
       - 'scripts/build-windows-package.ps1'
-      - 'scripts/check-capi-exports.sh'
       - '.github/workflows/ci-windows.yml'
   workflow_dispatch:
 
@@ -80,12 +78,6 @@ jobs:
         run: |
           swift --version
           dotnet --version
-
-      # @_cdecl を足して .def に書き忘れると DLL からシンボルが消えるが
-      # ビルドは通ってしまう。実行時 P/Invoke 失敗になる前に機械的に弾く。
-      - name: Check CApi exports (.def sync)
-        shell: bash
-        run: ./scripts/check-capi-exports.sh
 
       # Bubilator88Core のユニットテストを Windows 上でも回す。
       # ビルドが通っても壊れうる差分 (セーブステート形式、時刻/ロケール依存、

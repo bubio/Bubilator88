@@ -159,10 +159,10 @@ Rules:
   the source tree drift apart between releases.
 - **A red `ci-windows.yml` does not block macOS work.** It records that Windows
   broke and which commit did it; fixing it can wait for the next Windows release.
-- After touching `Sources/CApi/`, run `scripts/check-capi-exports.sh`. Swift's
-  `@_cdecl` does not emit `__declspec(dllexport)`, so `Bubilator88C.def` is the
-  real export list — forget an entry and the build still succeeds while the DLL
-  silently loses the symbol.
+- Every `@_cdecl` function in the core's `Sources/CApi/` must be `public`. On
+  Windows, Swift exports only a DLL's public symbols; a non-public one still
+  builds while the DLL silently loses it. The core's CI compares the DLL's
+  export table with the `@_cdecl` names.
 
 `ci-windows.yml` runs on `main` pushes and PRs that change the core pin
 (`Package.resolved`), `windows/**` or `models/onnx/**` — the only places that

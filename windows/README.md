@@ -59,7 +59,7 @@ git lfs pull               # AI モデル実体 (models/onnx/*.onnx, 計 ~67MB) 
 ```
 
 コアの置き場所を変えたときは `BUBILATOR88_CORE_DIR` に設定する
-(`scripts/build-windows-package.ps1` と `scripts/check-capi-exports.sh` が見る)。
+(`scripts/build-windows-package.ps1` が見る)。
 リリースと CI は、macOS アプリの `Package.resolved` が固定している revision のコアを使う。
 
 > **LFS 注意**: AI モデルは `models/onnx/*.onnx`(Git LFS 管理)。`git lfs pull` 前は
@@ -87,11 +87,10 @@ swift test                                  # 760+ ユニットテスト
 swift run BootTester "C:\path\game.d88"     # テキストVRAMダンプ等
 ```
 
-> **エクスポートに関する注意**: `@_cdecl` は C リンケージを付けるが Windows の
-> `dllexport` は付けないため、`Sources/CApi/Bubilator88C.def` を linker に渡して
-> シンボルを公開している(`Package.swift` の CApi target、Windows 限定 linkerSettings)。
-> もし未エクスポートになる場合は `swift build` のログで `/DEF:` が渡っているか確認し、
-> 代替として `-Xlinker /EXPORT:b88_create`(各シンボル)でも可。
+> **エクスポートに関する注意**: Swift は DLL の `public` な記号を自分で書き出す。
+> `Sources/CApi/CApi.swift` の `@_cdecl` 関数は必ず `public` にすること
+> (付け忘れてもビルドは通り、P/Invoke が実行時に失敗する)。コアの CI が DLL の
+> 書き出し表と `@_cdecl` の一覧を突き合わせている。
 
 ### 2. AI モデル (ONNX) を用意 — 任意
 
