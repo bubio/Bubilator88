@@ -1,0 +1,1580 @@
+;==============================================================================
+; Graphics VRAM tests
+;==============================================================================
+
+; Port $31 values (bit5, the 25-row line control, is added on 24kHz)
+P31_COL200	equ		$19					; color, shown, 200 lines
+P31_BW200	equ		$09					; B/W, shown, 200 lines
+P31_BW400	equ		$08					; B/W, shown, 400 lines
+P31_OFF		equ		$11					; color, hidden
+
+; Output port $31 = A (with bit5 on 24kHz), and remember it.
+SetP31:
+		ld		b,a
+		ld		a,(v_is15k)
+		or		a
+		ld		a,b
+		jr		nz,.out
+		or		$20
+.out:
+		ld		(v_p31),a
+		or		$02						; keep 64K RAM mode
+		out		($31),a
+		ret
+
+; Standard setup for a graphics test: color text, graphics mode A, planes
+; cleared, header with title HL.
+GfxStart:
+		push	hl
+		push	af
+		call	GvramClear
+		pop		af
+		call	SetP31
+		pop		hl
+		jp		TestHeader
+
+; Three boxes, one per plane: B (blue) left, R (red) middle, G (green)
+; right, lines 32-111 (text rows 4-13).
+PlaneBoxes:
+		ld		bc,(6 << 8) | 32
+		ld		de,(20 << 8) | 80
+		ld		a,1
+		call	FillBox
+		ld		bc,(30 << 8) | 32
+		ld		de,(20 << 8) | 80
+		ld		a,2
+		call	FillBox
+		ld		bc,(54 << 8) | 32
+		ld		de,(20 << 8) | 80
+		ld		a,4
+		jp		FillBox
+
+;------------------------------------------------------------------------------
+; M. Graphic/text mode combinations (the page's 6-combination BASIC program)
+;------------------------------------------------------------------------------
+TitleModes:
+		db		"M: Graphic/text mode combos",0
+
+TestModes:
+		ld		a,5
+		ld		(v_sel),a				; combination 1-6 (5 = color text, B/W 200)
+.redraw:
+		call	TextDefaults
+		ld		a,(v_sel)
+		cp		4
+		ld		a,1						; 1-3: B/W text
+		jr		c,.text
+		xor		a						; 4-6: color text
+.text:
+		ld		(v_sel2),a
+		call	TextMode
+		call	CrtcApply
+		call	GvramClear
+		; graphics mode: 1/4 color 200, 2/5 B/W 200, 3/6 B/W 400
+		ld		a,(v_sel)
+		dec		a
+.mod3:
+		cp		3
+		jr		c,.g
+		sub		3
+		jr		.mod3
+.g:
+		ld		hl,ModeP31
+		ld		e,a
+		ld		d,0
+		add		hl,de
+		ld		a,(hl)
+		call	SetP31
+		; LINE (0,0)-(100,100),1,BF
+		ld		bc,0
+		ld		de,(13 << 8) | 101
+		ld		a,1
+		call	FillBox
+		; LINE (0,0)-(639,5),0 : clear the top 6 lines
+		ld		bc,0
+		ld		de,(80 << 8) | 6
+		xor		a
+		call	FillBox
+		ld		a,(v_sel2)
+		or		a
+		ld		a,A_WHITE
+		jr		z,.clr
+		ld		a,D_NORMAL
+.clr:
+		call	ClearText
+		ld		bc,0
+		ld		hl,MsgNec
+		call	PrintAt
+		; row 0 attributes: every X = 79 first, then the page's pairs
+		ld		b,0
+		call	RowAddr
+		ld		de,80
+		add		hl,de
+		push	hl
+		ld		b,20
+.x79:
+		ld		(hl),79
+		inc		hl
+		inc		hl
+		djnz	.x79
+		pop		hl
+		ld		de,ModeAttrColor
+		ld		b,4*2
+		ld		a,(v_sel2)
+		or		a
+		jr		z,.copy
+		ld		de,ModeAttrBW
+		ld		b,2*2
+.copy:
+		ld		a,(de)
+		ld		(hl),a
+		inc		de
+		inc		hl
+		djnz	.copy
+		ld		hl,ScrModes
+		call	Draw
+		ld		bc,(23 << 8) | 78
+		call	Locate
+		ld		a,(v_sel)
+		add		a,'0'
+		ld		(de),a
+.key:
+		call	WaitKey
+		cp		K_ESC
+		ret		z
+		sub		'1'
+		cp		6
+		jr		nc,.key
+		inc		a
+		ld		(v_sel),a
+		jp		.redraw
+
+ModeP31:	db		P31_COL200, P31_BW200, P31_BW400
+; (x, attr) pairs for row 0, from the page's POKEs
+ModeAttrBW:	db		0,$04, 11,$00
+ModeAttrColor: db	0,$48, 4,$04, 11,$00, 12,$E8
+MsgNec:		db		"NEC PC-8801",0
+ScrModes:
+		db		DS_TEXT,21,0,"Keys: text B/W or color x graphics color 200 / B/W 200 / B/W 400",$0A
+		db		"1:BW+COL200  2:BW+BW200  3:BW+BW400",$0A
+		db		"4:COL+COL200 5:COL+BW200 6:COL+BW400 (page: T=0/1, G=0/1/2)   now:",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; N. B/W mode background color (port $52 digital, port $54 analog)
+;------------------------------------------------------------------------------
+TitleBgColor:
+		db		"N: B/W background color",0
+
+TestBgColor:
+		xor		a
+		ld		(v_sel),a				; digital BG color 0-7
+		ld		(v_sel2),a				; analog BG choice (0 = off)
+		ld		(v_sel3),a				; 1 = 400 lines
+		ld		hl,TitleBgColor
+		ld		a,P31_BW200
+		call	GfxStart
+		call	PlaneBoxes
+		ld		hl,ScrBgColor
+		call	Draw
+.apply:
+		ld		a,P31_BW200
+		ld		b,a
+		ld		a,(v_sel3)
+		or		a
+		ld		a,b
+		jr		z,.m
+		ld		a,P31_BW400
+.m:
+		call	SetP31
+		ld		a,(v_sel2)
+		or		a
+		jr		nz,.analog
+		ld		a,(v_p32)
+		out		($32),a
+		ld		a,(v_sel)
+		rlca
+		rlca
+		rlca
+		rlca
+		out		($52),a
+		jr		.show
+.analog:
+		ld		a,(v_p32)
+		or		$20
+		out		($32),a
+		xor		a
+		out		($52),a
+		ld		a,(v_sel2)
+		dec		a
+		add		a,a
+		ld		e,a
+		ld		d,0
+		ld		hl,AnalogBgTable
+		add		hl,de
+		ld		a,(hl)
+		or		$80						; background RB
+		out		($54),a
+		inc		hl
+		ld		a,(hl)
+		or		$C0						; background G
+		out		($54),a
+.show:
+		ld		bc,(21 << 8) | 1
+		call	Locate
+		ld		hl,MsgBgNow
+		call	PutStr
+		ld		a,(v_sel)
+		add		a,'0'
+		ld		(de),a
+		inc		de
+		ld		hl,MsgBgAnalog
+		call	PutStr
+		ld		a,(v_sel2)
+		add		a,'0'
+		ld		(de),a
+.key:
+		call	WaitKey
+		cp		K_ESC
+		ret		z
+		cp		'A'
+		jr		z,.ka
+		cp		'W'
+		jr		z,.kw
+		sub		'0'
+		cp		8
+		jr		nc,.key
+		ld		(v_sel),a
+		xor		a
+		ld		(v_sel2),a
+		jp		.apply
+.ka:
+		ld		a,(v_sel2)
+		inc		a
+		cp		5
+		jr		c,.ka1
+		ld		a,1
+.ka1:
+		ld		(v_sel2),a
+		jp		.apply
+.kw:
+		ld		a,(v_sel3)
+		xor		1
+		ld		(v_sel3),a
+		jp		.apply
+
+; (RB, G) for the analog background: dark blue, brown, gray, dark green
+AnalogBgTable:
+		db		$02,0, $20,2, $1B,3, $00,3
+
+MsgBgNow:	db		"digital BG ($52) = ",0
+MsgBgAnalog: db		"   analog BG ($54) choice = ",0
+
+ScrBgColor:
+		db		DS_TEXT,2,1,"B/W graphics: boxes in planes B, R, G (all show as 'white').",0
+		db		DS_TEXT,22,1,"0-7: digital background   A: analog background   W: 200/400 lines",0
+		db		DS_TEXT,20,1,"EXPECT: the black part takes the chosen color (analog needs $32 bit5=1).",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; O. Port $53 plane / text masks
+;------------------------------------------------------------------------------
+TitlePlaneMask:
+		db		"O: Port $53 plane masks",0
+
+TestPlaneMask:
+		xor		a
+		ld		(v_sel),a				; port $53
+		ld		(v_sel2),a				; 1 = color graphics
+		ld		(v_sel3),a				; 1 = 400 lines
+		ld		hl,TitlePlaneMask
+		ld		a,P31_BW200
+		call	GfxStart
+		call	PlaneBoxes
+		; 400-line mode shows B on top and R below: mark the R plane's top
+		ld		bc,(40 << 8) | 0
+		ld		de,(34 << 8) | 4
+		ld		a,2
+		call	FillBox
+		ld		hl,ScrPlaneMask
+		call	Draw
+		xor		a
+		out		($53),a
+.apply:
+		ld		a,(v_sel2)
+		or		a
+		ld		a,P31_COL200
+		jr		nz,.m
+		ld		a,(v_sel3)
+		or		a
+		ld		a,P31_BW200
+		jr		z,.m
+		ld		a,P31_BW400
+.m:
+		call	SetP31
+		ld		bc,(21 << 8) | 1
+		call	Locate
+		ld		hl,MsgP53
+		call	PutStr
+		ld		a,(v_sel)
+		call	PutBin8
+		ld		hl,MsgP53Mode
+		call	PutStr
+		ld		hl,MsgBW200
+		ld		a,(v_sel2)
+		or		a
+		jr		z,.bw
+		ld		hl,MsgCOL200
+		jr		.pm
+.bw:
+		ld		a,(v_sel3)
+		or		a
+		jr		z,.pm
+		ld		hl,MsgBW400
+.pm:
+		call	PutStr
+.key:
+		call	WaitKey
+		cp		K_ESC
+		ret		z
+		ld		c,$08
+		cp		'1'
+		jr		z,.bit
+		ld		c,$04
+		cp		'2'
+		jr		z,.bit
+		ld		c,$02
+		cp		'3'
+		jr		z,.bit
+		ld		c,$01
+		cp		'4'
+		jr		z,.bit
+		ld		hl,v_sel2
+		cp		'5'
+		jr		z,.tog
+		ld		hl,v_sel3
+		cp		'6'
+		jr		nz,.key
+.tog:
+		ld		a,(hl)
+		xor		1
+		ld		(hl),a
+		jp		.apply
+.bit:
+		ld		a,(v_sel)
+		xor		c
+		ld		(v_sel),a
+		out		($53),a
+		jp		.apply
+
+MsgP53:		db		"port $53 = ",0
+MsgP53Mode:	db		"   graphics: ",0
+MsgBW200:	db		"B/W 200 ",0
+MsgBW400:	db		"B/W 400 ",0
+MsgCOL200:	db		"color 200",0
+
+ScrPlaneMask:
+		db		DS_TEXT,2,1,"Boxes: B plane (left), R plane (middle), G plane (right).",0
+		db		DS_TEXT,22,1,"1:hide G 2:hide R 3:hide B 4:hide text 5:color/B-W 6:200/400 lines",0
+		db		DS_TEXT,16,1,"EXPECT: in B/W mode bits 3-1 hide planes, in color mode they are ignored.",$0A
+		db		"Bits set while in color mode must apply after switching back to B/W",$0A
+		db		"(M88 play6 bug). In 400 lines B is the top half, R the bottom, G unused.",$0A
+		db		"Bit 0 hides the text in both modes.",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; P. B/W graphics colored by text attributes
+;------------------------------------------------------------------------------
+TitleMonoAttr:
+		db		"P: B/W graphics + text color",0
+
+TestMonoAttr:
+		xor		a
+		ld		(v_sel),a				; 1 = analog palette
+		ld		(v_sel2),a				; port $53 text bit
+		ld		hl,TitleMonoAttr
+		ld		a,P31_BW200
+		call	GfxStart
+		; diagonal stripes in plane B under text rows 2-13 (lines 16-111)
+		ld		a,$5C
+		out		($5C),a
+		ld		hl,GVRAM+16*80
+		ld		c,96
+		ld		a,$E1
+.line:
+		ld		b,80
+.byte:
+		ld		(hl),a
+		inc		hl
+		djnz	.byte
+		rlca
+		dec		c
+		jr		nz,.line
+		out		($5F),a
+		ld		hl,ScrMonoAttr
+		call	Draw
+.apply:
+		ld		a,(v_sel2)
+		out		($53),a
+		ld		a,(v_sel)
+		or		a
+		jr		z,.digital
+		ld		hl,MonoPalette
+		call	PalAnalogLoad
+		jr		.key
+.digital:
+		call	PalAnalogStd
+.key:
+		call	WaitKey
+		cp		K_ESC
+		ret		z
+		ld		hl,v_sel
+		cp		'A'
+		jr		z,.tog
+		cp		'4'
+		jr		nz,.key
+		ld		a,(v_sel2)
+		xor		1
+		ld		(v_sel2),a
+		jr		.apply
+.tog:
+		ld		a,(hl)
+		xor		1
+		ld		(hl),a
+		jr		.apply
+
+; analog palette: 1 orange, 2 pink, 3 purple, 4 lime, 5 teal, 6 beige, 7 gray
+MonoPalette:
+		db		$00,0, $38,4, $3D,3, $27,0, $20,7, $05,5, $34,6, $24,4
+
+ScrMonoAttr:
+		db		DS_ATTR,3, 0,A_RED, 20,A_GREEN, 40,A_BLUE, 60,A_YELLOW, $FF
+		db		DS_ATTR,4, 0,A_CYAN, 20,A_MAGENTA, 40,A_WHITE, 60,A_RED, $FF
+		db		DS_ATTR,6, 0,A_WHITE, 10,D_REVERSE, 30,D_NORMAL, 40,D_BLINK, 60,D_SECRET, 70,D_NORMAL, $FF
+		db		DS_TEXT,6,11,"reverse",0
+		db		DS_TEXT,6,41,"blink",0
+		db		DS_TEXT,6,61,"secret",0
+		db		DS_ATTR,8, 0,A_WHITE, 10,D_UNDER, 30,D_UPPER, 50,D_NORMAL, $FF
+		db		DS_TEXT,8,11,"underline",0
+		db		DS_TEXT,8,31,"upperline",0
+		db		DS_ATTR,10, 0,A_RED, 8,A_YELLOW, 16,A_GREEN, 24,A_CYAN, 32,A_BLUE, 40,A_MAGENTA, 48,A_WHITE, 56,A_RED, 64,A_YELLOW, 72,A_GREEN, $FF
+		db		DS_ATTR,11, 0,A_YELLOW, 8,A_GREEN, 16,A_CYAN, 24,A_BLUE, 32,A_MAGENTA, 40,A_WHITE, 48,A_RED, 56,A_YELLOW, 64,A_GREEN, 72,A_CYAN, $FF
+		db		DS_TEXT,12,1,"Text in color: RED GREEN BLUE",0
+		db		DS_ATTR,12, 0,A_WHITE, 15,A_RED, 19,A_GREEN, 25,A_BLUE, 29,A_WHITE, $FF
+		db		DS_TEXT,16,1,"EXPECT: the lit dots take the text attribute color of each character cell;",$0A
+		db		"of the decorations only reverse affects the graphics. With an analog",$0A
+		db		"palette both text and those dots use it. Hiding the text (4) keeps the",$0A
+		db		"coloring.",0
+		db		DS_TEXT,22,1,"A: analog palette on/off   4: hide text (port $53 bit0)",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; Q. CRTC stopped in B/W mode: lit dots take palette 0
+;------------------------------------------------------------------------------
+TitleCrtcStop:
+		db		"Q: CRTC stop in B/W mode",0
+
+TestCrtcStop:
+		ld		hl,TitleCrtcStop
+		ld		a,P31_COL200
+		call	GfxStart
+		; boxes of colors 0-7, 80 dots wide, rows 40-139
+		ld		b,0
+.box:
+		push	bc
+		ld		a,b
+		add		a,a
+		ld		c,a
+		add		a,a
+		add		a,a
+		add		a,c						; x = 10*n
+		ld		c,40
+		ld		d,10
+		ld		e,100
+		ld		h,b
+		ld		b,a
+		ld		a,h
+		call	FillBox
+		pop		bc
+		inc		b
+		ld		a,b
+		cp		8
+		jr		nz,.box
+		ld		hl,StopPalette
+		call	PalAnalogLoad
+		ld		hl,ScrCrtcStop
+		call	Draw
+.key:
+		call	WaitKey
+		cp		K_ESC
+		ret		z
+		cp		'1'
+		jr		z,.color
+		cp		'2'
+		jr		z,.bw
+		cp		'3'
+		jr		z,.stop
+		cp		'4'
+		jr		nz,.key
+		call	CrtcApply
+		jr		.key
+.color:
+		ld		a,P31_COL200
+		call	SetP31
+		jr		.key
+.bw:
+		ld		a,P31_BW200
+		call	SetP31
+		jr		.key
+.stop:
+		ld		a,P31_BW200
+		call	SetP31
+		xor		a
+		out		($51),a
+		jr		.key
+
+; analog palette: 0 = G3 R2 B1 (dark olive), 1-7 = full colors
+StopPalette:
+		db		$11,3, $07,0, $38,0, $3F,0, $00,7, $07,7, $38,7, $3F,7
+
+ScrCrtcStop:
+		db		DS_TEXT,2,1,"Boxes of colors 0-7; analog palette 0 = G3 R2 B1 (dark olive).",0
+		db		DS_TEXT,20,1,"1: color graphics  2: B/W graphics  3: B/W + CRTC reset (out $51,0)",$0A
+		db		"4: restart the CRTC",0
+		db		DS_TEXT,16,1,"EXPECT (page): after 3 the lit dots show palette 0's color, not white.",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; R. ALU self-check
+;------------------------------------------------------------------------------
+TitleAlu:
+		db		"R: ALU self-check",0
+
+; Port $35 values
+ALU_LOGIC	equ		$80					; GVRAM, write through port $34
+ALU_COPY	equ		$90					; 3-plane copy
+ALU_R2B		equ		$A0
+ALU_B2R		equ		$B0
+
+; Turn the ALU on with port $35 = A.
+AluOn:
+		out		($35),a
+		ld		a,(v_p32)
+		or		$40
+		out		($32),a
+		ret
+
+AluOff:
+		ld		a,(v_p32)
+		out		($32),a
+		ret
+
+; Write E to plane A (0=B 1=R 2=G) at HL, independent access.
+PlaneWrite:
+		add		a,$5C
+		ld		c,a
+		out		(c),a
+		ld		(hl),e
+		out		($5F),a
+		ret
+
+; E = plane A at HL.
+PlaneRead:
+		add		a,$5C
+		ld		c,a
+		out		(c),a
+		ld		e,(hl)
+		out		($5F),a
+		ret
+
+; Set all three planes at HL to E.
+PlanesSet:
+		push	de
+		xor		a
+		call	PlaneWrite
+		pop		de
+		push	de
+		ld		a,1
+		call	PlaneWrite
+		pop		de
+		ld		a,2
+		jp		PlaneWrite
+
+; Compare planes B,R,G at HL with the 3 bytes at DE. Sets v_w1 (got) /
+; v_w2 (expected) of the first mismatch; Z = all equal.
+PlanesCheck:
+		ld		b,0
+.plane:
+		push	bc
+		push	de
+		ld		a,b
+		call	PlaneRead
+		ld		a,e
+		pop		de
+		pop		bc
+		ld		c,a
+		ld		a,(de)
+		cp		c
+		jr		nz,.bad
+		inc		de
+		inc		b
+		ld		a,b
+		cp		3
+		jr		nz,.plane
+		xor		a
+		ret
+.bad:
+		ld		(v_w2),a
+		ld		a,c
+		ld		(v_w1),a
+		ld		a,b
+		ld		(v_sel4),a				; failing plane
+		or		1						; NZ
+		ret
+
+; Print a result on row B: name HL, then PASS or FAIL with got/expected.
+; Z = pass.
+AluReport:
+		push	bc
+		ld		a,1
+		jr		z,.pass
+		xor		a
+.pass:
+		ld		(v_sel3),a				; 1 = pass
+		ld		c,1
+		call	PrintAt
+		pop		bc
+		push	bc
+		ld		c,48
+		call	Locate
+		ld		a,(v_sel3)
+		or		a
+		jr		z,.fail
+		ld		hl,MsgPass
+		call	PutStr
+		pop		bc
+		ld		a,A_GREEN
+		jp		RowAttr
+.fail:
+		ld		hl,MsgFail
+		call	PutStr
+		ld		a,(v_sel4)
+		ld		hl,PlaneNames
+		call	PutNth
+		ld		hl,MsgGot
+		call	PutStr
+		ld		a,(v_w1)
+		call	PutHex8
+		ld		hl,MsgExp
+		call	PutStr
+		ld		a,(v_w2)
+		call	PutHex8
+		pop		bc
+		ld		a,A_RED
+		jp		RowAttr
+
+MsgPass:	db		"PASS",0
+MsgFail:	db		"FAIL ",0
+MsgGot:		db		" got ",0
+MsgExp:		db		" exp ",0
+PlaneNames:	db		"B",0,"R",0,"G",0,"-",0
+
+TestAlu:
+		ld		hl,TitleAlu
+		ld		a,P31_OFF
+		call	GfxStart
+		ld		a,3
+		ld		(v_sel4),a
+
+		; 1. independent access
+		ld		hl,$C000
+		ld		e,$A5
+		xor		a
+		call	PlaneWrite
+		ld		hl,$C000
+		ld		e,$5A
+		ld		a,1
+		call	PlaneWrite
+		ld		hl,$C000
+		ld		e,$3C
+		ld		a,2
+		call	PlaneWrite
+		ld		hl,$C000
+		ld		de,ExpIndep
+		call	PlanesCheck
+		ld		b,2
+		ld		hl,NameIndep
+		call	AluReport
+
+		; 2. port $5C read-back of the selection
+		ld		a,3
+		ld		(v_sel4),a
+		ld		c,$5C
+		ld		d,1						; expected bits
+.sel:
+		out		(c),a
+		in		a,($5C)
+		and		7
+		cp		d
+		jr		nz,.selbad
+		inc		c
+		sla		d
+		ld		a,c
+		cp		$5F
+		jr		nz,.sel
+		out		($5F),a
+		in		a,($5C)
+		and		7
+		ld		d,0
+		cp		d
+		jr		nz,.selbad
+		jr		.selok
+.selbad:
+		ld		(v_w1),a
+		ld		a,d
+		ld		(v_w2),a
+		out		($5F),a
+		or		1
+		jr		.selrep
+.selok:
+		xor		a
+.selrep:
+		ld		b,3
+		ld		hl,NameSel
+		call	AluReport
+
+		; 3. turning the ALU on forgets the plane selection
+		out		($5D),a
+		ld		a,ALU_LOGIC
+		call	AluOn
+		call	AluOff
+		in		a,($5C)
+		and		7
+		ld		(v_w1),a
+		xor		a
+		ld		(v_w2),a
+		out		($5F),a
+		ld		a,(v_w1)
+		or		a
+		ld		b,4
+		ld		hl,NameAluReset
+		call	AluReport
+
+		; 4-7. logic operations on all planes: $F0 op $CC
+		ld		ix,LogicCases
+		ld		b,5
+.logic:
+		push	bc
+		ld		hl,$C100
+		ld		e,$F0
+		call	PlanesSet
+		ld		a,(ix+0)
+		out		($34),a
+		ld		a,ALU_LOGIC
+		call	AluOn
+		ld		a,$CC
+		ld		($C100),a
+		call	AluOff
+		ld		hl,$C100
+		push	ix
+		pop		de
+		inc		de
+		call	PlanesCheck
+		pop		bc
+		push	bc
+		push	af
+		ld		l,(ix+4)
+		ld		h,(ix+5)
+		pop		af
+		call	AluReport
+		ld		de,6
+		add		ix,de
+		pop		bc
+		inc		b
+		ld		a,b
+		cp		10
+		jr		nz,.logic
+
+		; 9. a 16-bit store is two logic writes
+		ld		hl,$C200
+		ld		e,$F0
+		call	PlanesSet
+		ld		hl,$C201
+		ld		e,$F0
+		call	PlanesSet
+		ld		a,$07					; OR on all planes
+		out		($34),a
+		ld		a,ALU_LOGIC
+		call	AluOn
+		ld		hl,$33CC
+		ld		($C200),hl
+		call	AluOff
+		ld		hl,$C200
+		ld		de,ExpWordLo
+		call	PlanesCheck
+		jr		nz,.wrep
+		ld		hl,$C201
+		ld		de,ExpWordHi
+		call	PlanesCheck
+.wrep:
+		ld		b,10
+		ld		hl,NameWord
+		call	AluReport
+
+		; 10. compare data: planes B=$F0 R=$CC G=$AA
+		ld		hl,$C300
+		ld		e,$F0
+		xor		a
+		call	PlaneWrite
+		ld		hl,$C300
+		ld		e,$CC
+		ld		a,1
+		call	PlaneWrite
+		ld		hl,$C300
+		ld		e,$AA
+		ld		a,2
+		call	PlaneWrite
+		ld		a,3
+		ld		(v_sel4),a
+		ld		c,0						; compare value 0-7 (GRB)
+.cmp:
+		; expected: AND over planes of (plane or ~plane)
+		ld		a,$F0
+		bit		0,c
+		jr		nz,.cb
+		cpl
+.cb:
+		ld		d,a
+		ld		a,$CC
+		bit		1,c
+		jr		nz,.cr
+		cpl
+.cr:
+		and		d
+		ld		d,a
+		ld		a,$AA
+		bit		2,c
+		jr		nz,.cg
+		cpl
+.cg:
+		and		d
+		ld		d,a						; expected
+		ld		a,c
+		or		ALU_LOGIC
+		call	AluOn
+		ld		a,($C300)
+		ld		e,a						; got
+		call	AluOff
+		ld		a,e
+		cp		d
+		jr		nz,.cmpbad
+		inc		c
+		ld		a,c
+		cp		8
+		jr		nz,.cmp
+		xor		a
+		jr		.cmprep
+.cmpbad:
+		ld		a,e
+		ld		(v_w1),a
+		ld		a,d
+		ld		(v_w2),a
+		ld		a,c
+		ld		(v_sel),a
+		or		$FF
+.cmprep:
+		ld		b,11
+		ld		hl,NameCompare
+		call	AluReport
+
+		; 11. 3-plane copy
+		ld		hl,$C400
+		ld		e,$11
+		xor		a
+		call	PlaneWrite
+		ld		hl,$C400
+		ld		e,$22
+		ld		a,1
+		call	PlaneWrite
+		ld		hl,$C400
+		ld		e,$44
+		ld		a,2
+		call	PlaneWrite
+		ld		hl,$C401
+		ld		e,0
+		call	PlanesSet
+		ld		a,ALU_COPY
+		call	AluOn
+		ld		a,($C400)
+		ld		($C401),a
+		call	AluOff
+		ld		hl,$C401
+		ld		de,ExpCopy
+		call	PlanesCheck
+		ld		b,12
+		ld		hl,NameCopy
+		call	AluReport
+
+		; 12. R -> B transfer
+		ld		hl,$C500
+		ld		e,$5A
+		ld		a,1
+		call	PlaneWrite
+		ld		hl,$C501
+		ld		e,$00
+		xor		a
+		call	PlaneWrite
+		ld		hl,$C501
+		ld		e,$99
+		ld		a,1
+		call	PlaneWrite
+		ld		hl,$C501
+		ld		e,$00
+		ld		a,2
+		call	PlaneWrite
+		ld		a,ALU_R2B
+		call	AluOn
+		ld		a,($C500)
+		ld		($C501),a
+		call	AluOff
+		ld		hl,$C501
+		ld		de,ExpR2B
+		call	PlanesCheck
+		ld		b,13
+		ld		hl,NameR2B
+		call	AluReport
+
+		; 13. B -> R transfer
+		ld		hl,$C600
+		ld		e,$C3
+		xor		a
+		call	PlaneWrite
+		ld		hl,$C601
+		ld		e,$77
+		xor		a
+		call	PlaneWrite
+		ld		hl,$C601
+		ld		e,$00
+		ld		a,1
+		call	PlaneWrite
+		ld		hl,$C601
+		ld		e,$00
+		ld		a,2
+		call	PlaneWrite
+		ld		a,ALU_B2R
+		call	AluOn
+		ld		a,($C600)
+		ld		($C601),a
+		call	AluOff
+		ld		hl,$C601
+		ld		de,ExpB2R
+		call	PlanesCheck
+		ld		b,14
+		ld		hl,NameB2R
+		call	AluReport
+
+		; 14. $FE80-$FFFF is VRAM too
+		ld		hl,$FF00
+		ld		e,$E7
+		xor		a
+		call	PlaneWrite
+		ld		hl,$FF00
+		ld		e,$7E
+		ld		a,1
+		call	PlaneWrite
+		ld		hl,$FF00
+		ld		e,$81
+		ld		a,2
+		call	PlaneWrite
+		ld		hl,$FF00
+		ld		de,ExpHidden
+		call	PlanesCheck
+		ld		b,15
+		ld		hl,NameHidden
+		call	AluReport
+
+		; 15. ALU on with $35 bit7=0 reaches main RAM, not VRAM
+		ld		hl,$C700
+		ld		e,0
+		call	PlanesSet
+		xor		a
+		ld		($C700),a				; main RAM
+		xor		a						; $35 = 0: main RAM
+		call	AluOn
+		ld		a,$77
+		ld		($C700),a
+		call	AluOff
+		ld		a,3
+		ld		(v_sel4),a
+		ld		a,($C700)
+		ld		(v_w1),a
+		ld		a,$77
+		ld		(v_w2),a
+		ld		a,($C700)
+		cp		$77
+		jr		nz,.mrep
+		ld		hl,$C700
+		ld		de,ExpZero
+		call	PlanesCheck
+.mrep:
+		ld		b,16
+		ld		hl,NameMain
+		call	AluReport
+
+		call	GvramClear
+		ld		bc,(18 << 8) | 1
+		ld		hl,MsgAluNote
+		call	PrintAt
+		jp		WaitEsc
+
+; op for port $34, expected B, R, G, name
+LogicCases:
+		db		$00, $30,$30,$30
+		dw		NameNand
+		db		$07, $FC,$FC,$FC
+		dw		NameOr
+		db		$70, $3C,$3C,$3C
+		dw		NameXor
+		db		$77, $F0,$F0,$F0
+		dw		NameNop
+		db		$35, $F0,$3C,$FC
+		dw		NameMixed
+
+ExpIndep:	db		$A5,$5A,$3C
+ExpWordLo:	db		$FC,$FC,$FC
+ExpWordHi:	db		$F3,$F3,$F3
+ExpCopy:	db		$11,$22,$44
+ExpR2B:		db		$5A,$99,$00
+ExpB2R:		db		$77,$C3,$00
+ExpHidden:	db		$E7,$7E,$81
+ExpZero:	db		$00,$00,$00
+
+NameIndep:	db		"Independent access: write/read each plane",0
+NameSel:	db		"Port $5C reads back the selected plane",0
+NameAluReset: db	"ALU on clears the plane selection",0
+NameNand:	db		"ALU logic NAND (bit reset) $F0,$CC -> $30",0
+NameOr:		db		"ALU logic OR    $F0,$CC -> $FC",0
+NameXor:	db		"ALU logic XOR   $F0,$CC -> $3C",0
+NameNop:	db		"ALU logic NOP   $F0,$CC -> $F0",0
+NameMixed:	db		"ALU per plane: B NOP, R XOR, G OR",0
+NameWord:	db		"16-bit store = two logic writes",0
+NameCompare: db		"Compare data read (all 8 colors)",0
+NameCopy:	db		"3-plane copy (read buffer, write)",0
+NameR2B:	db		"R -> B plane transfer",0
+NameB2R:	db		"B -> R plane transfer",0
+NameHidden:	db		"$FE80-$FFFF is VRAM (write/read)",0
+NameMain:	db		"ALU on, $35 bit7=0 accesses main RAM",0
+MsgAluNote:	db		"Every check is decided by the program. The page describes each rule.",0
+
+;------------------------------------------------------------------------------
+; S. Digital / analog palette
+;------------------------------------------------------------------------------
+TitlePalette:
+		db		"S: Digital/analog palette",0
+
+TestPalette:
+		ld		hl,TitlePalette
+		ld		a,P31_COL200
+		call	GfxStart
+		; bars of colors 0-7, 80 dots wide, rows 24-167
+		ld		b,0
+.bar:
+		push	bc
+		ld		a,b
+		add		a,a
+		ld		c,a
+		add		a,a
+		add		a,a
+		add		a,c
+		ld		c,24
+		ld		d,10
+		ld		e,144
+		ld		h,b
+		ld		b,a
+		ld		a,h
+		call	FillBox
+		pop		bc
+		inc		b
+		ld		a,b
+		cp		8
+		jr		nz,.bar
+		ld		hl,ScrPalette
+		call	Draw
+		ld		a,'1'
+.apply:
+		push	af
+		call	PalAnalogStd			; reset, leaves digital mode
+		call	PalDigitalStd
+		pop		af
+		cp		'2'
+		jr		z,.rev
+		cp		'3'
+		jr		z,.same
+		cp		'4'
+		jr		z,.astd
+		cp		'5'
+		jr		z,.gray
+		cp		'6'
+		jr		z,.red
+		cp		'7'
+		jr		z,.dig2
+		jr		.key
+.rev:
+		ld		c,$54
+		ld		a,7
+.r1:
+		out		(c),a
+		inc		c
+		dec		a
+		jp		p,.r1
+		jr		.key
+.same:
+		ld		c,$55
+		ld		b,7
+		ld		a,1
+.s1:
+		out		(c),a
+		inc		c
+		djnz	.s1
+		jr		.key
+.astd:
+		ld		a,(v_p32)
+		or		$20
+		out		($32),a
+		jr		.key
+.gray:
+		ld		hl,GrayPalette
+		call	PalAnalogLoad
+		jr		.key
+.red:
+		ld		hl,RedPalette
+		call	PalAnalogLoad
+		jr		.key
+.dig2:
+		; digital mode, but each entry written as an analog RB then G byte
+		ld		c,$54
+		ld		b,0
+.d1:
+		xor		a
+		bit		1,b
+		jr		z,.d2
+		or		$38
+.d2:
+		bit		0,b
+		jr		z,.d3
+		or		$07
+.d3:
+		out		(c),a
+		ld		a,$40
+		bit		2,b
+		jr		z,.d4
+		or		$07
+.d4:
+		out		(c),a
+		inc		c
+		inc		b
+		ld		a,b
+		cp		8
+		jr		nz,.d1
+.key:
+		call	WaitKey
+		cp		K_ESC
+		ret		z
+		cp		'1'
+		jr		c,.key
+		cp		'8'
+		jr		nc,.key
+		jp		.apply
+
+GrayPalette:
+		db		$00,0, $09,1, $12,2, $1B,3, $24,4, $2D,5, $36,6, $3F,7
+RedPalette:
+		db		$00,0, $08,0, $10,0, $18,0, $20,0, $28,0, $30,0, $38,0
+
+ScrPalette:
+		db		DS_TEXT,1,1,"Bars show color codes 0-7.",0
+		db		DS_TEXT,21,1,"Text: RED GREEN BLUE YELLOW (graphics in color: text stays digital 8 colors)",0
+		db		DS_ATTR,21, 0,A_WHITE, 7,A_RED, 11,A_GREEN, 17,A_BLUE, 22,A_YELLOW, 29,A_WHITE, $FF
+		db		DS_TEXT,22,1,"1:digital 2:digital reversed 3:digital all blue 4:analog 5:analog gray",$0A
+		db		"6:analog red ramp 7:digital mode, written as analog pairs",0
+		db		DS_TEXT,12,1,"EXPECT: 7 shows bars 0-3 black and 4-7 white (the G byte wins, bits 7-6",$0A
+		db		"ignored). Palette changes never affect the text colors.",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; T. Raster palette: palette 0 rewritten during the display
+;------------------------------------------------------------------------------
+TitleRaster:
+		db		"T: Raster palette (hblank)",0
+
+TestRaster:
+		xor		a
+		ld		(v_sel),a				; 0 = digital 8 bands, 1 = analog 32 bands
+		ld		hl,TitleRaster
+		ld		a,P31_COL200
+		call	GfxStart
+		ld		bc,(36 << 8) | 0
+		ld		de,(8 << 8) | 200
+		ld		a,7
+		call	FillBox					; a white column for reference
+		ld		hl,ScrRaster
+		call	Draw
+		call	Calibrate
+.mode:
+		ld		hl,(v_dlines)
+		ld		b,3						; digital: 8 bands
+		ld		a,(v_sel)
+		or		a
+		jr		z,.shift
+		ld		b,5						; analog: 32 bands
+.shift:
+		srl		h
+		rr		l
+		djnz	.shift
+		ld		a,l						; lines per band
+		srl		a
+		srl		a
+		srl		a
+		neg
+		add		a,l						; 7/8: finish before the blank
+.bl:
+		call	LinesToLoops
+		ld		(v_w1),hl
+		ld		a,(v_sel)
+		or		a
+		jr		z,.dig
+		ld		a,(v_p32)
+		or		$20
+		out		($32),a
+		jr		.frame
+.dig:
+		ld		a,(v_p32)
+		out		($32),a
+.frame:
+		di
+		call	WaitVBlank
+		call	PollKey
+		cp		K_ESC
+		jp		z,.done
+		cp		K_SPACE
+		jr		nz,.nokey
+		ld		a,(v_sel)
+		xor		1
+		ld		(v_sel),a
+		jr		.mode
+.nokey:
+		call	WaitDisplay
+		ld		a,(v_sel)
+		or		a
+		jr		nz,.analog
+		ld		b,8
+		ld		c,0
+.band:
+		ld		a,c
+		out		($54),a
+		ld		hl,(v_w1)
+		call	Delay
+		inc		c
+		djnz	.band
+		xor		a
+		out		($54),a
+		jr		.frame
+.analog:
+		ld		b,32
+		ld		c,0
+.aband:
+		; ramp: blue 0-7, red 0-7, green 0-7, white 0-7
+		ld		a,c
+		and		7
+		ld		e,a
+		ld		a,c
+		rrca
+		rrca
+		rrca
+		and		3
+		jr		z,.ab
+		cp		1
+		jr		z,.ar
+		cp		2
+		jr		z,.ag
+		ld		a,e						; white: R=B=G=level
+		rlca
+		rlca
+		rlca
+		or		e
+		out		($54),a
+		ld		a,e
+		or		$40
+		out		($54),a
+		jr		.adelay
+.ab:
+		ld		a,e
+		out		($54),a
+		ld		a,$40
+		out		($54),a
+		jr		.adelay
+.ar:
+		ld		a,e
+		rlca
+		rlca
+		rlca
+		out		($54),a
+		ld		a,$40
+		out		($54),a
+		jr		.adelay
+.ag:
+		xor		a
+		out		($54),a
+		ld		a,e
+		or		$40
+		out		($54),a
+.adelay:
+		ld		hl,(v_w1)
+		call	Delay
+		inc		c
+		djnz	.aband
+		xor		a
+		out		($54),a
+		ld		a,$40
+		out		($54),a
+		jp		.frame
+.done:
+		ret
+
+ScrRaster:
+		db		DS_TEXT,2,1,"Palette 0 is rewritten several times during every frame.",0
+		db		DS_TEXT,4,1,"SPACE: digital 8 bands / analog 32 bands",0
+		db		DS_TEXT,6,1,"EXPECT (page): palette writes take effect per scan line, so the",$0A
+		db		"background shows horizontal bands. Emulators that latch the palette",$0A
+		db		"once per frame show one color.",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; U. Settings changed in the middle of the display
+;------------------------------------------------------------------------------
+TitleMidFrame:
+		db		"U: Mid-frame 200/400 switch",0
+
+TestMidFrame:
+		ld		a,1
+		ld		(v_sel),a
+		ld		hl,TitleMidFrame
+		ld		a,P31_COL200
+		call	GfxStart
+		call	MidFramePattern
+		ld		hl,ScrMidFrame
+		call	Draw
+		call	Calibrate
+		ld		hl,(v_dlines)
+		srl		h
+		rr		l
+		ld		a,l
+		call	LinesToLoops			; half of the display
+		ld		(v_w1),hl
+.frame:
+		di
+		call	WaitVBlank
+		call	PollKey
+		cp		K_ESC
+		jr		z,.done
+		cp		'0'
+		jr		c,.first
+		cp		'5'
+		jr		nc,.first
+		sub		'0'
+		ld		(v_sel),a
+.first:
+		; settings for the top half
+		ld		a,P31_COL200
+		call	SetP31
+		ld		a,(v_p30)
+		out		($30),a
+		ld		a,(v_p32)
+		out		($32),a
+		call	WaitDisplay
+		ld		hl,(v_w1)
+		call	Delay
+		; settings for the bottom half
+		ld		a,(v_sel)
+		cp		1
+		jr		z,.s400
+		cp		2
+		jr		z,.soff
+		cp		3
+		jr		z,.s40
+		cp		4
+		jr		nz,.frame
+		ld		a,(v_p32)
+		or		$20
+		out		($32),a
+		jr		.frame
+.s400:
+		ld		a,P31_BW400
+		call	SetP31
+		jr		.frame
+.soff:
+		ld		a,P31_OFF
+		call	SetP31
+		jr		.frame
+.s40:
+		ld		a,(v_p30)
+		and		$FE
+		out		($30),a
+		jr		.frame
+.done:
+		ld		a,(v_p30)
+		out		($30),a
+		ret
+
+; The page's pattern: B plane vertical lines every 16 dots, R plane
+; horizontal lines every 8 lines, G plane dots.
+MidFramePattern:
+		out		($5C),a
+		ld		hl,GVRAM
+		ld		de,40*200
+.b:
+		ld		(hl),$80
+		inc		hl
+		inc		hl
+		dec		de
+		ld		a,d
+		or		e
+		jr		nz,.b
+		out		($5D),a
+		ld		hl,GVRAM
+		ld		c,25
+.r:
+		ld		b,80
+.r1:
+		ld		(hl),$FF
+		inc		hl
+		djnz	.r1
+		ld		de,7*80
+		add		hl,de
+		dec		c
+		jr		nz,.r
+		out		($5E),a
+		ld		hl,GVRAM+4*80
+		ld		c,25
+.g:
+		ld		b,40
+.g1:
+		ld		(hl),$01
+		inc		hl
+		inc		hl
+		djnz	.g1
+		ld		de,7*80
+		add		hl,de
+		dec		c
+		jr		nz,.g
+		out		($5F),a
+		ret
+
+ScrMidFrame:
+		db		DS_TEXT,2,1,"The top half is color 200 lines; halfway down a setting changes:",$0A
+		db		"0: nothing  1: to B/W 400 lines  2: graphics off  3: port $30 40 columns",$0A
+		db		"4: port $32 digital -> analog",0
+		db		DS_TEXT,6,1,"EXPECT (page): 1 and 2 split the screen (the bottom of 1 shows the R plane",$0A
+		db		"in 400-line form). 3 garbles the screen; 4 has no visible effect.",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; V. VRAM access speed
+;------------------------------------------------------------------------------
+TitleSpeed:
+		db		"V: VRAM access speed (V1S)",0
+
+TestSpeed:
+		ld		hl,TitleSpeed
+		ld		a,P31_COL200
+		call	GfxStart
+		ld		hl,ScrSpeed
+		call	Draw
+.run:
+		ld		bc,(12 << 8) | 1
+		ld		hl,MsgMeasuring
+		call	PrintAt
+		; 1: busy loop, main RAM in $C000-$FFFF
+		out		($5F),a
+		call	SpeedLoop
+		ld		(v_w1),hl
+		; 2: busy loop, B plane selected
+		out		($5C),a
+		call	SpeedLoop
+		out		($5F),a
+		ld		(v_w2),hl
+		; 3: fill all planes, standard mode
+		ld		a,(v_p40)
+		and		$EF
+		out		($40),a
+		call	FillLoop
+		ld		(v_w3),hl
+		; 4: fill all planes, graphic high-speed mode
+		ld		a,(v_p40)
+		or		$10
+		out		($40),a
+		call	FillLoop
+		ld		(v_w4),hl
+		ld		a,(v_p40)
+		out		($40),a
+		ld		bc,(12 << 8) | 1
+		ld		hl,MsgBlank30
+		call	PrintAt
+		ld		hl,(v_w1)
+		ld		bc,(5 << 8) | 42
+		call	PutTicks
+		ld		hl,(v_w2)
+		ld		bc,(6 << 8) | 42
+		call	PutTicks
+		ld		hl,(v_w3)
+		ld		bc,(8 << 8) | 42
+		call	PutTicks
+		ld		hl,(v_w4)
+		ld		bc,(9 << 8) | 42
+		call	PutTicks
+		call	GvramClear
+.key:
+		call	WaitKey
+		cp		K_ESC
+		ret		z
+		cp		K_SPACE
+		jr		nz,.key
+		jp		.run
+
+; Fill all three planes 4 times; HL = RTC ticks.
+FillLoop:
+		call	TimerStart
+		ld		a,4
+.pass:
+		push	af
+		ld		c,$5C
+.plane:
+		out		(c),a
+		ld		hl,GVRAM
+		ld		de,GVRAM+1
+		ld		(hl),$55
+		push	bc
+		ld		bc,16000-1
+		ldir
+		pop		bc
+		inc		c
+		ld		a,c
+		cp		$5F
+		jr		nz,.plane
+		out		($5F),a
+		pop		af
+		dec		a
+		jr		nz,.pass
+		jp		TimerStop
+
+ScrSpeed:
+		db		DS_TEXT,2,1,"Timed with the RTC interrupt (graphics are shown; text too).",0
+		db		DS_TEXT,5,1,"1: busy loop, main RAM at $C000",$0A
+		db		"2: busy loop, B plane selected",$0A
+		db		$0A
+		db		"3: fill planes, standard ($40 b4=0)",$0A
+		db		"4: fill planes, high speed ($40 b4=1)",0
+		db		DS_TEXT,14,1,"SPACE: measure again",0
+		db		DS_TEXT,16,1,"EXPECT (page, V1S): 2 is about 3.5x slower than 1 (22 s vs 6 s in BASIC),",$0A
+		db		"4 takes about half the time of 3 (17 s vs 34 s). V1H and V2: no difference.",0
+		db		DS_END

@@ -1,0 +1,148 @@
+;==============================================================================
+; VRAMTEST IPL
+;
+; The N88 ROM reads cylinder 0 / head 0 / sector 1 (256 bytes) to $C000 and
+; jumps there. This loader asks the disk sub-system for the program image
+; (IMAGE_SECTORS sectors from track 0 sector 2 onward) into $4000 with the
+; machine in 64K RAM mode, and runs it.
+;
+; Sub-system protocol (main side, i8255 at $FC-$FF):
+;   $FD out  data byte to sub       $FC in   data byte from sub
+;   $FE in   bit0 DAV  bit1 RFD  bit2 DAC   (sub -> main handshake lines)
+;   $FF out  bit set/reset of port C: $0F/$0E ATN, $09/$08 DAV,
+;            $0B/$0A RFD, $0D/$0C DAC       (main -> sub handshake lines)
+;==============================================================================
+
+		cpu		z80
+		relaxed	on
+
+LOAD_ADDR	equ		$4000				; RAM under the ROM (writes reach it)
+		ifndef	IMAGE_SECTORS
+IMAGE_SECTORS	equ		120				; set by build.py (max 120 = $4000-$BBFF)
+		endif
+
+		org		$C000
+
+Ipl:
+		di
+		ld		sp,$C000
+		; 64K RAM mode before loading: in ROM mode $8000-$83FF is the text
+		; window and writes there land elsewhere.
+		ld		a,$13
+		out		($31),a
+		ld		hl,LOAD_ADDR
+		ld		b,IMAGE_SECTORS			; sectors still to read
+		ld		d,0						; track (cylinder*2 + head)
+		ld		e,2						; first sector
+
+.pass:
+		ld		a,17
+		sub		e						; sectors left on this track
+		cp		b
+		jr		c,.count
+		ld		a,b
+.count:
+		ld		c,a						; sectors in this pass
+
+		ld		a,$02					; READ DATA
+		call	SendCommand
+		ld		a,c						; sector count
+		call	SendByte
+		xor		a						; drive 0
+		call	SendByte
+		ld		a,d						; track
+		call	SendByte
+		ld		a,e						; sector
+		call	SendByte
+
+		ld		a,$12					; FAST SEND DATA
+		call	SendCommand
+		push	bc
+.sector:
+		call	Receive256
+		dec		c
+		jr		nz,.sector
+		pop		bc
+
+		ld		a,b
+		sub		c
+		jr		z,.run
+		ld		b,a
+		inc		d						; next track, sector 1
+		ld		e,1
+		jr		.pass
+
+.run:
+		jp		LOAD_ADDR
+
+;------------------------------------------------------------------------------
+; Raise ATN, wait for the sub-system to be ready, then send A as a command.
+SendCommand:
+		push	af
+		ld		a,$0F					; ATN on
+		out		($FF),a
+.ready:
+		in		a,($FE)
+		and		$02						; RFD
+		jr		z,.ready
+		ld		a,$0E					; ATN off
+		out		($FF),a
+		pop		af
+		jr		SendNow
+
+; Send A as a data byte.
+SendByte:
+		push	af
+.ready:
+		in		a,($FE)
+		and		$02						; RFD
+		jr		z,.ready
+		pop		af
+SendNow:
+		out		($FD),a
+		ld		a,$09					; DAV on
+		out		($FF),a
+.ack:
+		in		a,($FE)
+		and		$04						; DAC
+		jr		z,.ack
+		ld		a,$08					; DAV off
+		out		($FF),a
+.release:
+		in		a,($FE)
+		and		$04
+		jr		nz,.release
+		ret
+
+;------------------------------------------------------------------------------
+; Receive one 256-byte sector with the fast-send handshake (two bytes per
+; round trip). HL advances by 256.
+Receive256:
+		push	bc
+		ld		bc,$00FC				; B=0 -> 256 bytes, C=data port
+.pair:
+		ld		a,$0B					; RFD on
+		out		($FF),a
+.first:
+		in		a,($FE)
+		rrca							; DAV
+		jr		nc,.first
+		ld		a,$0A					; RFD off
+		out		($FF),a
+		ini
+		ld		a,$0D					; DAC on
+		out		($FF),a
+.second:
+		in		a,($FE)
+		rrca
+		jr		c,.second
+		ini
+		ld		a,$0C					; DAC off
+		out		($FF),a
+		jr		nz,.pair
+		pop		bc
+		ret
+
+		if		$ > $C100
+		fatal	"IPL exceeds 256 bytes"
+		endif
