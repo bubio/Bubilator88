@@ -1406,16 +1406,6 @@
         }
       }
     },
-    "CPU Speed" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CPU速度"
-          }
-        }
-      }
-    },
     "Create Blank Disk" : {
       "comment" : "Save panel title",
       "localizations" : {
@@ -1846,6 +1836,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "空"
+          }
+        }
+      }
+    },
+    "Emulation Speed" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エミュレーション速度"
           }
         }
       }
@@ -4527,13 +4527,13 @@
         }
       }
     },
-    "Set CPU Speed to x1 before recording" : {
+    "Set Emulation Speed to x1 before recording" : {
       "comment" : "x1 lock toast",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "録音を開始する前に CPU 速度を x1 にしてください"
+            "value" : "録音を開始する前にエミュレーション速度を x1 にしてください"
           }
         }
       }
@@ -4747,12 +4747,12 @@
         }
       }
     },
-    "Start Audio Recording (set CPU Speed to x1)" : {
+    "Start Audio Recording (set Emulation Speed to x1)" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "録音を開始 (CPU速度を x1 にしてください)"
+            "value" : "録音を開始 (エミュレーション速度を x1 にしてください)"
           }
         }
       }
@@ -4777,12 +4777,12 @@
         }
       }
     },
-    "Start Video Recording (set CPU Speed to x1)" : {
+    "Start Video Recording (set Emulation Speed to x1)" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "録画を開始 (CPU速度を x1 にしてください)"
+            "value" : "録画を開始 (エミュレーション速度を x1 にしてください)"
           }
         }
       }
@@ -5012,13 +5012,13 @@
         }
       }
     },
-    "Stop video recording (CPU locked at 1×)" : {
+    "Stop video recording (speed locked at 1×)" : {
       "comment" : "Status bar video record button tooltip",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "録画を停止 (CPU 速度は 1× に固定中)"
+            "value" : "録画を停止 (エミュレーション速度は 1× に固定中)"
           }
         }
       }

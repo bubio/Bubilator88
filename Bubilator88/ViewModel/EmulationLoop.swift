@@ -52,7 +52,7 @@ nonisolated final class EmulationLoop: @unchecked Sendable {
     return running && visible && !terminated
   }
 
-  /// Number of machine frames per pacer tick (CPU speed multiplier).
+  /// Number of machine frames per pacer tick (emulation speed multiplier).
   func setFramesPerStep(_ count: Int) {
     condition.lock()
     framesPerStep = max(1, count)

@@ -51,7 +51,7 @@ public sealed partial class MainWindow : Window
     private bool _paused;
     private bool _fullscreen;
     private int _windowScale = 2;   // ×1/×2/×4, persisted
-    private int _cpuSpeed = 1;      // fast-forward multiplier: 1/2/4/8/16
+    private int _emulationSpeed = 1; // fast-forward multiplier: 1/2/4/8/16
     private bool _busy;             // suspends the frame loop during a state load
     private string _videoFilter = "None";   // None/Linear/Bicubic/CRT/xBRZ/Enhanced
     private bool _scanlineEnabled;           // scanline overlay (None/Linear/Bicubic only)
@@ -335,11 +335,11 @@ public sealed partial class MainWindow : Window
         int frames = 0;
         while (_accumulator >= FrameSeconds && frames < MaxCatchUpFrames)
         {
-            // CPU speed N runs N emulation frames per logical 60 Hz frame (matches
-            // macOS CPUSpeed.framesPerDraw). Audio is drained every emulation frame
+            // Emulation speed N runs N frames per logical 60 Hz frame (matches
+            // macOS EmulationSpeed.framesPerDraw). Audio is drained every emulation frame
             // so the core buffer never accumulates; the source voice plays the
             // over-produced samples back at N× (see _audio.SetFrequencyRatio).
-            for (int s = 0; s < _cpuSpeed; s++)
+            for (int s = 0; s < _emulationSpeed; s++)
             {
                 _host.RunFrame();
                 if (_audio is not null) _host.DrainAudio(_audio);
@@ -1247,16 +1247,16 @@ public sealed partial class MainWindow : Window
     // MARK: - Help menu
     // OnAbout lives in MainWindow.AboutDialog.cs (mirrors the Settings dialog split).
 
-    // MARK: - Control menu (CPU speed, screenshot, save states)
+    // MARK: - Control menu (emulation speed, screenshot, save states)
 
-    /// CPU fast-forward. Speed N runs N emulation frames per draw and plays the
-    /// over-produced audio back at N× (matches macOS CPUSpeed / varispeed).
-    private void OnCpuSpeed(object sender, RoutedEventArgs e)
+    /// Emulation fast-forward. Speed N runs N emulation frames per draw and plays the
+    /// over-produced audio back at N× (matches macOS EmulationSpeed / varispeed).
+    private void OnEmulationSpeed(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe && int.TryParse(fe.Tag?.ToString(), out int n))
         {
-            _cpuSpeed = Math.Clamp(n, 1, 16);
-            _audio?.SetFrequencyRatio(_cpuSpeed);
+            _emulationSpeed = Math.Clamp(n, 1, 16);
+            _audio?.SetFrequencyRatio(_emulationSpeed);
         }
     }
 

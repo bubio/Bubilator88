@@ -29,8 +29,8 @@ struct ControlCommands: Commands {
 
       Divider()
 
-      Picker("CPU Speed", selection: $viewModel.cpuSpeed) {
-        ForEach(EmulatorViewModel.CPUSpeed.allCases, id: \.self) { speed in
+      Picker("Emulation Speed", selection: $viewModel.emulationSpeed) {
+        ForEach(EmulatorViewModel.EmulationSpeed.allCases, id: \.self) { speed in
           Text(speed.rawValue).tag(speed)
         }
       }
@@ -57,10 +57,10 @@ struct ControlCommands: Commands {
         if viewModel.audioRecorder.isRecording {
           Label("Stop Audio Recording",
                 systemImage: "stop.circle")
-        } else if viewModel.cpuSpeed != .x1 {
-          // Audio is sampled at wall-clock; faster CPU speeds yield
+        } else if viewModel.emulationSpeed != .x1 {
+          // Audio is sampled at wall-clock; faster emulation speeds yield
           // pitch-shifted/desynced output. Force x1 first.
-          Label("Start Audio Recording (set CPU Speed to x1)",
+          Label("Start Audio Recording (set Emulation Speed to x1)",
                 systemImage: "record.circle")
         } else {
           Label(
@@ -74,7 +74,7 @@ struct ControlCommands: Commands {
       .keyboardShortcut("r", modifiers: [.command, .shift])
       .disabled(viewModel.videoRecorder.isRecording
         || (!viewModel.audioRecorder.isRecording
-          && viewModel.cpuSpeed != .x1))
+          && viewModel.emulationSpeed != .x1))
 
       Button {
         viewModel.toggleVideoRecording()
@@ -82,10 +82,10 @@ struct ControlCommands: Commands {
         if viewModel.videoRecorder.isRecording {
           Label("Stop Video Recording",
                 systemImage: "stop.circle")
-        } else if viewModel.cpuSpeed != .x1 {
-          // Video timeline assumes wall-clock playback; faster CPU
+        } else if viewModel.emulationSpeed != .x1 {
+          // Video timeline assumes wall-clock playback; faster emulation
           // speeds desync audio against video. Force x1 first.
-          Label("Start Video Recording (set CPU Speed to x1)",
+          Label("Start Video Recording (set Emulation Speed to x1)",
                 systemImage: "video.circle")
         } else {
           Label(
@@ -99,7 +99,7 @@ struct ControlCommands: Commands {
       .keyboardShortcut("v", modifiers: [.command, .shift])
       .disabled(viewModel.audioRecorder.isRecording
         || (!viewModel.videoRecorder.isRecording
-          && viewModel.cpuSpeed != .x1))
+          && viewModel.emulationSpeed != .x1))
 
       Divider()
 
