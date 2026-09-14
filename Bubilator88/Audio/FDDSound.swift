@@ -12,6 +12,7 @@ import Synchronization
 final class FDDSound {
 
   private var engine: AVAudioEngine?
+  private let configurationRecovery = AudioConfigurationRecovery()
   /// Per-drive player nodes (drive 0, drive 1)
   private var playerNodes: [AVAudioPlayerNode] = []
 
@@ -162,6 +163,11 @@ final class FDDSound {
       self.engine = engine
       self.playerNodes = nodes
       isEnabled = true
+      configurationRecovery.observe(engine) { [weak self, weak engine] in
+        guard let self, let engine, self.isEnabled, self.engine === engine else { return }
+        if !engine.isRunning { try engine.start() }
+        for node in self.playerNodes where !node.isPlaying { node.play() }
+      }
     } catch {
       // FDD sound init failed — emulator runs without disk sounds
     }
@@ -208,6 +214,7 @@ final class FDDSound {
   }
 
   func stop() {
+    configurationRecovery.stop()
     for node in playerNodes { node.stop() }
     engine?.stop()
     playerNodes = []
