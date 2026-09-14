@@ -13,7 +13,7 @@ import Bubilator88Core
 // from any path.
 extension EmulatorViewModel {
 
-  /// From the DEBUG menu: choose a timeline script and replay it live.
+  /// From the Develop menu: choose a timeline script and replay it live.
   func openAndPlayScript() {
     let panel = NSOpenPanel()
     panel.allowsMultipleSelection = false
@@ -180,7 +180,7 @@ extension EmulatorViewModel {
     }
   }
 
-  /// Cancels a script in progress, for the DEBUG menu's stop and for resets.
+  /// Cancels a script in progress, for the Develop menu's stop and for resets.
   func cancelScriptPlayback() {
     guard let player = scriptPlayer else { return }
     // `scriptPlayer` is read by the emulation loop every frame, so clearing it
@@ -314,7 +314,7 @@ extension EmulatorViewModel {
   /// menu. Assembling the same information the manual path (`mountDiskImage`)
   /// produces keeps multi-image D88 selection working afterwards.
   /// Two of the three call sites run with the emulation loop still going — the
-  /// status bar's stop button and DEBUG ▸ Stop Script Playback, both through
+  /// status bar's stop button and Develop ▸ Stop Script Playback, both through
   /// `cancelScriptPlayback()`, and the playback-finished hop in
   /// `tickScriptPlayer` — so the machine's own drive state is sampled once
   /// under `emuQueue` rather than read straight off `machine`:
