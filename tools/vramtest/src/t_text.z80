@@ -1,0 +1,1434 @@
+;==============================================================================
+; Text VRAM / CRTC / DMAC tests
+;==============================================================================
+
+
+;------------------------------------------------------------------------------
+; A. Attribute table, color mode
+;------------------------------------------------------------------------------
+TitleAttrColor:
+		db		"A: Attribute table (color text mode)",0
+
+TestAttrColor:
+		ld		hl,TitleAttrColor
+		call	TestHeader
+		ld		hl,ScrAttrColor
+		call	Draw
+		ld		hl,ScrAttrCommon
+		call	Draw
+		jp		WaitEsc
+
+; Decoration rows are shared by the color and B/W screens; only the
+; attribute lists differ.
+ScrAttrCommon:
+		db		DS_TEXT,2,1,"Decoration",0
+		db		DS_TEXT,2,20,"no line     underline   upperline   both",0
+		db		DS_TEXT,3,1,"$00 normal",$0A,"$01 secret",$0A,"$02 blink",$0A,"$03 secret",$0A
+		db		"$04 reverse",$0A,"$05 rev. secret",$0A,"$06 rev. blink",$0A,"$07 rev. secret",0
+		db		DS_TEXT,3,20,"[Sample_g]  [Sample_g]  [Sample_g]  [Sample_g]",0
+		db		DS_TEXT,4,20,"[Sample_g]  [Sample_g]  [Sample_g]  [Sample_g]",0
+		db		DS_TEXT,5,20,"[Sample_g]  [Sample_g]  [Sample_g]  [Sample_g]",0
+		db		DS_TEXT,6,20,"[Sample_g]  [Sample_g]  [Sample_g]  [Sample_g]",0
+		db		DS_TEXT,7,20,"[Sample_g]  [Sample_g]  [Sample_g]  [Sample_g]",0
+		db		DS_TEXT,8,20,"[Sample_g]  [Sample_g]  [Sample_g]  [Sample_g]",0
+		db		DS_TEXT,9,20,"[Sample_g]  [Sample_g]  [Sample_g]  [Sample_g]",0
+		db		DS_TEXT,10,20,"[Sample_g]  [Sample_g]  [Sample_g]  [Sample_g]",0
+		db		DS_SEQ,17,0,80,$00,1
+		db		DS_SEQ,18,0,80,$50,1
+		db		DS_SEQ,19,0,80,$A0,1
+		db		DS_SEQ,20,0,16,$F0,1
+		db		DS_FILL,21,0,60,$FF
+		db		DS_TEXT,22,0,"EXPECT: lines ignore blink and secret; reverse turns lines black;",$0A
+		db		"        secret blanks the glyph only. Semigraphics take colors and decorations.",0
+		db		DS_END
+
+DECOR		macro	mrow,mdec,mbase
+		db		DS_ATTR,mrow, 0,mbase, 20,mdec, 30,0, 32,mdec|$20, 42,0, 44,mdec|$10, 54,0, 56,mdec|$30, 66,0, $FF
+		endm
+
+ScrAttrColor:
+		DECOR	3,$00,A_WHITE
+		DECOR	4,$01,A_WHITE
+		DECOR	5,$02,A_WHITE
+		DECOR	6,$03,A_WHITE
+		DECOR	7,$04,A_WHITE
+		DECOR	8,$05,A_WHITE
+		DECOR	9,$06,A_WHITE
+		DECOR	10,$07,A_WHITE
+		db		DS_TEXT,12,1,"Colors (bit3=1), then the same colors reversed",0
+		db		DS_TEXT,13,1,"0:BLACK   1:BLUE    2:RED     3:MAGENTA 4:GREEN   5:CYAN    6:YELLOW  7:WHITE",0
+		db		DS_TEXT,14,1,"0:BLACK   1:BLUE    2:RED     3:MAGENTA 4:GREEN   5:CYAN    6:YELLOW  7:WHITE",0
+		db		DS_ATTR,13, 0,$08, 10,$28, 20,$48, 30,$68, 40,$88, 50,$A8, 60,$C8, 70,$E8, $FF
+		db		DS_ATTR,14, 0,$08, 1,$04, 10,$28, 20,$48, 30,$68, 40,$88, 50,$A8, 60,$C8, 70,$E8, 79,D_NORMAL, $FF
+		db		DS_TEXT,16,1,"Semigraphics (bit4=1): codes $00-$FF, then decorations on $FF blocks",0
+		db		DS_ATTR,17, 0,$F8, 16,$38, 32,$58, 48,$98, 64,$D8, $FF
+		db		DS_ATTR,18, 0,$F8, 16,$38, 32,$58, 48,$98, 64,$D8, $FF
+		db		DS_ATTR,19, 0,$F8, 16,$38, 32,$58, 48,$98, 64,$D8, $FF
+		db		DS_ATTR,20, 0,$F8, 16,$E8, $FF
+		db		DS_ATTR,21, 0,$F8, 10,$20, 20,$10, 30,$02, 40,$04, 50,$01, 60,$00, $FF
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; B. Attribute table, B/W mode, with every AT/SC combination
+;------------------------------------------------------------------------------
+TitleAttrBW:
+		db		"B: Attribute table (B/W text mode)",0
+
+TestAttrBW:
+		ld		a,%000
+		ld		(v_sel),a
+.redraw:
+		call	TextDefaults
+		ld		a,1
+		call	TextMode
+		ld		a,(v_sel)
+		ld		(v_atsc),a
+		call	CrtcApply
+		ld		hl,TitleAttrBW
+		call	TestHeader
+		ld		hl,ScrAttrBW
+		call	Draw
+		ld		hl,ScrAttrCommon
+		call	Draw
+		ld		bc,(23 << 8) | 0
+		call	Locate
+		ld		hl,MsgAtsc
+		call	PutStr
+		ld		a,(v_sel)
+		call	PutBin8
+		ld		hl,MsgAtscKeys
+		call	PutStr
+.key:
+		call	WaitKey
+		cp		K_ESC
+		ret		z
+		ld		hl,AtscChoices
+		sub		'1'
+		cp		4
+		jr		nc,.key
+		ld		e,a
+		ld		d,0
+		add		hl,de
+		ld		a,(hl)
+		ld		(v_sel),a
+		jp		.redraw
+
+AtscChoices:
+		db		%000,%100,%101,%001
+MsgAtsc:	db		"AT1 AT0 SC = ",0
+MsgAtscKeys: db		"  1:000 trans.  2:100 non-trans.  3:101 non-trans./no special  4:001 no attr",0
+
+ScrAttrBW:
+		DECOR	3,$00,$00
+		DECOR	4,$01,$00
+		DECOR	5,$02,$00
+		DECOR	6,$03,$00
+		DECOR	7,$04,$00
+		DECOR	8,$05,$00
+		DECOR	9,$06,$00
+		DECOR	10,$07,$00
+		db		DS_TEXT,12,1,"B/W mode has no colors: bit7 selects semigraphics, bits 5/4 the lines.",$0A
+		db		"Keys 2-4 change how the CRTC reads each row, so the layout breaks; 1 restores.",0
+		db		DS_TEXT,16,1,"Semigraphics (bit7=1): codes $00-$FF, then decorations on $FF blocks",0
+		db		DS_ATTR,17, 0,$80, $FF
+		db		DS_ATTR,18, 0,$80, $FF
+		db		DS_ATTR,19, 0,$80, $FF
+		db		DS_ATTR,20, 0,$80, 16,$00, $FF
+		db		DS_ATTR,21, 0,$80, 10,$A0, 20,$90, 30,$82, 40,$84, 50,$81, 60,$00, $FF
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; C. Attribute ordering rules
+;------------------------------------------------------------------------------
+TitleAttrOrder:
+		db		"C: Attribute order rules",0
+
+TestAttrOrder:
+		ld		hl,TitleAttrOrder
+		call	TestHeader
+		ld		hl,ScrAttrOrder
+		call	Draw
+		ld		b,3
+		call	Ruler
+		ld		b,7
+		call	Ruler
+		ld		b,11
+		call	Ruler
+		ld		b,15
+		call	Ruler
+		ld		b,19
+		call	Ruler
+		ld		b,20
+		call	Ruler
+		ld		b,21
+		call	Ruler
+		jp		WaitEsc
+
+; Fill row B with "0123456789" x 8.
+Ruler:
+		ld		c,0
+		call	Locate
+		ld		b,80
+		ld		a,'0'
+.ch:
+		ld		(de),a
+		inc		de
+		inc		a
+		cp		'9'+1
+		jr		nz,.next
+		ld		a,'0'
+.next:
+		djnz	.ch
+		ret
+
+ScrAttrOrder:
+		db		DS_TEXT,2,0,"1) The first attribute always starts at X=0 (written: X=40 red, X=60 green)",0
+		db		DS_ATTR,3, 40,A_RED, 60,A_GREEN, $FF
+		db		DS_TEXT,4,0,"   EXPECT: red from column 0, green from column 60",0
+		db		DS_TEXT,6,0,"2) X written as 0,70,60,50,40,30,20 with values blue..white (page example)",0
+		db		DS_ATTR,7, 0,A_BLUE, 70,A_RED, 60,A_MAGENTA, 50,A_GREEN, 40,A_CYAN, 30,A_YELLOW, 20,A_WHITE, $FF
+		db		DS_TEXT,8,0,"   EXPECT: 0 blue, 20 red, 30 magenta, 40 green, 50 cyan, 60 yellow, 70 white",0
+		db		DS_TEXT,10,0,"3) Color and decoration are separate attributes",0
+		db		DS_ATTR,11, 0,A_WHITE, 10,A_RED, 20,D_REVERSE, 40,D_NORMAL, 50,A_WHITE, $FF
+		db		DS_TEXT,12,0,"   EXPECT: red from 10, reversed 20-39, white again from 50",0
+		db		DS_TEXT,14,0,"4) The same start position twice (not allowed: X=20 red, X=20 green)",0
+		db		DS_ATTR,15, 0,A_WHITE, 20,A_RED, 20,A_GREEN, 40,A_WHITE, $FF
+		db		DS_TEXT,16,0,"   The page calls the result undefined - compare emulators",0
+		db		DS_TEXT,18,0,"5) Attribute state across rows (not covered by the page)",0
+		db		DS_ATTR,19, 0,A_RED, 40,D_REVERSE, $FF
+		db		DS_ATTR,20, 0,D_NORMAL, $FF
+		db		DS_ATTR,21, 0,A_GREEN, $FF
+		db		DS_TEXT,22,0,"   row 19: red, reverse from 40 / row 20: decoration only / row 21: color only",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; D. 40-column mode
+;------------------------------------------------------------------------------
+Title40Col:
+		db		"D: 40-column mode",0
+
+Test40Col:
+		ld		a,25
+		ld		(v_sel),a
+		xor		a
+		ld		(v_sel2),a				; 0 = 40 columns, 1 = 80
+.redraw:
+		call	TextDefaults
+		ld		a,(v_sel)
+		ld		(v_rows),a
+		ld		a,(v_sel2)
+		or		a
+		jr		nz,.cols
+		ld		a,(v_p30)
+		and		$FE						; 40 columns
+		ld		(v_p30),a
+.cols:
+		call	CrtcApply
+		ld		a,A_WHITE
+		call	ClearText
+		ld		hl,Scr40Col
+		call	Draw
+		; row 4: A-Z... at every byte
+		ld		bc,(4 << 8) | 0
+		call	Locate
+		ld		b,80
+		ld		a,'A'
+.abc:
+		ld		(de),a
+		inc		de
+		inc		a
+		cp		'Z'+1
+		jr		nz,.abc1
+		ld		a,'a'
+.abc1:
+		cp		'z'+1
+		jr		nz,.abc2
+		ld		a,'A'
+.abc2:
+		djnz	.abc
+		; row 13: $FF semigraphics on even bytes, $0F on odd bytes
+		ld		bc,(13 << 8) | 0
+		call	Locate
+		ld		b,40
+.sg:
+		ld		a,$FF
+		ld		(de),a
+		inc		de
+		ld		a,$0F
+		ld		(de),a
+		inc		de
+		djnz	.sg
+.key:
+		call	WaitKey
+		cp		K_ESC
+		ret		z
+		cp		'1'
+		jr		z,.k1
+		cp		'2'
+		jr		z,.k2
+		cp		'3'
+		jr		nz,.key
+		ld		a,1
+		ld		(v_sel2),a
+		ld		a,25
+		jr		.set
+.k1:
+		xor		a
+		ld		(v_sel2),a
+		ld		a,25
+		jr		.set
+.k2:
+		xor		a
+		ld		(v_sel2),a
+		ld		a,20
+.set:
+		ld		(v_sel),a
+		jp		.redraw
+
+Scr40Col:
+		db		DS_ROW,0,A_CYAN
+		db		DS_WIDE,0,0,"D: 40-COLUMN MODE",0
+		db		DS_WIDE,2,0,"ROW 4 HAS A-Z AT EVERY BYTE:",0
+		db		DS_WIDE,5,0,"EXPECT ACEG... (EVEN BYTES ONLY)",0
+		db		DS_WIDE,7,0,"0123456789012345678901234567890123456789",0
+		db		DS_ATTR,7, 0,A_WHITE, 11,A_RED, 20,A_GREEN, $FF
+		db		DS_WIDE,8,0,"X=11 RED (ODD: IGNORED), X=20 GREEN",0
+		db		DS_WIDE,10,0,"0123456789012345678901234567890123456789",0
+		db		DS_ATTR,10, 0,A_WHITE, 10,A_RED, 30,A_WHITE, $FF
+		db		DS_WIDE,11,0,"EXPECT RED FROM CHAR 5 TO 14",0
+		db		DS_ATTR,13, 0,$F8, $FF
+		db		DS_WIDE,14,0,"ROW 13: SEMIGRAPHIC $FF EVEN, $0F ODD",0
+		db		DS_WIDE,15,0,"EXPECT WIDE FULL BLOCKS ONLY",0
+		db		DS_ROW,23,A_GREEN
+		db		DS_WIDE,23,0,"1:40X25  2:40X20  3:80X25  ESC:MENU",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; E. Text rows: CRTC setting vs port $31 bit5
+;------------------------------------------------------------------------------
+TitleRows:
+		db		"E: Rows: CRTC vs port $31",0
+
+TestRows:
+		ld		a,1
+		ld		(v_sel),a
+.redraw:
+		call	TextDefaults
+		ld		a,(v_sel)
+		; 1: CRTC 25 / port 25   2: CRTC 25 / port 20
+		; 3: CRTC 20 / port 25   4: CRTC 20 / port 20
+		ld		b,25
+		cp		3
+		jr		c,.crtc
+		ld		b,20
+.crtc:
+		ld		a,b
+		ld		(v_rows),a
+		ld		hl,(v_rows)
+		ld		h,0
+		ld		de,ROW_BYTES
+		call	MulHLDE
+		ld		(v_dmacount),hl
+		ld		a,(v_sel)
+		ld		c,$31					; port $31 with bit5 set (25 rows)
+		cp		1
+		jr		z,.p31
+		cp		3
+		jr		z,.p31
+		ld		c,$11					; bit5 clear (20 rows)
+.p31:
+		ld		a,c
+		ld		(v_p31),a
+		ld		a,1
+		ld		(v_p31raw),a
+		call	CrtcApply
+		ld		a,A_WHITE
+		call	ClearText
+		; every row: "Row nn" and a pattern with descenders
+		ld		b,0
+.row:
+		push	bc
+		ld		c,0
+		call	Locate
+		ld		hl,MsgRowN
+		call	PutStr
+		pop		bc
+		push	bc
+		ld		a,b
+		call	PutDec2
+		ld		hl,MsgRowTail
+		call	PutStr
+		pop		bc
+		push	bc
+		ld		a,b
+		and		1
+		ld		a,A_WHITE
+		jr		z,.col
+		ld		a,A_CYAN
+.col:
+		call	RowAttr
+		pop		bc
+		inc		b
+		ld		a,b
+		cp		25
+		jr		nz,.row
+		ld		hl,ScrRows
+		call	Draw
+		ld		bc,(1 << 8) | 40
+		call	Locate
+		ld		hl,MsgRowsNow
+		call	PutStr
+		ld		a,(v_rows)
+		call	PutDec2
+		ld		hl,MsgRowsPort
+		call	PutStr
+		ld		a,(v_p31)
+		and		$20
+		ld		a,20
+		jr		z,.pr
+		ld		a,25
+.pr:
+		call	PutDec2
+.key:
+		call	WaitKey
+		cp		K_ESC
+		ret		z
+		sub		'1'
+		cp		4
+		jr		nc,.key
+		inc		a
+		ld		(v_sel),a
+		jp		.redraw
+
+; Write A (0-99) as two decimal digits at DE.
+PutDec2:
+		ld		c,'0'-1
+.tens:
+		inc		c
+		sub		10
+		jr		nc,.tens
+		add		a,10+'0'
+		ld		b,a
+		ld		a,c
+		ld		(de),a
+		inc		de
+		ld		a,b
+		ld		(de),a
+		inc		de
+		ret
+
+; HL = HL * DE (16-bit result)
+MulHLDE:
+		push	bc
+		ld		b,h
+		ld		c,l
+		ld		hl,0
+		ld		a,16
+.bit:
+		add		hl,hl
+		ex		de,hl
+		add		hl,hl
+		ex		de,hl
+		jr		nc,.skip
+		add		hl,bc
+.skip:
+		dec		a
+		jr		nz,.bit
+		pop		bc
+		ret
+
+MsgRowN:	db		"Row ",0
+MsgRowTail:	db		"  Agjpqy_|  ##########  +--------+",0
+MsgRowsNow:	db		"CRTC rows ",0
+MsgRowsPort: db		"  port $31 bit5: ",0
+
+ScrRows:
+		db		DS_TEXT,2,40,"1: CRTC 25 / port 25 (normal)",$0A
+		db		"2: CRTC 25 / port 20",$0A
+		db		"3: CRTC 20 / port 25",$0A
+		db		"4: CRTC 20 / port 20 (normal)",$0A
+		db		$0A
+		db		"EXPECT (page, 24kHz):",$0A
+		db		"2: 25 rows fill the screen, glyphs",$0A
+		db		"   are cut to the 20-row height",$0A
+		db		"3: 20 rows fill the screen, glyphs",$0A
+		db		"   are cut to the 25-row height",$0A
+		db		"Port $31 bit5 only matters on 24kHz.",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; F. Whole-screen reverse, cursor shape, blink rate
+;------------------------------------------------------------------------------
+TitleCursor:
+		db		"F: Reverse / cursor / blink",0
+
+TestCursor:
+		call	TextDefaults
+		ld		a,1
+		ld		(v_curon),a
+		ld		a,40
+		ld		(v_curx),a
+		ld		a,12
+		ld		(v_cury),a
+.apply:
+		call	CrtcApply
+.redraw:
+		ld		hl,TitleCursor
+		call	TestHeader
+		ld		hl,ScrCursor
+		call	Draw
+		ld		bc,(20 << 8) | 0
+		call	Locate
+		ld		hl,MsgDm
+		call	PutStr
+		ld		a,(v_dm)
+		add		a,'0'
+		ld		(de),a
+		inc		de
+		ld		hl,MsgCurType
+		call	PutStr
+		ld		a,(v_curtype)
+		ld		hl,CurTypeNames
+		call	PutNth
+		ld		hl,MsgBlink
+		call	PutStr
+		ld		a,(v_blink)
+		ld		hl,BlinkNames
+		call	PutNth
+		ld		hl,MsgCurPos
+		call	PutStr
+		ld		a,(v_curx)
+		call	PutDec2
+		ld		a,','
+		ld		(de),a
+		inc		de
+		ld		a,(v_cury)
+		call	PutDec2
+		ld		a,(v_curon)
+		or		a
+		jr		nz,.key
+		ld		hl,MsgHidden
+		call	PutStr
+.key:
+		call	WaitKey
+		cp		K_ESC
+		ret		z
+		ld		hl,v_dm
+		cp		'R'
+		jr		z,.toggle
+		ld		hl,v_curon
+		cp		'V'
+		jr		z,.toggle
+		ld		hl,v_curtype
+		cp		'C'
+		jr		z,.cycle
+		ld		hl,v_blink
+		cp		'B'
+		jr		z,.cycle
+		ld		hl,v_curx
+		ld		b,1
+		cp		K_RIGHT
+		jr		z,.move
+		ld		b,-1
+		cp		K_LEFT
+		jr		z,.move
+		ld		hl,v_cury
+		cp		K_UP
+		jr		z,.move
+		ld		b,1
+		cp		K_DOWN
+		jr		nz,.key
+.move:
+		ld		a,(hl)
+		add		a,b
+		ld		(hl),a
+		call	CursorApply
+		jp		.redraw
+.toggle:
+		ld		a,(hl)
+		xor		1
+		ld		(hl),a
+		jp		.apply
+.cycle:
+		ld		a,(hl)
+		inc		a
+		and		3
+		ld		(hl),a
+		jp		.apply
+
+; Print the A-th string of the 0-separated list at HL, at DE.
+PutNth:
+		or		a
+		jr		z,.put
+.skip:
+		ld		c,a
+.find:
+		ld		a,(hl)
+		inc		hl
+		or		a
+		jr		nz,.find
+		ld		a,c
+		dec		a
+		jr		nz,.skip
+.put:
+		jp		PutStr
+
+MsgDm:		db		"DM (reverse screen)=",0
+MsgCurType:	db		"  cursor: ",0
+MsgBlink:	db		"  blink: ",0
+MsgCurPos:	db		"  pos ",0
+MsgHidden:	db		" (hidden)",0
+CurTypeNames:
+		db		"underline",0,"underline blinking",0,"block",0,"block blinking",0
+BlinkNames:
+		db		"16/32 (fast)",0,"32/64",0,"48/96 (default)",0,"64/128 (slow)",0
+
+ScrCursor:
+		db		DS_TEXT,2,1,"Normal text  ",0
+		db		DS_TEXT,3,1,"Reverse attribute",0
+		db		DS_ATTR,3, 0,A_WHITE, 1,D_REVERSE, 18,D_NORMAL, $FF
+		db		DS_TEXT,4,1,"Blink attribute",0
+		db		DS_ATTR,4, 0,A_WHITE, 1,D_BLINK, 16,D_NORMAL, $FF
+		db		DS_TEXT,5,1,"Reverse + blink",0
+		db		DS_ATTR,5, 0,A_WHITE, 1,D_REVERSE|D_BLINK, 16,D_NORMAL, $FF
+		db		DS_TEXT,6,1,"Colors: red green blue",0
+		db		DS_ATTR,6, 0,A_WHITE, 9,A_RED, 13,A_WHITE, 14,A_GREEN, 19,A_WHITE, 20,A_BLUE, $FF
+		db		DS_FILL,12,30,20,'.'
+		db		DS_TEXT,8,1,"R: toggle START DISPLAY DM (whole-screen reverse)",$0A
+		db		"C: cursor type   B: blink rate (cursor/attribute)   V: cursor on/off",$0A
+		db		"Arrows: move the cursor (LOAD CURSOR POSITION)",0
+		db		DS_TEXT,15,1,"EXPECT: DM=1 swaps normal and reversed text over the whole screen.",$0A
+		db		"The blink rate setting changes both the cursor and the blink attribute.",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; G. Special control characters (transparent B/W mode)
+;------------------------------------------------------------------------------
+TitleSpecial:
+		db		"G: Special control characters",0
+
+TestSpecial:
+		xor		a
+		ld		(v_sel),a				; control code (0 = none)
+		ld		a,$E0
+		ld		(v_sel2),a				; prefix byte ($E0 or $60)
+		ld		a,$03
+		ld		(v_sel3),a				; SET INTERRUPT MASK ME,MN
+		call	TextDefaults
+		ld		a,1
+		call	TextMode				; transparent B/W, special chars on
+		call	CrtcApply
+.redraw:
+		ld		a,D_NORMAL
+		call	ClearText
+		ld		b,0
+		ld		a,D_REVERSE
+		call	RowAttr
+		ld		hl,TitleSpecial
+		ld		bc,0
+		call	PrintAt
+		ld		b,3
+.rows:
+		push	bc
+		ld		c,1
+		call	Locate
+		ld		hl,MsgRowN
+		call	PutStr
+		pop		bc
+		push	bc
+		ld		a,b
+		call	PutDec2
+		ld		hl,MsgSpecialRow
+		call	PutStr
+		pop		bc
+		inc		b
+		ld		a,b
+		cp		23
+		jr		nz,.rows
+		ld		hl,ScrSpecial
+		call	Draw
+		; special control character in row 12, attribute pair 5
+		ld		a,(v_sel)
+		or		a
+		jr		z,.mask
+		ld		b,12
+		call	RowAddr
+		ld		de,80+5*2
+		add		hl,de
+		ld		a,(v_sel2)
+		ld		(hl),a
+		inc		hl
+		ld		a,(v_sel)
+		ld		(hl),a
+.mask:
+		ld		a,(v_sel3)
+		or		$40
+		out		($51),a					; SET INTERRUPT MASK
+.live:
+		call	WaitVBlank
+		ld		bc,(1 << 8) | 1
+		call	Locate
+		ld		hl,MsgSpecNow
+		call	PutStr
+		ld		a,(v_sel2)
+		call	PutHex8
+		ld		a,'/'
+		ld		(de),a
+		inc		de
+		ld		a,(v_sel)
+		call	PutHex8
+		ld		hl,MsgSpecMask
+		call	PutStr
+		ld		a,(v_sel3)
+		call	PutHex8
+		ld		hl,MsgSpecStatus
+		call	PutStr
+		in		a,($51)
+		call	PutBin8
+		call	PollKey
+		or		a
+		jr		z,.live
+		cp		K_ESC
+		ret		z
+		ld		hl,v_sel
+		ld		c,0
+		cp		'0'
+		jr		z,.code
+		ld		c,$04
+		cp		'1'
+		jr		z,.code
+		ld		c,$02
+		cp		'2'
+		jr		z,.code
+		ld		c,$01
+		cp		'3'
+		jr		z,.code
+		cp		'4'
+		jr		z,.prefix
+		cp		'5'
+		jr		nz,.live
+		ld		a,(v_sel3)
+		inc		a
+		and		3
+		ld		(v_sel3),a
+		jp		.redraw
+.prefix:
+		ld		a,(v_sel2)
+		xor		$80
+		ld		(v_sel2),a
+		jp		.redraw
+.code:
+		ld		(hl),c
+		jp		.redraw
+
+MsgSpecialRow: db		"  --------------------------------",0
+MsgSpecNow:	db		"row 12 pair 5 = ",0
+MsgSpecMask: db		"   int mask ME,MN=",0
+MsgSpecStatus: db		"   status $51: ",0
+
+ScrSpecial:
+		db		DS_TEXT,23,1,"0:none 1:I($04) 2:V($02) 3:D($01) 4:$E0/$60 5:int mask",0
+		db		DS_TEXT,2,40,"status bits: 000 VE U N E LP",0
+		db		DS_TEXT,13,48,"EXPECT (page):",$0A
+		db		"V: the screen flickers",$0A
+		db		"D: the screen disappears",$0A
+		db		"I: no visible change",$0A
+		db		"N and E never become 1",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; H. CRTC status and DMA TC/UPDATE flags
+;------------------------------------------------------------------------------
+TitleStatus:
+		db		"H: CRTC status / DMA TC",0
+
+TestStatus:
+		ld		hl,TitleStatus
+		call	TestHeader
+		ld		hl,ScrStatus
+		call	Draw
+.frame:
+		call	SampleFrame
+		ld		bc,(3 << 8) | 22
+		call	Locate
+		in		a,($51)
+		call	PutBin8
+		ld		bc,(4 << 8) | 22
+		call	Locate
+		in		a,($68)
+		call	PutBin8
+		ld		bc,(7 << 8) | 30
+		call	Locate
+		ld		hl,(v_w1)
+		call	PutDec16
+		ld		bc,(8 << 8) | 30
+		call	Locate
+		ld		hl,(v_w2)
+		call	PutDec16
+		ld		bc,(8 << 8) | 52
+		call	Locate
+		ld		hl,(v_w3)
+		call	PutDec16
+		ld		bc,(9 << 8) | 30
+		call	Locate
+		ld		hl,(v_w4)
+		call	PutDec16
+		ld		bc,(9 << 8) | 52
+		call	Locate
+		ld		hl,(v_buf)
+		call	PutDec16
+		call	PollKey
+		cp		K_ESC
+		ret		z
+		cp		'S'
+		jr		nz,.frame
+		; STOP DISPLAY, read the status, then restart
+		xor		a
+		out		($51),a
+		ld		hl,4000
+		call	Delay
+		in		a,($51)
+		ld		(v_sel),a
+		call	CrtcApply
+		ld		bc,(12 << 8) | 22
+		call	Locate
+		ld		a,(v_sel)
+		call	PutBin8
+		jr		.frame
+
+; Poll port $68 from one vertical blank to the next.
+; v_w1 = reads, v_w2 = TC2 seen, v_w3 = TC2 seen in VBlank,
+; v_w4 = UPDATE seen, v_buf = UPDATE seen in VBlank.
+SampleFrame:
+		ld		hl,0
+		ld		(v_w1),hl
+		ld		(v_w2),hl
+		ld		(v_w3),hl
+		ld		(v_w4),hl
+		ld		(v_buf),hl
+		call	WaitVBlank
+		ld		c,0						; 0 = first blank, 1 = display seen
+.poll:
+		in		a,($68)
+		ld		e,a
+		in		a,($40)
+		and		$20
+		ld		d,a						; nonzero in VBlank
+		jr		nz,.inblank
+		ld		c,1
+		jr		.count
+.inblank:
+		ld		a,c
+		or		a
+		ret		nz						; back in VBlank after the display: done
+.count:
+		ld		hl,(v_w1)
+		inc		hl
+		ld		(v_w1),hl
+		bit		2,e
+		jr		z,.upd
+		ld		hl,(v_w2)
+		inc		hl
+		ld		(v_w2),hl
+		ld		a,d
+		or		a
+		jr		z,.upd
+		ld		hl,(v_w3)
+		inc		hl
+		ld		(v_w3),hl
+.upd:
+		bit		4,e
+		jr		z,.poll
+		ld		hl,(v_w4)
+		inc		hl
+		ld		(v_w4),hl
+		ld		a,d
+		or		a
+		jr		z,.poll
+		ld		hl,(v_buf)
+		inc		hl
+		ld		(v_buf),hl
+		jr		.poll
+
+ScrStatus:
+		db		DS_TEXT,2,1,"                     76543210",0
+		db		DS_TEXT,3,1,"CRTC status ($51):             000 VE U N E LP",0
+		db		DS_TEXT,4,1,"DMAC status ($68):             000 UPD TC3 TC2 TC1 TC0",0
+		db		DS_TEXT,6,1,"Polling $68 for one frame:",0
+		db		DS_TEXT,7,1,"  reads per frame",0
+		db		DS_TEXT,8,1,"  TC2 seen                               in VBlank",0
+		db		DS_TEXT,9,1,"  UPDATE seen                            in VBlank",0
+		db		DS_TEXT,11,1,"S: STOP DISPLAY, then read the status once:",0
+		db		DS_TEXT,12,1,"  status after stop:",0
+		db		DS_TEXT,14,1,"EXPECT (page): VE=1 while displaying and 0 after STOP DISPLAY; U N E LP stay 0.",$0A
+		db		"TC2 reads as 1 once per frame (reading clears it); UPDATE stays 1 for a while.",$0A
+		db		"Neither is 1 during vertical blank.",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; I. DMA start address
+;------------------------------------------------------------------------------
+TitleDmaAddr:
+		db		"I: DMA start address",0
+
+TestDmaAddr:
+		ld		hl,TitleDmaAddr
+		call	TestHeader
+		; 8 extra rows in $F008-$F3C7, above the normal text VRAM
+		ld		hl,TVRAM_STD-8*ROW_BYTES
+		ld		(v_tvbase),hl
+		ld		b,0
+.pre:
+		push	bc
+		call	RowAddr
+		ld		c,120
+.clr:
+		ld		(hl),' '
+		inc		hl
+		dec		c
+		jr		nz,.clr
+		ld		a,A_YELLOW
+		pop		bc
+		push	bc
+		call	RowAttr
+		pop		bc
+		push	bc
+		ld		c,2
+		call	Locate
+		ld		hl,MsgPreRow
+		call	PutStr
+		pop		bc
+		push	bc
+		ld		a,8
+		sub		b
+		call	PutDec2
+		pop		bc
+		inc		b
+		ld		a,b
+		cp		8
+		jr		nz,.pre
+		ld		hl,TVRAM_STD
+		ld		(v_tvbase),hl
+		ld		hl,ScrDmaAddr
+		call	Draw
+		xor		a
+		ld		(v_sel),a				; rows shown above row 0
+		ld		(v_sel2),a				; 0 = scrolling, 1 = paused
+		ld		a,1
+		ld		(v_sel3),a				; direction
+		xor		a
+		ld		(v_sel4),a				; frame counter
+.frame:
+		ld		a,(v_sel2)
+		or		a
+		jr		nz,.show
+		ld		a,(v_sel4)
+		inc		a
+		ld		(v_sel4),a
+		cp		20
+		jr		c,.show
+		xor		a
+		ld		(v_sel4),a
+		ld		a,(v_sel3)
+		ld		b,a
+		ld		a,(v_sel)
+		add		a,b
+		ld		(v_sel),a
+		or		a
+		jr		z,.flip
+		cp		8
+		jr		nz,.set
+.flip:
+		ld		a,b
+		neg
+		ld		(v_sel3),a
+.set:
+		ld		a,(v_sel)
+		ld		l,a
+		ld		h,0
+		ld		de,ROW_BYTES
+		call	MulHLDE
+		ex		de,hl
+		ld		hl,TVRAM_STD
+		or		a
+		sbc		hl,de
+		call	SetDmaAddr
+.show:
+		call	WaitVBlank
+		call	PollKey
+		or		a
+		jr		z,.frame
+		cp		K_ESC
+		ret		z
+		cp		K_SPACE
+		jr		nz,.addr
+		ld		a,(v_sel2)
+		xor		1
+		ld		(v_sel2),a
+		jr		.frame
+.addr:
+		ld		hl,$0000
+		cp		'1'
+		jr		z,.v1
+		ld		hl,$0001
+		cp		'2'
+		jr		nz,.frame
+.v1:
+		ld		a,(v_isV1S)
+		or		a
+		jr		z,.frame
+		ld		a,1
+		ld		(v_sel2),a				; pause the scroll
+		call	SetDmaAddr
+		jr		.frame
+
+; Point text DMA (channel 2) at HL during vertical blank.
+SetDmaAddr:
+		call	WaitVBlank
+		ld		a,$A0
+		out		($68),a
+		ld		a,l
+		out		($64),a
+		ld		a,h
+		out		($64),a
+		push	hl
+		ld		hl,(v_dmacount)
+		dec		hl
+		ld		a,l
+		out		($65),a
+		ld		a,h
+		or		$80
+		out		($65),a
+		pop		hl
+		ld		a,$E4
+		out		($68),a
+		ret
+
+MsgPreRow:	db		"extra row above $F3C8, -",0
+
+ScrDmaAddr:
+		db		DS_TEXT,3,2,"The text DMA start address moves up and down by whole rows,",$0A
+		db		"showing the 8 extra rows stored just below $F3C8.",$0A
+		db		$0A
+		db		"SPACE: pause",$0A
+		db		"1: DMA from $0000   2: DMA from $0001   (V1S only)",$0A
+		db		$0A
+		db		"EXPECT (page): V1S accepts any start address, V1H/V2 only $F000-$FFFF.",$0A
+		db		"A window that includes $0000 garbles the screen; $0001 is fine.",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; J. Text DMA and CPU speed
+;------------------------------------------------------------------------------
+TitleDmaSpeed:
+		db		"J: Text DMA and CPU speed",0
+
+SPEED_LOOPS	equ		4					; x 65536 iterations
+
+TestDmaSpeed:
+		ld		hl,TitleDmaSpeed
+		call	TestHeader
+		ld		hl,ScrDmaSpeed
+		call	Draw
+.run:
+		ld		bc,(10 << 8) | 1
+		ld		hl,MsgMeasuring
+		call	PrintAt
+		; 1: display running
+		call	SpeedLoop
+		ld		(v_w1),hl
+		; 2: STOP DISPLAY
+		xor		a
+		out		($51),a
+		call	SpeedLoop
+		ld		(v_w2),hl
+		call	CrtcApply
+		; 3: DMAC channel 2 disabled
+		xor		a
+		out		($68),a
+		call	SpeedLoop
+		ld		(v_w3),hl
+		call	CrtcApply
+		ld		bc,(10 << 8) | 1
+		ld		hl,MsgBlank30
+		call	PrintAt
+		ld		hl,(v_w1)
+		ld		bc,(6 << 8) | 40
+		call	PutTicks
+		ld		hl,(v_w2)
+		ld		bc,(7 << 8) | 40
+		call	PutTicks
+		ld		hl,(v_w3)
+		ld		bc,(8 << 8) | 40
+		call	PutTicks
+.key:
+		call	WaitKey
+		cp		K_ESC
+		ret		z
+		cp		K_SPACE
+		jr		nz,.key
+		jr		.run
+
+; Run the fixed busy loop and return its time in RTC ticks (HL).
+SpeedLoop:
+		call	TimerStart
+		ld		b,SPEED_LOOPS
+.outer:
+		ld		hl,0
+.inner:
+		dec		hl
+		ld		a,h
+		or		l
+		jr		nz,.inner
+		djnz	.outer
+		jp		TimerStop
+
+; Print HL ticks as "nnnnn ticks = nnnnn ms" at row B, column C.
+PutTicks:
+		push	hl
+		call	Locate
+		pop		hl
+		push	hl
+		call	PutDec16
+		ld		hl,MsgTicks
+		call	PutStr
+		pop		hl
+		; ms = ticks * 10 / 6
+		push	de
+		ld		de,10
+		call	MulHLDE
+		ld		c,6
+		call	DivHLC
+		pop		de
+		call	PutDec16
+		ld		hl,MsgMs
+		jp		PutStr
+
+; HL = HL / C, A = remainder
+DivHLC:
+		push	bc
+		xor		a
+		ld		b,16
+.bit:
+		add		hl,hl
+		rla
+		cp		c
+		jr		c,.skip
+		sub		c
+		inc		l
+.skip:
+		djnz	.bit
+		pop		bc
+		ret
+
+MsgMeasuring: db	"Measuring...",0
+MsgBlank30:	db		"                              ",0
+MsgTicks:	db		" ticks (1/600 s) = ",0
+MsgMs:		db		" ms",0
+
+ScrDmaSpeed:
+		db		DS_TEXT,2,1,"The same busy loop (4 x 65536 iterations) is timed with the RTC interrupt.",0
+		db		DS_TEXT,6,1,"1: text display running",$0A
+		db		"2: CRTC STOP DISPLAY (out $51,0)",$0A
+		db		"3: DMAC channel 2 off (out $68,0)",0
+		db		DS_TEXT,12,1,"SPACE: measure again",0
+		db		DS_TEXT,14,1,"EXPECT (page): in V1S mode the text DMA steals CPU cycles, so 2 and 3 are",$0A
+		db		"clearly faster than 1. The page times a BASIC loop with and without out &H51,0.",0
+		db		DS_END
+
+;------------------------------------------------------------------------------
+; K. 27 colors (V1 only): a 6000-byte DMA window shows two screens in turn
+;------------------------------------------------------------------------------
+Title27Color:
+		db		"K: 27 colors (V1S)",0
+
+Test27Color:
+		ld		a,(v_isV1S)
+		or		a
+		jp		z,NeedV1S
+		ld		hl,$C000
+		ld		(v_dmaaddr),hl
+		ld		hl,ROW_BYTES*25*2
+		ld		(v_dmacount),hl
+		call	CrtcApply
+		ld		hl,$C000
+		xor		a
+		call	Draw27					; even frames
+		ld		hl,$C000+ROW_BYTES*25
+		ld		a,1
+		call	Draw27					; odd frames
+		jp		WaitEsc
+
+; Draw one of the two screens at HL. A = 0 for the first frame, 1 for the
+; second. Color i (0-26) has g,r,b in 0..2 = frames lit.
+Draw27:
+		ld		(v_tvbase),hl
+		ld		(v_sel),a
+		ld		a,A_WHITE
+		call	ClearText
+		ld		hl,Scr27
+		call	Draw
+		ld		b,0						; grid row 0..2
+.grow:
+		ld		c,0						; cell 0..8
+		; attributes for the 6 text rows of this grid row
+		ld		ix,v_buf
+		ld		(ix+0),0
+		ld		(ix+1),A_WHITE
+		inc		ix
+		inc		ix
+.cell:
+		ld		a,b
+		add		a,a
+		add		a,a
+		add		a,a
+		add		a,b						; b*9
+		add		a,c						; color index
+		call	Color27Attr
+		ld		(ix+1),a
+		ld		a,c
+		add		a,a
+		add		a,a
+		add		a,a
+		add		a,4
+		ld		(ix+0),a				; x = 4 + 8*cell
+		inc		ix
+		inc		ix
+		inc		c
+		ld		a,c
+		cp		9
+		jr		nz,.cell
+		ld		(ix+0),76
+		ld		(ix+1),A_WHITE
+		ld		(ix+2),$FF
+		; rows 3+7*b .. +5
+		ld		a,b
+		add		a,a
+		add		a,a
+		add		a,a
+		sub		b
+		add		a,3
+		ld		e,a
+		ld		d,6
+.trow:
+		push	bc
+		push	de
+		ld		b,e
+		ld		c,4
+		call	Locate
+		ld		b,72
+		ld		a,$FF
+.blk:
+		ld		(de),a
+		inc		de
+		djnz	.blk
+		pop		de
+		push	de
+		ld		b,e
+		ld		hl,v_buf
+		call	SetAttrs
+		pop		de
+		pop		bc
+		inc		e
+		dec		d
+		jr		nz,.trow
+		inc		b
+		ld		a,b
+		cp		3
+		jr		nz,.grow
+		ret
+
+; A = color index (g*9 + r*3 + b, digits 0-2 = frames lit) -> semigraphic
+; color attribute for frame v_sel (0 lights digits >= 1, 1 lights digits = 2).
+Color27Attr:
+		push	bc
+		push	de
+		ld		b,a
+		ld		a,(v_sel)
+		inc		a
+		ld		d,a						; threshold
+		ld		c,0						; color bits
+		ld		e,$20					; B, then R ($40), then G ($80)
+		ld		a,b
+.digit:
+		ld		b,0
+.div3:
+		cp		3
+		jr		c,.rem
+		sub		3
+		inc		b
+		jr		.div3
+.rem:
+		cp		d
+		jr		c,.off
+		ld		a,c
+		or		e
+		ld		c,a
+.off:
+		ld		a,b						; next digit
+		sla		e
+		jr		nc,.digit
+		ld		a,c
+		or		$18						; color + semigraphic
+		pop		de
+		pop		bc
+		ret
+
+Scr27:
+		db		DS_TEXT,0,0,"K: 27 colors - the DMA window is 6000 bytes, so two screens alternate",0
+		db		DS_TEXT,24,0,"Real hardware flickers. ESC: menu",0
+		db		DS_END
+
+NeedV1S:
+		ld		hl,MsgNeedV1S
+		call	TestHeader
+		ld		bc,(2 << 8) | 0
+		ld		hl,MsgNeedV1Sb
+		call	PrintAt
+		jp		WaitEsc
+
+MsgNeedV1S:	db		"This test needs V1S mode",0
+MsgNeedV1Sb: db		"The text DMA must read outside $F000-$FFFF, which only V1S allows",$0A
+		db		"(V1H behaves like V2). Set the DIP switches to V1S and reset.",0
+
+;------------------------------------------------------------------------------
+; L. 32 / 50 rows: semigraphics colored per 2x3 / 2x2 dots
+;------------------------------------------------------------------------------
+TitleLine50:
+		db		"L: 32/50-row semigraphics",0
+
+TestLine50:
+		ld		a,32
+		ld		(v_sel),a
+.redraw:
+		call	TextDefaults
+		ld		a,(v_sel)
+		cp		50
+		jr		nz,.r32
+		ld		a,(v_isV1S)
+		or		a
+		jr		nz,.v1ok
+		ld		a,32					; 50 rows needs 6000 bytes: V1 only
+		ld		(v_sel),a
+		jr		.r32
+.v1ok:
+		ld		hl,$C000
+		jr		.base
+.r32:
+		ld		hl,$F000
+.base:
+		ld		(v_tvbase),hl
+		ld		(v_dmaaddr),hl
+		ld		a,(v_sel)
+		ld		l,a
+		ld		h,0
+		ld		de,ROW_BYTES
+		call	MulHLDE
+		ld		(v_dmacount),hl
+		; CRTC parameters
+		ld		ix,v_params
+		ld		(ix+0),$CE
+		ld		a,(v_sel)
+		dec		a
+		or		$80						; default blink rate
+		ld		(ix+1),a
+		ld		a,(v_is15k)
+		or		a
+		ld		hl,Rows24k
+		jr		z,.tab
+		ld		hl,Rows15k
+.tab:
+		ld		a,(v_sel)
+		cp		50
+		jr		nz,.t
+		inc		hl
+		inc		hl
+.t:
+		ld		a,(hl)
+		or		$60						; block cursor
+		ld		(ix+2),a
+		inc		hl
+		ld		a,(hl)
+		ld		(ix+3),a
+		ld		(ix+4),$53				; color, 20 attributes
+		ld		a,(v_is15k)
+		or		a
+		ld		a,$31
+		jr		z,.p31
+		ld		a,$11
+.p31:
+		ld		(v_p31),a
+		call	CrtcLoad
+		; fill every row with $FF blocks in color stripes
+		ld		b,0
+.row:
+		push	bc
+		call	RowAddr
+		ld		c,80
+.blk:
+		ld		(hl),$FF
+		inc		hl
+		dec		c
+		jr		nz,.blk
+		; 20 stripes of 4 columns, colors 1..7 shifted by the row
+		ld		c,0
+		pop		de
+		push	de
+		ld		e,d						; row
+.stripe:
+		ld		a,c
+		add		a,a
+		add		a,a
+		ld		(hl),a					; x = 4*stripe
+		inc		hl
+		ld		a,c
+		add		a,e
+.mod7:
+		cp		7
+		jr		c,.m
+		sub		7
+		jr		.mod7
+.m:
+		inc		a						; 1..7
+		rrca
+		rrca
+		rrca
+		or		$18
+		ld		(hl),a
+		inc		hl
+		inc		c
+		ld		a,c
+		cp		20
+		jr		nz,.stripe
+		pop		bc
+		inc		b
+		ld		a,(v_sel)
+		cp		b
+		jr		nz,.row
+		; label on the first row
+		ld		b,0
+		ld		a,A_WHITE
+		call	RowAttr
+		ld		bc,0
+		ld		hl,MsgLine50
+		call	PrintAt
+.key:
+		call	WaitKey
+		cp		K_ESC
+		ret		z
+		ld		c,32
+		cp		'1'
+		jr		z,.set
+		ld		c,50
+		cp		'2'
+		jr		nz,.key
+.set:
+		ld		a,c
+		ld		(v_sel),a
+		jp		.redraw
+
+; P3 (char height - 1) and P4 (V, Z) for 32 and 50 rows
+Rows24k:	db		12, (1 << 5) | 24,  7, (5 << 5) | 24
+Rows15k:	db		5,  (7 << 5) | 30,  3, (7 << 5) | 30
+
+MsgLine50:	db		"L: 1=32 rows  2=50 rows (V1S)  ESC=menu  (some monitors lose sync)",0

@@ -1,0 +1,217 @@
+;==============================================================================
+; VRAMTEST - PC-8801 text/graphics VRAM test disk
+;
+; A menu of small tests for the behaviors described in "PC-8801 Programming
+; - VRAM Information" (vraminfo.html). Each test draws its own screen and
+; returns to the menu on ESC.
+;==============================================================================
+
+		cpu		z80
+		relaxed	on
+
+		org		$4000					; loaded by the IPL, runs in 64K RAM mode
+
+Entry:
+		di
+		ld		sp,STACK_TOP
+		ld		hl,VARS
+		ld		de,VARS+1
+		ld		(hl),0
+		ld		bc,VARS_END-VARS-1
+		ldir
+		call	ProbeEnv
+		call	InitVectors
+		jp		Menu
+
+		include	"lib.z80"
+
+;==============================================================================
+; Menu
+;==============================================================================
+MENU_LEFT	equ		12				; items in the left column
+
+Menu:
+		ld		sp,STACK_TOP
+		call	ResetVideo
+		ld		b,0
+		ld		a,A_CYAN
+		call	RowAttr
+		ld		bc,0
+		ld		hl,MsgTitle
+		call	PrintAt
+		call	PrintEnv
+		ld		b,3
+		ld		a,A_YELLOW
+		call	RowAttr
+		ld		bc,(3 << 8) | 1
+		ld		hl,MsgColumns
+		call	PrintAt
+		ld		b,23
+		ld		a,A_GREEN
+		call	RowAttr
+		ld		bc,(23 << 8) | 1
+		ld		hl,MsgMenuHelp
+		call	PrintAt
+
+		; item list
+		ld		ix,MenuTable
+		ld		b,4						; row
+		ld		c,2						; column
+		ld		e,0						; item count
+.item:
+		ld		a,(ix+0)
+		or		a
+		jr		z,.wait
+		push	de
+		push	bc
+		call	Locate					; DE = address
+		ld		l,(ix+3)
+		ld		h,(ix+4)
+		call	PutStr
+		pop		bc
+		pop		de
+		inc		b
+		inc		e
+		ld		a,e
+		cp		MENU_LEFT
+		jr		nz,.next
+		ld		b,4
+		ld		c,42
+.next:
+		ld		de,5
+		add		ix,de
+		ld		e,a
+		jr		.item
+
+.wait:
+		call	WaitKey
+		ld		ix,MenuTable
+.find:
+		ld		b,a
+		ld		a,(ix+0)
+		or		a
+		jr		z,.wait
+		cp		b
+		jr		z,.run
+		ld		a,b
+		ld		de,5
+		add		ix,de
+		jr		.find
+.run:
+		ld		l,(ix+1)
+		ld		h,(ix+2)
+		ld		de,Menu
+		push	de						; tests return to the menu
+		jp		(hl)
+
+; Row 1: detected machine mode, monitor and clock.
+PrintEnv:
+		ld		bc,(1 << 8) | 1
+		call	Locate
+		ld		hl,MsgMode
+		call	PutStr
+		call	PutModeName
+		ld		hl,MsgMonitor
+		call	PutStr
+		ld		hl,Msg24k
+		ld		a,(v_is15k)
+		or		a
+		jr		z,.mon
+		ld		hl,Msg15k
+.mon:
+		call	PutStr
+		ld		hl,MsgClock
+		call	PutStr
+		ld		hl,Msg8MHz
+		ld		a,(v_is4mhz)
+		or		a
+		jr		z,.clk
+		ld		hl,Msg4MHz
+.clk:
+		jp		PutStr
+
+PutModeName:
+		ld		hl,MsgV2
+		ld		a,(v_isV1)
+		or		a
+		jr		z,.put
+		ld		hl,MsgV1S
+		ld		a,(v_isH)
+		or		a
+		jr		z,.put
+		ld		hl,MsgV1H
+.put:
+		jp		PutStr
+
+MsgTitle:	db		" VRAMTEST - PC-8801 text/graphics VRAM tests (after vraminfo.html)",0
+MsgColumns:	db		"TEXT / CRTC / DMAC                      GRAPHICS",0
+MsgMenuHelp: db		"Press a letter to run a test.  ESC returns to this menu.",0
+MsgMode:	db		"Mode: ",0
+MsgMonitor:	db		"   Monitor: ",0
+MsgClock:	db		"   Clock: ",0
+MsgV2:		db		"V2 ",0
+MsgV1S:		db		"V1S",0
+MsgV1H:		db		"V1H",0
+Msg24k:		db		"24kHz",0
+Msg15k:		db		"15kHz",0
+Msg8MHz:	db		"8MHz",0
+Msg4MHz:	db		"4MHz",0
+
+; key, routine, title
+MenuTable:
+		db		'A'
+		dw		TestAttrColor, TitleAttrColor
+		db		'B'
+		dw		TestAttrBW, TitleAttrBW
+		db		'C'
+		dw		TestAttrOrder, TitleAttrOrder
+		db		'D'
+		dw		Test40Col, Title40Col
+		db		'E'
+		dw		TestRows, TitleRows
+		db		'F'
+		dw		TestCursor, TitleCursor
+		db		'G'
+		dw		TestSpecial, TitleSpecial
+		db		'H'
+		dw		TestStatus, TitleStatus
+		db		'I'
+		dw		TestDmaAddr, TitleDmaAddr
+		db		'J'
+		dw		TestDmaSpeed, TitleDmaSpeed
+		db		'K'
+		dw		Test27Color, Title27Color
+		db		'L'
+		dw		TestLine50, TitleLine50
+		db		'M'
+		dw		TestModes, TitleModes
+		db		'N'
+		dw		TestBgColor, TitleBgColor
+		db		'O'
+		dw		TestPlaneMask, TitlePlaneMask
+		db		'P'
+		dw		TestMonoAttr, TitleMonoAttr
+		db		'Q'
+		dw		TestCrtcStop, TitleCrtcStop
+		db		'R'
+		dw		TestAlu, TitleAlu
+		db		'S'
+		dw		TestPalette, TitlePalette
+		db		'T'
+		dw		TestRaster, TitleRaster
+		db		'U'
+		dw		TestMidFrame, TitleMidFrame
+		db		'V'
+		dw		TestSpeed, TitleSpeed
+		db		'W'
+		dw		TestSysInfo, TitleSysInfo
+		db		0
+
+		include	"t_text.z80"
+		include	"t_gfx.z80"
+		include	"t_misc.z80"
+
+ProgramEnd:
+		if		ProgramEnd > VARS
+		fatal	"program image overlaps the work area"
+		endif

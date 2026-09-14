@@ -1,0 +1,169 @@
+;==============================================================================
+; System information
+;==============================================================================
+
+TitleSysInfo:
+		db		"W: System info / ports",0
+
+TestSysInfo:
+		ld		hl,TitleSysInfo
+		call	TestHeader
+		ld		hl,ScrSysInfo
+		call	Draw
+		; raw port reads
+		ld		ix,SysPorts
+		ld		b,3
+.port:
+		ld		c,(ix+0)
+		ld		a,c
+		or		a
+		jr		z,.more
+		push	bc
+		in		a,(c)
+		ld		c,22
+		push	af
+		call	Locate
+		pop		af
+		push	af
+		call	PutHex8
+		inc		de
+		inc		de
+		pop		af
+		call	PutBin8
+		pop		bc
+		inc		ix
+		inc		b
+		jr		.port
+.more:
+		; decoded machine state
+		ld		bc,(3 << 8) | 44
+		call	Locate
+		ld		hl,MsgBootCols
+		call	PutStr
+		in		a,($30)
+		and		$04
+		ld		hl,Msg80
+		jr		z,.c
+		ld		hl,Msg40
+.c:
+		call	PutStr
+		ld		hl,MsgBootRows
+		call	PutStr
+		in		a,($30)
+		and		$08
+		ld		hl,Msg25
+		jr		z,.r
+		ld		hl,Msg20
+.r:
+		call	PutStr
+		ld		bc,(4 << 8) | 44
+		call	Locate
+		call	PutModeName
+		ld		bc,(7 << 8) | 44
+		call	Locate
+		ld		hl,Msg24k
+		ld		a,(v_is15k)
+		or		a
+		jr		z,.m
+		ld		hl,Msg15k
+.m:
+		call	PutStr
+		ld		bc,(9 << 8) | 44
+		call	Locate
+		ld		hl,Msg8MHz
+		ld		a,(v_is4mhz)
+		or		a
+		jr		z,.k
+		ld		hl,Msg4MHz
+.k:
+		call	PutStr
+
+		; DMA channel 2 read back (writing the mode register resets the
+		; byte flip-flop)
+		ld		a,$E4
+		out		($68),a
+		ld		bc,(13 << 8) | 22
+		call	Locate
+		in		a,($64)
+		ld		l,a
+		in		a,($64)
+		ld		h,a
+		call	PutHex16
+		inc		de
+		inc		de
+		in		a,($65)
+		ld		l,a
+		in		a,($65)
+		ld		h,a
+		call	PutHex16
+
+		; last CRTC reset parameters
+		ld		bc,(14 << 8) | 22
+		call	Locate
+		ld		hl,v_params
+		ld		b,5
+.par:
+		ld		a,(hl)
+		call	PutHex8
+		inc		de
+		inc		hl
+		djnz	.par
+
+		; text VRAM bank: write through both port $32 bit4 settings
+		ld		a,$5A
+		ld		($F000),a				; high-speed text RAM (bit4=0)
+		ld		a,(v_p32)
+		or		$10
+		out		($32),a
+		ld		a,$A5
+		ld		($F000),a				; main RAM (bit4=1)
+		ld		a,(v_p32)
+		out		($32),a
+		ld		a,($F000)
+		push	af
+		ld		bc,(16 << 8) | 22
+		call	Locate
+		pop		af
+		push	af
+		call	PutHex8
+		pop		af
+		ld		hl,MsgBankSep
+		cp		$5A
+		jr		z,.bank
+		ld		hl,MsgBankSame
+.bank:
+		inc		de
+		inc		de
+		call	PutStr
+		jp		WaitEsc
+
+; ports shown from row 3 on
+SysPorts:
+		db		$30, $31, $32, $40, $5C, $6E, $68, $51, $71, 0
+
+MsgBootCols: db		"boot: ",0
+MsgBootRows: db		" columns, ",0
+Msg80:		db		"80",0
+Msg40:		db		"40",0
+Msg25:		db		"25 rows",0
+Msg20:		db		"20 rows",0
+MsgBankSep:	db		"separate from main RAM (expected in V1H/V2)",0
+MsgBankSame: db		"same as main RAM (expected in V1S)",0
+
+ScrSysInfo:
+		db		DS_TEXT,2,1,"port                  hex  binary",0
+		db		DS_TEXT,3,1,"$30 DIP SW1",$0A
+		db		"$31 DIP SW2",$0A
+		db		"$32",$0A
+		db		"$40 control in",$0A
+		db		"$5C plane select",$0A
+		db		"$6E clock (bit7=4MHz)",$0A
+		db		"$68 DMAC status",$0A
+		db		"$51 CRTC status",$0A
+		db		"$71 ext ROM",0
+		db		DS_TEXT,13,1,"DMA ch2 addr/count",$0A
+		db		"CRTC params",0
+		db		DS_TEXT,16,1,"$F000 after writes",0
+		db		DS_TEXT,17,1,"(wrote $5A with $32 bit4=0, then $A5 with bit4=1, read back with bit4=0)",0
+		db		DS_END
+
