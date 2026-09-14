@@ -21,59 +21,7 @@ struct DisplaySettingsTab: View {
         Text(settings.fullscreenIntegerScaling
           ? "Pixel-perfect display with black borders. No scaling artifacts."
           : "Fill the screen as much as possible while maintaining aspect ratio.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-      }
-
-      Section("AI Upscale Models") {
-        ForEach(AIModelStore.downloadableModels, id: \.name) { model in
-          downloadableModelRow(model)
-        }
-        Text("Downloaded the first time its filter is selected.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-      }
-
-      Section("Status Bar") {
-        Toggle("Show Tape Icon", isOn: $settings.showTapeInStatusBar)
-      }
-
-      Section("Video Recording") {
-        Picker("Format", selection: $settings.videoRecordingFormat) {
-          Text("Apple ProRes 4444 (.mov)").tag("proRes4444")
-          Text("H.264 (.mp4)").tag("h264Mp4")
-        }
-        .pickerStyle(.menu)
-
-        Toggle("Ask save location every time", isOn: $settings.videoRecordingAskEveryTime)
-
-        HStack {
-          Text(settings.videoRecordingDirectory ?? "~/Movies")
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-            .truncationMode(.head)
-          Spacer()
-          Button("Choose...") {
-            let panel = NSOpenPanel()
-            panel.canChooseDirectories = true
-            panel.canChooseFiles = false
-            panel.canCreateDirectories = true
-            panel.prompt = "Select"
-            if panel.runModal() == .OK, let url = panel.url {
-              settings.videoRecordingDirectory = url.path
-            }
-          }
-        }
-
-        if settings.videoRecordingFormat == "proRes4444" {
-          Text("Faithful color reproduction; even single-pixel lines keep their color. Very large files (~600 MB per minute).")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        } else {
-          Text("Compact files that are easy to share (~45 MB per minute). Thin lines and single-pixel colors may look slightly washed out.")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        }
+          .settingsDescriptionStyle()
       }
 
       Section("Translation Overlay") {
@@ -89,35 +37,20 @@ struct DisplaySettingsTab: View {
           viewModel.toggleTranslation(true)
         }
         Text("Translates Japanese text detected on screen. Requires language download in System Settings.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
+          .settingsDescriptionStyle()
+      }
+
+      Section {
+        Toggle("Show Tape Icon", isOn: $settings.showTapeInStatusBar)
+      }
+
+      Section {
+        Toggle("Play dissolve animation on reset", isOn: $settings.resetAnimationEnabled)
       }
     }
     .formStyle(.grouped)
     .task {
       availableLanguages = await TranslationLanguage.fetchAvailable()
-    }
-  }
-
-  /// One row per downloadable model: which filter it serves, whether it is on
-  /// this Mac, and a Delete button once it is.
-  private func downloadableModelRow(_ model: DownloadableAIModel) -> some View {
-    let filterName = EmulatorViewModel.VideoFilter.allCases
-      .first { $0.downloadableModel == model }?.rawValue ?? model.name
-    let installed = viewModel.isAIModelInstalled(model)
-    let size = ByteCountFormatter.string(fromByteCount: model.byteCount, countStyle: .file)
-    return HStack {
-      VStack(alignment: .leading, spacing: 2) {
-        Text(filterName)
-        Text(installed ? "Downloaded" : "Not downloaded (\(size))")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-      }
-      Spacer()
-      if installed {
-        Button("Delete", role: .destructive) { viewModel.deleteAIModel(model) }
-          .disabled(viewModel.aiModelDownload != nil)
-      }
     }
   }
 }

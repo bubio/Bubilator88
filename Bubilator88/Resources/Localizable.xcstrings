@@ -259,105 +259,6 @@
         }
       }
     },
-    "15 kHz (Standard)" : {
-      "comment" : "Settings: monitor type — 15kHz standard display",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "15 kHz (標準ディスプレイ)"
-          }
-        }
-      }
-    },
-    "24 kHz (Dedicated)" : {
-      "comment" : "Settings: monitor type — 24kHz dedicated display",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "24 kHz (専用ディスプレイ)"
-          }
-        }
-      }
-    },
-    "DIP SW1-6 on real hardware. Adds one wait state to main memory and text VRAM accesses, slowing the machine slightly. Off on a factory-default PC-8801. Applied on next reset." : {
-      "comment" : "Settings: memory wait DIP explanation",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "実機の DIP SW1-6 です。メインメモリとテキスト VRAM へのアクセスにウェイトを 1 つ加え、動作をわずかに遅くします。工場出荷時の PC-8801 では OFF です。次回のリセットで反映されます。"
-          }
-        }
-      }
-    },
-    "DIP SW1-8 on real hardware. The monitor's horizontal frequency decides the VSYNC rate: 55.4 Hz at 24 kHz, 62.4 Hz at 15 kHz. Applied on next reset." : {
-      "comment" : "Settings: monitor type explanation",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "実機の DIP SW1-8 です。モニタの水平周波数が VSYNC の周期を決めます: 24 kHz なら 55.4 Hz、15 kHz なら 62.4 Hz。次回のリセットで反映されます。"
-          }
-        }
-      }
-    },
-    "Memory Wait" : {
-      "comment" : "Settings: memory wait DIP section header",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メモリウェイト"
-          }
-        }
-      }
-    },
-    "Memory wait" : {
-      "comment" : "Settings: memory wait DIP toggle label",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メモリウェイト"
-          }
-        }
-      }
-    },
-    "Memory wait: Off" : {
-      "comment" : "Status bar fps tooltip",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メモリウェイト: OFF"
-          }
-        }
-      }
-    },
-    "Memory wait: On" : {
-      "comment" : "Status bar fps tooltip",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メモリウェイト: ON"
-          }
-        }
-      }
-    },
-    "Monitor" : {
-      "comment" : "Settings: monitor type section and picker label",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "モニタ"
-          }
-        }
-      }
-    },
     "© 2026 bubio. Licensed under GPL v2.0" : {
       "comment" : "About dialog copyright",
       "localizations" : {
@@ -446,6 +347,17 @@
     "8MHz" : {
 
     },
+    "15 kHz (Standard)" : {
+      "comment" : "Settings: monitor type — 15kHz standard display",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "15 kHz (標準ディスプレイ)"
+          }
+        }
+      }
+    },
     "16 bytes from this address, read through the main Z80 bus" : {
       "localizations" : {
         "ja" : {
@@ -471,6 +383,17 @@
     },
     "22 kHz" : {
 
+    },
+    "24 kHz (Dedicated)" : {
+      "comment" : "Settings: monitor type — 24kHz dedicated display",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "24 kHz (専用ディスプレイ)"
+          }
+        }
+      }
     },
     "128 KB" : {
 
@@ -821,6 +744,26 @@
         }
       }
     },
+    "Audio Effects" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音響効果"
+          }
+        }
+      }
+    },
+    "Audio Recording" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音声録音"
+          }
+        }
+      }
+    },
     "Auto" : {
       "localizations" : {
         "ja" : {
@@ -974,16 +917,6 @@
         }
       }
     },
-    "CD Mix" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CD ミックス"
-          }
-        }
-      }
-    },
     "Can't Load Disk Image" : {
       "comment" : "Disk load failure alert title",
       "localizations" : {
@@ -1071,6 +1004,7 @@
       }
     },
     "Capacity" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1116,6 +1050,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "トレースのスナップショットを取得"
+          }
+        }
+      }
+    },
+    "CD Mix" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CD ミックス"
           }
         }
       }
@@ -1409,7 +1354,7 @@
       }
     },
     "Could Not Delete Model" : {
-      "comment" : "Alert title when deleting a downloaded AI model fails",
+      "comment" : "Alert title",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1617,11 +1562,34 @@
       }
     },
     "Development" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "開発"
+          }
+        }
+      }
+    },
+    "DIP SW1-6 on real hardware. Adds one wait state to main memory and text VRAM accesses, slowing the machine slightly. Off on a factory-default PC-8801. Applied on next reset." : {
+      "comment" : "Settings: memory wait DIP explanation",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "実機の DIP SW1-6 です。メインメモリとテキスト VRAM へのアクセスにウェイトを 1 つ加え、動作をわずかに遅くします。工場出荷時の PC-8801 では OFF です。次回のリセットで反映されます。"
+          }
+        }
+      }
+    },
+    "DIP SW1-8 on real hardware. The monitor's horizontal frequency decides the VSYNC rate: 55.4 Hz at 24 kHz, 62.4 Hz at 15 kHz. Applied on next reset." : {
+      "comment" : "Settings: monitor type explanation",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "実機の DIP SW1-8 です。モニタの水平周波数が VSYNC の周期を決めます: 24 kHz なら 55.4 Hz、15 kHz なら 62.4 Hz。次回のリセットで反映されます。"
           }
         }
       }
@@ -1754,17 +1722,6 @@
         }
       }
     },
-    "Download the model for “%@” (%@)?" : {
-      "comment" : "AI model download prompt. %1 video filter name, %2 download size (e.g. \"31 MB\")",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「%1$@」のモデル (%2$@) をダウンロードしますか？"
-          }
-        }
-      }
-    },
     "Download AI Model" : {
       "comment" : "Title of the AI model download sheet",
       "localizations" : {
@@ -1772,6 +1729,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI モデルのダウンロード"
+          }
+        }
+      }
+    },
+    "Download the model for “%@” (%@)?" : {
+      "comment" : "AI model download prompt. %1 video filter name, %2 download size (e.g. \"31 MB\")",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「%1$@」のモデル (%2$@) をダウンロードしますか？"
           }
         }
       }
@@ -2422,6 +2390,7 @@
       }
     },
     "Game Controller" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -2515,11 +2484,22 @@
       }
     },
     "Haptic Feedback" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "触覚フィードバック"
+          }
+        }
+      }
+    },
+    "Hardware Configuration" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ハードウェア構成"
           }
         }
       }
@@ -2597,6 +2577,7 @@
       }
     },
     "Immersive Audio" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -2906,6 +2887,7 @@
       }
     },
     "Layout" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3045,6 +3027,54 @@
         }
       }
     },
+    "Memory wait" : {
+      "comment" : "Settings: memory wait DIP toggle label",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリウェイト"
+          }
+        }
+      }
+    },
+    "Memory Wait" : {
+      "comment" : "Settings: memory wait DIP section header",
+      "extractionState" : "stale",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリウェイト"
+          }
+        }
+      }
+    },
+    "memory wait (default: keep current setting)" : {
+      "comment" : "CLI --help: description of the -mem_wait/-mem_nowait options"
+    },
+    "Memory wait: Off" : {
+      "comment" : "Status bar fps tooltip",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリウェイト: OFF"
+          }
+        }
+      }
+    },
+    "Memory wait: On" : {
+      "comment" : "Status bar fps tooltip",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリウェイト: ON"
+          }
+        }
+      }
+    },
     "Mode" : {
       "localizations" : {
         "ja" : {
@@ -3054,6 +3084,20 @@
           }
         }
       }
+    },
+    "Monitor" : {
+      "comment" : "Settings: monitor type section and picker label",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モニタ"
+          }
+        }
+      }
+    },
+    "monitor frequency (default: keep current setting)" : {
+      "comment" : "CLI --help: description of the -24k/-15k options"
     },
     "Mono = the two 200-line halves combined (640×400). Upper/Lower = one half each." : {
       "localizations" : {
@@ -3574,6 +3618,7 @@
       }
     },
     "Pseudo Stereo" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3648,16 +3693,6 @@
         }
       }
     },
-    "Recreates the mastering of classic game music CDs." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "あの頃のゲームミュージック CD のマスタリングを再現します。"
-          }
-        }
-      }
-    },
     "Read or Write" : {
       "localizations" : {
         "ja" : {
@@ -3689,6 +3724,7 @@
       }
     },
     "Recording" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3771,6 +3807,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "「%@」に録画中"
+          }
+        }
+      }
+    },
+    "Recreates the mastering of classic game music CDs." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あの頃のゲームミュージック CD のマスタリングを再現します。"
           }
         }
       }
@@ -4183,6 +4229,16 @@
         }
       }
     },
+    "Save" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存"
+          }
+        }
+      }
+    },
     "Save Failed" : {
       "comment" : "Alert title: writing the recorded .b88script failed",
       "localizations" : {
@@ -4547,7 +4603,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "テープアイコンを表示"
+            "value" : "ステータスバーにテープアイコンを表示"
           }
         }
       }
@@ -4762,6 +4818,7 @@
       }
     },
     "Status Bar" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -5471,28 +5528,6 @@
         }
       }
     },
-    "VSYNC rate — %@" : {
-      "comment" : "Status bar fps tooltip",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "VSYNC 周波数 — %@"
-          }
-        }
-      }
-    },
-    "VSYNC: %.2f Hz (%@ monitor) — %@" : {
-      "comment" : "Status bar fps tooltip",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "VSYNC: %.2f Hz (%@ モニタ) — %@"
-          }
-        }
-      }
-    },
     "Val" : {
       "localizations" : {
         "ja" : {
@@ -5587,8 +5622,30 @@
         }
       }
     },
+    "VSYNC rate — %@" : {
+      "comment" : "Status bar fps tooltip",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VSYNC 周波数 — %@"
+          }
+        }
+      }
+    },
+    "VSYNC: %.2f Hz (%@ monitor) — %@" : {
+      "comment" : "Status bar fps tooltip",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VSYNC: %.2f Hz (%@ モニタ) — %@"
+          }
+        }
+      }
+    },
     "W" : {
-
+      "shouldTranslate" : false
     },
     "wait takes exactly one argument (e.g. wait 90, wait 1.5s)." : {
       "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
@@ -5613,7 +5670,7 @@
       }
     },
     "WAV" : {
-
+      "shouldTranslate" : false
     },
     "What this breakpoint watches. The emulator stops the moment such an access happens." : {
       "localizations" : {
@@ -5686,7 +5743,7 @@
       }
     },
     "Δ" : {
-
+      "shouldTranslate" : false
     }
   },
   "version" : "1.0"

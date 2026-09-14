@@ -14,7 +14,7 @@ struct ControllerSettingsTab: View {
     let gc = viewModel.gameController
 
     Form {
-      Section("Game Controller") {
+      Section {
         Toggle("Enable Game Controller", isOn: $settings.gameControllerEnabled)
           .onChange(of: settings.gameControllerEnabled) { _, newValue in
             if newValue {
@@ -26,12 +26,10 @@ struct ControllerSettingsTab: View {
 
         if gc.connectedControllers.isEmpty {
           Text("No controller connected.")
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            .settingsDescriptionStyle()
         } else if gc.connectedControllers.count == 1 {
           Text("Connected: \(gc.connectedControllers[0].displayName)")
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            .settingsDescriptionStyle()
         } else {
           Picker("Active Controller", selection: Binding(
             get: { gc.activeControllerInfo?.id },
@@ -43,35 +41,11 @@ struct ControllerSettingsTab: View {
           }
           .pickerStyle(.menu)
         }
-      }
 
-      Section("Haptic Feedback") {
         Toggle("Enable Haptic Feedback", isOn: $settings.controllerHapticEnabled)
           .disabled(!settings.gameControllerEnabled)
         Text("Vibrates the controller when SSG noise effects (explosions, impacts) are detected.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-      }
-
-      Section("Mouse") {
-        Toggle("Enable Mouse Input", isOn: $settings.mouseEnabled)
-        Picker("Mode", selection: $settings.mouseJoyMode) {
-          Text("Bus Mouse (PC-8872)").tag(false)
-          Text("Joystick (mouse-as-joystick)").tag(true)
-        }
-        .pickerStyle(.radioGroup)
-        .disabled(!settings.mouseEnabled)
-        HStack {
-          Text("Sensitivity")
-          Slider(value: $settings.mouseSensitivity, in: 0.5...3.0, step: 0.1)
-            .disabled(!settings.mouseEnabled)
-          Text(String(format: "%.1f×", settings.mouseSensitivity))
-            .monospacedDigit()
-            .frame(width: 40, alignment: .trailing)
-        }
-        Text("Click the emulation screen to capture the pointer; press Control+Esc to release.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
+          .settingsDescriptionStyle()
       }
 
       if let active = gc.activeControllerInfo, settings.gameControllerEnabled {
