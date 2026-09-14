@@ -374,7 +374,7 @@ extension EmulatorViewModel {
   /// docs/MEMORY_DUMP_FORMAT.md.
   func dumpMemoryViaSavePanel() {
     let panel = NSSavePanel()
-    panel.title = String(localized: "Dump Memory…", comment: "Debug menu memory dump title")
+    panel.title = String(localized: "Dump Memory…", comment: "Develop menu memory dump title")
     let stamp = ISO8601DateFormatter().string(from: .now)
       .replacingOccurrences(of: ":", with: "-")
     panel.nameFieldStringValue = "Bubilator88-memdump-\(stamp)"

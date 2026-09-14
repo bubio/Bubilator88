@@ -368,7 +368,7 @@ final class EmulatorViewModel {
     }
   }
 
-  /// Show/hide the DEBUG menu — persisted via Settings.
+  /// Show/hide the Develop menu — persisted via Settings.
   var showDebugMenu: Bool {
     get { Settings.shared.showDebugMenu }
     set { Settings.shared.showDebugMenu = newValue }
@@ -639,7 +639,7 @@ final class EmulatorViewModel {
 
   /// Force YM2203 (OPN) mode — programs see register 0xFF as 0x00
   ///
-  /// Set from the debug menu on the main thread; goes through `emuQueue` for
+  /// Set from the Develop menu on the main thread; goes through `emuQueue` for
   /// the same reason the other sound flags do (§3.3(c), §9.6). This one was
   /// named in the plan as taking no queue at all.
   var forceOPNMode: Bool = false {

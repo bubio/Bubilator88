@@ -17,7 +17,7 @@ import Bubilator88Core
 // directly. Controllers are out of scope for v1.
 extension EmulatorViewModel {
 
-  /// DEBUG menu "Record Script…": cold-resets and starts recording.
+  /// Develop menu "Record Script…": cold-resets and starts recording.
   func startScriptRecording() {
     guard scriptRecorder == nil else { return }
     if isPlayingScript {

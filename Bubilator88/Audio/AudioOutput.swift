@@ -19,6 +19,7 @@ import Synchronization
 final class AudioOutput {
 
   private var audioEngine: AVAudioEngine?
+  private let configurationRecovery = AudioConfigurationRecovery()
   private var srcNode: AVAudioSourceNode?
   private var varispeed: AVAudioUnitVarispeed?
 
@@ -136,6 +137,10 @@ final class AudioOutput {
       self.audioEngine = engine
       self.spatialEnabled = spatial
       isPlaying = true
+      configurationRecovery.observe(engine) { [weak self, weak engine] in
+        guard let self, let engine, self.isPlaying, self.audioEngine === engine else { return }
+        if !engine.isRunning { try engine.start() }
+      }
     } catch {
       // Audio start failed — emulator runs silently
     }
@@ -316,6 +321,7 @@ final class AudioOutput {
 
   /// Stop audio output.
   func stop() {
+    configurationRecovery.stop()
     removeSpectrumTap()
     headTracking.stop()
 

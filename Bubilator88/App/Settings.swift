@@ -155,7 +155,7 @@ final class Settings {
 
   // MARK: - UI
 
-  /// Show the DEBUG menu in the menu bar.
+  /// Show the Develop menu in the menu bar.
   var showDebugMenu: Bool = false {
     didSet { UserDefaults.standard.set(showDebugMenu, forKey: Keys.showDebugMenu) }
   }

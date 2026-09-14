@@ -103,7 +103,7 @@ struct GeneralSettingsTab: View {
       }
 
       Section("Development") {
-        Toggle("Show DEBUG Menu", isOn: $viewModel.showDebugMenu)
+        Toggle("Show Develop Menu", isOn: $viewModel.showDebugMenu)
       }
     }
     .formStyle(.grouped)

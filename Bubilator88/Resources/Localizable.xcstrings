@@ -1535,9 +1535,6 @@
         }
       }
     },
-    "DEBUG" : {
-
-    },
     "Debugger" : {
       "localizations" : {
         "ja" : {
@@ -1605,6 +1602,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "検出: %@"
+          }
+        }
+      }
+    },
+    "Develop" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開発"
           }
         }
       }
@@ -1834,7 +1841,7 @@
       }
     },
     "Dump Memory…" : {
-      "comment" : "Debug menu memory dump title",
+      "comment" : "Develop menu memory dump title",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1986,7 +1993,7 @@
       }
     },
     "Every user preference returns to its default. This cannot be undone, and the app must be restarted for all of the changes to take effect." : {
-      "comment" : "Confirmation alert body for the DEBUG menu's Reset Settings",
+      "comment" : "Confirmation alert body for the Develop menu's Reset Settings",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1997,7 +2004,7 @@
       }
     },
     "Exempt Text from Scanlines" : {
-      "comment" : "DEBUG menu: keep the text layer at full brightness under the scanline overlay",
+      "comment" : "Develop menu: keep the text layer at full brightness under the scanline overlay",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3893,7 +3900,7 @@
       }
     },
     "Reset all settings?" : {
-      "comment" : "Confirmation alert title for the DEBUG menu's Reset Settings",
+      "comment" : "Confirmation alert title for the Develop menu's Reset Settings",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -4515,12 +4522,12 @@
         }
       }
     },
-    "Show DEBUG Menu" : {
+    "Show Develop Menu" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "DEBUGメニューを表示"
+            "value" : "開発メニューを表示"
           }
         }
       }
