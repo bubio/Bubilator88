@@ -1,0 +1,34 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "dev",
+      "displayName": "Local core, Debug, checked",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/cmake/${presetName}",
+      "cacheVariables": {
+        "B88_CONFIGURATION": "Debug",
+        "B88_EXCLUSIVITY": "checked",
+        "B88_CORE": "local"
+      }
+    },
+    {
+      "name": "release-checked",
+      "inherits": "dev",
+      "displayName": "Local core, Release, checked",
+      "cacheVariables": { "B88_CONFIGURATION": "Release" }
+    },
+    {
+      "name": "release-unchecked",
+      "inherits": "release-checked",
+      "displayName": "Local core, Release, unchecked",
+      "cacheVariables": { "B88_EXCLUSIVITY": "unchecked" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "dev", "configurePreset": "dev", "targets": ["app"] },
+    { "name": "release-checked", "configurePreset": "release-checked", "targets": ["app"] },
+    { "name": "release-unchecked", "configurePreset": "release-unchecked", "targets": ["app"] }
+  ]
+}

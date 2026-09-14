@@ -152,6 +152,17 @@ git clone https://github.com/bubio/Bubilator88Core.git
 open Bubilator88/Bubilator88Dev.xcworkspace
 ```
 
+コマンドラインからはCMakeでもビルドできます（CMake 3.21以降）。
+リポジトリ直下で実行すると、手元のコアを使うDebug・排他チェック有効のビルドになります。
+
+```sh
+cmake --preset dev
+cmake --build --preset dev
+```
+
+Releaseのchecked／unchecked切替や、CMake不要のシェルスクリプトは
+[ローカルビルド手順](docs/LOCAL_BUILD.md)を参照してください。
+
 内部設計資料は private submodule (`docs/develop`) にあります。ビルドや実行には不要で、
 アクセス権があるコントリビューター向けです。
 
