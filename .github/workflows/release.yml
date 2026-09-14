@@ -53,6 +53,19 @@ jobs:
         # isn't present on the runner image by default.
         run: sudo xcodebuild -downloadComponent MetalToolchain
 
+      - name: Checkout the exact app-pinned core
+        uses: ./.github/actions/checkout-core
+
+      - name: Test the validation gates
+        run: python3 -m unittest discover -s scripts/tests -v
+
+      # Test this release's pin with this runner's compiler, not a past main run.
+      - name: Validate checked and unchecked Release core
+        run: >-
+          python3 scripts/test_pinned_core.py
+          --configuration release --mode checked unchecked
+          --output exclusivity-tests
+
       - name: Derive version
         id: version
         run: |
@@ -68,14 +81,17 @@ jobs:
           echo "ref=$REF"         >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Build (Release, ad-hoc signed)
+      - name: Build (Release unchecked, ad-hoc signed)
         run: |
           set -euo pipefail
           xcodebuild \
+            -project Bubilator88.xcodeproj \
             -scheme Bubilator88 \
             -configuration Release \
             -derivedDataPath build \
             -destination 'generic/platform=macOS' \
+            -onlyUsePackageVersionsFromResolvedFile \
+            SWIFT_ENFORCE_EXCLUSIVE_ACCESS=unchecked \
             ARCHS=arm64 \
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_STYLE=Manual \
@@ -84,7 +100,23 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=YES \
             MARKETING_VERSION="${{ steps.version.outputs.version }}" \
-            build
+            build 2>&1 | tee release-build.log
+
+      - name: Verify release compiler flags and dependency revisions
+        run: |
+          python3 scripts/check_exclusivity.py --mode unchecked --xcode-log release-build.log
+          python3 scripts/test_pinned_core.py --xcode-checkouts build/SourcePackages/checkouts
+
+      - name: Preserve exclusivity validation evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: exclusivity-validation
+          path: |
+            exclusivity-tests/*.log
+            exclusivity-tests/summary.json
+            release-build.log
+          retention-days: 14
 
       - name: Locate .app
         id: locate

@@ -1,0 +1,45 @@
+name: Pinned Core Validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  checked:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select latest Xcode 26
+        run: |
+          XCODE_PATH=$(find /Applications -maxdepth 1 -type d -name 'Xcode_26*.app' | sort -V | tail -1)
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH=/Applications/Xcode.app
+          fi
+          sudo xcode-select -s "$XCODE_PATH"
+          swift --version
+      - uses: ./.github/actions/checkout-core
+      - name: Test the validation gates
+        run: python3 -m unittest discover -s scripts/tests -v
+      - name: Test the pinned core with exclusivity checks
+        run: >-
+          python3 scripts/test_pinned_core.py
+          --configuration debug release --mode checked
+          --output exclusivity-tests
+      - name: Preserve validation evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: checked-core-validation
+          path: |
+            exclusivity-tests/*.log
+            exclusivity-tests/summary.json
+          retention-days: 14

@@ -5,8 +5,8 @@
 
 .DESCRIPTION
     1. Swift toolchain の所在と runtime DLL ディレクトリを検出
-    2. (任意) swift test で Bubilator88Core の回帰を確認
-    3. swift build -c release --product Bubilator88C → native\Bubilator88C.dll に配置
+    2. (任意) unchecked で swift test を実行して Bubilator88Core の回帰を確認
+    3. unchecked で swift build -c release --product Bubilator88C → native\Bubilator88C.dll に配置
     4. AI モデル (models/onnx/*.onnx) が Git LFS ポインタのままでないか確認
     5. dotnet publish (win-x64, self-contained) でシェルを発行
     6. Bubilator88C.dll の依存クロージャに含まれる Swift runtime DLL だけを
@@ -117,10 +117,10 @@ Write-Host "    Swift runtime bin: $SwiftRuntimeBin"
 # 2. (任意) Bubilator88Core のユニットテスト
 # ---------------------------------------------------------------------------
 if ($RunCoreTests) {
-    Step "swift test (Bubilator88Core)"
+    Step "swift test -Xswiftc -enforce-exclusivity=unchecked (Bubilator88Core)"
     Push-Location $CoreDir
     try {
-        & swift test
+        & swift test -Xswiftc -enforce-exclusivity=unchecked
         if ($LASTEXITCODE -ne 0) { throw "swift test が失敗しました (exit $LASTEXITCODE)。" }
     } finally {
         Pop-Location
@@ -131,10 +131,10 @@ if ($RunCoreTests) {
 # 3. コア DLL のビルド
 # ---------------------------------------------------------------------------
 if (-not $SkipCoreBuild) {
-    Step "swift build -c release --product Bubilator88C"
+    Step "swift build -c release --product Bubilator88C -Xswiftc -enforce-exclusivity=unchecked"
     Push-Location $CoreDir
     try {
-        & swift build -c release --product Bubilator88C
+        & swift build -c release --product Bubilator88C -Xswiftc -enforce-exclusivity=unchecked
         if ($LASTEXITCODE -ne 0) { throw "swift build が失敗しました (exit $LASTEXITCODE)。" }
     } finally {
         Pop-Location

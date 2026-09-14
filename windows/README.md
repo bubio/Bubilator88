@@ -75,7 +75,7 @@ git lfs pull               # AI モデル実体 (models/onnx/*.onnx, 計 ~67MB) 
 
 ```powershell
 cd ..\Bubilator88Core     # このリポジトリの隣に clone したコア
-swift build -c release --product Bubilator88C
+swift build -c release --product Bubilator88C -Xswiftc -enforce-exclusivity=unchecked
 # 成果物 (例): .build\release\Bubilator88C.dll を shell の native\ にコピー
 Copy-Item .build\release\Bubilator88C.dll ..\Bubilator88\windows\Bubilator88.Windows\native\
 ```
@@ -83,7 +83,7 @@ Copy-Item .build\release\Bubilator88C.dll ..\Bubilator88\windows\Bubilator88.Win
 まずコア健全性を確認(macOS と同じ結果になるはず):
 
 ```powershell
-swift test                                  # 760+ ユニットテスト
+swift test -Xswiftc -enforce-exclusivity=unchecked  # 760+ ユニットテスト
 swift run BootTester "C:\path\game.d88"     # テキストVRAMダンプ等
 ```
 
