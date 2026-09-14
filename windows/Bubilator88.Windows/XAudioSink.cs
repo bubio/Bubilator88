@@ -95,7 +95,7 @@ internal sealed unsafe class XAudioSink : IDisposable
     public void SetVolume(float volume) => _source.Volume = Math.Clamp(volume, 0f, 1f);
 
     /// <summary>
-    /// Playback-rate multiplier for CPU fast-forward. At speed N the core
+    /// Playback-rate multiplier for emulation fast-forward. At speed N the core
     /// produces N× the samples per wall-second; a ratio of N plays them back in
     /// real time (sped up / higher pitch), keeping audio in step with video.
     /// </summary>

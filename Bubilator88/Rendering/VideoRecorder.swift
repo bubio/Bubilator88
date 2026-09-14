@@ -21,8 +21,8 @@ nonisolated private let kAudioSampleRate: Double = 44_100
 ///   - `.proRes4444` → Apple ProRes 4444 + AAC in `.mov` (full chroma).
 ///   - `.h264Mp4`    → H.264 + AAC in `.mp4` (smaller files).
 ///
-/// Mutually exclusive with `AudioRecorder` (UI policy). The emulator's
-/// CPU speed is locked to 1× while a session is active, so submission
+/// Mutually exclusive with `AudioRecorder` (UI policy). The emulation
+/// speed is locked to 1× while a session is active, so submission
 /// and wall-clock advance together.
 ///
 /// Encoding is offloaded to a dedicated serial queue; the emulator

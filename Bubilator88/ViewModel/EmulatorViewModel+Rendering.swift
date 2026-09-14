@@ -119,7 +119,7 @@ extension EmulatorViewModel {
     // captured from `pixelBuffer` matches the state we just saved.
     recordRewindSnapshotIfNeeded()
 
-    // Video recorder frame tap. CPU speed is locked to x1 while recording,
+    // Video recorder frame tap. Emulation speed is locked to x1 while recording,
     // so frameCount is always 1 here — one wall-clock frame = one file frame.
     if videoRecorder.isRecordingFlag {
       videoRecorder.appendFrame(pixelBuffer, width: 640, height: 400)

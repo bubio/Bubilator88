@@ -404,7 +404,7 @@ struct ContentView: View {
             .font(.system(size: 20))
         }
         .buttonStyle(.plain)
-        .help(String(localized: "Stop video recording (CPU locked at 1×)",
+        .help(String(localized: "Stop video recording (speed locked at 1×)",
                      comment: "Status bar video record button tooltip"))
       }
 

@@ -85,9 +85,9 @@ extension EmulatorViewModel {
                        comment: "Mutual exclusion toast"))
       return
     }
-    // Audio capture runs at wall-clock; non-x1 CPU speeds desync the result.
-    guard cpuSpeed == .x1 else {
-      showToast(String(localized: "Set CPU Speed to x1 before recording",
+    // Audio capture runs at wall-clock; non-x1 emulation speeds desync the result.
+    guard emulationSpeed == .x1 else {
+      showToast(String(localized: "Set Emulation Speed to x1 before recording",
                        comment: "x1 lock toast"))
       return
     }

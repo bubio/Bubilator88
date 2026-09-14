@@ -93,13 +93,13 @@
             </muxc:MenuBarItem>
 
             <muxc:MenuBarItem Title="Control">
-                <MenuFlyoutSubItem Text="CPU Speed">
+                <MenuFlyoutSubItem Text="Emulation Speed">
                     <muxc:RadioMenuFlyoutItem x:Name="Speed1" Text="x1" GroupName="Speed"
-                                              IsChecked="True" Click="OnCpuSpeed" Tag="1" />
-                    <muxc:RadioMenuFlyoutItem x:Name="Speed2" Text="x2" GroupName="Speed" Click="OnCpuSpeed" Tag="2" />
-                    <muxc:RadioMenuFlyoutItem x:Name="Speed4" Text="x4" GroupName="Speed" Click="OnCpuSpeed" Tag="4" />
-                    <muxc:RadioMenuFlyoutItem x:Name="Speed8" Text="x8" GroupName="Speed" Click="OnCpuSpeed" Tag="8" />
-                    <muxc:RadioMenuFlyoutItem x:Name="Speed16" Text="x16" GroupName="Speed" Click="OnCpuSpeed" Tag="16" />
+                                              IsChecked="True" Click="OnEmulationSpeed" Tag="1" />
+                    <muxc:RadioMenuFlyoutItem x:Name="Speed2" Text="x2" GroupName="Speed" Click="OnEmulationSpeed" Tag="2" />
+                    <muxc:RadioMenuFlyoutItem x:Name="Speed4" Text="x4" GroupName="Speed" Click="OnEmulationSpeed" Tag="4" />
+                    <muxc:RadioMenuFlyoutItem x:Name="Speed8" Text="x8" GroupName="Speed" Click="OnEmulationSpeed" Tag="8" />
+                    <muxc:RadioMenuFlyoutItem x:Name="Speed16" Text="x16" GroupName="Speed" Click="OnEmulationSpeed" Tag="16" />
                 </MenuFlyoutSubItem>
                 <MenuFlyoutSeparator />
                 <MenuFlyoutItem Text="Save Screenshot…" Click="OnSaveScreenshot" />

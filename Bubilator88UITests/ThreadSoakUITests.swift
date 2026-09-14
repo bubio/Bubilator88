@@ -244,7 +244,7 @@ final class ThreadSoakUITests: XCTestCase {
     }
   }
 
-  /// Item 14: CPU speed is written from the main thread and read by the pacer.
+  /// Item 14: Emulation speed is written from the main thread and read by the pacer.
   func testSpeedChangeCycle() throws {
     for round in 1...3 {
       press(.init(XCUIKeyboardKey.upArrow.rawValue))

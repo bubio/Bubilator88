@@ -63,9 +63,9 @@ final class EmulatorViewModel {
     }
   }
 
-  // MARK: - CPU Speed
+  // MARK: - Emulation Speed
 
-  enum CPUSpeed: String, CaseIterable {
+  enum EmulationSpeed: String, CaseIterable {
     case x1 = "x1"
     case x2 = "x2"
     case x4 = "x4"
@@ -87,10 +87,10 @@ final class EmulatorViewModel {
     }
   }
 
-  var cpuSpeed: CPUSpeed = .x1 {
+  var emulationSpeed: EmulationSpeed = .x1 {
     didSet {
-      audio.setRate(cpuSpeed.audioRate)
-      emulationLoop.setFramesPerStep(cpuSpeed.framesPerDraw)
+      audio.setRate(emulationSpeed.audioRate)
+      emulationLoop.setFramesPerStep(emulationSpeed.framesPerDraw)
     }
   }
 
@@ -105,14 +105,14 @@ final class EmulatorViewModel {
         return
       }
       if turboMode {
-        savedSpeed = cpuSpeed
-        cpuSpeed = .x8
+        savedSpeed = emulationSpeed
+        emulationSpeed = .x8
       } else {
-        cpuSpeed = savedSpeed
+        emulationSpeed = savedSpeed
       }
     }
   }
-  private var savedSpeed: CPUSpeed = .x1
+  private var savedSpeed: EmulationSpeed = .x1
 
   // MARK: - Video Filter
 
@@ -349,7 +349,7 @@ final class EmulatorViewModel {
     }
   }
 
-  /// CPU overclock multiplier (1/2/4) — DEBUG-only, not persisted.
+  /// CPU overclock multiplier (1/2/4) — Develop menu only, not persisted.
   /// Applies live without reset.
   var cpuOverclock: Int = 1 {
     didSet {
@@ -980,7 +980,7 @@ final class EmulatorViewModel {
 
     audio.start(spatial: Settings.shared.immersiveAudio)
     applyVolume()
-    audio.setRate(cpuSpeed.audioRate)
+    audio.setRate(emulationSpeed.audioRate)
     if Settings.shared.fddSound {
       fddSound.volume = FDDSound.volume(for: Settings.shared.fddSoundVolumeLevel)
       fddSound.start(outputDeviceUID: Settings.shared.fddSoundDeviceUID)
@@ -995,7 +995,7 @@ final class EmulatorViewModel {
     // emulation stays parked while the window is occluded, as it did when the
     // draw loop drove it.
     syncLoopSettings()
-    emulationLoop.setFramesPerStep(cpuSpeed.framesPerDraw)
+    emulationLoop.setFramesPerStep(emulationSpeed.framesPerDraw)
     emulationLoop.start()
     metalView?.startEmulation()
   }
@@ -1006,7 +1006,7 @@ final class EmulatorViewModel {
     audio.stop()
     audio.start(spatial: Settings.shared.immersiveAudio)
     applyVolume()
-    audio.setRate(cpuSpeed.audioRate)
+    audio.setRate(emulationSpeed.audioRate)
   }
 
   /// Internal tear-down of the run loop. Stops Metal, audio, FDD
