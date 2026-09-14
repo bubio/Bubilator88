@@ -1,13 +1,13 @@
 import AppKit
 import SwiftUI
 
-/// Debug Menu
+/// Develop Menu
 struct DebugCommands: Commands {
   @Bindable var viewModel: EmulatorViewModel
   @Environment(\.openWindow) private var openWindow
 
   var body: some Commands {
-    CommandMenu("DEBUG") {
+    CommandMenu("Develop") {
       Button("Debugger…") {
         openWindow(id: "debugger")
       }
@@ -105,13 +105,13 @@ struct DebugCommands: Commands {
     let alert = NSAlert()
     alert.messageText = String(
       localized: "Reset all settings?",
-      comment: "Confirmation alert title for the DEBUG menu's Reset Settings")
+      comment: "Confirmation alert title for the Develop menu's Reset Settings")
     alert.informativeText = String(
       localized: """
       Every user preference returns to its default. This cannot be undone, and \
       the app must be restarted for all of the changes to take effect.
       """,
-      comment: "Confirmation alert body for the DEBUG menu's Reset Settings")
+      comment: "Confirmation alert body for the Develop menu's Reset Settings")
     alert.alertStyle = .warning
     alert.addButton(
       withTitle: String(localized: "Reset", comment: "Confirm button for Reset Settings"))

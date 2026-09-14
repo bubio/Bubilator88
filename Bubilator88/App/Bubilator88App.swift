@@ -91,7 +91,7 @@ struct Bubilator88App: App {
     .windowToolbarStyle(.unifiedCompact)
     // The auto-generated "Debugger" menu entry in the standard
     // Window menu duplicates the one we already expose from the
-    // Debug menu. Strip it.
+    // Develop menu. Strip it.
     .commandsRemoved()
 
     // On-screen PC-8801 keyboard. Separate window so the emulation view
