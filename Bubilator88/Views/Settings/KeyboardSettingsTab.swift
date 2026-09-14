@@ -11,7 +11,7 @@ struct KeyboardSettingsTab: View {
     // Observation-era way to get `$settings` back inside the body.
     @Bindable var settings = settings
     Form {
-      Section("Layout") {
+      Section {
         Picker("Keyboard Layout", selection: $settings.keyboardLayout) {
           ForEach(KeyboardLayout.allCases) { layout in
             Text(layout.displayName).tag(layout)
@@ -21,30 +21,25 @@ struct KeyboardSettingsTab: View {
         if settings.keyboardLayout == .auto {
           let detected = KeyboardLayoutDetector.currentLayout()
           Text("Detected: \(detected == .jis ? "JIS" : "US (ANSI)")")
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            .settingsDescriptionStyle()
         }
       }
 
       Section("Numpad Emulation") {
         Toggle("Arrow Keys as Numpad", isOn: $settings.arrowKeysAsNumpad)
         Text("For keyboards without a numpad. Maps arrow keys to numpad 2/4/6/8 for game character movement.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
+          .settingsDescriptionStyle()
         Toggle("Number Row as Numpad", isOn: $settings.numberRowAsNumpad)
         Text("For games that only accept numpad digits (e.g. adventure game menu selections). Maps number row 0-9 to numpad 0-9.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
+          .settingsDescriptionStyle()
         Toggle("WASD as Numpad", isOn: $settings.wasdAsNumpad)
         Text("Maps WASD keys to numpad 8/4/2/6 for game character movement using the left hand.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
+          .settingsDescriptionStyle()
       }
 
       Section("Special Key Mapping") {
         Text("PC-8801 keys not found on modern keyboards. Click to reassign.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
+          .settingsDescriptionStyle()
 
         ForEach(PC88SpecialKey.allCases) { sk in
           SpecialKeyMappingRow(
