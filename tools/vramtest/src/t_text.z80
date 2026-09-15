@@ -807,6 +807,7 @@ SampleFrame:
 		ld		(v_w4),hl
 		ld		(v_buf),hl
 		call	WaitVBlank
+		in		a,($68)					; drop a TC left over from before sampling
 		ld		c,0						; 0 = first blank, 1 = display seen
 .poll:
 		in		a,($68)
