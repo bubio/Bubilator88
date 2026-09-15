@@ -21,7 +21,7 @@ Producing the two logs
     BOOTTEST_USE_RUNFRAME=1 BOOTTEST_TURBO=1 BOOTTEST_FRAMES=200 \
     BOOTTEST_DIPSW2=0xB1 CLOCK_4MHZ=1 \
     BOOTTEST_CPU_TRACE_PATH=/tmp/bubi.trace BOOTTEST_CPU_TRACE_LIMIT=200000 \
-      .build/arm64-apple-macosx/debug/BootTester <disk.d88>
+      .build/debug/BootTester <disk.d88>
 
 Match the machine on both sides or everything after instruction 1 is noise:
 BubiC's `BootMode`/`CPUType`/`DipSwitch` live in

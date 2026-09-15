@@ -20,7 +20,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 BT = Path(os.environ.get(
     "BOOTTESTER",
-    Path.home() / "dev/_Emu/Bubilator88Core/.build/arm64-apple-macosx/release/BootTester"))
+    Path.home() / "dev/_Emu/Bubilator88Core/.build/release/BootTester"))
 
 
 def read_ppm(path):

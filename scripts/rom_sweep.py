@@ -26,7 +26,9 @@ REPO = Path(__file__).resolve().parent.parent
 # The core lives in its own repository (bubio/Bubilator88Core), cloned next to
 # this one. Set BUBILATOR88_CORE_DIR to use a clone somewhere else.
 CORE_DIR = Path(os.environ.get("BUBILATOR88_CORE_DIR", REPO.parent / "Bubilator88Core"))
-BOOTTESTER = CORE_DIR / ".build" / "arm64-apple-macosx" / "release" / "BootTester"
+# .build/release follows the build system's output directory (see
+# capture_reference_screenshots.py).
+BOOTTESTER = CORE_DIR / ".build" / "release" / "BootTester"
 
 TURBO = 8
 # With TURBO=N, BOOTTEST_FRAMES=F runs F*N emulated frames.

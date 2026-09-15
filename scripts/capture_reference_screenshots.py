@@ -19,7 +19,11 @@ REPO = Path(__file__).resolve().parent.parent
 # The core lives in its own repository (bubio/Bubilator88Core), cloned next to
 # this one. Set BUBILATOR88_CORE_DIR to use a clone somewhere else.
 CORE_DIR = Path(os.environ.get("BUBILATOR88_CORE_DIR", REPO.parent / "Bubilator88Core"))
-BOOTTESTER = CORE_DIR / ".build" / "arm64-apple-macosx" / "debug" / "BootTester"
+# .build/debug is a symlink to wherever SwiftPM put the debug products:
+# arm64-apple-macosx/debug with the native build system, out/Products/Debug
+# with swiftbuild (the default since Swift 6.4). Naming either directly
+# leaves a stale binary behind when the toolchain switches.
+BOOTTESTER = CORE_DIR / ".build" / "debug" / "BootTester"
 TEST_DIR = Path("/Volumes/CrucialX6/roms/PC88/TEST")
 SS_DIR = TEST_DIR / "SS"
 
