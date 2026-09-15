@@ -9,7 +9,7 @@ description: 15 シナリオの回帰テスト (scripts/regression_compare.py) �
 1. `/Volumes/CrucialX6` がマウントされているか確認。なければ「テストスイートの外付け SSD (CrucialX6) が未接続です」と報告して中止。
 2. `swift build --package-path ../Bubilator88Core` で BootTester を最新にする
    (コアは隣の clone。`BUBILATOR88_CORE_DIR` を設定している場合はそちら)。
-   **必須。** `regression_compare.py` は `.build/arm64-apple-macosx/debug/BootTester`
+   **必須。** `regression_compare.py` は `.build/debug/BootTester`
    を再ビルドせずそのまま実行するので、これを飛ばすと古いバイナリを測ることになり、
    変更が結果に反映されない (PASS も FAIL も信用できなくなる)。
 3. リポジトリルートで `python3 scripts/regression_compare.py` を実行 (全シナリオで数分かかる)。
