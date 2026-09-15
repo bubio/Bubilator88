@@ -5,7 +5,11 @@ import SwiftUI
 /// corners are rounded; the 2 inner (concave) corners at the notch are sharp,
 /// matching a real ISO-style Enter keycap. `notchWidth`/`notchHeight` of 0
 /// degrades to a plain rounded rectangle.
-struct NotchedKeyShape: Shape {
+///
+/// `nonisolated` because the target defaults to MainActor isolation, which
+/// would make `path(in:)` main-actor-bound; Xcode 27 rejects that against
+/// `Shape`'s nonisolated requirement.
+nonisolated struct NotchedKeyShape: Shape {
   let notchWidth: CGFloat
   let notchHeight: CGFloat
   let cornerRadius: CGFloat
