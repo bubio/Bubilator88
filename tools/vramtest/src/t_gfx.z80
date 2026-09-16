@@ -1374,6 +1374,15 @@ TestMidFrame:
 .frame:
 		di
 		call	WaitVBlank
+		; Settings for the top half, before the key poll: PollKey waits for
+		; the key to come up, and a key held down would otherwise leave the
+		; whole screen in the bottom half's mode for as long as it is held.
+		ld		a,P31_COL200
+		call	SetP31
+		ld		a,(v_p30)
+		out		($30),a
+		ld		a,(v_p32)
+		out		($32),a
 		call	PollKey
 		cp		K_ESC
 		jr		z,.done
@@ -1384,13 +1393,6 @@ TestMidFrame:
 		sub		'0'
 		ld		(v_sel),a
 .first:
-		; settings for the top half
-		ld		a,P31_COL200
-		call	SetP31
-		ld		a,(v_p30)
-		out		($30),a
-		ld		a,(v_p32)
-		out		($32),a
 		call	WaitDisplay
 		ld		hl,(v_w1)
 		call	Delay
