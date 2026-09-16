@@ -1360,17 +1360,33 @@ TestLine50:
 .p31:
 		ld		(v_p31),a
 		call	CrtcLoad
-		; fill every row with $FF blocks in color stripes
+		; Fill every row with the four patterns, in color stripes. A solid
+		; $FF cell would look the same at any row height, so each stripe
+		; shows one block row of the 2x4 grid being cut away:
+		;   $5A checkerboard (the sample on the page), $33 bits 0,1,4,5,
+		;   $CC bits 2,3,6,7 (blank at 50 rows), $FF all eight.
 		ld		b,0
 .row:
 		push	bc
 		call	RowAddr
-		ld		c,80
+		ex		de,hl					; DE = row, HL scratch for the table
+		ld		b,80
+		ld		c,0
 .blk:
-		ld		(hl),$FF
-		inc		hl
-		dec		c
-		jr		nz,.blk
+		push	bc
+		ld		a,c
+		and		3
+		ld		c,a
+		ld		b,0
+		ld		hl,PatLine50
+		add		hl,bc
+		ld		a,(hl)
+		pop		bc
+		ld		(de),a
+		inc		de
+		inc		c
+		djnz	.blk
+		ex		de,hl					; HL = attributes, after 80 chars
 		; 20 stripes of 4 columns, colors 1..7 shifted by the row
 		ld		c,0
 		pop		de
@@ -1428,8 +1444,16 @@ TestLine50:
 		ld		(v_sel),a
 		jp		.redraw
 
-; P3 (char height - 1) and P4 (V, Z) for 32 and 50 rows
-Rows24k:	db		12, (1 << 5) | 24,  7, (5 << 5) | 24
+; P3 (char height - 1) and P4 (V, Z) for 32 and 50 rows.
+; From the formula in the author's crtc.z80 (line50.zip): R = round(lines /
+; rows) - 1, V = round(horizontal / (vertical * lines per row) - rows) - 1
+; capped at 7, Z = round(dot clock / (horizontal * 8) - columns) - 2.
+Rows24k:	db		12, (3 << 5) | 24,  7, (5 << 5) | 24
 Rows15k:	db		5,  (7 << 5) | 30,  3, (7 << 5) | 30
 
-MsgLine50:	db		"L: 1=32 rows  2=50 rows (V1S)  ESC=menu  (some monitors lose sync)",0
+; One cell per column of a stripe: see the fill loop above.
+PatLine50:	db		$5A, $33, $CC, $FF
+
+; Padded to 80 so the label row covers the pattern behind it.
+MsgLine50:	db		"L: 1=32 rows  2=50 rows (V1S)  ESC=menu  cells 5A 33 CC FF"
+		db		" (50: CC blank)       ",0
