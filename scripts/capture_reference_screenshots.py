@@ -93,8 +93,12 @@ SCENARIOS = [
        [(10, "SPACE"), (11, "3"),
         (25, "SPACE"), (28, "SPACE")])]),
 
+    # 40 s, not the 28 s that used to catch the title screen: V1S graphics run
+    # at hardware speed since the "GVRAM selected slows everything" wait went
+    # in, and at 28 s this is still loading. 40 s is the opening scene — 200-line
+    # mono graphics with text over them, which is what this scenario is for.
     ("TheHospital", "ザ・病院.D88", False, DIPSW2_V1S, 8,
-     [("TheHospital.ppm", 28, [(15, "SPACE")])]),
+     [("TheHospital.ppm", 40, [(15, "SPACE")])]),
 
     # The only 200-line monochrome capture (the fisherman scene, colored by
     # text attributes); every other scenario is color or 400-line mono.

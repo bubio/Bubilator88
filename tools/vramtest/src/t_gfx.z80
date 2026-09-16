@@ -1496,6 +1496,12 @@ TestSpeed:
 		ld		bc,(12 << 8) | 1
 		ld		hl,MsgMeasuring
 		call	PrintAt
+		; Standard mode for 1 and 2: the page measured the "selected is
+		; slower" effect with the high-speed bit off, and this program's
+		; idle value for port $40 has it on.
+		ld		a,(v_p40)
+		and		$EF
+		out		($40),a
 		; 1: busy loop, main RAM in $C000-$FFFF
 		out		($5F),a
 		call	SpeedLoop
@@ -1571,12 +1577,12 @@ FillLoop:
 
 ScrSpeed:
 		db		DS_TEXT,2,1,"Timed with the RTC interrupt (graphics are shown; text too).",0
-		db		DS_TEXT,5,1,"1: busy loop, main RAM at $C000",$0A
-		db		"2: busy loop, B plane selected",$0A
+		db		DS_TEXT,5,1,"1: busy loop, main RAM at $C000  (standard)",$0A
+		db		"2: busy loop, B plane selected   (standard)",$0A
 		db		$0A
 		db		"3: fill planes, standard ($40 b4=0)",$0A
 		db		"4: fill planes, high speed ($40 b4=1)",0
 		db		DS_TEXT,14,1,"SPACE: measure again",0
-		db		DS_TEXT,16,1,"EXPECT (page, V1S): 2 is about 3.5x slower than 1 (22 s vs 6 s in BASIC),",$0A
-		db		"4 takes about half the time of 3 (17 s vs 34 s). V1H and V2: no difference.",0
+		db		DS_TEXT,16,1,"EXPECT (page, V1S): 2 is about 3.5x slower than 1 (22 s vs 6 s in BASIC).",$0A
+		db		"3 vs 4 is 2x in BASIC, more here: LDIR spends far less time per byte.",0
 		db		DS_END
