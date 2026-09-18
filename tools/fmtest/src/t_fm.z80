@@ -1,0 +1,730 @@
+;==============================================================================
+; fmtest work area (appended after vramtest's VARS_END, well inside the
+; $BC00-$BFFF work area — plenty of room below STACK_TOP=$C000).
+;==============================================================================
+FM_VARS		equ		VARS_END
+v_addr		equ		FM_VARS+0		; playground: current register address
+v_val		equ		FM_VARS+1		; playground: current value to write
+v_bank		equ		FM_VARS+2		; playground: 0=lower ($44/$45), 1=upper ($46/$47)
+v_entrytmp	equ		FM_VARS+3		; hex entry scratch
+v_algo		equ		FM_VARS+4		; algorithm demo: current ALGO (0-7)
+v_fb		equ		FM_VARS+5		; algorithm demo: current feedback (0-7)
+FM_VARS_END	equ		FM_VARS+6
+
+;==============================================================================
+; OPNA low-level helpers
+;==============================================================================
+; A = register, C = value. Lower bank ($44/$45): FM ch1-3, SSG, mode/timers,
+; rhythm, ADPCM.
+WriteFM:
+		out		($44),a
+		ld		a,c
+		out		($45),a
+		ret
+
+; A = register, C = value. Upper bank ($46/$47): FM ch4-6, per-channel pan/
+; AMS/PMS.
+WriteFMUp:
+		out		($46),a
+		ld		a,c
+		out		($47),a
+		ret
+
+; Key on/off channel index B (0-5, mapped to chip channel select 0-2/4-6),
+; mask C (bits 4-7 = OP4..OP1).
+KeyChannel:
+		ld		a,b
+		cp		3
+		jr		c,.lo
+		inc		a
+.lo:
+		or		c
+		ld		c,a
+		ld		a,$28
+		jp		WriteFM
+
+; Silence everything and stop the timers, without touching the patches set
+; up by the demo screens (so re-entering a screen sounds the same as before).
+; Also the very first thing run at boot and whenever the menu is (re)drawn.
+OpnaSilence:
+		ld		hl,ChanList
+		ld		b,6
+.fm:
+		ld		a,$28
+		ld		c,(hl)
+		call	WriteFM
+		inc		hl
+		djnz	.fm
+		ld		a,$07
+		ld		c,$3F					; SSG: tone+noise off, all 3 channels
+		call	WriteFM
+		ld		a,$27
+		ld		c,0						; timers off, mode register cleared
+		call	WriteFM
+		ret
+
+ChanList:
+		db		0,1,2,4,5,6				; chip channel-select values (key-off mask 0)
+
+;==============================================================================
+; A: Register playground
+;
+; Poke any OPNA register directly and hear the result immediately — this is
+; the general-purpose tool; B and C below are just quick-access presets for
+; things that came up in earlier investigation (see docs/develop/SOUND_TEST.md
+; if that gets written) so you don't have to remember the register numbers.
+;==============================================================================
+TitlePlayground:
+		db		"A: Register playground",0
+
+TestPlayground:
+		ld		hl,TitlePlayground
+		call	TestHeader
+		ld		hl,MsgPGHelp1
+		ld		bc,(3 << 8) | 1
+		call	PrintAt
+		ld		hl,MsgPGHelp2
+		ld		bc,(4 << 8) | 1
+		call	PrintAt
+		ld		hl,MsgPGHelp3
+		ld		bc,(5 << 8) | 1
+		call	PrintAt
+		xor		a
+		ld		(v_addr),a
+		ld		(v_val),a
+		ld		(v_bank),a
+		call	PGRedraw
+.loop:
+		call	WaitKey
+		cp		K_ESC
+		jp		z,OpnaSilence
+		cp		'A'
+		jr		z,.enterAddr
+		cp		'D'
+		jr		z,.enterVal
+		cp		'U'
+		jr		z,.toggleBank
+		cp		K_RET
+		jr		z,.write
+		cp		'0'
+		jr		z,.alloff
+		cp		'1'
+		jr		c,.loop
+		cp		'7'
+		jr		nc,.loop
+		sub		'1'
+		ld		b,a
+		ld		c,$F0
+		call	KeyChannel
+		jr		.loop
+.toggleBank:
+		ld		a,(v_bank)
+		xor		1
+		ld		(v_bank),a
+		call	PGRedraw
+		jr		.loop
+.enterAddr:
+		call	PGHexEntry
+		ld		(v_addr),a
+		call	PGRedraw
+		jr		.loop
+.enterVal:
+		call	PGHexEntry
+		ld		(v_val),a
+		call	PGRedraw
+		jr		.loop
+.write:
+		ld		a,(v_addr)
+		ld		c,a
+		ld		a,(v_val)
+		ld		b,a
+		ld		a,(v_bank)
+		or		a
+		jr		nz,.wUp
+		ld		a,c
+		out		($44),a
+		ld		a,b
+		out		($45),a
+		jr		.loop
+.wUp:
+		ld		a,c
+		out		($46),a
+		ld		a,b
+		out		($47),a
+		jr		.loop
+.alloff:
+		call	OpnaSilence
+		jr		.loop
+
+; Read two hex-digit keypresses and return the byte in A. ESC bails all the
+; way out to the menu (silencing first).
+PGHexEntry:
+		xor		a
+		ld		(v_entrytmp),a
+		ld		b,2
+.digit:
+		call	WaitKey
+		cp		K_ESC
+		jp		z,OpnaSilence
+		call	PGHexDigit
+		jr		c,.digit
+		ld		d,a
+		ld		hl,v_entrytmp
+		ld		a,(hl)
+		rlca
+		rlca
+		rlca
+		rlca
+		or		d
+		ld		(hl),a
+		djnz	.digit
+		ld		a,(v_entrytmp)
+		ret
+
+; A = key code in. On return: carry clear and A = 0-15 if it was a hex
+; digit ('0'-'9' or 'A'-'F'), carry set otherwise (A undefined).
+PGHexDigit:
+		cp		'0'
+		jr		c,.no
+		cp		'9'+1
+		jr		nc,.letter
+		sub		'0'
+		or		a
+		ret
+.letter:
+		cp		'A'
+		jr		c,.no
+		cp		'F'+1
+		jr		nc,.no
+		sub		'A'-10
+		or		a
+		ret
+.no:
+		scf
+		ret
+
+PGRedraw:
+		ld		bc,(7 << 8) | 1
+		call	Locate
+		ld		hl,MsgAddr
+		call	PutStr
+		ld		a,(v_addr)
+		call	PutHex8
+		ld		bc,(7 << 8) | 16
+		call	Locate
+		ld		hl,MsgVal
+		call	PutStr
+		ld		a,(v_val)
+		call	PutHex8
+		ld		bc,(7 << 8) | 31
+		call	Locate
+		ld		hl,MsgBank
+		call	PutStr
+		ld		hl,MsgLowerShort
+		ld		a,(v_bank)
+		or		a
+		jr		z,.b
+		ld		hl,MsgUpperShort
+.b:
+		call	PutStr
+		ld		bc,(9 << 8) | 1
+		call	Locate
+		ld		hl,MsgLower
+		ld		a,(v_bank)
+		or		a
+		jr		z,.c
+		ld		hl,MsgUpper
+.c:
+		jp		PutStr
+
+MsgPGHelp1:	db		"A: enter address (2 hex digits).",0
+MsgPGHelp2:	db		"D: enter value (2 hex digits).  RETURN: write.",0
+MsgPGHelp3:	db		"U: toggle bank.  1-6: key on FM ch N.  0: silence all.",0
+MsgAddr:	db		"Addr: $",0
+MsgVal:		db		"Val: $",0
+MsgBank:	db		"Bank: ",0
+MsgLowerShort: db		"LOWER",0
+MsgUpperShort: db		"UPPER",0
+MsgLower:	db		"LOWER ($44/45): FM ch1-3, SSG, mode/timers, rhythm, ADPCM",0
+MsgUpper:	db		"UPPER ($46/47): FM ch4-6, pan/AMS/PMS",0
+
+;==============================================================================
+; B: Algorithm & feedback (ch1)
+;
+; One sustained ch1 note; change ALGO (number keys) or feedback (up/down)
+; live and hear the timbre change. All 4 operators get equal TL so whichever
+; ones are carriers in the current algorithm are always audible.
+;==============================================================================
+TitleAlgorithm:
+		db		"B: Algorithm & feedback (ch1)",0
+
+TestAlgorithm:
+		ld		hl,TitleAlgorithm
+		call	TestHeader
+		ld		hl,MsgAlgoHelp1
+		ld		bc,(3 << 8) | 1
+		call	PrintAt
+		ld		hl,MsgAlgoHelp2
+		ld		bc,(4 << 8) | 1
+		call	PrintAt
+		xor		a
+		ld		(v_algo),a
+		ld		(v_fb),a
+		call	AlgoSetupPatch
+		call	AlgoRedraw
+		call	AlgoRetrigger
+.loop:
+		call	WaitKey
+		cp		K_ESC
+		jp		z,OpnaSilence
+		cp		'0'
+		jr		c,.arrows
+		cp		'7'+1
+		jr		nc,.arrows
+		sub		'0'
+		ld		(v_algo),a
+		call	AlgoApply
+		call	AlgoRedraw
+		call	AlgoRetrigger
+		jr		.loop
+.arrows:
+		cp		K_UP
+		jr		z,.fbup
+		cp		K_DOWN
+		jr		z,.fbdown
+		jr		.loop
+.fbup:
+		ld		a,(v_fb)
+		cp		7
+		jr		z,.loop
+		inc		a
+		ld		(v_fb),a
+		jr		.fbcommit
+.fbdown:
+		ld		a,(v_fb)
+		or		a
+		jr		z,.loop
+		dec		a
+		ld		(v_fb),a
+.fbcommit:
+		call	AlgoApply
+		call	AlgoRedraw
+		call	AlgoRetrigger
+		jr		.loop
+
+; Identical params on all 4 physical slots of ch1 ($x0/$x4/$x8/$xC), a
+; sustained envelope (fast attack, slow-ish decay to SL=0, so it just holds),
+; and a mid-range F-Number. ALGO/FB start at 0 (all-serial) — AlgoApply
+; overwrites $B0 afterwards.
+AlgoSetupPatch:
+		ld		a,$30
+		ld		c,$01
+		call	WriteFM
+		ld		a,$34
+		ld		c,$01
+		call	WriteFM
+		ld		a,$38
+		ld		c,$01
+		call	WriteFM
+		ld		a,$3C
+		ld		c,$01
+		call	WriteFM
+		ld		a,$40
+		ld		c,$08
+		call	WriteFM
+		ld		a,$44
+		ld		c,$08
+		call	WriteFM
+		ld		a,$48
+		ld		c,$08
+		call	WriteFM
+		ld		a,$4C
+		ld		c,$08
+		call	WriteFM
+		ld		a,$50
+		ld		c,$1F
+		call	WriteFM
+		ld		a,$54
+		ld		c,$1F
+		call	WriteFM
+		ld		a,$58
+		ld		c,$1F
+		call	WriteFM
+		ld		a,$5C
+		ld		c,$1F
+		call	WriteFM
+		ld		a,$60
+		ld		c,$0A
+		call	WriteFM
+		ld		a,$64
+		ld		c,$0A
+		call	WriteFM
+		ld		a,$68
+		ld		c,$0A
+		call	WriteFM
+		ld		a,$6C
+		ld		c,$0A
+		call	WriteFM
+		ld		a,$70
+		ld		c,$00
+		call	WriteFM
+		ld		a,$74
+		ld		c,$00
+		call	WriteFM
+		ld		a,$78
+		ld		c,$00
+		call	WriteFM
+		ld		a,$7C
+		ld		c,$00
+		call	WriteFM
+		ld		a,$80
+		ld		c,$07
+		call	WriteFM
+		ld		a,$84
+		ld		c,$07
+		call	WriteFM
+		ld		a,$88
+		ld		c,$07
+		call	WriteFM
+		ld		a,$8C
+		ld		c,$07
+		call	WriteFM
+		ld		a,$A4
+		ld		c,$22				; block 4
+		call	WriteFM
+		ld		a,$A0
+		ld		c,$69				; F-Number low
+		jp		WriteFM
+
+AlgoApply:
+		ld		a,(v_fb)
+		rlca
+		rlca
+		rlca
+		ld		b,a
+		ld		a,(v_algo)
+		or		b
+		ld		c,a
+		ld		a,$B0
+		jp		WriteFM
+
+AlgoRetrigger:
+		ld		b,0
+		ld		c,$00
+		call	KeyChannel
+		ld		b,0
+		ld		c,$F0
+		jp		KeyChannel
+
+AlgoRedraw:
+		ld		bc,(6 << 8) | 1
+		call	Locate
+		ld		hl,MsgAlgoLabel
+		call	PutStr
+		ld		a,(v_algo)
+		add		a,'0'
+		ld		(de),a
+		ld		bc,(6 << 8) | 24
+		call	Locate
+		ld		hl,MsgFbLabel
+		call	PutStr
+		ld		a,(v_fb)
+		add		a,'0'
+		ld		(de),a
+		ret
+
+MsgAlgoHelp1: db		"0-7: select algorithm.  UP/DOWN: feedback -/+.",0
+MsgAlgoHelp2: db		"Same 4-operator patch throughout, only $B0 (algorithm/feedback) changes.",0
+MsgAlgoLabel: db		"Algorithm: ",0
+MsgFbLabel:	db		"   Feedback: ",0
+
+;==============================================================================
+; C: CH3 special mode (normal / effect sound / CSM)
+;
+; 2026-09: investigated whether YS actually uses "effect sound mode"
+; ($27 D7:D6=01) audibly. It's in continuous use from the title screen on,
+; but the driver writes near-identical F-Numbers to all 4 operators (a 1-frame
+; staggered unison/chorus), which is why it sounds like an ordinary voice.
+; Mode 3 here deliberately spreads the 4 operators apart so you can hear what
+; the mode *can* do when a driver actually uses it for dissonance.
+;==============================================================================
+TitleCh3Special:
+		db		"C: CH3 special mode (normal / effect / CSM)",0
+
+TestCh3Special:
+		ld		hl,TitleCh3Special
+		call	TestHeader
+		ld		hl,MsgCh3Help1
+		ld		bc,(3 << 8) | 1
+		call	PrintAt
+		ld		hl,MsgCh3Help2
+		ld		bc,(4 << 8) | 1
+		call	PrintAt
+		ld		hl,MsgCh3Help3
+		ld		bc,(5 << 8) | 1
+		call	PrintAt
+		call	Ch3SetupPatch
+		call	Ch3Mode1
+.loop:
+		call	WaitKey
+		cp		K_ESC
+		jp		z,OpnaSilence
+		cp		'1'
+		jr		z,.m1
+		cp		'2'
+		jr		z,.m2
+		cp		'3'
+		jr		z,.m3
+		cp		'4'
+		jr		z,.m4
+		jr		.loop
+.m1:
+		call	Ch3Mode1
+		jr		.loop
+.m2:
+		call	Ch3Mode2
+		jr		.loop
+.m3:
+		call	Ch3Mode3
+		jr		.loop
+.m4:
+		call	Ch3Mode4
+		jr		.loop
+
+; ALGO7/FB0 on ch3 so all 4 operators are independent carriers — with
+; divergent per-operator F-Numbers you hear 4 simultaneous pitches, not just
+; a timbre change.
+Ch3SetupPatch:
+		ld		a,$32
+		ld		c,$01
+		call	WriteFM
+		ld		a,$36
+		ld		c,$01
+		call	WriteFM
+		ld		a,$3A
+		ld		c,$01
+		call	WriteFM
+		ld		a,$3E
+		ld		c,$01
+		call	WriteFM
+		ld		a,$42
+		ld		c,$0C
+		call	WriteFM
+		ld		a,$46
+		ld		c,$0C
+		call	WriteFM
+		ld		a,$4A
+		ld		c,$0C
+		call	WriteFM
+		ld		a,$4E
+		ld		c,$0C
+		call	WriteFM
+		ld		a,$52
+		ld		c,$1F
+		call	WriteFM
+		ld		a,$56
+		ld		c,$1F
+		call	WriteFM
+		ld		a,$5A
+		ld		c,$1F
+		call	WriteFM
+		ld		a,$5E
+		ld		c,$1F
+		call	WriteFM
+		ld		a,$62
+		ld		c,$0A
+		call	WriteFM
+		ld		a,$66
+		ld		c,$0A
+		call	WriteFM
+		ld		a,$6A
+		ld		c,$0A
+		call	WriteFM
+		ld		a,$6E
+		ld		c,$0A
+		call	WriteFM
+		ld		a,$72
+		ld		c,$00
+		call	WriteFM
+		ld		a,$76
+		ld		c,$00
+		call	WriteFM
+		ld		a,$7A
+		ld		c,$00
+		call	WriteFM
+		ld		a,$7E
+		ld		c,$00
+		call	WriteFM
+		ld		a,$82
+		ld		c,$07
+		call	WriteFM
+		ld		a,$86
+		ld		c,$07
+		call	WriteFM
+		ld		a,$8A
+		ld		c,$07
+		call	WriteFM
+		ld		a,$8E
+		ld		c,$07
+		call	WriteFM
+		ld		a,$B2
+		ld		c,$07				; ALGO7, FB0
+		jp		WriteFM
+
+; Mode 1: normal CH3 — a single F-Number for all 4 internal operators via
+; $A2/$A6. The special per-operator registers exist on the chip but are
+; ignored in this mode.
+Ch3Mode1:
+		ld		a,$27
+		ld		c,$00
+		call	WriteFM
+		ld		a,$A6
+		ld		c,$22				; block 4
+		call	WriteFM
+		ld		a,$A2
+		ld		c,$69
+		call	WriteFM
+		ld		b,2
+		ld		c,$00
+		call	KeyChannel
+		ld		b,2
+		ld		c,$F0
+		call	KeyChannel
+		ld		bc,(6 << 8) | 1
+		call	Locate
+		ld		hl,MsgCh3Mode1
+		jp		PutStr
+
+; Mode 2: effect sound mode ($27=$40), but all 4 operators get the *same*
+; F-Number — this is what YS's driver actually does. Should sound the same
+; as mode 1.
+Ch3Mode2:
+		ld		a,$27
+		ld		c,$40
+		call	WriteFM
+		ld		a,$A6
+		ld		c,$22
+		call	WriteFM
+		ld		a,$A2
+		ld		c,$69
+		call	WriteFM
+		ld		a,$AD
+		ld		c,$22				; op1
+		call	WriteFM
+		ld		a,$A9
+		ld		c,$69
+		call	WriteFM
+		ld		a,$AE
+		ld		c,$22				; op2
+		call	WriteFM
+		ld		a,$AA
+		ld		c,$69
+		call	WriteFM
+		ld		a,$AC
+		ld		c,$22				; op3
+		call	WriteFM
+		ld		a,$A8
+		ld		c,$69
+		call	WriteFM
+		ld		b,2
+		ld		c,$00
+		call	KeyChannel
+		ld		b,2
+		ld		c,$F0
+		call	KeyChannel
+		ld		bc,(6 << 8) | 1
+		call	Locate
+		ld		hl,MsgCh3Mode2
+		jp		PutStr
+
+; Mode 3: effect sound mode, operators deliberately spread apart in
+; F-Number — this is what the mode is actually capable of.
+Ch3Mode3:
+		ld		a,$27
+		ld		c,$40
+		call	WriteFM
+		ld		a,$A6
+		ld		c,$22
+		call	WriteFM
+		ld		a,$A2
+		ld		c,$69				; op4: base
+		call	WriteFM
+		ld		a,$AD
+		ld		c,$22
+		call	WriteFM
+		ld		a,$A9
+		ld		c,$49				; op1: base - 0x20
+		call	WriteFM
+		ld		a,$AE
+		ld		c,$22
+		call	WriteFM
+		ld		a,$AA
+		ld		c,$99				; op2: base + 0x30
+		call	WriteFM
+		ld		a,$AC
+		ld		c,$23				; op3: next block up, well spread
+		call	WriteFM
+		ld		a,$A8
+		ld		c,$10
+		call	WriteFM
+		ld		b,2
+		ld		c,$00
+		call	KeyChannel
+		ld		b,2
+		ld		c,$F0
+		call	KeyChannel
+		ld		bc,(6 << 8) | 1
+		call	Locate
+		ld		hl,MsgCh3Mode3
+		jp		PutStr
+
+; Mode 4: CSM ($27=$80). Timer A auto-retriggers CH3's envelopes on
+; overflow (no CPU interrupt needed — this is the chip's own internal
+; auto-key-on). TA=0 gives the shortest, fastest period, for an obviously
+; buzzy/textured result. Uses the same divergent F-Numbers as mode 3.
+Ch3Mode4:
+		ld		a,$A6
+		ld		c,$22
+		call	WriteFM
+		ld		a,$A2
+		ld		c,$69
+		call	WriteFM
+		ld		a,$AD
+		ld		c,$22
+		call	WriteFM
+		ld		a,$A9
+		ld		c,$49
+		call	WriteFM
+		ld		a,$AE
+		ld		c,$22
+		call	WriteFM
+		ld		a,$AA
+		ld		c,$99
+		call	WriteFM
+		ld		a,$AC
+		ld		c,$23
+		call	WriteFM
+		ld		a,$A8
+		ld		c,$10
+		call	WriteFM
+		ld		a,$24
+		ld		c,$00				; Timer A period = 0 (shortest, fastest overflow)
+		call	WriteFM
+		ld		a,$25
+		ld		c,$00
+		call	WriteFM
+		ld		a,$27
+		ld		c,$94				; CSM + Timer A load + enable in one write
+		call	WriteFM
+		ld		bc,(6 << 8) | 1
+		call	Locate
+		ld		hl,MsgCh3Mode4
+		jp		PutStr
+
+MsgCh3Help1: db		"1: normal CH3.  2: effect mode, unison (= what YS actually does).",0
+MsgCh3Help2: db		"3: effect mode, operators spread apart (dissonant chorus).",0
+MsgCh3Help3: db		"4: CSM, Timer A auto-retrigger, same spread as 3.",0
+MsgCh3Mode1: db		"Mode 1: normal CH3 ($27=$00)                                    ",0
+MsgCh3Mode2: db		"Mode 2: effect sound, unison ($27=$40, same F-Num on all 4 ops) ",0
+MsgCh3Mode3: db		"Mode 3: effect sound, spread ($27=$40, divergent F-Num per op)  ",0
+MsgCh3Mode4: db		"Mode 4: CSM ($27=$80/$94), Timer A auto-retrigger, spread ops   ",0
