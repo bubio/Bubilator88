@@ -614,6 +614,8 @@ TestSpecial:
 		ld		(v_sel2),a				; prefix byte ($E0 or $60)
 		ld		a,$03
 		ld		(v_sel3),a				; SET INTERRUPT MASK ME,MN
+		ld		a,5
+		ld		(v_sel4),a				; attribute slot holding the pair
 		call	TextDefaults
 		ld		a,1
 		call	TextMode				; transparent B/W, special chars on
@@ -647,13 +649,17 @@ TestSpecial:
 		jr		nz,.rows
 		ld		hl,ScrSpecial
 		call	Draw
-		; special control character in row 12, attribute pair 5
+		; special control character in row 12, at the selected pair
 		ld		a,(v_sel)
 		or		a
 		jr		z,.mask
 		ld		b,12
 		call	RowAddr
-		ld		de,80+5*2
+		ld		a,(v_sel4)
+		add		a,a
+		add		a,80
+		ld		e,a
+		ld		d,0
 		add		hl,de
 		ld		a,(v_sel2)
 		ld		(hl),a
@@ -669,6 +675,10 @@ TestSpecial:
 		ld		bc,(1 << 8) | 1
 		call	Locate
 		ld		hl,MsgSpecNow
+		call	PutStr
+		ld		a,(v_sel4)
+		call	PutDec2
+		ld		hl,MsgSpecEq
 		call	PutStr
 		ld		a,(v_sel2)
 		call	PutHex8
@@ -706,7 +716,20 @@ TestSpecial:
 		cp		'4'
 		jr		z,.prefix
 		cp		'5'
+		jr		z,.intmask
+		cp		'6'
 		jr		nz,.live
+		; pair 5 (anywhere in the row) or 19 (the last slot, which is all
+		; M88 looks at)
+		ld		a,(v_sel4)
+		cp		5
+		ld		a,19
+		jr		z,.setpair
+		ld		a,5
+.setpair:
+		ld		(v_sel4),a
+		jp		.redraw
+.intmask:
 		ld		a,(v_sel3)
 		inc		a
 		and		3
@@ -722,12 +745,13 @@ TestSpecial:
 		jp		.redraw
 
 MsgSpecialRow: db		"  --------------------------------",0
-MsgSpecNow:	db		"row 12 pair 5 = ",0
+MsgSpecNow:	db		"row 12 pair ",0
+MsgSpecEq:	db		" = ",0
 MsgSpecMask: db		"   int mask ME,MN=",0
 MsgSpecStatus: db		"   status $51: ",0
 
 ScrSpecial:
-		db		DS_TEXT,23,1,"0:none 1:I($04) 2:V($02) 3:D($01) 4:$E0/$60 5:int mask",0
+		db		DS_TEXT,23,1,"0:none 1:I($04) 2:V($02) 3:D($01) 4:$E0/$60 5:int mask 6:pair",0
 		db		DS_TEXT,2,40,"status bits: 000 VE U N E LP",0
 		db		DS_TEXT,13,48,"EXPECT (page):",$0A
 		db		"V: the screen flickers",$0A
