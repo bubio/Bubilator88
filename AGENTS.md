@@ -103,23 +103,6 @@ Key points:
 
 **Layer structure:** Bubilator88Core (pure Swift, no platform APIs) ← App (SwiftUI/AppKit). Lower layers must never depend on upper layers.
 
-**Core components:**
-- **Machine** — orchestrator that owns all components and drives time via `tick()`
-- **Z80** — pure Swift CPU, step-based execution returning T-states, communicates only through Bus
-- **Pc88Bus** — memory/IO abstraction (memRead/memWrite/ioRead/ioWrite). Owns RAM, ROM, VRAM, I/O registers, VRAM WAIT logic
-- **CRTC** (uPD3301) — scanline timing, VRTC flag, display parameters
-- **YM2608** (OPNA) — SSG (3ch), FM (6ch×4op), ADPCM, Rhythm; timer interrupts
-- **SubSystem** — sub-CPU + uPD765A FDC via 8255 PIO handshake protocol
-- **InterruptController** — i8214 behavioral model, 8 priority levels, IM2 vector dispatch
-- **DMAController** (uPD8257) — channel 2 for text VRAM→CRTC
-- **FontROM** — built-in ASCII + external ROM loading
-- **ScreenRenderer** — GVRAM planes→RGBA buffer, text overlay, 40/80 column modes
-
-**App-layer components:**
-- **EmulatorViewModel** — drives Machine on dedicated DispatchQueue at 60Hz
-- **AudioOutput** — AVAudioEngine with ring buffer for YM2608 audio
-- **KeyMapping** — macOS keyCode→PC-8801 keyboard matrix
-
 **Timing:** T-state based, not frame-based. Machine orchestrates all progression. GVRAM access adds 1T WAIT during active display.
 
 **Memory map (default):** 0x0000–0x7FFF ROM (N88-BASIC), 0x8000–0x83FF text window, 0x8400–0xBFFF Main RAM, 0xC000–0xFFFF GVRAM (banked) or Main RAM. Unimplemented I/O ports return 0xFF.
@@ -139,36 +122,17 @@ Key points:
 
 `windows/` holds a C# + WinUI 3 shell that drives the same Bubilator88Core through a
 C ABI DLL (`Sources/CApi/` in the core, built as the `Bubilator88C` product).
-It lives in `main` alongside the macOS app rather than in a fork: the emulation
-core is the product, so every accuracy fix is a Windows fix too, and a fork
-would turn each one into a permanent cherry-pick. Windows builds use the same
-core revision as the macOS app (`.github/actions/checkout-core`).
+The shell's own rules, CI triggers and parity gaps live in `windows/CLAUDE.md`,
+which loads when working under `windows/`. Two rules belong here because they
+apply to the core, which is a separate clone:
 
-The Windows-specific footprint inside the Swift package is deliberately tiny —
-the `CApi` target (new files only), the `Bubilator88C` product in
-`Package.swift`, and one `#if os(Windows)` in `Peripherals/UPD1990A.swift`.
-No emulation logic is conditional on the platform, and it must stay that way.
-
-Rules:
-
-- **Bubilator88Core is macOS-first.** Accuracy decisions are judged by the macOS
-  regression suite. Never bend the core's design for the Windows shell.
-- **The Windows shell may lag.** Core features can land without a C# counterpart.
 - **The C ABI is additive-only.** Do not change the signature or semantics of an
   existing `b88_*` function; add a new one instead. Shipped Windows binaries and
   the source tree drift apart between releases.
-- **A red `ci-windows.yml` does not block macOS work.** It records that Windows
-  broke and which commit did it; fixing it can wait for the next Windows release.
 - Every `@_cdecl` function in the core's `Sources/CApi/` must be `public`. On
   Windows, Swift exports only a DLL's public symbols; a non-public one still
   builds while the DLL silently loses it. The core's CI compares the DLL's
   export table with the `@_cdecl` names.
-
-`ci-windows.yml` runs on `main` pushes and PRs that change the core pin
-(`Package.resolved`), `windows/**` or `models/onnx/**` — the only places that
-can break Windows. `release-windows.yml` builds the distributable on
-`win-v*` tags, independent of the macOS release. Details and the current parity
-gaps: `windows/README.md`, `docs/develop/WINDOWS_PORT.md`.
 
 ## Code Style
 
@@ -202,29 +166,10 @@ gaps: `windows/README.md`, `docs/develop/WINDOWS_PORT.md`.
 
 ## Localization
 
-UI strings live in String Catalogs: `Bubilator88/Resources/Localizable.xcstrings`
-and `InfoPlist.xcstrings`. English is the source language and has no
-localization entries — it falls back to the key itself, so **the key is the
-English string**. Japanese is the only translated language.
-
-Call sites use `String(localized:comment:)`; SwiftUI views rely on
-`LocalizedStringKey` literals in `Text`/`Button`/`.help`.
-`scripts/strings_to_xcstrings.py` converts legacy `.strings` files if one ever
-reappears.
-
-A command-line build never fills the catalog in — only opening it in Xcode's
-editor does. Use **`scripts/extract_loc_keys.py --missing`** after a build to
-list keys the compiler extracted but the catalog lacks. It reads the
-`.stringsdata` that `SWIFT_EMIT_LOC_STRINGS = YES` emits, so it reports the
-*exact* key, including the format specifiers SwiftUI derives from interpolation
-(`Text("FM \(ch + 1): muted")` → `"FM %lld: muted"`). Guessing those by hand
-ships strings that silently never resolve.
-
-Bubilator88Core itself has no localization. `Script.swift` / `ScriptPlayer.swift`
-therefore raise errors carrying an English **format string plus arguments**, and
-the app layer translates them through the catalog
-(`ViewModel/ScriptErrorLocalization.swift`) — the format string doubles as the
-catalog key.
+UI strings live in String Catalogs and English is the source language, so **the
+key is the English string**. The details — call-site forms, the catalog-filling
+trap, and how the core reports localizable errors — are in the `localization`
+skill (`.claude/skills/localization/SKILL.md`).
 
 ## Logging
 
