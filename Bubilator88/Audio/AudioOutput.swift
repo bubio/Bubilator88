@@ -55,29 +55,118 @@ final class AudioOutput {
   private nonisolated(unsafe) var readIndex: Int = 0
   private nonisolated(unsafe) var writeIndex: Int = 0
 
-  /// Compute ring buffer size from Settings.audioBufferMs (power of 2, stereo pairs).
-  private static func ringBufferSize(forMs ms: Int) -> Int {
-    let sampleRate = PC88.audioSampleRate
-    let rawSize = ms * sampleRate * 2 / 1000
-    let size = max(4096, rawSize)
-    var p = 1
-    while p < size { p <<= 1 }
-    return p
+  // MARK: Fill level
+  //
+  // The ring's capacity and the fill level the rate control aims for are
+  // independent. The capacity is fixed and generous; the target comes from
+  // Settings.audioBufferMs. When the capacity was derived from the setting
+  // (rounded up to a power of two, target = half of it), a 20ms setting
+  // aimed for 23ms. The emulator writes a whole video frame (~18ms) at once
+  // and the fill is measured right after that write, so the level fell to
+  // 5ms just before the next write. That is below one CoreAudio IO chunk,
+  // so every frame underran.
+
+  /// Ring capacity in frames: 1.49s at 44.1kHz, enough for the 500ms maximum
+  /// setting plus a batch of fast-forward frames.
+  private nonisolated static let ringCapacityFrames = 1 << 16
+
+  /// Headroom for scheduling jitter on top of one write burst + one IO chunk.
+  private nonisolated static let jitterMarginFrames = 128
+
+  /// IO buffer size requested from the output device (5.8ms at 44.1kHz).
+  /// The default of 512 frames needs twice the fill level.
+  private static let preferredDeviceBufferFrames: UInt32 = 256
+
+  /// Fill level (frames, measured right after a write) that the setting asks for.
+  private nonisolated static func settingTargetFrames(forMs ms: Int) -> Int {
+    ms * PC88.audioSampleRate / 1000
   }
 
-  /// Compute mono ring buffer size (power of 2).
-  private static func monoRingBufferSize(forMs ms: Int) -> Int {
-    let sampleRate = PC88.audioSampleRate
-    let rawSize = ms * sampleRate / 1000
-    let size = max(2048, rawSize)
-    var p = 1
-    while p < size { p <<= 1 }
-    return p
+  /// Lowest fill level that doesn't run dry before the next write: one write
+  /// burst drains in full, and the render callback takes a whole IO chunk at
+  /// a time.
+  private nonisolated static func minimumTargetFrames(burstFrames: Int, ioFrames: Int) -> Int {
+    burstFrames + ioFrames + jitterMarginFrames
   }
+
+  /// Initial fill for a fresh ring, before any real burst or IO chunk has been
+  /// seen. Assumes the slower (24kHz monitor, 55.42Hz) frame and the device's
+  /// default 512-frame IO so the first seconds don't underrun while the rate
+  /// control settles.
+  private nonisolated static func initialFillFrames(forMs ms: Int) -> Int {
+    let burst = PC88.audioSampleRate * 100 / 5542
+    return max(settingTargetFrames(forMs: ms), minimumTargetFrames(burstFrames: burst, ioFrames: 512))
+  }
+
+  /// Target from the setting, captured at start (bufferLock).
+  private nonisolated(unsafe) var settingTarget: Int = 0
+  /// Largest render-callback request seen since start, in frames (bufferLock).
+  private nonisolated(unsafe) var maxRenderFrames: Int = 0
 
   /// Last sample values for smooth underrun fade-out
   private nonisolated(unsafe) var lastSampleL: Float = 0
   private nonisolated(unsafe) var lastSampleR: Float = 0
+
+  // MARK: - Underrun diagnostics
+  //
+  // The render callback increments these when the ring buffer runs dry
+  // (readIndex == writeIndex). Counters, not the lock-protected ring state,
+  // so the debug UI can poll them without contending with the audio thread.
+
+  private let underrunEventCount  = Atomic<UInt64>(0)
+  private let underrunSampleCount = Atomic<UInt64>(0)
+  /// `systemUptime` bit pattern of the last underrun (0 = none yet). Stored as
+  /// bits because `Atomic` only supports integer-representable payloads.
+  private let lastUnderrunUptimeBits = Atomic<UInt64>(0)
+  /// Frames thrown away because the ring was full when the emulator wrote.
+  private let overflowSampleCount = Atomic<UInt64>(0)
+  /// Fill level the rate control aimed for at the last write, in frames.
+  private let currentTargetFrames = Atomic<Int>(0)
+  /// Largest IO chunk the render callback has been asked for, in frames.
+  private let currentIOFrames = Atomic<Int>(0)
+
+  struct UnderrunStats {
+    let events: UInt64
+    let samples: UInt64
+    let secondsSinceLast: Double?
+    let droppedSamples: UInt64
+    /// Fill-level target in milliseconds (0 before the first write).
+    let targetMs: Double
+    /// Render-callback IO chunk in frames (0 before the first callback).
+    let ioFrames: Int
+  }
+
+  /// Snapshot of buffer-underrun counts for the debug UI. Safe to call from the main actor.
+  nonisolated func underrunSnapshot() -> UnderrunStats {
+    let events  = underrunEventCount.load(ordering: .relaxed)
+    let samples = underrunSampleCount.load(ordering: .relaxed)
+    let lastBits = lastUnderrunUptimeBits.load(ordering: .relaxed)
+    let since: Double? = lastBits > 0
+      ? ProcessInfo.processInfo.systemUptime - Double(bitPattern: lastBits)
+      : nil
+    let target = currentTargetFrames.load(ordering: .relaxed)
+    return UnderrunStats(events: events, samples: samples, secondsSinceLast: since,
+                         droppedSamples: overflowSampleCount.load(ordering: .relaxed),
+                         targetMs: Double(target) * 1000 / Double(PC88.audioSampleRate),
+                         ioFrames: currentIOFrames.load(ordering: .relaxed))
+  }
+
+  /// Clears the underrun counters, e.g. before starting a fresh play-through to watch for dropouts.
+  nonisolated func resetUnderrunStats() {
+    underrunEventCount.store(0, ordering: .relaxed)
+    underrunSampleCount.store(0, ordering: .relaxed)
+    lastUnderrunUptimeBits.store(0, ordering: .relaxed)
+    overflowSampleCount.store(0, ordering: .relaxed)
+  }
+
+  /// Records one render callback's worth of underrun, called off the audio thread's hot loop
+  /// (at most once per callback, not once per frame).
+  private func recordUnderrun(frames: Int) {
+    guard frames > 0 else { return }
+    underrunEventCount.wrappingAdd(1, ordering: .relaxed)
+    underrunSampleCount.wrappingAdd(UInt64(frames), ordering: .relaxed)
+    lastUnderrunUptimeBits.store(ProcessInfo.processInfo.systemUptime.bitPattern, ordering: .relaxed)
+  }
 
   /// Whether audio is currently playing
   private(set) var isPlaying: Bool = false
@@ -124,6 +213,7 @@ final class AudioOutput {
   func start(spatial: Bool = false) {
     guard !isPlaying else { return }
 
+    resetUnderrunStats()
     let engine = AVAudioEngine()
 
     if spatial {
@@ -132,6 +222,8 @@ final class AudioOutput {
       startStereo(engine: engine)
     }
 
+    Self.requestDeviceBufferFrames(for: engine)
+
     do {
       try engine.start()
       self.audioEngine = engine
@@ -139,23 +231,64 @@ final class AudioOutput {
       isPlaying = true
       configurationRecovery.observe(engine) { [weak self, weak engine] in
         guard let self, let engine, self.isPlaying, self.audioEngine === engine else { return }
-        if !engine.isRunning { try engine.start() }
+        if !engine.isRunning {
+          // A new output device starts at its own default IO size.
+          Self.requestDeviceBufferFrames(for: engine)
+          try engine.start()
+        }
       }
     } catch {
       // Audio start failed — emulator runs silently
     }
   }
 
+  /// Ask the engine's output device for `preferredDeviceBufferFrames`-sized IO,
+  /// clamped to the range the device supports. The HAL applies this per
+  /// process, so other apps on the same device keep their own size. On failure
+  /// the device's default stays in effect; the fill target adapts to whatever
+  /// chunk size the render callback actually sees.
+  private static func requestDeviceBufferFrames(for engine: AVAudioEngine) {
+    guard let au = engine.outputNode.audioUnit else { return }
+    var deviceID = AudioDeviceID(0)
+    var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+    guard AudioUnitGetProperty(au, kAudioOutputUnitProperty_CurrentDevice,
+                               kAudioUnitScope_Global, 0, &deviceID, &size) == noErr,
+          deviceID != 0 else { return }
+
+    var frames = preferredDeviceBufferFrames
+    var rangeAddr = AudioObjectPropertyAddress(
+      mSelector: kAudioDevicePropertyBufferFrameSizeRange,
+      mScope: kAudioObjectPropertyScopeGlobal,
+      mElement: kAudioObjectPropertyElementMain
+    )
+    var range = AudioValueRange()
+    var rangeSize = UInt32(MemoryLayout<AudioValueRange>.size)
+    if AudioObjectGetPropertyData(deviceID, &rangeAddr, 0, nil, &rangeSize, &range) == noErr {
+      frames = UInt32(max(range.mMinimum, min(range.mMaximum, Double(frames))))
+    }
+
+    var addr = AudioObjectPropertyAddress(
+      mSelector: kAudioDevicePropertyBufferFrameSize,
+      mScope: kAudioObjectPropertyScopeGlobal,
+      mElement: kAudioObjectPropertyElementMain
+    )
+    _ = AudioObjectSetPropertyData(deviceID, &addr, 0, nil,
+                                   UInt32(MemoryLayout<UInt32>.size), &frames)
+  }
+
   /// Build the standard stereo audio graph: sourceNode → varispeed → mainMixer
   private func startStereo(engine: AVAudioEngine) {
-    let bufSize = Self.ringBufferSize(forMs: Settings.shared.audioBufferMs)
+    let ms = Settings.shared.audioBufferMs
     bufferLock.lock()
-    ringBuffer = Array(repeating: 0, count: bufSize)
+    ringBuffer = Array(repeating: 0, count: Self.ringCapacityFrames * 2)
     readIndex = 0
-    writeIndex = (bufSize / 2) & ~1  // Pre-fill to target level with silence
+    writeIndex = Self.initialFillFrames(forMs: ms) * 2  // Pre-fill to target level with silence
+    settingTarget = Self.settingTargetFrames(forMs: ms)
+    maxRenderFrames = 0
     lastSampleL = 0
     lastSampleR = 0
     bufferLock.unlock()
+    currentIOFrames.store(0, ordering: .relaxed)
 
     let format = AVAudioFormat(
       commonFormat: .pcmFormatFloat32,
@@ -174,6 +307,8 @@ final class AudioOutput {
       }
 
       self.bufferLock.lock()
+      self.noteRenderFrames(Int(frameCount))
+      var underrunFrames = 0
       for frame in 0..<Int(frameCount) {
         if self.readIndex != self.writeIndex {
           self.lastSampleL = self.ringBuffer[self.readIndex]
@@ -182,6 +317,7 @@ final class AudioOutput {
           bufR[frame] = self.lastSampleR
           self.readIndex = (self.readIndex + 2) % self.ringBuffer.count
         } else {
+          underrunFrames += 1
           self.lastSampleL *= 0.95
           self.lastSampleR *= 0.95
           bufL[frame] = self.lastSampleL
@@ -189,6 +325,7 @@ final class AudioOutput {
         }
       }
       self.bufferLock.unlock()
+      self.recordUnderrun(frames: underrunFrames)
 
       return noErr
     }
@@ -208,14 +345,18 @@ final class AudioOutput {
   /// L and R mono sources positioned in 3D space. Pan-following is automatic:
   /// L-panned signals only feed the L node → sound from left in 3D.
   private func startSpatial(engine: AVAudioEngine) {
-    let bufSize = Self.monoRingBufferSize(forMs: Settings.shared.audioBufferMs)
+    let ms = Settings.shared.audioBufferMs
     bufferLock.lock()
-    spatialRingBuffers = Array(repeating: Array(repeating: 0, count: bufSize),
+    spatialRingBuffers = Array(repeating: Array(repeating: 0, count: Self.ringCapacityFrames),
                                count: Self.spatialNodeCount)
     spatialReadIndices = Array(repeating: 0, count: Self.spatialNodeCount)
-    spatialWriteIndices = Array(repeating: bufSize / 2, count: Self.spatialNodeCount)  // Pre-fill to target level
+    spatialWriteIndices = Array(repeating: Self.initialFillFrames(forMs: ms),
+                                count: Self.spatialNodeCount)  // Pre-fill to target level
     spatialLastSamples = Array(repeating: 0, count: Self.spatialNodeCount)
+    settingTarget = Self.settingTargetFrames(forMs: ms)
+    maxRenderFrames = 0
     bufferLock.unlock()
+    currentIOFrames.store(0, ordering: .relaxed)
 
     let monoFormat = AVAudioFormat(
       commonFormat: .pcmFormatFloat32,
@@ -239,17 +380,23 @@ final class AudioOutput {
         }
 
         self.bufferLock.lock()
+        if idx == 0 { self.noteRenderFrames(Int(frameCount)) }
+        var underrunFrames = 0
         for frame in 0..<Int(frameCount) {
           if self.spatialReadIndices[idx] != self.spatialWriteIndices[idx] {
             self.spatialLastSamples[idx] = self.spatialRingBuffers[idx][self.spatialReadIndices[idx]]
             buf[frame] = self.spatialLastSamples[idx]
             self.spatialReadIndices[idx] = (self.spatialReadIndices[idx] + 1) % self.spatialRingBuffers[idx].count
           } else {
+            underrunFrames += 1
             self.spatialLastSamples[idx] *= 0.95
             buf[frame] = self.spatialLastSamples[idx]
           }
         }
         self.bufferLock.unlock()
+        // All 8 spatial nodes drain in lockstep, so only node 0 reports —
+        // otherwise one dropout would count as 8 events.
+        if idx == 0 { self.recordUnderrun(frames: underrunFrames) }
 
         return noErr
       }
@@ -296,6 +443,11 @@ final class AudioOutput {
   /// Set playback rate for speed control (1.0 = normal, 2.0 = 2x, etc.).
   func setRate(_ rate: Float) {
     varispeed?.rate = rate
+    // The render callback's request scales with the rate; don't keep a
+    // fast-forward chunk size as the fill floor after returning to x1.
+    bufferLock.lock()
+    maxRenderFrames = 0
+    bufferLock.unlock()
   }
 
   // MARK: - Spectrum tap
@@ -393,6 +545,7 @@ final class AudioOutput {
     bufferLock.lock()
     guard ringBuffer.count > 0 else { bufferLock.unlock(); return }
 
+    var dropped = 0
     var i = 0
     while i + 1 < samples.count {
       let nextWrite = (writeIndex + 2) % ringBuffer.count
@@ -400,6 +553,8 @@ final class AudioOutput {
         ringBuffer[writeIndex] = samples[i]
         ringBuffer[writeIndex + 1] = samples[i + 1]
         writeIndex = nextWrite
+      } else {
+        dropped += 1
       }
       i += 2
     }
@@ -410,10 +565,38 @@ final class AudioOutput {
     } else {
       fill = (ringBuffer.count - readIndex + writeIndex) / 2
     }
+    let target = targetFrames(burstFrames: samples.count / 2)
 
     bufferLock.unlock()
 
-    pc88.adjustAudioRate(bufferedFrames: fill, capacityFrames: ringBuffer.count / 2)
+    finishDrain(pc88, fill: fill, target: target, dropped: dropped)
+  }
+
+  /// Records one render callback's request size. Caller holds bufferLock.
+  private nonisolated func noteRenderFrames(_ frames: Int) {
+    guard frames > maxRenderFrames else { return }
+    maxRenderFrames = frames
+    currentIOFrames.store(frames, ordering: .relaxed)
+  }
+
+  /// Fill level to aim for after writing `burstFrames`. Caller holds bufferLock.
+  ///
+  /// The burst is what drains before the next write, so it is taken from the
+  /// write itself: this follows the 15kHz/24kHz frame rate and fast-forward
+  /// batches without knowing about either.
+  private nonisolated func targetFrames(burstFrames: Int) -> Int {
+    let io = maxRenderFrames > 0 ? maxRenderFrames : 512
+    return max(settingTarget, Self.minimumTargetFrames(burstFrames: burstFrames, ioFrames: io))
+  }
+
+  /// Rate control and diagnostics after a write, outside bufferLock.
+  private nonisolated func finishDrain(_ pc88: PC88, fill: Int, target: Int, dropped: Int) {
+    if dropped > 0 {
+      overflowSampleCount.wrappingAdd(UInt64(dropped), ordering: .relaxed)
+    }
+    currentTargetFrames.store(target, ordering: .relaxed)
+    // adjustAudioRate steers toward capacityFrames / 2.
+    pc88.adjustAudioRate(bufferedFrames: fill, capacityFrames: target * 2)
   }
 
   /// Split per-channel stereo buffers into L/R mono ring buffers for spatial nodes.
@@ -427,6 +610,7 @@ final class AudioOutput {
 
     bufferLock.lock()
 
+    var dropped = 0
     // Deinterleave each stereo buffer into L/R mono ring buffers
     for (groupIdx, stereo) in stereoBuffers.enumerated() {
       let lIdx = groupIdx * 2      // L node index
@@ -441,6 +625,8 @@ final class AudioOutput {
         if nextL != spatialReadIndices[lIdx] {
           spatialRingBuffers[lIdx][spatialWriteIndices[lIdx]] = stereo[i]
           spatialWriteIndices[lIdx] = nextL
+        } else if lIdx == 0 {
+          dropped += 1  // count FM-L only; all 8 rings fill in lockstep
         }
         // Write R sample
         let nextR = (spatialWriteIndices[rIdx] + 1) % ringSize
@@ -459,9 +645,10 @@ final class AudioOutput {
     } else {
       fill = spatialRingBuffers[0].count - spatialReadIndices[0] + spatialWriteIndices[0]
     }
+    let target = targetFrames(burstFrames: stereoBuffers[0].count / 2)
 
     bufferLock.unlock()
 
-    pc88.adjustAudioRate(bufferedFrames: fill, capacityFrames: spatialRingBuffers[0].count)
+    finishDrain(pc88, fill: fill, target: target, dropped: dropped)
   }
 }

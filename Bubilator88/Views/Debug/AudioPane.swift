@@ -18,6 +18,8 @@ struct AudioPane: View {
   @State private var ssgMixer:    UInt8 = 0xFF
   @State private var rhythmKey:   UInt8 = 0
   @State private var adpcmActive: Bool  = false
+  @State private var underrun:    AudioOutput.UnderrunStats = .init(events: 0, samples: 0, secondsSinceLast: nil,
+                                                                        droppedSamples: 0, targetMs: 0, ioFrames: 0)
 
   // MARK: - Mute state (ephemeral — resets to all-on when the debug window closes)
 
@@ -94,6 +96,37 @@ struct AudioPane: View {
               }
               .padding(.vertical, 2)
             }
+          }
+
+          // Row: Underrun diagnostics (buffer dry-out → audible dropout)
+          GroupBox("Underrun") {
+            HStack(spacing: 12) {
+              VStack(alignment: .leading, spacing: 2) {
+                Text("Events: \(underrun.events)")
+                Text("Samples: \(underrun.samples)")
+                if let since = underrun.secondsSinceLast {
+                  Text(String(format: "Last: %.1fs ago", since))
+                } else {
+                  Text("Last: —")
+                }
+              }
+              .font(.system(size: 10, design: .monospaced))
+              .foregroundStyle(underrun.events > 0 ? Color.orange : Color.secondary)
+              VStack(alignment: .leading, spacing: 2) {
+                Text(String(format: "Target: %.1fms", underrun.targetMs))
+                Text("IO: \(underrun.ioFrames) frames")
+                Text("Dropped: \(underrun.droppedSamples)")
+              }
+              .font(.system(size: 10, design: .monospaced))
+              .foregroundStyle(Color.secondary)
+              Spacer()
+              Button("Reset") {
+                viewModel.audio.resetUnderrunStats()
+                underrun = viewModel.audio.underrunSnapshot()
+              }
+              .controlSize(.mini)
+            }
+            .padding(.vertical, 2)
           }
 
           // Row 2: Rhythm | ADPCM
@@ -263,6 +296,10 @@ struct AudioPane: View {
   }
 
   private func pollOnce() {
+    // Underrun counters live on AudioOutput itself (audio-thread atomics), not
+    // pc88.soundState, so they're read directly rather than via emuQueue.
+    underrun = viewModel.audio.underrunSnapshot()
+
     let pc88 = viewModel.pc88
     // Use DispatchQueue.main.async instead of Task { @MainActor } to avoid
     // per-poll Task allocation overhead at the 100 ms polling rate.
