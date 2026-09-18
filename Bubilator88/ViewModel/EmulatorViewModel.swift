@@ -585,6 +585,11 @@ final class EmulatorViewModel {
   /// main-thread publish happens on change rather than every frame.
   @ObservationIgnored nonisolated(unsafe) var publishedFrameRate: Double = 0.0
 
+  /// Next slice of the current frame on the x1 path
+  /// (`runFrameSliceForMetal`). Emulation-thread only, like
+  /// `publishedFrameRate`. 0 means the next tick starts a frame.
+  @ObservationIgnored nonisolated(unsafe) var frameSliceIndex: Int = 0
+
   @ObservationIgnored nonisolated(unsafe) var rewindActive: Bool = false
 
   /// True while the user is holding the rewind key. Drives reverse
