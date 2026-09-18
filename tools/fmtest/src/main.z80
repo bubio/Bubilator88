@@ -1,0 +1,154 @@
+;==============================================================================
+; FMTEST - PC-8801 YM2608 (OPNA) sound test disk
+;
+; A menu of listening tests for the OPNA, built the same way as vramtest:
+; boots straight to a menu, ESC returns from any screen. Where vramtest
+; compares pixels against a documented real-machine description, this disk
+; is meant to be judged by ear — there is no "EXPECT" text, you are the
+; verification.
+;==============================================================================
+
+		cpu		z80
+		relaxed	on
+
+		org		$4000					; loaded by the IPL, runs in 64K RAM mode
+
+Entry:
+		di
+		ld		sp,STACK_TOP
+		ld		hl,VARS
+		ld		de,VARS+1
+		ld		(hl),0
+		ld		bc,VARS_END-VARS-1
+		ldir
+		ld		hl,FM_VARS
+		ld		de,FM_VARS+1
+		ld		(hl),0
+		ld		bc,FM_VARS_END-FM_VARS-1
+		ldir
+		call	ProbeEnv
+		call	InitVectors
+		call	OpnaSilence
+		jp		Menu
+
+		include	"lib.z80"
+
+;==============================================================================
+; Menu
+;==============================================================================
+Menu:
+		ld		sp,STACK_TOP
+		call	OpnaSilence
+		call	ResetVideo
+		ld		b,0
+		ld		a,A_CYAN
+		call	RowAttr
+		ld		bc,0
+		ld		hl,MsgTitle
+		call	PrintAt
+		call	PrintEnv
+		ld		b,23
+		ld		a,A_GREEN
+		call	RowAttr
+		ld		bc,(23 << 8) | 1
+		ld		hl,MsgMenuHelp
+		call	PrintAt
+
+		; item list (single column — few enough tests to fit)
+		ld		ix,MenuTable
+		ld		b,3						; row
+		ld		c,2						; column
+.item:
+		ld		a,(ix+0)
+		or		a
+		jr		z,.wait
+		push	bc
+		call	Locate					; DE = address
+		ld		l,(ix+3)
+		ld		h,(ix+4)
+		call	PutStr
+		pop		bc
+		inc		b
+		ld		de,5
+		add		ix,de
+		jr		.item
+
+.wait:
+		call	WaitKey
+		ld		ix,MenuTable
+.find:
+		ld		b,a
+		ld		a,(ix+0)
+		or		a
+		jr		z,.wait
+		cp		b
+		jr		z,.run
+		ld		a,b
+		ld		de,5
+		add		ix,de
+		jr		.find
+.run:
+		ld		l,(ix+1)
+		ld		h,(ix+2)
+		ld		de,Menu
+		push	de						; tests return to the menu
+		jp		(hl)
+
+; Row 1: detected machine mode, monitor and clock — same probe as vramtest,
+; just informational here (the OPNA doesn't care, but boot mode does affect
+; port $E4/$E6 RTC timing used for CSM's Timer A demo).
+PrintEnv:
+		ld		bc,(1 << 8) | 1
+		call	Locate
+		ld		hl,MsgMode
+		call	PutStr
+		call	PutModeName
+		ld		hl,MsgClock
+		call	PutStr
+		ld		hl,Msg8MHz
+		ld		a,(v_is4mhz)
+		or		a
+		jr		z,.clk
+		ld		hl,Msg4MHz
+.clk:
+		jp		PutStr
+
+PutModeName:
+		ld		hl,MsgV2
+		ld		a,(v_isV1)
+		or		a
+		jr		z,.put
+		ld		hl,MsgV1S
+		ld		a,(v_isH)
+		or		a
+		jr		z,.put
+		ld		hl,MsgV1H
+.put:
+		jp		PutStr
+
+MsgTitle:	db		" FMTEST - PC-8801 YM2608 (OPNA) listening tests. Judge by ear.",0
+MsgMenuHelp: db		"Press a letter to run a test.  ESC returns to this menu.",0
+MsgMode:	db		"Mode: ",0
+MsgClock:	db		"   Clock: ",0
+MsgV2:		db		"V2 ",0
+MsgV1S:		db		"V1S",0
+MsgV1H:		db		"V1H",0
+Msg8MHz:	db		"8MHz",0
+Msg4MHz:	db		"4MHz",0
+
+; key, routine, title
+MenuTable:
+		db		'A'
+		dw		TestPlayground, TitlePlayground
+		db		'B'
+		dw		TestAlgorithm, TitleAlgorithm
+		db		'C'
+		dw		TestCh3Special, TitleCh3Special
+		db		0
+
+		include	"t_fm.z80"
+
+ProgramEnd:
+		if		ProgramEnd > VARS
+		fatal	"program image overlaps the work area"
+		endif

@@ -1,0 +1,1152 @@
+;==============================================================================
+; fmtest common library (forked from vramtest's lib.z80 — text/menu/keyboard/
+; CRTC plumbing is identical; only the OPNA-specific code lives in t_fm.z80)
+;==============================================================================
+
+TVRAM_STD	equ		$F3C8
+ROW_BYTES	equ		120
+GVRAM		equ		$C000
+
+; Attribute values (color text mode)
+A_BLACK		equ		$08
+A_BLUE		equ		$28
+A_RED		equ		$48
+A_MAGENTA	equ		$68
+A_GREEN		equ		$88
+A_CYAN		equ		$A8
+A_YELLOW	equ		$C8
+A_WHITE		equ		$E8
+A_SEMIG		equ		$10				; color-mode semigraphic bit
+; Decoration values (color mode with bit3=0, or B/W mode)
+D_NORMAL	equ		$00
+D_SECRET	equ		$01
+D_BLINK		equ		$02
+D_REVERSE	equ		$04
+D_UPPER		equ		$10
+D_UNDER		equ		$20
+BW_SEMIG	equ		$80				; B/W-mode semigraphic bit
+
+; Key codes returned by ScanKey / WaitKey
+K_RET		equ		$0D
+K_ESC		equ		$1B
+K_SPACE		equ		$20
+K_UP		equ		$1E
+K_DOWN		equ		$1F
+K_LEFT		equ		$1D
+K_RIGHT		equ		$1C
+
+;------------------------------------------------------------------------------
+; Work area. Lives above the program image, below the stack.
+VARS		equ		$BC00
+v_isV1		equ		VARS+$00		; 1 = V1S/V1H
+v_isH		equ		VARS+$01		; 1 = V1H
+v_is15k		equ		VARS+$02		; 1 = 15kHz monitor
+v_is4mhz	equ		VARS+$03		; 1 = 4MHz
+v_isV1S		equ		VARS+$05		; 1 = V1S (text DMA may start anywhere)
+v_p32		equ		VARS+$04		; port $32 base (digital, ALU off, TVRAM)
+v_ticks		equ		VARS+$06		; word, RTC ticks (1/600 s)
+v_tvbase	equ		VARS+$08		; word, base address used by RowAddr
+v_rows		equ		VARS+$0A		; CRTC rows (20/25)
+v_atsc		equ		VARS+$0B		; AT1,AT0,SC (0-7)
+v_dm		equ		VARS+$0C		; START DISPLAY DM bit (0/1)
+v_curtype	equ		VARS+$0D		; C1C0
+v_blink		equ		VARS+$0E		; B1B0
+v_p30		equ		VARS+$0F		; port $30 value
+v_p31		equ		VARS+$10		; port $31 value (bit5 filled in unless v_p31raw)
+v_p31raw	equ		VARS+$11		; nonzero: output v_p31 as-is
+v_dmaaddr	equ		VARS+$12		; word
+v_dmacount	equ		VARS+$14		; word, bytes to transfer
+v_p40		equ		VARS+$16		; port $40 idle value (sync bit clear)
+v_curon		equ		VARS+$17		; LOAD CURSOR CM bit
+v_curx		equ		VARS+$18
+v_cury		equ		VARS+$19
+v_params	equ		VARS+$1A		; 5 bytes: last CRTC reset parameters
+v_attrlast	equ		VARS+$1F
+v_loops		equ		VARS+$20		; word, delay loops per display period
+v_dlines	equ		VARS+$22		; word, display lines per frame (200/400)
+v_sel		equ		VARS+$24		; per-test scratch
+v_sel2		equ		VARS+$25
+v_sel3		equ		VARS+$26
+v_sel4		equ		VARS+$27
+v_w1		equ		VARS+$28		; word scratch
+v_w2		equ		VARS+$2A
+v_w3		equ		VARS+$2C
+v_w4		equ		VARS+$2E
+v_fbcol	equ		VARS+$30		; FillBox: color
+v_fbplane	equ		VARS+$31		; FillBox: plane port
+v_fbval		equ		VARS+$32		; FillBox: byte for this plane
+v_buf		equ		VARS+$40		; 64-byte scratch buffer
+VARS_END	equ		VARS+$80
+
+VECTORS		equ		$BD00			; IM2 table (I = $BD)
+STACK_TOP	equ		$C000
+
+;==============================================================================
+; Startup environment probe
+;==============================================================================
+ProbeEnv:
+		in		a,($31)
+		ld		b,a
+		rlca
+		and		1
+		ld		(v_isV1),a
+		ld		a,b
+		rlca
+		rlca
+		and		1
+		ld		(v_isH),a
+		xor		1
+		ld		b,a
+		ld		a,(v_isV1)
+		and		b
+		ld		(v_isV1S),a
+		in		a,($40)
+		rrca
+		and		1
+		ld		(v_is15k),a
+		in		a,($6E)
+		rlca
+		and		1
+		ld		(v_is4mhz),a
+		ld		a,$89					; sound int masked, RGB out, EROM 1, digital, ALU off, TVRAM
+		ld		(v_p32),a
+		ld		a,$11
+		ld		(v_p40),a
+		ld		hl,200
+		ld		a,(v_is15k)
+		or		a
+		jr		nz,.lines
+		ld		hl,400
+.lines:
+		ld		(v_dlines),hl
+		ret
+
+;==============================================================================
+; Interrupts: only the RTC (1/600 s) is ever enabled, to time things.
+;==============================================================================
+InitVectors:
+		ld		hl,VECTORS
+		ld		b,8
+.fill:
+		ld		de,IsrIgnore
+		ld		(hl),e
+		inc		hl
+		ld		(hl),d
+		inc		hl
+		djnz	.fill
+		ld		hl,IsrRtc
+		ld		(VECTORS+2*2),hl		; level 2 = RTC
+		ld		a,VECTORS >> 8
+		ld		i,a
+		im		2
+		ret
+
+IsrIgnore:
+		push	af
+		ld		a,$FF
+		out		($E4),a
+		pop		af
+		ei
+		reti
+
+IsrRtc:
+		push	af
+		push	hl
+		ld		hl,(v_ticks)
+		inc		hl
+		ld		(v_ticks),hl
+		ld		a,$FF
+		out		($E4),a
+		pop		hl
+		pop		af
+		ei
+		reti
+
+; Clear the tick counter and start counting.
+TimerStart:
+		di
+		ld		hl,0
+		ld		(v_ticks),hl
+		ld		a,$FF
+		out		($E4),a
+		ld		a,$01					; RTC only
+		out		($E6),a
+		ei
+		ret
+
+; Stop counting. HL = ticks.
+TimerStop:
+		di
+		xor		a
+		out		($E6),a
+		ld		hl,(v_ticks)
+		ret
+
+;==============================================================================
+; Display timing
+;==============================================================================
+; Wait for the start of vertical blank. Gives up after a while so a stopped
+; CRTC cannot hang the program.
+WaitVBlank:
+		push	bc
+		ld		bc,0
+.disp:
+		in		a,($40)
+		and		$20
+		jr		z,.blank
+		dec		bc
+		ld		a,b
+		or		c
+		jr		nz,.disp
+		jr		.out
+.blank:
+		ld		bc,0
+.wait:
+		in		a,($40)
+		and		$20
+		jr		nz,.out
+		dec		bc
+		ld		a,b
+		or		c
+		jr		nz,.wait
+.out:
+		pop		bc
+		ret
+
+; Wait for the start of the display period (end of vertical blank).
+WaitDisplay:
+		push	bc
+		ld		bc,0
+.inblank:
+		in		a,($40)
+		and		$20
+		jr		nz,.leave
+		dec		bc
+		ld		a,b
+		or		c
+		jr		nz,.inblank
+		jr		.out
+.leave:
+		ld		bc,0
+.wait:
+		in		a,($40)
+		and		$20
+		jr		z,.out
+		dec		bc
+		ld		a,b
+		or		c
+		jr		nz,.wait
+.out:
+		pop		bc
+		ret
+
+; Measure how many Delay iterations fit in one display period.
+; The counting loop and Delay have the same length and fetch pattern.
+Calibrate:
+		di
+		call	WaitDisplay
+		ld		hl,0
+.count:
+		inc		hl
+		in		a,($40)
+		bit		5,a
+		jr		z,.count
+		ld		(v_loops),hl
+		ret
+
+; Busy-wait HL iterations (HL >= 1), same cost per iteration as Calibrate.
+Delay:
+		dec		hl
+		in		a,($40)
+		ld		a,h
+		or		l
+		jr		nz,Delay
+		ret
+
+; HL = number of Delay iterations covering A display lines.
+LinesToLoops:
+		push	de
+		push	bc
+		ld		hl,(v_loops)
+		ld		c,a
+		call	Mul16x8					; DEHL? -> AHL (24-bit)
+		; divide 24-bit A:HL by v_dlines
+		ld		de,(v_dlines)
+		call	Div24by16
+		ld		a,h
+		or		l
+		jr		nz,.ok
+		inc		hl
+.ok:
+		pop		bc
+		pop		de
+		ret
+
+; A:HL = HL * C
+Mul16x8:
+		push	de
+		push	bc
+		ex		de,hl					; DE = multiplicand
+		ld		hl,0
+		xor		a
+		ld		b,8
+.bit:
+		add		hl,hl
+		rla
+		rlc		c
+		jr		nc,.skip
+		add		hl,de
+		adc		a,0
+.skip:
+		djnz	.bit
+		pop		bc
+		pop		de
+		ret
+
+; HL = A:HL / DE (quotient fits in 16 bits)
+Div24by16:
+		push	bc
+		ld		c,a						; C:HL dividend
+		push	hl
+		pop		ix
+		ld		hl,0					; remainder
+		ld		b,24
+.bit:
+		add		ix,ix
+		rl		c
+		adc		hl,hl
+		or		a
+		sbc		hl,de
+		jr		nc,.one
+		add		hl,de
+		djnz	.bit
+		jr		.done
+.one:
+		inc		ix
+		djnz	.bit
+.done:
+		push	ix
+		pop		hl
+		pop		bc
+		ret
+
+;==============================================================================
+; CRTC / DMAC
+;==============================================================================
+; Program the CRTC with the standard parameters for v_rows (20/25) on the
+; connected monitor, then the DMAC, then start the display.
+CrtcApply:
+		ld		hl,v_params
+		ld		a,$CE					; P1: char mode, 80 chars
+		ld		(hl),a
+		inc		hl
+		ld		a,(v_blink)
+		rrca
+		rrca
+		and		$C0
+		ld		b,a
+		ld		a,(v_rows)
+		dec		a
+		or		b
+		ld		(hl),a					; P2: blink, rows-1
+		inc		hl
+		; char height (R) and vertical blank (V) depend on monitor and rows
+		ld		a,(v_is15k)
+		or		a
+		ld		a,(v_rows)
+		jr		nz,.k15
+		cp		20
+		ld		bc,(19 << 8) | 1		; 24kHz 20 rows: R=19 V=1
+		jr		z,.geom
+		ld		bc,(15 << 8) | 2		; 24kHz 25 rows: R=15 V=2
+		jr		.geom
+.k15:
+		cp		20
+		ld		bc,(9 << 8) | 5			; 15kHz 20 rows: R=9 V=5
+		jr		z,.geom
+		ld		bc,(7 << 8) | 6			; 15kHz 25 rows: R=7 V=6
+.geom:
+		ld		a,(v_curtype)
+		rrca
+		rrca
+		rrca
+		and		$60
+		or		b
+		ld		(hl),a					; P3: cursor type, char height-1
+		inc		hl
+		ld		a,c
+		rrca
+		rrca
+		rrca
+		and		$E0
+		ld		b,a
+		ld		a,(v_is15k)
+		or		a
+		ld		a,24					; Z for 24kHz
+		jr		z,.hb
+		ld		a,30					; Z for 15kHz
+.hb:
+		or		b
+		ld		(hl),a					; P4: V, Z
+		inc		hl
+		ld		a,(v_atsc)
+		rrca
+		rrca
+		rrca
+		and		$E0
+		or		19
+		ld		(hl),a					; P5: AT/SC, 20 attributes
+
+		; port $31 bit5 = 25-row line control (the ROM clears it on 15kHz)
+		ld		a,(v_p31raw)
+		or		a
+		jr		nz,CrtcLoad
+		ld		a,(v_p31)
+		and		$DF
+		ld		b,a
+		ld		a,(v_is15k)
+		or		a
+		jr		nz,.p31
+		ld		a,(v_rows)
+		cp		25
+		jr		nz,.p31
+		set		5,b
+.p31:
+		ld		a,b
+		ld		(v_p31),a
+		; fall through
+
+; Program CRTC/DMAC with the 5 bytes at v_params, ports $30/$31 from v_p30/
+; v_p31, the DMA window from v_dmaaddr/v_dmacount.
+CrtcLoad:
+		ld		a,(v_p30)
+		out		($30),a
+		ld		a,(v_p31)
+		or		$02						; keep 64K RAM mode
+		out		($31),a
+		ld		a,(v_p40)
+		or		$08						; CRT I/F sync bit on
+		out		($40),a
+		call	WaitVBlank
+		xor		a
+		out		($51),a					; RESET
+		ld		a,$A0
+		out		($68),a					; DMAC: autoload, extended write
+		ld		hl,(v_dmaaddr)
+		ld		a,l
+		out		($64),a
+		ld		a,h
+		out		($64),a
+		ld		hl,(v_dmacount)
+		dec		hl
+		ld		a,l
+		out		($65),a
+		ld		a,h
+		and		$3F
+		or		$80						; read transfer
+		out		($65),a
+		ld		hl,v_params
+		ld		b,5
+		ld		c,$50
+		otir
+		ld		a,$43					; SET INTERRUPT MASK: ME=MN=1
+		out		($51),a
+		ld		a,$E4					; DMAC: autoload, TC stop, ext write, ch2 on
+		out		($68),a
+		ld		a,(v_dm)
+		and		1
+		or		$20
+		out		($51),a					; START DISPLAY
+		call	CursorApply
+		call	WaitVBlank
+		call	WaitDisplay
+		ld		a,(v_p40)
+		out		($40),a					; sync bit off
+		ret
+
+CursorApply:
+		ld		a,(v_curon)
+		and		1
+		or		$80
+		out		($51),a					; LOAD CURSOR POSITION
+		ld		a,(v_curx)
+		out		($50),a
+		ld		a,(v_cury)
+		out		($50),a
+		ret
+
+; Reset every display setting the tests touch to a plain 80x25 color text
+; screen with graphics hidden.
+ResetVideo:
+		di
+		xor		a
+		out		($E6),a					; all interrupts off
+		out		($5F),a					; main RAM in $C000-$FFFF
+		ld		a,(v_p32)
+		out		($32),a					; digital, ALU off, TVRAM bank
+		xor		a
+		out		($35),a
+		out		($34),a
+		out		($53),a					; show all planes and text
+		out		($52),a					; B/W background black
+		call	PalAnalogStd
+		call	PalDigitalStd
+		ld		a,(v_p40)
+		out		($40),a
+		call	TextDefaults
+		call	CrtcApply
+		ld		a,A_WHITE
+		jp		ClearText
+
+; Standard 80x25 color text settings (not yet applied).
+TextDefaults:
+		ld		hl,TVRAM_STD
+		ld		(v_tvbase),hl
+		ld		(v_dmaaddr),hl
+		ld		hl,ROW_BYTES*25
+		ld		(v_dmacount),hl
+		ld		a,25
+		ld		(v_rows),a
+		ld		a,%010					; transparent color
+		ld		(v_atsc),a
+		xor		a
+		ld		(v_dm),a
+		ld		(v_curon),a
+		ld		(v_curx),a
+		ld		(v_cury),a
+		ld		(v_p31raw),a
+		ld		a,%11
+		ld		(v_curtype),a
+		ld		a,%10
+		ld		(v_blink),a
+		ld		a,$21					; RS-232C async, color, 80 columns
+		ld		(v_p30),a
+		ld		a,$11					; color graphics, hidden, 200 lines
+		ld		(v_p31),a
+		ret
+
+; Apply the current text settings for a B/W (A=1) or color (A=0) text
+; screen. Updates v_atsc and the port $30 CRT mode bit.
+TextMode:
+		or		a
+		ld		a,(v_p30)
+		jr		nz,.bw
+		and		$FD
+		ld		(v_p30),a
+		ld		a,%010
+		ld		(v_atsc),a
+		ret
+.bw:
+		or		$02
+		ld		(v_p30),a
+		xor		a						; transparent B/W, special chars on
+		ld		(v_atsc),a
+		ret
+
+;==============================================================================
+; Text VRAM
+;==============================================================================
+; HL = v_tvbase + B * 120. Destroys DE.
+RowAddr:
+		ld		l,b
+		ld		h,0
+		add		hl,hl
+		add		hl,hl
+		add		hl,hl
+		ld		d,h
+		ld		e,l						; row*8
+		add		hl,hl
+		add		hl,hl
+		add		hl,hl
+		add		hl,hl					; row*128
+		or		a
+		sbc		hl,de
+		ld		de,(v_tvbase)
+		add		hl,de
+		ret
+
+; DE = text address of row B, column C.
+Locate:
+		push	hl
+		call	RowAddr
+		ld		e,c
+		ld		d,0
+		add		hl,de
+		ex		de,hl
+		pop		hl
+		ret
+
+; Fill 25 rows: spaces, and every attribute pair set to (0,A) then (80,A).
+ClearText:
+		ld		(v_attrlast),a
+		ld		b,0
+.row:
+		push	bc
+		call	RowAddr
+		ld		b,80
+.ch:
+		ld		(hl),' '
+		inc		hl
+		djnz	.ch
+		ld		a,(v_attrlast)
+		ld		(hl),0
+		inc		hl
+		ld		(hl),a
+		inc		hl
+		ld		b,19
+.at:
+		ld		(hl),80
+		inc		hl
+		ld		(hl),a
+		inc		hl
+		djnz	.at
+		pop		bc
+		inc		b
+		ld		a,b
+		cp		25
+		jr		nz,.row
+		ret
+
+; Print a 0-terminated string at row B, column C. $0A moves to the next row
+; at column C. Returns HL past the terminator, B on the last row.
+PrintAt:
+		push	de
+.line:
+		call	Locate
+.ch:
+		ld		a,(hl)
+		inc		hl
+		or		a
+		jr		z,.done
+		cp		$0A
+		jr		z,.nl
+		ld		(de),a
+		inc		de
+		jr		.ch
+.nl:
+		inc		b
+		jr		.line
+.done:
+		pop		de
+		ret
+
+; Print a string at DE, advancing DE.
+PutStr:
+		ld		a,(hl)
+		inc		hl
+		or		a
+		ret		z
+		ld		(de),a
+		inc		de
+		jr		PutStr
+
+; Write A as two hex digits at DE.
+PutHex8:
+		push	af
+		rrca
+		rrca
+		rrca
+		rrca
+		call	.nib
+		pop		af
+.nib:
+		and		$0F
+		add		a,'0'
+		cp		'9'+1
+		jr		c,.put
+		add		a,7
+.put:
+		ld		(de),a
+		inc		de
+		ret
+
+PutHex16:
+		ld		a,h
+		call	PutHex8
+		ld		a,l
+		jr		PutHex8
+
+; Write HL as 5 decimal digits at DE.
+PutDec16:
+		push	bc
+		ld		bc,-10000
+		call	.digit
+		ld		bc,-1000
+		call	.digit
+		ld		bc,-100
+		call	.digit
+		ld		bc,-10
+		call	.digit
+		ld		a,l
+		add		a,'0'
+		ld		(de),a
+		inc		de
+		pop		bc
+		ret
+.digit:
+		ld		a,'0'-1
+.sub:
+		inc		a
+		add		hl,bc
+		jr		c,.sub
+		sbc		hl,bc
+		ld		(de),a
+		inc		de
+		ret
+
+; Write A as 8 binary digits at DE.
+PutBin8:
+		push	bc
+		ld		b,8
+		ld		c,a
+.bit:
+		rlc		c
+		ld		a,'0'
+		adc		a,0
+		ld		(de),a
+		inc		de
+		djnz	.bit
+		pop		bc
+		ret
+
+; Set the attribute pairs of row B from the list at HL: (x, attr) pairs
+; ended by $FF. Unused pairs become (80, last attr).
+SetAttrs:
+		push	hl
+		call	RowAddr
+		ld		de,80
+		add		hl,de
+		ex		de,hl
+		pop		hl
+		ld		c,20
+.pair:
+		ld		a,(hl)
+		cp		$FF
+		jr		z,.pad
+		ld		(de),a
+		inc		hl
+		inc		de
+		ld		a,(hl)
+		ld		(de),a
+		ld		(v_attrlast),a
+		inc		hl
+		inc		de
+		dec		c
+		jr		nz,.pair
+		inc		hl
+		ret
+.pad:
+		inc		hl
+		ld		a,(v_attrlast)
+.fill:
+		ex		de,hl
+		ld		(hl),80
+		inc		hl
+		ld		(hl),a
+		inc		hl
+		ex		de,hl
+		dec		c
+		jr		nz,.fill
+		ret
+
+; Give row B a single attribute A for the whole line.
+RowAttr:
+		ld		(v_attrlast),a
+		push	hl
+		call	RowAddr
+		ld		de,80
+		add		hl,de
+		ld		(hl),0
+		inc		hl
+		ld		(hl),a
+		inc		hl
+		ld		c,19
+.fill:
+		ld		(hl),80
+		inc		hl
+		ld		(hl),a
+		inc		hl
+		dec		c
+		jr		nz,.fill
+		pop		hl
+		ret
+
+; Standard test screen header: title at HL on row 0 and the "ESC: menu"
+; hint on row 24. Uses colors in color text mode, reverse in B/W mode.
+TestHeader:
+		push	hl
+		ld		a,(v_atsc)
+		cp		%010
+		jr		nz,.bw
+		ld		a,A_WHITE
+		call	ClearText
+		ld		b,0
+		ld		a,A_CYAN
+		call	RowAttr
+		ld		b,24
+		ld		a,A_YELLOW
+		call	RowAttr
+		jr		.text
+.bw:
+		ld		a,D_NORMAL
+		call	ClearText
+		ld		b,0
+		ld		a,D_REVERSE
+		call	RowAttr
+.text:
+		pop		hl
+		ld		bc,0
+		call	PrintAt
+		ld		bc,(24 << 8) | 0
+		ld		hl,MsgEscMenu
+		jp		PrintAt
+
+MsgEscMenu:
+		db		"ESC: back to menu",0
+
+; Wait for ESC.
+WaitEsc:
+		call	WaitKey
+		cp		K_ESC
+		jr		nz,WaitEsc
+		ret
+
+;------------------------------------------------------------------------------
+; Screen scripts: a byte stream of commands, interpreted by Draw.
+DS_END		equ		0
+DS_TEXT		equ		1				; row, col, "text", 0     ($0A = next row)
+DS_ATTR		equ		2				; row, (x, attr)..., $FF
+DS_ROW		equ		3				; row, attr               (whole row)
+DS_SEQ		equ		4				; row, col, count, first, step
+DS_FILL		equ		5				; row, col, count, byte
+DS_WIDE		equ		6				; row, col, "text", 0     (every other byte)
+
+Draw:
+		ld		a,(hl)
+		inc		hl
+		or		a
+		ret		z
+		ld		b,(hl)					; row
+		inc		hl
+		cp		DS_ATTR
+		jr		z,.attr
+		cp		DS_ROW
+		jr		z,.row
+		ld		c,(hl)					; col
+		inc		hl
+		cp		DS_TEXT
+		jr		z,.text
+		cp		DS_WIDE
+		jr		z,.wide
+		push	af
+		call	Locate					; DE = address
+		pop		af
+		cp		DS_SEQ
+		jr		z,.seq
+		; DS_FILL
+		ld		b,(hl)
+		inc		hl
+		ld		a,(hl)
+		inc		hl
+.fill:
+		ld		(de),a
+		inc		de
+		djnz	.fill
+		jr		Draw
+.seq:
+		ld		b,(hl)
+		inc		hl
+		ld		a,(hl)
+		inc		hl
+		ld		c,(hl)
+		inc		hl
+.next:
+		ld		(de),a
+		inc		de
+		add		a,c
+		djnz	.next
+		jr		Draw
+.text:
+		call	PrintAt
+		jr		Draw
+.wide:
+		call	Locate
+.wch:
+		ld		a,(hl)
+		inc		hl
+		or		a
+		jr		z,Draw
+		ld		(de),a
+		inc		de
+		inc		de
+		jr		.wch
+.attr:
+		call	SetAttrs
+		jr		Draw
+.row:
+		ld		a,(hl)
+		inc		hl
+		call	RowAttr
+		jr		Draw
+
+;==============================================================================
+; Keyboard
+;==============================================================================
+; A = code of the first pressed key, or 0. Modifier keys are ignored.
+ScanKey:
+		push	bc
+		push	de
+		push	hl
+		ld		hl,KeyTable
+		ld		c,0
+.row:
+		in		a,(c)
+		cpl
+		ld		e,a
+		ld		b,8
+.bit:
+		srl		e
+		jr		nc,.next
+		ld		a,(hl)
+		or		a
+		jr		nz,.found
+.next:
+		inc		hl
+		djnz	.bit
+		inc		c
+		ld		a,c
+		cp		11
+		jr		nz,.row
+		xor		a
+.found:
+		pop		hl
+		pop		de
+		pop		bc
+		ret
+
+; Wait until no (non-modifier) key is held.
+WaitRelease:
+		push	hl
+.hold:
+		ld		hl,30
+.settle:
+		call	ScanKey
+		or		a
+		jr		nz,.hold
+		dec		hl
+		ld		a,h
+		or		l
+		jr		nz,.settle
+		pop		hl
+		ret
+
+; Wait for a key press and its release. A = key code.
+WaitKey:
+		call	WaitRelease
+.poll:
+		call	ScanKey
+		or		a
+		jr		z,.poll
+		push	af
+		call	WaitRelease
+		pop		af
+		ret
+
+; Non-blocking: A = newly pressed key (after release), or 0.
+PollKey:
+		call	ScanKey
+		or		a
+		ret		z
+		push	af
+		call	WaitRelease
+		pop		af
+		ret
+
+KeyTable:
+		db		"01234567"						; row 0: keypad
+		db		"89*+=,.",K_RET					; row 1
+		db		"@ABCDEFG"						; row 2
+		db		"HIJKLMNO"						; row 3
+		db		"PQRSTUVW"						; row 4
+		db		"XYZ[",$5C,"]^-"				; row 5
+		db		"01234567"						; row 6
+		db		"89:;,./_"						; row 7
+		db		$0C,K_UP,K_RIGHT,$7F,0,0,0,0	; row 8: CLR UP RIGHT DEL GRPH KANA SHIFT CTRL
+		db		$03,$81,$82,$83,$84,$85,K_SPACE,K_ESC	; row 9: STOP F1-F5 SPACE ESC
+		db		$09,K_DOWN,K_LEFT,0,0,'-','/',0	; row 10: TAB DOWN LEFT HELP COPY - / CAPS
+
+;==============================================================================
+; Graphics VRAM
+;==============================================================================
+; Clear all three planes (independent access mode).
+GvramClear:
+		ld		a,$5C
+.plane:
+		push	af
+		ld		c,a
+		out		(c),a
+		ld		hl,GVRAM
+		ld		de,GVRAM+1
+		ld		(hl),0
+		ld		bc,$4000-1				; include the hidden $FE80-$FFFF area
+		ldir
+		pop		af
+		inc		a
+		cp		$5F
+		jr		nz,.plane
+		out		($5F),a
+		ret
+
+; Fill a box with color A (GRB bits) on all three planes.
+; B = x in bytes (0-79), C = y (0-199), D = width in bytes, E = height.
+FillBox:
+		ld		(v_fbcol),a
+		push	bc
+		push	de
+		ld		a,$5C					; B plane
+		ld		(v_fbplane),a
+.plane:
+		ld		a,(v_fbplane)
+		ld		c,a
+		out		(c),a
+		pop		de
+		pop		bc
+		push	bc
+		push	de
+		; value for this plane: $FF when the color has the plane's bit
+		ld		a,(v_fbplane)
+		sub		$5C						; 0=B 1=R 2=G
+		ld		h,a
+		ld		a,(v_fbcol)
+		inc		h
+.shift:
+		dec		h
+		jr		z,.got
+		rrca
+		jr		.shift
+.got:
+		and		1
+		neg								; 0 or $FF
+		ld		(v_fbval),a
+		call	.rect
+		ld		a,(v_fbplane)
+		inc		a
+		ld		(v_fbplane),a
+		cp		$5F
+		jr		nz,.plane
+		pop		de
+		pop		bc
+		out		($5F),a
+		ret
+; fill rectangle with v_fbval on the selected plane
+.rect:
+		push	de
+		ld		l,c
+		ld		h,0
+		add		hl,hl
+		add		hl,hl
+		add		hl,hl
+		add		hl,hl					; y*16
+		push	hl
+		add		hl,hl
+		add		hl,hl					; y*64
+		pop		de
+		add		hl,de					; y*80
+		ld		e,b
+		ld		d,0
+		add		hl,de
+		ld		de,GVRAM
+		add		hl,de
+		pop		de
+.line:
+		push	hl
+		push	de
+		ld		a,(v_fbval)
+		ld		b,d
+.byte:
+		ld		(hl),a
+		inc		hl
+		djnz	.byte
+		pop		de
+		pop		hl
+		push	de
+		ld		de,80
+		add		hl,de
+		pop		de
+		dec		e
+		jr		nz,.line
+		ret
+
+;==============================================================================
+; Palettes
+;==============================================================================
+; Digital palette: color code n -> color n.
+PalDigitalStd:
+		ld		c,$54
+		xor		a
+.set:
+		out		(c),a
+		inc		c
+		inc		a
+		cp		8
+		jr		nz,.set
+		ret
+
+; Analog palette: the 8 full-intensity colors, and a black background.
+; Leaves the palette in digital mode.
+PalAnalogStd:
+		ld		a,(v_p32)
+		or		$20
+		out		($32),a
+		ld		c,$54
+		ld		b,0
+.set:
+		; RB byte: R in bits 5-3, B in bits 2-0
+		xor		a
+		bit		1,b
+		jr		z,.nr
+		or		$38
+.nr:
+		bit		0,b
+		jr		z,.nb
+		or		$07
+.nb:
+		out		(c),a
+		ld		a,$40					; G byte
+		bit		2,b
+		jr		z,.ng
+		or		$07
+.ng:
+		out		(c),a
+		inc		c
+		inc		b
+		ld		a,b
+		cp		8
+		jr		nz,.set
+		ld		a,$80					; background RB = 0
+		out		($54),a
+		ld		a,$C0					; background G = 0
+		out		($54),a
+		ld		a,(v_p32)
+		out		($32),a
+		ret
+
+; Write the analog palette from HL: 8 entries of (RB, G) bytes, with the
+; port left in analog mode.
+PalAnalogLoad:
+		ld		a,(v_p32)
+		or		$20
+		out		($32),a
+		ld		c,$54
+		ld		b,8
+.set:
+		ld		a,(hl)
+		out		(c),a
+		inc		hl
+		ld		a,(hl)
+		or		$40
+		out		(c),a
+		inc		hl
+		inc		c
+		djnz	.set
+		ret
