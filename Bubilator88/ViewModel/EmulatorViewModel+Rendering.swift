@@ -42,7 +42,17 @@ extension EmulatorViewModel {
   nonisolated func runEmulationStep(frameCount: Int) {
     emuQueue.sync {
       guard emulationLoop.shouldRun else { return }
-      runFrameForMetal(frameCount: frameCount)
+      // At x1 the frame runs in slices, one per tick, so audio reaches the
+      // ring in ~4.5ms pieces spread over the frame instead of one ~18ms
+      // burst. The fill level has to cover everything that drains before the
+      // next write, so a smaller write is what lets a 20ms buffer hold. Fast
+      // forward and rewind keep whole frames: latency doesn't matter there.
+      let sliced = frameCount == 1 && !rewindActive
+      if sliced {
+        runFrameSliceForMetal()
+      } else {
+        runFrameForMetal(frameCount: frameCount)
+      }
       // Re-pace from the machine itself rather than a fixed 1/60. The frame
       // rate is a function of the monitor and the CRTC parameters, so it
       // changes when software reprograms the CRTC (a 20-row screen on a 24kHz
@@ -50,7 +60,8 @@ extension EmulatorViewModel {
       // pacer correct without the host having to be told.
       let rate = pc88.frameRate
       if rate > 0 {
-        emulationLoop.setFrameInterval(1.0 / rate)
+        let ticksPerFrame = sliced ? Double(Self.audioSlicesPerFrame) : 1
+        emulationLoop.setFrameInterval(1.0 / (rate * ticksPerFrame))
         if abs(rate - publishedFrameRate) > 0.01 {
           publishedFrameRate = rate
           Task { @MainActor [weak self] in self?.targetFrameRate = rate }
@@ -70,6 +81,8 @@ extension EmulatorViewModel {
     // only run between draws — so the timing is unchanged.
     applyPendingInput()
     if rewindActive {
+      // Snapshots sit on frame boundaries; resume forward play at slice 0.
+      frameSliceIndex = 0
       // Reverse playback at 1/Nth the raw step rate so the buffer
       // doesn't drain in a single wall-clock second.
       if rewindStepCounter <= 0 {
@@ -87,11 +100,49 @@ extension EmulatorViewModel {
     for _ in 0..<frameCount {
       tickPasteQueue()
       tickScriptPlayer()
+      // Finishes a frame the sliced path left part-way (switching to fast
+      // forward mid-frame): runFrame() stops at the same boundary.
       pc88.runFrame()
       // Advance the recording clock in lockstep with machine frames.
       if let r = scriptRecorder { r.frameIndex += 1 }
     }
+    frameSliceIndex = 0
 
+    // Drain audio immediately after emulation, before the potentially
+    // expensive pixel rendering step, to minimize ring buffer underruns.
+    audio.drainSamples()
+    finishFrame()
+  }
+
+  /// Slices per frame on the x1 path (`runFrameSliceForMetal`).
+  nonisolated static let audioSlicesPerFrame = 4
+
+  /// Run the next slice of the current frame, and render once it ends.
+  ///
+  /// Same emuQueue contract as `runFrameForMetal`. The per-frame host work
+  /// (input, paste, script) happens before slice 0, and the frame-end work
+  /// after the slice that ends the frame, so both still sit on the frame
+  /// boundary.
+  nonisolated func runFrameSliceForMetal() {
+    if frameSliceIndex == 0 {
+      applyPendingInput()
+      tickPasteQueue()
+      tickScriptPlayer()
+    }
+    let ended = pc88.runFrameSlice(frameSliceIndex, of: Self.audioSlicesPerFrame)
+    audio.drainSamples()
+    guard ended else {
+      frameSliceIndex += 1
+      return
+    }
+    frameSliceIndex = 0
+    if let r = scriptRecorder { r.frameIndex += 1 }
+    finishFrame()
+  }
+
+  /// The frame-end half of a loop tick: debugger check, render, publish,
+  /// rewind snapshot, recorders and the throttled UI updates.
+  nonisolated func finishFrame() {
     // Breakpoint check: when the debugger halted the machine
     // mid-frame, tear the run loop down the same way the user
     // Pause button does. This ensures the cursor blink (which
@@ -101,10 +152,6 @@ extension EmulatorViewModel {
         self?.pause()
       }
     }
-
-    // Drain audio immediately after emulation, before the potentially
-    // expensive pixel rendering step, to minimize ring buffer underruns.
-    audio.drainSamples()
 
     // Skip the wall-clock cursor blink when the debugger has
     // pinned execution. Otherwise the 60Hz Metal loop would keep
