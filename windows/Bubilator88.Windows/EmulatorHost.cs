@@ -163,6 +163,9 @@ internal sealed unsafe class EmulatorHost : IDisposable
     public void SetPseudoStereo(bool enabled)
         => NativeApi.b88_set_pseudo_stereo(_handle, enabled ? 1 : 0);
 
+    public void SetCdMix(bool enabled)
+        => NativeApi.b88_set_cd_mix(_handle, enabled ? 1 : 0);
+
     /// <summary>
     /// Sample and clear the per-drive disk-access flags (drives 0 and 1).
     /// Each flag pulses true while the FDC touched that drive since the last

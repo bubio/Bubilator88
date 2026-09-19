@@ -194,6 +194,7 @@ public sealed partial class MainWindow : Window
             _host.LoadRoms();
             _host.AudioBufferMs = _audioBufferMs;   // adaptive-rate target latency
             _host.SetPseudoStereo(_pseudoStereo);
+            _host.SetCdMix(_cdMix);
 
             LoadRecent();
 
@@ -1029,12 +1030,14 @@ public sealed partial class MainWindow : Window
         public int FddSoundVolumeLevel { get; set; } = 2;   // 0=small 1=medium 2=large
         public string FddSoundDeviceId { get; set; } = ""; // "" = System Default; matches macOS fddSoundDeviceUID
         public bool PseudoStereo { get; set; }   // matches macOS Settings.pseudoStereo default (off)
+        public bool CdMix { get; set; }          // matches macOS Settings.cdMix default (off)
         public bool GameControllerEnabled { get; set; } = true;   // matches macOS Settings.gameControllerEnabled default
         public ControllerButtonMapping? ControllerMapping { get; set; }   // null = use defaults
     }
 
     private double _volume = 0.5;
     private bool _pseudoStereo;
+    private bool _cdMix;
 
     private static string SettingsPath => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -1069,6 +1072,7 @@ public sealed partial class MainWindow : Window
             _fddSoundVolumeLevel = Math.Clamp(s.FddSoundVolumeLevel, 0, 2);
             _fddSoundDeviceId = s.FddSoundDeviceId ?? "";
             _pseudoStereo = s.PseudoStereo;
+            _cdMix = s.CdMix;
             _gameControllerEnabled = s.GameControllerEnabled;
             _controllerMapping = s.ControllerMapping ?? ControllerButtonMapping.Defaults.Clone();
         }
@@ -1105,6 +1109,7 @@ public sealed partial class MainWindow : Window
                 FddSoundVolumeLevel = _fddSoundVolumeLevel,
                 FddSoundDeviceId = _fddSoundDeviceId,
                 PseudoStereo = _pseudoStereo,
+                CdMix = _cdMix,
                 GameControllerEnabled = _gameControllerEnabled,
                 ControllerMapping = _controllerMapping,
             }));

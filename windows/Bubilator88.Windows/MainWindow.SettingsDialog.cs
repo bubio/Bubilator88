@@ -232,6 +232,15 @@ public sealed partial class MainWindow
         panel.Children.Add(Section("Pseudo Stereo", new[] { (FrameworkElement)pseudoStereoToggle },
             "Widens mono FM/SSG output with a Haas-effect chorus. Has no effect once any FM channel uses hardware panning."));
 
+        var cdMixToggle = Toggle("Enable CD Mix", _cdMix, isOn =>
+        {
+            _cdMix = isOn;
+            _host?.SetCdMix(isOn);
+            SaveSettings();
+        });
+        panel.Children.Add(Section("CD Mix", new[] { (FrameworkElement)cdMixToggle },
+            "Recreates the mastering of classic game music CDs."));
+
         var fddToggle = Toggle("Enable FDD Sound", _fddSoundEnabled, isOn =>
         {
             _fddSoundEnabled = isOn;
