@@ -158,19 +158,33 @@ public sealed partial class MainWindow : Window
     /// the menu chord handler (OnKeyDown) keep receiving input.
     private void RestoreEmulatorFocus() => Root.Focus(FocusState.Programmatic);
 
-    /// When a top-level menu closes, WinUI parks focus back on the MenuBarItem that
-    /// was open, which silences OnKeyDown. Catch that specific hand-off — a menu
-    /// flyout element giving focus to a MenuBarItem — and redirect to the emulation
-    /// view. Opening a menu (old focus = the screen, not a flyout item) and
-    /// navigating within an open menu (new focus ≠ a MenuBarItem) are left alone.
+    /// When a menu closes (item chosen, Esc, click outside, or a dialog opened
+    /// from it is dismissed), WinUI parks focus back on the MenuBarItem, which
+    /// then reacts to keys as well as the emulator (they bubble on to Root).
+    /// Catch focus arriving on a MenuBarItem from anywhere other than the
+    /// emulation view or another MenuBarItem — i.e. coming back out of a menu or
+    /// dialog — and, once WinUI has finished its own focus restoration, send it
+    /// to the emulation view unless a menu (or any other popup) is still open.
+    /// Keyboard menu access is left alone: entering the menu bar from the
+    /// emulation view (old = Root) and moving along it (old = MenuBarItem) keep
+    /// focus where the user put it.
     private void OnRootGettingFocus(UIElement sender, GettingFocusEventArgs e)
     {
-        if (e.NewFocusedElement is MenuBarItem && IsMenuFlyoutElement(e.OldFocusedElement))
-            e.TrySetNewFocusedElement(Root);
+        if (e.NewFocusedElement is not MenuBarItem) return;
+        if (e.OldFocusedElement == Root || e.OldFocusedElement is MenuBarItem) return;
+        DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            RestoreEmulatorFocusAfterMenu);
     }
 
-    private static bool IsMenuFlyoutElement(DependencyObject? element)
-        => element is MenuFlyoutItemBase or MenuFlyoutPresenter;
+    private void RestoreEmulatorFocusAfterMenu()
+    {
+        if (FocusManager.GetFocusedElement(Root.XamlRoot) is MenuBarItem && !IsPopupOpen())
+            RestoreEmulatorFocus();
+    }
+
+    private bool IsPopupOpen()
+        => Root.XamlRoot is { } root && VisualTreeHelper.GetOpenPopupsForXamlRoot(root).Count > 0;
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
@@ -1750,6 +1764,11 @@ public sealed partial class MainWindow : Window
 
     private void OnKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        // Root's KeyDown also sees keys bubbling up from focused chrome (a
+        // MenuBarItem during keyboard menu navigation). Those belong to that
+        // control, so only act when the emulation view itself has focus.
+        if (!ReferenceEquals(e.OriginalSource, Root)) return;
+
         // Host menu shortcuts win over emulator key input. The screen greedily
         // consumes letter/number keys (they map to the PC-8801 matrix), which
         // pre-empts the menu's accelerators, so the chords are dispatched here;
@@ -1786,7 +1805,10 @@ public sealed partial class MainWindow : Window
 
     private void OnKeyUp(object sender, KeyRoutedEventArgs e)
     {
-        if (_host?.KeyUp(e.Key) == true)
+        // Releases are always passed on, so a key pressed in the emulation view
+        // and let go after focus moved (e.g. into the menu) doesn't stick; but a
+        // key bubbling up from other chrome is left unhandled for that control.
+        if (_host?.KeyUp(e.Key) == true && ReferenceEquals(e.OriginalSource, Root))
             e.Handled = true;
     }
 
