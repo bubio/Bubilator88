@@ -284,13 +284,23 @@ public sealed partial class MainWindow : Window
     /// while one is up, and our callers are <c>async void</c>, so that would be an
     /// unhandled crash. A request made while one is already open is dropped, and any
     /// presentation failure (e.g. XamlRoot not ready yet) is swallowed.
+    /// When the dialog closes, WinUI hands focus back to whatever opened it —
+    /// usually a MenuBarItem — so focus is sent to the emulation view instead,
+    /// once WinUI has finished its own restoration (unless another dialog has
+    /// been opened in the meantime).
     private async Task<ContentDialogResult> ShowDialogAsync(ContentDialog dialog)
     {
         if (_dialogOpen) return ContentDialogResult.None;
         _dialogOpen = true;
         try { return await dialog.ShowAsync(); }
         catch { return ContentDialogResult.None; }
-        finally { _dialogOpen = false; }
+        finally
+        {
+            _dialogOpen = false;
+            DispatcherQueue.TryEnqueue(
+                Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                () => { if (!_dialogOpen) RestoreEmulatorFocus(); });
+        }
     }
 
     // MARK: - Boot configuration
