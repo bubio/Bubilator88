@@ -7,10 +7,19 @@ namespace Bubilator88.Windows;
 /// <summary>
 /// Managed lifetime wrapper around one native <c>B88Context</c>. Owns the
 /// reusable pixel + audio scratch buffers so the per-frame path never
-/// allocates. Not thread-safe; drive it from a single (UI) thread.
+/// allocates.
+///
+/// <para>The core must only be touched by one thread at a time. The emulation
+/// thread (<see cref="EmulationLoop"/>) and the UI thread both call in, so every
+/// native call takes <see cref="SyncRoot"/>. The lock is re-entrant, so a
+/// caller may hold it across several calls to make them one step (the loop's
+/// tick does).</para>
 /// </summary>
 internal sealed unsafe class EmulatorHost : IDisposable
 {
+    /// <summary>Serializes every access to the native context (see the class remarks).</summary>
+    public readonly object SyncRoot = new();
+
     public const int ScreenWidth = 640;
     public const int ScreenHeight = 400;
     private const int PixelBytes = ScreenWidth * ScreenHeight * 4;
@@ -34,6 +43,11 @@ internal sealed unsafe class EmulatorHost : IDisposable
     private readonly byte[] _pixels = new byte[PixelBytes];
     private readonly float[] _audio = new float[AudioMaxPairs * 2];
 
+    /// <summary>
+    /// The buffer <see cref="Render"/> composites into. Only read it while
+    /// holding <see cref="SyncRoot"/>; the UI takes finished frames from the
+    /// <see cref="FramePublisher"/> instead.
+    /// </summary>
     public ReadOnlySpan<byte> Pixels => _pixels;
 
     public EmulatorHost()
@@ -48,6 +62,11 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// %LOCALAPPDATA%\Bubilator88). N88.ROM is required; the rest are optional.
     /// </summary>
     public void LoadRoms(string? romDir = null)
+    {
+        lock (SyncRoot) LoadRomsLocked(romDir);
+    }
+
+    private void LoadRomsLocked(string? romDir)
     {
         romDir ??= Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -101,8 +120,9 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// <summary>Mount a D88 image. Returns image count in the blob.</summary>
     public int MountDisk(int drive, byte[] d88, int imageIndex = 0)
     {
-        fixed (byte* p = d88)
-            return NativeApi.b88_mount_disk(_handle, drive, p, d88.Length, imageIndex);
+        lock (SyncRoot)
+            fixed (byte* p = d88)
+                return NativeApi.b88_mount_disk(_handle, drive, p, d88.Length, imageIndex);
     }
 
     /// <summary>Per-image metadata returned by <see cref="ProbeDisk"/>.</summary>
@@ -154,17 +174,23 @@ internal sealed unsafe class EmulatorHost : IDisposable
         _ => "2D",
     };
 
-    public void EjectDisk(int drive) => NativeApi.b88_eject_disk(_handle, drive);
+    public void EjectDisk(int drive) { lock (SyncRoot) NativeApi.b88_eject_disk(_handle, drive); }
 
     public void SetWriteProtect(int drive, bool protectedFlag)
-        => NativeApi.b88_set_write_protect(_handle, drive, protectedFlag ? 1 : 0);
+    {
+        lock (SyncRoot) NativeApi.b88_set_write_protect(_handle, drive, protectedFlag ? 1 : 0);
+    }
 
     /// <summary>Enable/disable the pseudo-stereo (Haas effect) chorus on mono FM/SSG. Survives Reset/Configure.</summary>
     public void SetPseudoStereo(bool enabled)
-        => NativeApi.b88_set_pseudo_stereo(_handle, enabled ? 1 : 0);
+    {
+        lock (SyncRoot) NativeApi.b88_set_pseudo_stereo(_handle, enabled ? 1 : 0);
+    }
 
     public void SetCdMix(bool enabled)
-        => NativeApi.b88_set_cd_mix(_handle, enabled ? 1 : 0);
+    {
+        lock (SyncRoot) NativeApi.b88_set_cd_mix(_handle, enabled ? 1 : 0);
+    }
 
     /// <summary>
     /// Sample and clear the per-drive disk-access flags (drives 0 and 1).
@@ -174,7 +200,7 @@ internal sealed unsafe class EmulatorHost : IDisposable
     public void SampleDiskAccess(out bool drive0, out bool drive1)
     {
         int a = 0, b = 0;
-        NativeApi.b88_disk_access(_handle, &a, &b);
+        lock (SyncRoot) NativeApi.b88_disk_access(_handle, &a, &b);
         drive0 = a != 0;
         drive1 = b != 0;
     }
@@ -194,7 +220,7 @@ internal sealed unsafe class EmulatorHost : IDisposable
     public void SampleFddSoundEvents(out int seek0, out int seek1, out bool access0, out bool access1)
     {
         int s0 = 0, s1 = 0, a0 = 0, a1 = 0;
-        NativeApi.b88_fdd_sound_events(_handle, &s0, &s1, &a0, &a1);
+        lock (SyncRoot) NativeApi.b88_fdd_sound_events(_handle, &s0, &s1, &a0, &a1);
         seek0 = s0;
         seek1 = s1;
         access0 = a0 != 0;
@@ -209,6 +235,8 @@ internal sealed unsafe class EmulatorHost : IDisposable
                           int extRamCards = NativeApi.ExtRam_128KB,
                           int monitorType = NativeApi.Monitor24kHz, bool memoryWaitDip = false)
     {
+        lock (SyncRoot)
+        {
         NativeApi.b88_set_dipsw1(_handle, dipSw1);
         NativeApi.b88_apply_bootstrap(_handle, dipSw2Base);
         // Set before the reset: the monitor decides the CRTC's reset geometry
@@ -228,9 +256,10 @@ internal sealed unsafe class EmulatorHost : IDisposable
         // macOS's loadROMs() call at the end of performReset, which reinstalls
         // extRAM from Settings.extramCards on every reset.
         NativeApi.b88_install_ext_ram(_handle, extRamCards);
+        }
     }
 
-    public void Reset(bool preserveRam = false) => NativeApi.b88_reset(_handle, preserveRam ? 1 : 0);
+    public void Reset(bool preserveRam = false) { lock (SyncRoot) NativeApi.b88_reset(_handle, preserveRam ? 1 : 0); }
 
     /// <summary>
     /// Re-sync the DIP switches to a boot mode WITHOUT resetting. Used after a
@@ -240,12 +269,15 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// </summary>
     public void SyncDip(int dipSw1, int dipSw2Base)
     {
-        NativeApi.b88_set_dipsw1(_handle, dipSw1);
-        NativeApi.b88_apply_bootstrap(_handle, dipSw2Base);
+        lock (SyncRoot)
+        {
+            NativeApi.b88_set_dipsw1(_handle, dipSw1);
+            NativeApi.b88_apply_bootstrap(_handle, dipSw2Base);
+        }
     }
 
     /// <summary>True if the restored/active CPU clock is 8 MHz.</summary>
-    public bool Clock8MHz => NativeApi.b88_get_clock_8mhz(_handle) != 0;
+    public bool Clock8MHz { get { lock (SyncRoot) return NativeApi.b88_get_clock_8mhz(_handle) != 0; } }
 
     /// <summary>
     /// Monitor the machine is running on (NativeApi.Monitor15kHz/24kHz) — the
@@ -254,8 +286,8 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// </summary>
     public int MonitorType
     {
-        get => NativeApi.b88_get_monitor_type(_handle);
-        set => NativeApi.b88_set_monitor_type(_handle, value);
+        get { lock (SyncRoot) return NativeApi.b88_get_monitor_type(_handle); }
+        set { lock (SyncRoot) NativeApi.b88_set_monitor_type(_handle, value); }
     }
 
     /// <summary>
@@ -263,10 +295,10 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// (the renderer row-doubles it to 640×400). Video filters use this to pick
     /// the content resolution they operate on.
     /// </summary>
-    public bool Is400Line => NativeApi.b88_is_400line(_handle) != 0;
+    public bool Is400Line { get { lock (SyncRoot) return NativeApi.b88_is_400line(_handle) != 0; } }
 
     /// <summary>Advance the machine by one 1/60s frame (no rendering).</summary>
-    public void RunFrame() => NativeApi.b88_run_frame(_handle);
+    public void RunFrame() { lock (SyncRoot) NativeApi.b88_run_frame(_handle); }
 
     /// <summary>
     /// Run slice <paramref name="index"/> of <paramref name="count"/> roughly
@@ -276,7 +308,9 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// render/present and reset the slice index when this returns true.
     /// </summary>
     public bool RunFrameSlice(int index, int count)
-        => NativeApi.b88_run_frame_slice(_handle, index, count) != 0;
+    {
+        lock (SyncRoot) return NativeApi.b88_run_frame_slice(_handle, index, count) != 0;
+    }
 
     /// <summary>
     /// Emulated VSYNC frequency in Hz, from the CRTC programming (55.42Hz on
@@ -286,7 +320,8 @@ internal sealed unsafe class EmulatorHost : IDisposable
     {
         get
         {
-            double rate = NativeApi.b88_frame_rate(_handle);
+            double rate;
+            lock (SyncRoot) rate = NativeApi.b88_frame_rate(_handle);
             return rate > 0 ? rate : 60.0;
         }
     }
@@ -294,8 +329,9 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// <summary>Composite the current machine state into the internal pixel buffer.</summary>
     public void Render(bool blinkCursor)
     {
-        fixed (byte* p = _pixels)
-            NativeApi.b88_render_rgba(_handle, p, _pixels.Length, blinkCursor ? 1 : 0);
+        lock (SyncRoot)
+            fixed (byte* p = _pixels)
+                NativeApi.b88_render_rgba(_handle, p, _pixels.Length, blinkCursor ? 1 : 0);
     }
 
     /// <summary>Run one frame and composite into the internal pixel buffer.</summary>
@@ -310,6 +346,11 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// sub-system, mounted disk images). Mirrors macOS Machine.createSaveState.
     /// </summary>
     public byte[] SaveState()
+    {
+        lock (SyncRoot) return SaveStateLocked();
+    }
+
+    private byte[] SaveStateLocked()
     {
         int len = NativeApi.b88_save_state(_handle);
         if (len <= 0) return Array.Empty<byte>();
@@ -326,14 +367,20 @@ internal sealed unsafe class EmulatorHost : IDisposable
     public bool LoadState(byte[] blob)
     {
         if (blob is null || blob.Length == 0) return false;
-        fixed (byte* p = blob)
-            return NativeApi.b88_load_state(_handle, p, blob.Length) != 0;
+        lock (SyncRoot)
+            fixed (byte* p = blob)
+                return NativeApi.b88_load_state(_handle, p, blob.Length) != 0;
     }
 
     /// <summary>
     /// Drain available audio into <paramref name="sink"/>. Returns pairs drained.
     /// </summary>
     public int DrainAudio(XAudioSink sink)
+    {
+        lock (SyncRoot) return DrainAudioLocked(sink);
+    }
+
+    private int DrainAudioLocked(XAudioSink sink)
     {
         int pairs;
         fixed (float* p = _audio)
@@ -371,7 +418,7 @@ internal sealed unsafe class EmulatorHost : IDisposable
     public bool KeyDown(VirtualKey key)
     {
         if (!KeyMapping.TryMap(key, out var m)) return false;
-        NativeApi.b88_press_key(_handle, m.Row, m.Bit);
+        lock (SyncRoot) NativeApi.b88_press_key(_handle, m.Row, m.Bit);
         return true;
     }
 
@@ -379,23 +426,26 @@ internal sealed unsafe class EmulatorHost : IDisposable
     public bool KeyUp(VirtualKey key)
     {
         if (!KeyMapping.TryMap(key, out var m)) return false;
-        NativeApi.b88_release_key(_handle, m.Row, m.Bit);
+        lock (SyncRoot) NativeApi.b88_release_key(_handle, m.Row, m.Bit);
         return true;
     }
 
     /// <summary>Press a PC-88 matrix cell directly, bypassing VirtualKey mapping.
     /// Used by the game-controller path, whose inputs aren't Windows VirtualKeys.</summary>
-    public void PressMatrixKey(int row, int bit) => NativeApi.b88_press_key(_handle, row, bit);
+    public void PressMatrixKey(int row, int bit) { lock (SyncRoot) NativeApi.b88_press_key(_handle, row, bit); }
 
     /// <summary>Release a PC-88 matrix cell directly. See <see cref="PressMatrixKey"/>.</summary>
-    public void ReleaseMatrixKey(int row, int bit) => NativeApi.b88_release_key(_handle, row, bit);
+    public void ReleaseMatrixKey(int row, int bit) { lock (SyncRoot) NativeApi.b88_release_key(_handle, row, bit); }
 
     public void Dispose()
     {
-        if (_handle != IntPtr.Zero)
+        lock (SyncRoot)
         {
-            NativeApi.b88_destroy(_handle);
-            _handle = IntPtr.Zero;
+            if (_handle != IntPtr.Zero)
+            {
+                NativeApi.b88_destroy(_handle);
+                _handle = IntPtr.Zero;
+            }
         }
         GC.SuppressFinalize(this);
     }

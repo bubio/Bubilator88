@@ -12,7 +12,9 @@ AI アップスケールは ONNX Runtime + DirectML。
 ```
 windows/Bubilator88.Windows/
 ├── NativeApi.cs              P/Invoke (Bubilator88C.dll の @_cdecl と 1:1)
-├── EmulatorHost.cs           native ハンドル管理 + 再利用バッファ (毎フレーム alloc ゼロ)
+├── EmulatorHost.cs           native ハンドル管理 + 再利用バッファ (毎フレーム alloc ゼロ)。全呼び出しを SyncRoot で排他
+├── EmulationLoop.cs          エミュレーション専用スレッド + 高分解能タイマのペーサ (macOS の EmulationLoop 相当)
+├── FramePublisher.cs         完成フレームをエミュスレッド → UI スレッドへ渡す 3 スロット (macOS と同じ)
 ├── KeyMapping.cs             VirtualKey → PC-8801 15行マトリクス (US/JIS + テンキー擬似)
 ├── D3DScreen.cs              D3D11 + SwapChainPanel。フィルタ + スキャンライン + レターボックス
 ├── AiUpscaler.cs             ONNX Runtime + DirectML で AI x2 (3モデル切替、非同期ダブルバッファ)
@@ -20,7 +22,7 @@ windows/Bubilator88.Windows/
 ├── XAudioSink.cs             XAudio2 で 44.1kHz ステレオ float をストリーム (適応レート制御)
 ├── ImageCodec.cs             スクリーンショット PNG/JPEG/HEIC エンコード
 ├── WinSaveState.cs           セーブステート/メタ/サムネイルのファイル入出力
-├── MainWindow.xaml(.cs)      UI + フレームループ (コアの b88_frame_rate でペース) + 入力/ディスク/メニュー
+├── MainWindow.xaml(.cs)      UI + フレームループ (エミュ側 tick と UI 側の表示) + 入力/ディスク/メニュー
 ├── MainWindow.SettingsDialog.cs  設定ダイアログ (General/Display/Audio/Keyboard)
 ├── App.xaml(.cs)
 ├── Assets/
@@ -28,7 +30,7 @@ windows/Bubilator88.Windows/
 └── native/
     └── Bubilator88C.dll      ← swift build 成果物を手動配置 (git 管理外)
 
-windows/Bubilator88.Windows.Tests/   シェルの純ロジック xUnit テスト (KeyMapping / PixelMath)
+windows/Bubilator88.Windows.Tests/   シェルの純ロジック xUnit テスト (KeyMapping / PixelMath / FramePublisher など)
 
 AI モデル (3種) は全 OS 共有の `../../models/onnx/*.onnx` から csproj が出力直下へコピーする:
   SRVGGNet_x2_lite.onnx (Fast) / SRVGGNet_x2.onnx (Balanced) / RealESRGAN_x2.onnx (Quality)
@@ -250,7 +252,10 @@ SxS のアクティベーションコンテキストはこれを **exe がある
   macOS の音声サブフレーム化 (`bubio/Bubilator88#193`) に対応。x2〜x16 の早送りは従来通り
   フレーム一括実行)。フレームループはコアの `b88_frame_rate`(CRTC とモニタ種別から決まる
   実機のフレームレート。24kHz・25行で 55.42Hz)で毎フレームペースを取り直す — 60Hz 固定で
-  回すと CPU も YM2608 タイマーも約 8% 速くなる。早送りの音は x2/x4 は N 倍速(音程も上がる)で
+  回すと CPU も YM2608 タイマーも約 8% 速くなる。**2 スレッド構成**(macOS と同じ): エミュレーションは
+  専用スレッド (EmulationLoop) が自前のペーサで回し、UI スレッドの CompositionTarget.Rendering は
+  完成フレーム (FramePublisher) を表示するだけ。メニューやダイアログで UI が詰まっても音と進行が止まらない。
+  最小化中は停止する。早送りの音は x2/x4 は N 倍速(音程も上がる)で
   鳴らし、x8 以上はミュート(macOS 版は全段 N 倍速のまま)。YM2608 リズム音源サンプル読込。音量・バッファ長設定。
   擬似ステレオと **CD Mix**(出力段のローパス + ステレオリバーブ、既定 OFF。`b88_set_cd_mix`)。
   **FDD アクセス音**(シーク/リード音を合成、ドライブ別ステレオ定位、ステータスバーの赤アクセスランプ)は
