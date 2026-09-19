@@ -80,6 +80,8 @@ public sealed partial class MainWindow : Window
     private int _bootModeIndex;
     private bool _clock8MHz = true;
     private int _extRamCards = NativeApi.ExtRam_128KB;  // matches macOS Settings.extramCards default
+    private int _monitorType = NativeApi.Monitor24kHz;  // matches macOS Settings.monitorType default
+    private bool _memoryWaitDip;                        // matches macOS Settings.memoryWaitDip default (off)
 
     // Per-drive mounted-disk state (bytes kept so images can be switched without
     // re-reading the file; mirrors macOS MountedDiskInfo for multi-image .d88).
@@ -292,7 +294,7 @@ public sealed partial class MainWindow : Window
     {
         if (_host is null) return;
         var (dipSw1, dipSw2Base) = BootSelection();
-        _host.Configure(_clock8MHz, dipSw1, dipSw2Base, preserveRam, _extRamCards);
+        _host.Configure(_clock8MHz, dipSw1, dipSw2Base, preserveRam, _extRamCards, _monitorType, _memoryWaitDip);
         ModeLabel.Text = _bootModeIndex switch
         {
             1 => "N88-V1H",
@@ -995,6 +997,8 @@ public sealed partial class MainWindow : Window
         public int BootModeIndex { get; set; }       // 0=N88-V2 1=V1H 2=V1S 3=N-BASIC
         public bool Clock8MHz { get; set; } = true;
         public int ExtRamCards { get; set; } = NativeApi.ExtRam_128KB;  // 0=none 1=128KB 8=1MB
+        public int MonitorType { get; set; } = NativeApi.Monitor24kHz;  // 0=15kHz 1=24kHz
+        public bool MemoryWaitDip { get; set; }
         public double Volume { get; set; } = 0.5;    // matches macOS default
         public string VideoFilter { get; set; } = "None";  // None/Linear/Bicubic/CRT/xBRZ/Enhanced
         public bool ScanlineEnabled { get; set; }    // matches macOS default (off)
@@ -1033,6 +1037,8 @@ public sealed partial class MainWindow : Window
             _bootModeIndex = Math.Clamp(s.BootModeIndex, 0, 3);
             _clock8MHz = s.Clock8MHz;
             _extRamCards = NormalizeExtRamCards(s.ExtRamCards);
+            _monitorType = s.MonitorType == NativeApi.Monitor15kHz ? NativeApi.Monitor15kHz : NativeApi.Monitor24kHz;
+            _memoryWaitDip = s.MemoryWaitDip;
             _volume = Math.Clamp(s.Volume, 0.0, 1.0);
             _videoFilter = NormalizeFilter(s.VideoFilter);
             _scanlineEnabled = s.ScanlineEnabled;
@@ -1067,6 +1073,8 @@ public sealed partial class MainWindow : Window
                 BootModeIndex = _bootModeIndex,
                 Clock8MHz = _clock8MHz,
                 ExtRamCards = _extRamCards,
+                MonitorType = _monitorType,
+                MemoryWaitDip = _memoryWaitDip,
                 Volume = _volume,
                 VideoFilter = _videoFilter,
                 ScanlineEnabled = _scanlineEnabled,
@@ -1453,6 +1461,7 @@ public sealed partial class MainWindow : Window
     {
         BootModeIndex = _bootModeIndex,
         Clock8MHz = _clock8MHz,
+        MonitorType = _host?.MonitorType ?? _monitorType,
         Drive0 = MetaForDrive(0),
         Drive1 = MetaForDrive(1),
     };
@@ -1485,6 +1494,13 @@ public sealed partial class MainWindow : Window
         {
             _clock8MHz = _host?.Clock8MHz ?? _clock8MHz;
         }
+
+        // Outside the null check on purpose, like macOS performLoad: the
+        // restored CRTC geometry belongs to one monitor, and a state without
+        // metadata (or without the field) predates it and was 24kHz. Mirror it
+        // into the setting so the next Reset does not change the frame rate back.
+        _monitorType = meta?.MonitorType == NativeApi.Monitor15kHz ? NativeApi.Monitor15kHz : NativeApi.Monitor24kHz;
+        if (_host is not null) _host.MonitorType = _monitorType;
 
         (_bootModeIndex switch { 1 => BootN88V1H, 2 => BootN88V1S, 3 => BootNBasic, _ => BootN88V2 }).IsChecked = true;
         (_clock8MHz ? Clock8 : Clock4).IsChecked = true;

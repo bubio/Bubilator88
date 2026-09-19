@@ -263,14 +263,15 @@ SxS のアクティベーションコンテキストはこれを **exe がある
   Controller タブで「キーを押してバインド」/デフォルト復帰が可能)。
 - **状態保存**: セーブステート(スロット/クイック、メタ・サムネイル)、スクリーンショット(PNG/JPEG/HEIC)、Emulation Speed(×1〜×16)。
 - **設定**: General/Display/Audio/Keyboard/Controller タブ(`settings.json` に即時永続化)。
+  General タブの Hardware Configuration でモニタ種別 (24kHz/15kHz)・メモリウェイト DIP・
+  拡張 RAM を選択(いずれも次回リセットで反映)。モニタ種別は macOS と同様にセーブステートの
+  メタに記録し、ロード時に復元する(記録の無い古いステートは 24kHz 扱い)。
 - **テスト基盤**: シェル純ロジックの xUnit プロジェクト。
 
 ## 未実装(後続 / 別実装枠)
 
-- **モニタ種別 (15kHz/24kHz)・メモリウェイト DIP・CPU オーバークロックの設定 UI**。
-  C ABI (`b88_set_monitor_type` / `b88_set_memory_wait_dip` / `b88_set_cpu_overclock`) と
-  P/Invoke 宣言はあるが、設定画面から選べない。常にコアの既定値 (24kHz = 55.42Hz、
-  ウェイト off、×1) で動く。
+- **CPU オーバークロックの設定 UI**。C ABI (`b88_set_cpu_overclock`) と P/Invoke 宣言は
+  あるが、設定画面から選べない。常に ×1 で動く。
 - 触覚フィードバック(SSGノイズ検出→振動。Bubilator88Core の CApi 拡張が必要なため別PRで対応予定)
 - コントローラーのモデル別マッピング / ブランド別アイコン表示(`Windows.Gaming.Input.Gamepad` は
   製品識別情報を提供しないため、v1 は単一のグローバルマッピング)

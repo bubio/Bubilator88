@@ -202,10 +202,16 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// Configure boot mode and reset. Mount disks BEFORE calling so the boot
     /// strap (DIP SW2 bit 3) picks FDD boot when drive 0 is occupied.
     /// </summary>
-    public void Configure(bool clock8MHz, int dipSw1, int dipSw2Base, bool preserveRam = false, int extRamCards = NativeApi.ExtRam_128KB)
+    public void Configure(bool clock8MHz, int dipSw1, int dipSw2Base, bool preserveRam = false,
+                          int extRamCards = NativeApi.ExtRam_128KB,
+                          int monitorType = NativeApi.Monitor24kHz, bool memoryWaitDip = false)
     {
         NativeApi.b88_set_dipsw1(_handle, dipSw1);
         NativeApi.b88_apply_bootstrap(_handle, dipSw2Base);
+        // Set before the reset: the monitor decides the CRTC's reset geometry
+        // (and so the frame rate) — same ordering as macOS performReset.
+        NativeApi.b88_set_monitor_type(_handle, monitorType);
+        NativeApi.b88_set_memory_wait_dip(_handle, memoryWaitDip ? 1 : 0);
         // Cold reset (clear RAM) only for the first boot; user-triggered
         // re-applies (Reset / boot mode / clock) preserve RAM, matching the
         // macOS performReset (machine.reset(preserveRAM: true)).
@@ -237,6 +243,17 @@ internal sealed unsafe class EmulatorHost : IDisposable
 
     /// <summary>True if the restored/active CPU clock is 8 MHz.</summary>
     public bool Clock8MHz => NativeApi.b88_get_clock_8mhz(_handle) != 0;
+
+    /// <summary>
+    /// Monitor the machine is running on (NativeApi.Monitor15kHz/24kHz) — the
+    /// one applied at the last reset, which can differ from the pending setting.
+    /// Setting it takes effect without a reset; used to restore a save state.
+    /// </summary>
+    public int MonitorType
+    {
+        get => NativeApi.b88_get_monitor_type(_handle);
+        set => NativeApi.b88_set_monitor_type(_handle, value);
+    }
 
     /// <summary>
     /// True if the machine is in native 400-line mode; false for 200-line

@@ -146,13 +146,35 @@ public sealed partial class MainWindow
             "Image format used when saving screenshots. When save location isn't " +
             "asked every time, screenshots are written straight to the folder below."));
 
-        var extRamCombo = LabeledCombo("Capacity",
+        var monitorCombo = LabeledCombo("Monitor",
+            new[] { ("24 kHz (Dedicated)", NativeApi.Monitor24kHz.ToString()),
+                    ("15 kHz (Standard)", NativeApi.Monitor15kHz.ToString()) },
+            _monitorType.ToString(),
+            tag => { _monitorType = int.Parse(tag); SaveSettings(); });
+
+        var memoryWaitToggle = Toggle("Memory wait", _memoryWaitDip, on =>
+        {
+            _memoryWaitDip = on;
+            SaveSettings();
+        });
+
+        var extRamCombo = LabeledCombo("Extended RAM",
             new[] { ("None", "0"), ("128 KB", "1"), ("1 MB", "8") },
             _extRamCards.ToString(),
             tag => { _extRamCards = int.Parse(tag); SaveSettings(); });
 
-        panel.Children.Add(Section("Extended RAM", new[] { (FrameworkElement)extRamCombo },
-            "Applied on next reset."));
+        panel.Children.Add(Section("Hardware Configuration", new FrameworkElement[]
+        {
+            monitorCombo,
+            Caption("DIP SW1-8 on real hardware. The monitor's horizontal frequency decides " +
+                    "the VSYNC rate: 55.4 Hz at 24 kHz, 62.4 Hz at 15 kHz. Applied on next reset."),
+            memoryWaitToggle,
+            Caption("DIP SW1-6 on real hardware. Adds one wait state to main memory and text " +
+                    "VRAM accesses, slowing the machine slightly. Off on a factory-default " +
+                    "PC-8801. Applied on next reset."),
+            extRamCombo,
+            Caption("Applied on next reset."),
+        }));
 
         return panel;
     }
