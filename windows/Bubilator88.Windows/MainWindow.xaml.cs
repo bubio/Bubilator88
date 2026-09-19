@@ -193,7 +193,7 @@ public sealed partial class MainWindow : Window
 
             _screen = new D3DScreen(ScreenPanel, EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight);
             _audio = new XAudioSink();
-            _audio.SetVolume((float)_volume);
+            ApplyAudioVolume();
             VolumeSlider.Value = _volume * 100.0;
 
             _fddSound = new FddSound();
@@ -535,7 +535,7 @@ public sealed partial class MainWindow : Window
     private void OnVolumeChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
         _volume = Math.Clamp(e.NewValue / 100.0, 0.0, 1.0);
-        _audio?.SetVolume((float)_volume);
+        ApplyAudioVolume();
         SaveSettings();
     }
 
@@ -1301,14 +1301,26 @@ public sealed partial class MainWindow : Window
 
     /// Emulation fast-forward. Speed N runs N emulation frames per draw and plays the
     /// over-produced audio back at N× (matches macOS EmulationSpeed / varispeed).
+    /// From <see cref="MutedEmulationSpeed"/> up the audio is muted instead: at
+    /// 3–4 octaves up the music is just noise.
     private void OnEmulationSpeed(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe && int.TryParse(fe.Tag?.ToString(), out int n))
         {
             _emulationSpeed = Math.Clamp(n, 1, 16);
             _audio?.SetFrequencyRatio(_emulationSpeed);
+            ApplyAudioVolume();
         }
     }
+
+    private const int MutedEmulationSpeed = 8;
+
+    /// The volume slider's level, or silence while fast-forwarding at
+    /// <see cref="MutedEmulationSpeed"/> or above. Samples are still submitted
+    /// either way, so the queue — and the core's rate control — carries on as
+    /// usual and returning to a lower speed doesn't start from an empty buffer.
+    private void ApplyAudioVolume()
+        => _audio?.SetVolume(_emulationSpeed >= MutedEmulationSpeed ? 0f : (float)_volume);
 
     /// Capture the current frame through the active video filter (CRT phosphor,
     /// xBRZ, scanlines, …) for screenshots/thumbnails, mirroring the macOS
