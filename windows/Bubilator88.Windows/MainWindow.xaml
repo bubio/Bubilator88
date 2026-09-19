@@ -19,16 +19,14 @@
         <muxc:MenuBar Grid.Row="0"
                       Background="{ThemeResource SystemControlBackgroundChromeMediumBrush}">
             <muxc:MenuBarItem Title="Emulator">
-                <MenuFlyoutItem Text="Settings…" Click="OnSettings" />
-                <MenuFlyoutSeparator />
                 <!-- Shortcuts are dispatched in code (OnKeyDown) because the screen
                      greedily consumes letter/number keys for the PC-8801 matrix,
                      which pre-empts XAML KeyboardAccelerators. These overrides only
                      render the hint text next to the item. -->
-                <MenuFlyoutItem x:Name="PauseResumeItem" Text="Pause" Click="OnPauseResume"
-                                KeyboardAcceleratorTextOverride="Ctrl+R" />
                 <MenuFlyoutItem Text="Reset" Click="OnReset"
-                                KeyboardAcceleratorTextOverride="Ctrl+E" />
+                                KeyboardAcceleratorTextOverride="Ctrl+R" />
+                <MenuFlyoutItem x:Name="PauseResumeItem" Text="Pause" Click="OnPauseResume"
+                                KeyboardAcceleratorTextOverride="Ctrl+P" />
                 <MenuFlyoutSeparator />
                 <MenuFlyoutSubItem Text="Boot Mode">
                     <muxc:RadioMenuFlyoutItem x:Name="BootN88V2" Text="N88-BASIC V2" GroupName="Boot"
@@ -46,6 +44,8 @@
                     <muxc:RadioMenuFlyoutItem x:Name="Clock4" Text="4 MHz" GroupName="Clock"
                                               Click="OnClock" Tag="4" />
                 </MenuFlyoutSubItem>
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem Text="Settings…" Click="OnSettings" />
             </muxc:MenuBarItem>
 
             <muxc:MenuBarItem Title="Disk">

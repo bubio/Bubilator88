@@ -257,7 +257,7 @@ SxS のアクティベーションコンテキストはこれを **exe がある
   (`NAudio.CoreAudioApi.MMDeviceEnumerator` でデバイス列挙、macOS の `fddSoundDeviceUID` と同じ設計)。
 - **ディスク**: マルチイメージ D88、Drive 1/2/1&2、ライトプロテクト、Recent Files、イメージ選択ダイアログ。
 - **入力**: VirtualKey→マトリクス(US/JIS 記号、矢印/数字行/WASD のテンキー擬似)、
-  メニューのキーボードショートカット(Ctrl+R/E/S/L、Ctrl+Shift+C、Ctrl+1/2/3、F11)。
+  メニューのキーボードショートカット(Ctrl+R/P/S/L、Ctrl+Shift+C、Ctrl+1/2/3、F11)。
   **ゲームコントローラ**(`Windows.Gaming.Input.Gamepad` ポーリング、Dpad/ABXY/ショルダー/
   トリガー/スティックをPC-88キーまたはホストコマンドにマッピング、設定ダイアログの
   Controller タブで「キーを押してバインド」/デフォルト復帰が可能)。

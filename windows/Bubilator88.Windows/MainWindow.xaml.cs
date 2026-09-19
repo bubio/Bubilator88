@@ -1757,8 +1757,8 @@ public sealed partial class MainWindow : Window
 
         switch (key)
         {
-            case VirtualKey.R: OnPauseResume(this, EmptyArgs); return true;
-            case VirtualKey.E: OnReset(this, EmptyArgs); return true;
+            case VirtualKey.R: OnReset(this, EmptyArgs); return true;
+            case VirtualKey.P: OnPauseResume(this, EmptyArgs); return true;
             case VirtualKey.S: OnQuickSave(this, EmptyArgs); return true;
             case VirtualKey.L: OnQuickLoad(this, EmptyArgs); return true;
             case VirtualKey.Number1: _ = MountDriveAsync(0); return true;
