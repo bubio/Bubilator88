@@ -29,8 +29,8 @@ namespace Bubilator88.Windows;
 
 public sealed partial class MainWindow : Window
 {
-    private const double FrameSeconds = 1.0 / 60.0;
-    private const int MaxCatchUpFrames = 4;
+    // Slices per frame on the x1 path (matches macOS's audioSlicesPerFrame).
+    private const int AudioSlicesPerFrame = 4;
     // Render ticks a disk LED stays lit after an access pulse (~200 ms @ 60 Hz).
     private const int LedHoldTicks = 12;
     // Approx. non-screen chrome (menu + status + title) in DIPs, for window sizing.
@@ -44,15 +44,29 @@ public sealed partial class MainWindow : Window
     private readonly OcrManager _ocr = new();
     private List<OcrDetection> _ocrDetections = new();
 
+    // Emulation runs on its own thread (EmulationLoop); the UI thread presents
+    // the frames it publishes. See RunEmulationStep / OnRendering.
+    private EmulationLoop? _loop;
+    private readonly FramePublisher _frames =
+        new(EmulatorHost.ScreenWidth * EmulatorHost.ScreenHeight * 4);
+    private FrameSlot? _lastFrame;   // newest frame the UI took; valid until the next acquire
+    private long _fpsLastPublished;
+
+    // FDD LED / sound events, sampled per frame on the emulation thread and
+    // handed to the UI thread (seek steps are counts, so the UI tick — which
+    // doesn't line up with machine frames — must not sample them itself).
+    private readonly object _diskEventsLock = new();
+    private bool _pendingAccess0, _pendingAccess1;
+    private int _pendingSeek0, _pendingSeek1;
+    private bool _pendingRead0, _pendingRead1;
+
     private readonly Stopwatch _clock = Stopwatch.StartNew();
-    private double _accumulator;
     private double _lastTick;
-    private bool _running;
+    private int _sliceIndex;   // current x1-path slice (emulation thread only)
     private bool _paused;
     private bool _fullscreen;
     private int _windowScale = 2;   // ×1/×2/×4, persisted
     private int _emulationSpeed = 1; // fast-forward multiplier: 1/2/4/8/16
-    private bool _busy;             // suspends the frame loop during a state load
     private string _videoFilter = "None";   // None/Linear/Bicubic/CRT/xBRZ/Enhanced
     private bool _scanlineEnabled;           // scanline overlay (None/Linear/Bicubic only)
 
@@ -78,6 +92,8 @@ public sealed partial class MainWindow : Window
     private int _bootModeIndex;
     private bool _clock8MHz = true;
     private int _extRamCards = NativeApi.ExtRam_128KB;  // matches macOS Settings.extramCards default
+    private int _monitorType = NativeApi.Monitor24kHz;  // matches macOS Settings.monitorType default
+    private bool _memoryWaitDip;                        // matches macOS Settings.memoryWaitDip default (off)
 
     // Per-drive mounted-disk state (bytes kept so images can be switched without
     // re-reading the file; mirrors macOS MountedDiskInfo for multi-image .d88).
@@ -98,9 +114,8 @@ public sealed partial class MainWindow : Window
     // Status-bar state.
     private int _drive0Led;
     private int _drive1Led;
-    private int _fpsFrames;
     private double _fpsAccum;
-    private long _aiLastCompleted;   // throughput baseline for the AI-filter FPS path
+    private long _aiLastPresented;   // throughput baseline for the AI-filter FPS path
 
     // Matches the macOS status-bar drive LED (Color.red / Color.gray in ContentView.swift).
     private readonly SolidColorBrush _ledOn = new(Microsoft.UI.Colors.Red);
@@ -139,6 +154,9 @@ public sealed partial class MainWindow : Window
 
         Root.Loaded += OnLoaded;
         Closed += OnClosed;
+        // Park emulation while minimized, as the UI-thread loop did when
+        // Rendering stopped (mirrors macOS EmulationLoop.setVisible).
+        VisibilityChanged += (_, e) => _loop?.SetVisible(e.Visible);
 
         // Keep keyboard focus on the emulation view. Two chrome controls otherwise
         // capture it and silence OnKeyDown (the PC-8801 key matrix + Ctrl chords):
@@ -154,19 +172,33 @@ public sealed partial class MainWindow : Window
     /// the menu chord handler (OnKeyDown) keep receiving input.
     private void RestoreEmulatorFocus() => Root.Focus(FocusState.Programmatic);
 
-    /// When a top-level menu closes, WinUI parks focus back on the MenuBarItem that
-    /// was open, which silences OnKeyDown. Catch that specific hand-off — a menu
-    /// flyout element giving focus to a MenuBarItem — and redirect to the emulation
-    /// view. Opening a menu (old focus = the screen, not a flyout item) and
-    /// navigating within an open menu (new focus ≠ a MenuBarItem) are left alone.
+    /// When a menu closes (item chosen, Esc, click outside, or a dialog opened
+    /// from it is dismissed), WinUI parks focus back on the MenuBarItem, which
+    /// then reacts to keys as well as the emulator (they bubble on to Root).
+    /// Catch focus arriving on a MenuBarItem from anywhere other than the
+    /// emulation view or another MenuBarItem — i.e. coming back out of a menu or
+    /// dialog — and, once WinUI has finished its own focus restoration, send it
+    /// to the emulation view unless a menu (or any other popup) is still open.
+    /// Keyboard menu access is left alone: entering the menu bar from the
+    /// emulation view (old = Root) and moving along it (old = MenuBarItem) keep
+    /// focus where the user put it.
     private void OnRootGettingFocus(UIElement sender, GettingFocusEventArgs e)
     {
-        if (e.NewFocusedElement is MenuBarItem && IsMenuFlyoutElement(e.OldFocusedElement))
-            e.TrySetNewFocusedElement(Root);
+        if (e.NewFocusedElement is not MenuBarItem) return;
+        if (e.OldFocusedElement == Root || e.OldFocusedElement is MenuBarItem) return;
+        DispatcherQueue.TryEnqueue(
+            Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            RestoreEmulatorFocusAfterMenu);
     }
 
-    private static bool IsMenuFlyoutElement(DependencyObject? element)
-        => element is MenuFlyoutItemBase or MenuFlyoutPresenter;
+    private void RestoreEmulatorFocusAfterMenu()
+    {
+        if (FocusManager.GetFocusedElement(Root.XamlRoot) is MenuBarItem && !IsPopupOpen())
+            RestoreEmulatorFocus();
+    }
+
+    private bool IsPopupOpen()
+        => Root.XamlRoot is { } root && VisualTreeHelper.GetOpenPopupsForXamlRoot(root).Count > 0;
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
@@ -176,6 +208,7 @@ public sealed partial class MainWindow : Window
             _host.LoadRoms();
             _host.AudioBufferMs = _audioBufferMs;   // adaptive-rate target latency
             _host.SetPseudoStereo(_pseudoStereo);
+            _host.SetCdMix(_cdMix);
 
             LoadRecent();
 
@@ -191,7 +224,7 @@ public sealed partial class MainWindow : Window
 
             _screen = new D3DScreen(ScreenPanel, EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight);
             _audio = new XAudioSink();
-            _audio.SetVolume((float)_volume);
+            ApplyAudioVolume();
             VolumeSlider.Value = _volume * 100.0;
 
             _fddSound = new FddSound();
@@ -202,7 +235,6 @@ public sealed partial class MainWindow : Window
             _controller.Enabled = _gameControllerEnabled;
             _controller.OnHostCommand = ExecuteHostCommand;
 
-            _running = true;
             _lastTick = _clock.Elapsed.TotalSeconds;
             CompositionTarget.Rendering += OnRendering;
             Root.Focus(FocusState.Programmatic);
@@ -226,12 +258,19 @@ public sealed partial class MainWindow : Window
             // presenter (the screen was just created with the default filter).
             SyncVideoFilterMenu();
             ApplyVideoFilter();
+
+            // Last, once everything the loop touches exists.
+            _loop = new EmulationLoop(RunEmulationStep);
+            _loop.SetFramesPerStep(_emulationSpeed);
+            _loop.Start();
         }
         catch (Exception ex)
         {
             // Tear down anything that was constructed before the failure so the
-            // native handle / D3D / XAudio resources don't leak.
-            _running = false;
+            // native handle / D3D / XAudio resources don't leak. The loop goes
+            // first: it must have exited before the host is destroyed.
+            _loop?.Dispose();
+            _loop = null;
             CompositionTarget.Rendering -= OnRendering;
             _fddSound?.Dispose();
             _audio?.Dispose();
@@ -265,13 +304,23 @@ public sealed partial class MainWindow : Window
     /// while one is up, and our callers are <c>async void</c>, so that would be an
     /// unhandled crash. A request made while one is already open is dropped, and any
     /// presentation failure (e.g. XamlRoot not ready yet) is swallowed.
+    /// When the dialog closes, WinUI hands focus back to whatever opened it —
+    /// usually a MenuBarItem — so focus is sent to the emulation view instead,
+    /// once WinUI has finished its own restoration (unless another dialog has
+    /// been opened in the meantime).
     private async Task<ContentDialogResult> ShowDialogAsync(ContentDialog dialog)
     {
         if (_dialogOpen) return ContentDialogResult.None;
         _dialogOpen = true;
         try { return await dialog.ShowAsync(); }
         catch { return ContentDialogResult.None; }
-        finally { _dialogOpen = false; }
+        finally
+        {
+            _dialogOpen = false;
+            DispatcherQueue.TryEnqueue(
+                Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+                () => { if (!_dialogOpen) RestoreEmulatorFocus(); });
+        }
     }
 
     // MARK: - Boot configuration
@@ -290,7 +339,7 @@ public sealed partial class MainWindow : Window
     {
         if (_host is null) return;
         var (dipSw1, dipSw2Base) = BootSelection();
-        _host.Configure(_clock8MHz, dipSw1, dipSw2Base, preserveRam, _extRamCards);
+        _host.Configure(_clock8MHz, dipSw1, dipSw2Base, preserveRam, _extRamCards, _monitorType, _memoryWaitDip);
         ModeLabel.Text = _bootModeIndex switch
         {
             1 => "N88-V1H",
@@ -306,9 +355,105 @@ public sealed partial class MainWindow : Window
 
     // MARK: - Frame loop
 
+    /// One tick of the emulation loop, on the emulation thread: a slice at x1,
+    /// otherwise <paramref name="batch"/> whole frames (the emulation speed).
+    /// Everything runs under the host lock, and <see cref="EmulationLoop.ShouldRun"/>
+    /// is re-checked under it so a pause (Stop + join) is never overtaken.
+    private void RunEmulationStep(int batch)
+    {
+        EmulatorHost host = _host!;
+
+        if (batch == 1)
+        {
+            // At x1 the frame runs in slices, one per tick (mirrors macOS's
+            // audio-subframe pacing, EmulatorViewModel+Rendering.swift). Audio
+            // reaches XAudio2 in ~4.5ms pieces spread over the frame instead
+            // of one ~18ms burst, which is what lets a short (e.g. 20ms) buffer
+            // setting hold without underrunning.
+            lock (host.SyncRoot)
+            {
+                if (!_loop!.ShouldRun) return;
+                bool ended = host.RunFrameSlice(_sliceIndex, AudioSlicesPerFrame);
+                if (_audio is not null) host.DrainAudio(_audio);
+                if (ended)
+                {
+                    _sliceIndex = 0;
+                    FinishFrame(host);
+                }
+                else
+                {
+                    _sliceIndex++;
+                }
+                // Pace from the emulated VSYNC rate (55.42Hz on a 24kHz monitor),
+                // not a fixed 60Hz. It follows the CRTC programming, so it is
+                // re-read after every tick.
+                _loop.SetTickInterval(1.0 / (host.FrameRate * AudioSlicesPerFrame));
+            }
+            return;
+        }
+
+        // Emulation speed N runs N frames per tick (matches macOS
+        // EmulationSpeed.framesPerDraw). Audio is drained every frame so the
+        // core buffer never accumulates; the source voice plays the
+        // over-produced samples back at N× (see _audio.SetFrequencyRatio).
+        // The lock is released between frames so UI calls (key presses) wait
+        // for at most one frame even at x16.
+        for (int i = 0; i < batch; i++)
+        {
+            lock (host.SyncRoot)
+            {
+                if (!_loop!.ShouldRun) return;
+                // Also finishes a frame the sliced path left part-way (switching
+                // to fast forward mid-frame): RunFrame() stops at the same
+                // boundary, so the next x1 tick starts at slice 0.
+                host.RunFrame();
+                if (_audio is not null) host.DrainAudio(_audio);
+                _sliceIndex = 0;
+                if (i == batch - 1)
+                {
+                    FinishFrame(host);
+                    _loop.SetTickInterval(1.0 / host.FrameRate);
+                }
+            }
+        }
+    }
+
+    /// The frame-end half of a tick (emulation thread, host lock held): render
+    /// and publish the frame, and collect the FDD LED / sound events for the UI.
+    private void FinishFrame(EmulatorHost host)
+    {
+        host.Render(blinkCursor: true);
+        _frames.Publish(host.Pixels, host.Is400Line);
+
+        host.SampleDiskAccess(out bool d0, out bool d1);
+        host.SampleFddSoundEvents(out int seek0, out int seek1, out bool read0, out bool read1);
+        lock (_diskEventsLock)
+        {
+            _pendingAccess0 |= d0;
+            _pendingAccess1 |= d1;
+            _pendingSeek0 += seek0;
+            _pendingSeek1 += seek1;
+            _pendingRead0 |= read0;
+            _pendingRead1 |= read1;
+        }
+    }
+
+    /// Render the current machine state and publish it outside the loop — for
+    /// a state load while paused, where no tick would show the new screen.
+    private void PublishCurrentFrame()
+    {
+        if (_host is null) return;
+        lock (_host.SyncRoot)
+        {
+            _host.Render(blinkCursor: true);
+            _frames.Publish(_host.Pixels, _host.Is400Line, counted: false);
+        }
+    }
+
+    /// Present whatever frame the emulation thread finished last (UI thread).
     private void OnRendering(object? sender, object e)
     {
-        if (!_running || _host is null || _screen is null || _busy) return;
+        if (_host is null || _screen is null) return;
 
         // Polled every tick, including while paused, so a controller-bound
         // Pause/Resume can un-pause and held buttons don't go stale.
@@ -324,61 +469,38 @@ public sealed partial class MainWindow : Window
         double dt = now - _lastTick;
         _lastTick = now;
 
-        if (_paused)
+        if (_frames.AcquireLatest() is { } frame)
         {
-            _accumulator = 0;
-            return;
-        }
-
-        _accumulator += dt;
-
-        int frames = 0;
-        while (_accumulator >= FrameSeconds && frames < MaxCatchUpFrames)
-        {
-            // Emulation speed N runs N frames per logical 60 Hz frame (matches
-            // macOS EmulationSpeed.framesPerDraw). Audio is drained every emulation frame
-            // so the core buffer never accumulates; the source voice plays the
-            // over-produced samples back at N× (see _audio.SetFrequencyRatio).
-            for (int s = 0; s < _emulationSpeed; s++)
-            {
-                _host.RunFrame();
-                if (_audio is not null) _host.DrainAudio(_audio);
-            }
-            _accumulator -= FrameSeconds;
-            frames++;
-        }
-        // Drop backlog if we fell too far behind (avoid spiral of death).
-        if (_accumulator > FrameSeconds * MaxCatchUpFrames)
-            _accumulator = 0;
-
-        if (frames > 0)
-        {
-            _host.Render(blinkCursor: true);   // render once per draw, not per emulation frame
-            _screen.Present(_host.Pixels, _host.Is400Line);
+            _lastFrame = frame;
+            _screen.Present(frame.Pixels, frame.Is400Line);
             SampleAndDecayLeds();
             SampleFddSound();
-            _ocr.Tick(dt, _host.Pixels);
-            _fpsFrames += frames;
+            _ocr.Tick(dt, frame.Pixels);
         }
         UpdateFps(dt);
     }
 
     private void SampleAndDecayLeds()
     {
-        _host!.SampleDiskAccess(out bool d0, out bool d1);
+        bool d0, d1;
+        lock (_diskEventsLock)
+        {
+            d0 = _pendingAccess0;
+            d1 = _pendingAccess1;
+            _pendingAccess0 = _pendingAccess1 = false;
+        }
         if (d0) _drive0Led = LedHoldTicks;
         if (d1) _drive1Led = LedHoldTicks;
         UpdateLed(Drive0Led, ref _drive0Led);
         UpdateLed(Drive1Led, ref _drive1Led);
     }
 
-    /// Sample the per-drive FDD seek-step / read-access pulses and play the
-    /// matching synthesized sound (mirrors the macOS FDC callback wiring in
+    /// Play the FDD seek-step / read-access sounds collected since the last
+    /// presented frame (mirrors the macOS FDC callback wiring in
     /// EmulatorViewModel.init()).
-    // A single sampled (~16.7ms) frame can contain several seek steps (step
-    // rate can be as low as ~2ms — see UPD765A.srtClocks, and OnRendering's
-    // catch-up loop can bundle up to MaxCatchUpFrames logical frames into one
-    // sample). Cap the replay burst at XAudio2's own hard limit
+    // A single presented frame can carry several seek steps (step rate can be
+    // as low as ~2ms — see UPD765A.srtClocks — and the UI can skip frames the
+    // loop published). Cap the replay burst at XAudio2's own hard limit
     // (XAUDIO2_MAX_QUEUED_BUFFERS = 64 per source voice) minus a small margin,
     // rather than an arbitrary lower number — this is the largest burst the
     // voice can actually hold, so it only truncates when XAudio2 itself would
@@ -387,12 +509,22 @@ public sealed partial class MainWindow : Window
 
     private void SampleFddSound()
     {
+        int seek0, seek1;
+        bool read0, read1;
+        lock (_diskEventsLock)
+        {
+            seek0 = _pendingSeek0;
+            seek1 = _pendingSeek1;
+            read0 = _pendingRead0;
+            read1 = _pendingRead1;
+            _pendingSeek0 = _pendingSeek1 = 0;
+            _pendingRead0 = _pendingRead1 = false;
+        }
         if (_fddSound is not { IsEnabled: true } sound) return;
-        _host!.SampleFddSoundEvents(out int seek0, out int seek1, out bool access0, out bool access1);
         for (int i = 0; i < Math.Min(seek0, MaxSeekClicksPerSample); i++) sound.PlaySeekStep(0);
         for (int i = 0; i < Math.Min(seek1, MaxSeekClicksPerSample); i++) sound.PlaySeekStep(1);
-        if (access0) sound.PlayReadAccess(0);
-        if (access1) sound.PlayReadAccess(1);
+        if (read0) sound.PlayReadAccess(0);
+        if (read1) sound.PlayReadAccess(1);
     }
 
     private void UpdateLed(Ellipse led, ref int counter)
@@ -413,27 +545,35 @@ public sealed partial class MainWindow : Window
         // and frozen while the AI filter is inactive, so the delta naturally reads 0
         // on re-entry and grows from there.
         double fps;
-        if (_screen is not null && _screen.TryGetAiInferenceCount(out long completed))
+        if (_screen is not null && _screen.TryGetAiPresentedCount(out long presented))
         {
-            fps = (completed - _aiLastCompleted) / _fpsAccum;
-            _aiLastCompleted = completed;
+            fps = (presented - _aiLastPresented) / _fpsAccum;
+            _aiLastPresented = presented;
         }
         else
         {
-            fps = _fpsFrames / _fpsAccum;
+            // Emulated frames, not presents: the loop publishes at the machine's
+            // rate regardless of how often the display draws.
+            fps = (_frames.PublishedCount - _fpsLastPublished) / _fpsAccum;
         }
 
         FpsLabel.Text = $"{fps:0} fps";
-        _fpsFrames = 0;
         _fpsAccum = 0;
+        // Re-baselined on both paths, so leaving the AI filter doesn't count
+        // every frame published meanwhile into the first reading.
+        _fpsLastPublished = _frames.PublishedCount;
     }
 
     // MARK: - Emulator menu
 
     private void OnPauseResume(object sender, RoutedEventArgs e)
     {
-        if (_host is null) return;
+        if (_host is not { } host) return;
         _paused = !_paused;
+        // Stop joins by taking the host lock, so no tick is in flight once it
+        // returns; Start resets the pacer so the pause isn't "caught up".
+        if (_paused) _loop?.Stop(() => { lock (host.SyncRoot) { } });
+        else _loop?.Start();
         PauseResumeItem.Text = _paused ? "Resume" : "Pause";
         RunStateLed.Fill = _paused ? _pausedLed : _runLed;
 
@@ -453,11 +593,20 @@ public sealed partial class MainWindow : Window
 
         // Mirrors macOS: pausing forces an immediate OCR pass (rather than
         // waiting up to ~3s) so the overlay reflects the frozen frame promptly.
-        if (_paused && _ocr.Enabled)
-            _ocr.TriggerImmediate(_host.Pixels);
+        if (_paused && _ocr.Enabled && _lastFrame is not null)
+            _ocr.TriggerImmediate(_lastFrame.Pixels);
     }
 
-    private void OnReset(object sender, RoutedEventArgs e) => ApplyBootConfig(preserveRam: true);
+    private void OnReset(object sender, RoutedEventArgs e)
+    {
+        ApplyBootConfig(preserveRam: true);
+        // Resetting while paused would otherwise freeze the display on the
+        // instant-post-reset VRAM/CRTC state — garbage the boot ROM only clears
+        // once the CPU runs. Mirrors macOS reset(), which forces the restart so
+        // reset always leaves the machine running. Boot mode / clock changes
+        // keep the pause, as on macOS.
+        if (_paused) OnPauseResume(this, EmptyArgs);
+    }
 
     private void OnBootMode(object sender, RoutedEventArgs e)
     {
@@ -485,7 +634,7 @@ public sealed partial class MainWindow : Window
     private void OnVolumeChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
         _volume = Math.Clamp(e.NewValue / 100.0, 0.0, 1.0);
-        _audio?.SetVolume((float)_volume);
+        ApplyAudioVolume();
         SaveSettings();
     }
 
@@ -945,6 +1094,8 @@ public sealed partial class MainWindow : Window
         public int BootModeIndex { get; set; }       // 0=N88-V2 1=V1H 2=V1S 3=N-BASIC
         public bool Clock8MHz { get; set; } = true;
         public int ExtRamCards { get; set; } = NativeApi.ExtRam_128KB;  // 0=none 1=128KB 8=1MB
+        public int MonitorType { get; set; } = NativeApi.Monitor24kHz;  // 0=15kHz 1=24kHz
+        public bool MemoryWaitDip { get; set; }
         public double Volume { get; set; } = 0.5;    // matches macOS default
         public string VideoFilter { get; set; } = "None";  // None/Linear/Bicubic/CRT/xBRZ/Enhanced
         public bool ScanlineEnabled { get; set; }    // matches macOS default (off)
@@ -961,12 +1112,14 @@ public sealed partial class MainWindow : Window
         public int FddSoundVolumeLevel { get; set; } = 2;   // 0=small 1=medium 2=large
         public string FddSoundDeviceId { get; set; } = ""; // "" = System Default; matches macOS fddSoundDeviceUID
         public bool PseudoStereo { get; set; }   // matches macOS Settings.pseudoStereo default (off)
+        public bool CdMix { get; set; }          // matches macOS Settings.cdMix default (off)
         public bool GameControllerEnabled { get; set; } = true;   // matches macOS Settings.gameControllerEnabled default
         public ControllerButtonMapping? ControllerMapping { get; set; }   // null = use defaults
     }
 
     private double _volume = 0.5;
     private bool _pseudoStereo;
+    private bool _cdMix;
 
     private static string SettingsPath => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -983,6 +1136,8 @@ public sealed partial class MainWindow : Window
             _bootModeIndex = Math.Clamp(s.BootModeIndex, 0, 3);
             _clock8MHz = s.Clock8MHz;
             _extRamCards = NormalizeExtRamCards(s.ExtRamCards);
+            _monitorType = s.MonitorType == NativeApi.Monitor15kHz ? NativeApi.Monitor15kHz : NativeApi.Monitor24kHz;
+            _memoryWaitDip = s.MemoryWaitDip;
             _volume = Math.Clamp(s.Volume, 0.0, 1.0);
             _videoFilter = NormalizeFilter(s.VideoFilter);
             _scanlineEnabled = s.ScanlineEnabled;
@@ -999,6 +1154,7 @@ public sealed partial class MainWindow : Window
             _fddSoundVolumeLevel = Math.Clamp(s.FddSoundVolumeLevel, 0, 2);
             _fddSoundDeviceId = s.FddSoundDeviceId ?? "";
             _pseudoStereo = s.PseudoStereo;
+            _cdMix = s.CdMix;
             _gameControllerEnabled = s.GameControllerEnabled;
             _controllerMapping = s.ControllerMapping ?? ControllerButtonMapping.Defaults.Clone();
         }
@@ -1017,6 +1173,8 @@ public sealed partial class MainWindow : Window
                 BootModeIndex = _bootModeIndex,
                 Clock8MHz = _clock8MHz,
                 ExtRamCards = _extRamCards,
+                MonitorType = _monitorType,
+                MemoryWaitDip = _memoryWaitDip,
                 Volume = _volume,
                 VideoFilter = _videoFilter,
                 ScanlineEnabled = _scanlineEnabled,
@@ -1033,6 +1191,7 @@ public sealed partial class MainWindow : Window
                 FddSoundVolumeLevel = _fddSoundVolumeLevel,
                 FddSoundDeviceId = _fddSoundDeviceId,
                 PseudoStereo = _pseudoStereo,
+                CdMix = _cdMix,
                 GameControllerEnabled = _gameControllerEnabled,
                 ControllerMapping = _controllerMapping,
             }));
@@ -1171,8 +1330,8 @@ public sealed partial class MainWindow : Window
         // First activation: kick off a capture immediately rather than
         // waiting up to ~3s for the next cadence tick (matches macOS
         // toggleTranslation's first-activation triggerImmediateOCR()).
-        if (_ocr.Enabled && !wasEnabled && _host is not null)
-            _ocr.TriggerImmediate(_host.Pixels);
+        if (_ocr.Enabled && !wasEnabled && _lastFrame is not null)
+            _ocr.TriggerImmediate(_lastFrame.Pixels);
     }
 
     /// <summary>Replace the current OCR detection set and redraw the overlay
@@ -1251,14 +1410,27 @@ public sealed partial class MainWindow : Window
 
     /// Emulation fast-forward. Speed N runs N emulation frames per draw and plays the
     /// over-produced audio back at N× (matches macOS EmulationSpeed / varispeed).
+    /// From <see cref="MutedEmulationSpeed"/> up the audio is muted instead: at
+    /// 3–4 octaves up the music is just noise.
     private void OnEmulationSpeed(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe && int.TryParse(fe.Tag?.ToString(), out int n))
         {
             _emulationSpeed = Math.Clamp(n, 1, 16);
+            _loop?.SetFramesPerStep(_emulationSpeed);
             _audio?.SetFrequencyRatio(_emulationSpeed);
+            ApplyAudioVolume();
         }
     }
+
+    private const int MutedEmulationSpeed = 8;
+
+    /// The volume slider's level, or silence while fast-forwarding at
+    /// <see cref="MutedEmulationSpeed"/> or above. Samples are still submitted
+    /// either way, so the queue — and the core's rate control — carries on as
+    /// usual and returning to a lower speed doesn't start from an empty buffer.
+    private void ApplyAudioVolume()
+        => _audio?.SetVolume(_emulationSpeed >= MutedEmulationSpeed ? 0f : (float)_volume);
 
     /// Capture the current frame through the active video filter (CRT phosphor,
     /// xBRZ, scanlines, …) for screenshots/thumbnails, mirroring the macOS
@@ -1271,7 +1443,9 @@ public sealed partial class MainWindow : Window
             byte[]? filtered = _screen.CaptureFiltered(out int w, out int h);
             if (filtered is not null) return (filtered, w, h);
         }
-        return (_host!.Pixels.ToArray(), EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight);
+        byte[] raw = _lastFrame?.Pixels.ToArray()
+                     ?? new byte[EmulatorHost.ScreenWidth * EmulatorHost.ScreenHeight * 4];
+        return (raw, EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight);
     }
 
     private async void OnSaveScreenshot(object sender, RoutedEventArgs e)
@@ -1373,17 +1547,15 @@ public sealed partial class MainWindow : Window
         try { blob = await File.ReadAllBytesAsync(WinSaveState.StatePath(slot)); }
         catch (Exception ex) { ShowError($"Load failed: {ex.Message}"); return; }
 
-        // Suspend the frame loop across the state mutation so a render can't read
-        // a half-restored machine, then re-render once from the new state.
-        _busy = true;
-        bool ok;
-        try { ok = _host.LoadState(blob); }
-        finally { _busy = false; }
+        // LoadState holds the host lock, so the emulation thread can't run a
+        // slice on a half-restored machine.
+        bool ok = _host.LoadState(blob);
         if (!ok) { ShowToast("Load failed: corrupt or incompatible state"); return; }
 
         ApplyLoadedMeta(WinSaveState.ReadMeta(slot));
-        _host.Render(blinkCursor: true);
-        _screen?.Present(_host.Pixels, _host.Is400Line);
+        // Show the restored screen now, even while paused (the loop would
+        // otherwise only publish it on its next frame).
+        PublishCurrentFrame();
         ShowToast(slot < 0 ? "Quick loaded" : $"Loaded slot {slot + 1}");
     }
 
@@ -1391,6 +1563,7 @@ public sealed partial class MainWindow : Window
     {
         BootModeIndex = _bootModeIndex,
         Clock8MHz = _clock8MHz,
+        MonitorType = _host?.MonitorType ?? _monitorType,
         Drive0 = MetaForDrive(0),
         Drive1 = MetaForDrive(1),
     };
@@ -1423,6 +1596,13 @@ public sealed partial class MainWindow : Window
         {
             _clock8MHz = _host?.Clock8MHz ?? _clock8MHz;
         }
+
+        // Outside the null check on purpose, like macOS performLoad: the
+        // restored CRTC geometry belongs to one monitor, and a state without
+        // metadata (or without the field) predates it and was 24kHz. Mirror it
+        // into the setting so the next Reset does not change the frame rate back.
+        _monitorType = meta?.MonitorType == NativeApi.Monitor15kHz ? NativeApi.Monitor15kHz : NativeApi.Monitor24kHz;
+        if (_host is not null) _host.MonitorType = _monitorType;
 
         (_bootModeIndex switch { 1 => BootN88V1H, 2 => BootN88V1S, 3 => BootNBasic, _ => BootN88V2 }).IsChecked = true;
         (_clock8MHz ? Clock8 : Clock4).IsChecked = true;
@@ -1672,6 +1852,11 @@ public sealed partial class MainWindow : Window
 
     private void OnKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        // Root's KeyDown also sees keys bubbling up from focused chrome (a
+        // MenuBarItem during keyboard menu navigation). Those belong to that
+        // control, so only act when the emulation view itself has focus.
+        if (!ReferenceEquals(e.OriginalSource, Root)) return;
+
         // Host menu shortcuts win over emulator key input. The screen greedily
         // consumes letter/number keys (they map to the PC-8801 matrix), which
         // pre-empts the menu's accelerators, so the chords are dispatched here;
@@ -1695,8 +1880,8 @@ public sealed partial class MainWindow : Window
 
         switch (key)
         {
-            case VirtualKey.R: OnPauseResume(this, EmptyArgs); return true;
-            case VirtualKey.E: OnReset(this, EmptyArgs); return true;
+            case VirtualKey.R: OnReset(this, EmptyArgs); return true;
+            case VirtualKey.P: OnPauseResume(this, EmptyArgs); return true;
             case VirtualKey.S: OnQuickSave(this, EmptyArgs); return true;
             case VirtualKey.L: OnQuickLoad(this, EmptyArgs); return true;
             case VirtualKey.Number1: _ = MountDriveAsync(0); return true;
@@ -1708,14 +1893,19 @@ public sealed partial class MainWindow : Window
 
     private void OnKeyUp(object sender, KeyRoutedEventArgs e)
     {
-        if (_host?.KeyUp(e.Key) == true)
+        // Releases are always passed on, so a key pressed in the emulation view
+        // and let go after focus moved (e.g. into the menu) doesn't stick; but a
+        // key bubbling up from other chrome is left unhandled for that control.
+        if (_host?.KeyUp(e.Key) == true && ReferenceEquals(e.OriginalSource, Root))
             e.Handled = true;
     }
 
     private void OnClosed(object sender, WindowEventArgs e)
     {
-        _running = false;
         CompositionTarget.Rendering -= OnRendering;
+        // Stop the emulation thread before anything it touches is disposed.
+        _loop?.Dispose();
+        _loop = null;
         if (_host is not null) _controller.ReleaseAll(_host);
         _ocr.Dispose();
         _fddSound?.Dispose();

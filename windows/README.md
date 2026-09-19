@@ -12,7 +12,9 @@ AI アップスケールは ONNX Runtime + DirectML。
 ```
 windows/Bubilator88.Windows/
 ├── NativeApi.cs              P/Invoke (Bubilator88C.dll の @_cdecl と 1:1)
-├── EmulatorHost.cs           native ハンドル管理 + 再利用バッファ (毎フレーム alloc ゼロ)
+├── EmulatorHost.cs           native ハンドル管理 + 再利用バッファ (毎フレーム alloc ゼロ)。全呼び出しを SyncRoot で排他
+├── EmulationLoop.cs          エミュレーション専用スレッド + 高分解能タイマのペーサ (macOS の EmulationLoop 相当)
+├── FramePublisher.cs         完成フレームをエミュスレッド → UI スレッドへ渡す 3 スロット (macOS と同じ)
 ├── KeyMapping.cs             VirtualKey → PC-8801 15行マトリクス (US/JIS + テンキー擬似)
 ├── D3DScreen.cs              D3D11 + SwapChainPanel。フィルタ + スキャンライン + レターボックス
 ├── AiUpscaler.cs             ONNX Runtime + DirectML で AI x2 (3モデル切替、非同期ダブルバッファ)
@@ -20,7 +22,7 @@ windows/Bubilator88.Windows/
 ├── XAudioSink.cs             XAudio2 で 44.1kHz ステレオ float をストリーム (適応レート制御)
 ├── ImageCodec.cs             スクリーンショット PNG/JPEG/HEIC エンコード
 ├── WinSaveState.cs           セーブステート/メタ/サムネイルのファイル入出力
-├── MainWindow.xaml(.cs)      UI + 60Hz フレームループ + 入力/ディスク/メニュー
+├── MainWindow.xaml(.cs)      UI + フレームループ (エミュ側 tick と UI 側の表示) + 入力/ディスク/メニュー
 ├── MainWindow.SettingsDialog.cs  設定ダイアログ (General/Display/Audio/Keyboard)
 ├── App.xaml(.cs)
 ├── Assets/
@@ -28,7 +30,7 @@ windows/Bubilator88.Windows/
 └── native/
     └── Bubilator88C.dll      ← swift build 成果物を手動配置 (git 管理外)
 
-windows/Bubilator88.Windows.Tests/   シェルの純ロジック xUnit テスト (KeyMapping / PixelMath)
+windows/Bubilator88.Windows.Tests/   シェルの純ロジック xUnit テスト (KeyMapping / PixelMath / FramePublisher など)
 
 AI モデル (3種) は全 OS 共有の `../../models/onnx/*.onnx` から csproj が出力直下へコピーする:
   SRVGGNet_x2_lite.onnx (Fast) / SRVGGNet_x2.onnx (Balanced) / RealESRGAN_x2.onnx (Quality)
@@ -244,22 +246,38 @@ SxS のアクティベーションコンテキストはこれを **exe がある
 - **AI アップスケール**: ONNX Runtime + DirectML で 3 モデル(Fast=SRVGGNet_x2_lite /
   Balanced=SRVGGNet_x2 / Quality=RealESRGAN_x2)を切替(640×400→1280×800)。フィルタ選択で
   モデルを載せ替え。非同期ダブルバッファ、未準備/欠落時は Bicubic フォールバック(macOS パリティ)。
-- **音声**: XAudio2 リングバッファ + 適応レート制御。YM2608 リズム音源サンプル読込。音量・バッファ長設定。
+- **音声**: XAudio2 リングバッファ + 適応レート制御。**音声サブフレーム化**(Emulation Speed
+  x1 時、1フレームを `b88_run_frame_slice` で4スライスに分割し、スライス毎に音声を drain。
+  1バーストが ~16.7ms → ~4.5ms に縮み、短めのバッファ設定でのアンダーラン耐性が向上。
+  macOS の音声サブフレーム化 (`bubio/Bubilator88#193`) に対応。x2〜x16 の早送りは従来通り
+  フレーム一括実行)。フレームループはコアの `b88_frame_rate`(CRTC とモニタ種別から決まる
+  実機のフレームレート。24kHz・25行で 55.42Hz)で毎フレームペースを取り直す — 60Hz 固定で
+  回すと CPU も YM2608 タイマーも約 8% 速くなる。**2 スレッド構成**(macOS と同じ): エミュレーションは
+  専用スレッド (EmulationLoop) が自前のペーサで回し、UI スレッドの CompositionTarget.Rendering は
+  完成フレーム (FramePublisher) を表示するだけ。メニューやダイアログで UI が詰まっても音と進行が止まらない。
+  最小化中は停止する。早送りの音は x2/x4 は N 倍速(音程も上がる)で
+  鳴らし、x8 以上はミュート(macOS 版は全段 N 倍速のまま)。YM2608 リズム音源サンプル読込。音量・バッファ長設定。
+  擬似ステレオと **CD Mix**(出力段のローパス + ステレオリバーブ、既定 OFF。`b88_set_cd_mix`)。
   **FDD アクセス音**(シーク/リード音を合成、ドライブ別ステレオ定位、ステータスバーの赤アクセスランプ)は
   メイン音声とは別の専用 XAudio2 エンジンで再生し、出力デバイスを個別に選択可能
   (`NAudio.CoreAudioApi.MMDeviceEnumerator` でデバイス列挙、macOS の `fddSoundDeviceUID` と同じ設計)。
 - **ディスク**: マルチイメージ D88、Drive 1/2/1&2、ライトプロテクト、Recent Files、イメージ選択ダイアログ。
 - **入力**: VirtualKey→マトリクス(US/JIS 記号、矢印/数字行/WASD のテンキー擬似)、
-  メニューのキーボードショートカット(Ctrl+R/E/S/L、Ctrl+Shift+C、Ctrl+1/2/3、F11)。
+  メニューのキーボードショートカット(Ctrl+R/P/S/L、Ctrl+Shift+C、Ctrl+1/2/3、F11)。
   **ゲームコントローラ**(`Windows.Gaming.Input.Gamepad` ポーリング、Dpad/ABXY/ショルダー/
   トリガー/スティックをPC-88キーまたはホストコマンドにマッピング、設定ダイアログの
   Controller タブで「キーを押してバインド」/デフォルト復帰が可能)。
-- **状態保存**: セーブステート(スロット/クイック、メタ・サムネイル)、スクリーンショット(PNG/JPEG/HEIC)、CPU 早送り(×1〜×16)。
+- **状態保存**: セーブステート(スロット/クイック、メタ・サムネイル)、スクリーンショット(PNG/JPEG/HEIC)、Emulation Speed(×1〜×16)。
 - **設定**: General/Display/Audio/Keyboard/Controller タブ(`settings.json` に即時永続化)。
+  General タブの Hardware Configuration でモニタ種別 (24kHz/15kHz)・メモリウェイト DIP・
+  拡張 RAM を選択(いずれも次回リセットで反映)。モニタ種別は macOS と同様にセーブステートの
+  メタに記録し、ロード時に復元する(記録の無い古いステートは 24kHz 扱い)。
 - **テスト基盤**: シェル純ロジックの xUnit プロジェクト。
 
 ## 未実装(後続 / 別実装枠)
 
+- **CPU オーバークロックの設定 UI**。C ABI (`b88_set_cpu_overclock`) と P/Invoke 宣言は
+  あるが、設定画面から選べない。常に ×1 で動く。
 - 触覚フィードバック(SSGノイズ検出→振動。Bubilator88Core の CApi 拡張が必要なため別PRで対応予定)
 - コントローラーのモデル別マッピング / ブランド別アイコン表示(`Windows.Gaming.Input.Gamepad` は
   製品識別情報を提供しないため、v1 は単一のグローバルマッピング)

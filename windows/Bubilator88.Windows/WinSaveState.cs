@@ -16,6 +16,13 @@ internal sealed class WinSaveMeta
     public int BootModeIndex { get; set; }      // 0=N88-V2 1=V1H 2=V1S 3=N-BASIC
     public bool Clock8MHz { get; set; } = true;
 
+    // Monitor the machine was running on (0=15kHz 1=24kHz). Unlike the DIP
+    // switches it travels with the state: the restored CRTC geometry was
+    // programmed for this monitor, and pairing it with the other one gives a
+    // frame rate no real machine has. Null in states written before it was
+    // added — those were all 24kHz (mirrors the macOS SaveMeta.monitorType).
+    public int? MonitorType { get; set; }
+
     public DriveMeta? Drive0 { get; set; }
     public DriveMeta? Drive1 { get; set; }
 

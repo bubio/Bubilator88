@@ -66,6 +66,9 @@ internal static unsafe partial class NativeApi
     public static partial void b88_set_pseudo_stereo(IntPtr handle, int enabled);
 
     [LibraryImport(Dll)]
+    public static partial void b88_set_cd_mix(IntPtr handle, int enabled);
+
+    [LibraryImport(Dll)]
     public static partial int b88_d88_probe(byte* ptr, int len, byte* outUtf8, int outCap);
 
     [LibraryImport(Dll)]
@@ -88,6 +91,26 @@ internal static unsafe partial class NativeApi
     [LibraryImport(Dll)]
     public static partial int b88_get_clock_8mhz(IntPtr handle);
 
+    // Monitor type (SW1-8), MonitorType raw values. Decides the CRTC's reset
+    // geometry and the frame rate (15kHz = 62.42Hz, 24kHz = 55.42Hz), so set
+    // it before b88_reset.
+    public const int Monitor15kHz = 0;
+    public const int Monitor24kHz = 1;
+
+    [LibraryImport(Dll)]
+    public static partial void b88_set_monitor_type(IntPtr handle, int type);
+
+    [LibraryImport(Dll)]
+    public static partial int b88_get_monitor_type(IntPtr handle);
+
+    // Memory wait DIP (SW1-6). Set before b88_reset, alongside the monitor.
+    [LibraryImport(Dll)]
+    public static partial void b88_set_memory_wait_dip(IntPtr handle, int on);
+
+    // CPU-only overclock (1 = real speed); CRTC/sound/RTC keep real time.
+    [LibraryImport(Dll)]
+    public static partial void b88_set_cpu_overclock(IntPtr handle, int multiplier);
+
     // 1 = native 400-line, 0 = 200-line (doubled). Lets the host feed video
     // filters the correct content resolution (640×200 vs 640×400).
     [LibraryImport(Dll)]
@@ -106,6 +129,19 @@ internal static unsafe partial class NativeApi
 
     [LibraryImport(Dll)]
     public static partial int b88_run_frame(IntPtr handle);
+
+    // Run slice `index` of `count` slices of the current frame. Returns 1 once
+    // the frame has ended (render then, and start the next frame at slice 0),
+    // 0 if it hasn't, -1 for a bad handle or an index outside 0..<count. Pace
+    // the calls at `count × frame rate` and drain audio after each one — see
+    // CApi.swift's b88_run_frame_slice doc comment.
+    [LibraryImport(Dll)]
+    public static partial int b88_run_frame_slice(IntPtr handle, int index, int count);
+
+    // VSYNC frequency in Hz (55.42 on a 24kHz monitor, 62.42 on 15kHz — never
+    // exactly 60). Follows the CRTC, so re-read every frame. 0 = not set up.
+    [LibraryImport(Dll)]
+    public static partial double b88_frame_rate(IntPtr handle);
 
     [LibraryImport(Dll)]
     public static partial void b88_press_key(IntPtr handle, int row, int bit);

@@ -53,17 +53,43 @@ public sealed partial class MainWindow
 
     private async void OnSettings(object sender, RoutedEventArgs e)
     {
-        var pivot = new Pivot { Width = 440 };
-        pivot.Items.Add(new PivotItem { Header = "General", Content = WrapTab(BuildGeneralTab()) });
-        pivot.Items.Add(new PivotItem { Header = "Display", Content = WrapTab(BuildDisplayTab()) });
-        pivot.Items.Add(new PivotItem { Header = "Audio", Content = WrapTab(BuildAudioTab()) });
-        pivot.Items.Add(new PivotItem { Header = "Keyboard", Content = WrapTab(BuildKeyboardTab()) });
-        pivot.Items.Add(new PivotItem { Header = "Controller", Content = WrapTab(BuildControllerTab()) });
+        // SelectorBar (Windows App SDK 1.5+) is the successor to Pivot for a
+        // handful of views: it only draws the headers, so the selected tab's
+        // content is swapped into the presenter below. Every tab is built up
+        // front, as with Pivot, so switching keeps each tab's control state.
+        var tabs = new (string Header, FrameworkElement Content)[]
+        {
+            ("General", WrapTab(BuildGeneralTab())),
+            ("Display", WrapTab(BuildDisplayTab())),
+            ("Audio", WrapTab(BuildAudioTab())),
+            ("Keyboard", WrapTab(BuildKeyboardTab())),
+            ("Controller", WrapTab(BuildControllerTab())),
+        };
+
+        var bar = new SelectorBar();
+        // Fixed height (= WrapTab's MaxHeight): the dialog is centred on its
+        // content, so letting each tab size it would move the tab bar on
+        // every switch. Short tabs top-align; tall ones scroll.
+        var presenter = new ContentPresenter
+        {
+            Height = 420,
+            Margin = new Thickness(0, 8, 0, 0),
+            VerticalContentAlignment = VerticalAlignment.Top,
+        };
+        foreach (var (header, content) in tabs)
+            bar.Items.Add(new SelectorBarItem { Text = header, Tag = content });
+        bar.SelectionChanged += (s, _) => presenter.Content = s.SelectedItem?.Tag;
+        bar.SelectedItem = bar.Items[0];
+        presenter.Content = tabs[0].Content;
+
+        var body = new StackPanel { Width = 440 };
+        body.Children.Add(bar);
+        body.Children.Add(presenter);
 
         var dialog = new ContentDialog
         {
             Title = "Settings",
-            Content = pivot,
+            Content = body,
             CloseButtonText = "Close",
             XamlRoot = Root.XamlRoot,
         };
@@ -120,13 +146,35 @@ public sealed partial class MainWindow
             "Image format used when saving screenshots. When save location isn't " +
             "asked every time, screenshots are written straight to the folder below."));
 
-        var extRamCombo = LabeledCombo("Capacity",
+        var monitorCombo = LabeledCombo("Monitor",
+            new[] { ("24 kHz (Dedicated)", NativeApi.Monitor24kHz.ToString()),
+                    ("15 kHz (Standard)", NativeApi.Monitor15kHz.ToString()) },
+            _monitorType.ToString(),
+            tag => { _monitorType = int.Parse(tag); SaveSettings(); });
+
+        var memoryWaitToggle = Toggle("Memory wait", _memoryWaitDip, on =>
+        {
+            _memoryWaitDip = on;
+            SaveSettings();
+        });
+
+        var extRamCombo = LabeledCombo("Extended RAM",
             new[] { ("None", "0"), ("128 KB", "1"), ("1 MB", "8") },
             _extRamCards.ToString(),
             tag => { _extRamCards = int.Parse(tag); SaveSettings(); });
 
-        panel.Children.Add(Section("Extended RAM", new[] { (FrameworkElement)extRamCombo },
-            "Applied on next reset."));
+        panel.Children.Add(Section("Hardware Configuration", new FrameworkElement[]
+        {
+            monitorCombo,
+            Caption("DIP SW1-8 on real hardware. The monitor's horizontal frequency decides " +
+                    "the VSYNC rate: 55.4 Hz at 24 kHz, 62.4 Hz at 15 kHz. Applied on next reset."),
+            memoryWaitToggle,
+            Caption("DIP SW1-6 on real hardware. Adds one wait state to main memory and text " +
+                    "VRAM accesses, slowing the machine slightly. Off on a factory-default " +
+                    "PC-8801. Applied on next reset."),
+            extRamCombo,
+            Caption("Applied on next reset."),
+        }));
 
         return panel;
     }
@@ -183,6 +231,15 @@ public sealed partial class MainWindow
         });
         panel.Children.Add(Section("Pseudo Stereo", new[] { (FrameworkElement)pseudoStereoToggle },
             "Widens mono FM/SSG output with a Haas-effect chorus. Has no effect once any FM channel uses hardware panning."));
+
+        var cdMixToggle = Toggle("Enable CD Mix", _cdMix, isOn =>
+        {
+            _cdMix = isOn;
+            _host?.SetCdMix(isOn);
+            SaveSettings();
+        });
+        panel.Children.Add(Section("CD Mix", new[] { (FrameworkElement)cdMixToggle },
+            "Recreates the mastering of classic game music CDs."));
 
         var fddToggle = Toggle("Enable FDD Sound", _fddSoundEnabled, isOn =>
         {
