@@ -898,19 +898,19 @@ internal sealed unsafe class D3DScreen : IDisposable
     }
 
     /// <summary>For the status-bar FPS readout: when the AI filter is active the
-    /// meter should report inference throughput (completed inferences per second),
-    /// which lands well under 60 Hz, rather than emulation frames — mirroring the
-    /// macOS metal view, which measures <c>aiUpscaler.completedCount</c> deltas in
-    /// AI mode. Returns false for every other filter so the caller falls back to the
-    /// normal frame count.</summary>
-    public bool TryGetAiInferenceCount(out long completed)
+    /// meter should report AI throughput (inferences plus frames skipped because
+    /// the source was unchanged), which lands well under 60 Hz on a moving screen,
+    /// rather than emulation frames — mirroring the macOS metal view, which
+    /// measures <c>aiUpscaler.presentedCount</c> deltas in AI mode. Returns false
+    /// for every other filter so the caller falls back to the normal frame count.</summary>
+    public bool TryGetAiPresentedCount(out long presented)
     {
         if (IsAi(_filter) && _ai is not null)
         {
-            completed = _ai.CompletedCount;
+            presented = _ai.PresentedCount;
             return true;
         }
-        completed = 0;
+        presented = 0;
         return false;
     }
 

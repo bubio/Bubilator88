@@ -44,6 +44,7 @@ internal sealed class AiUpscaler : IDisposable
     private bool _inferring;
     private int _generation;                         // bumped on Reset to drop stale results
     private long _completed;
+    private long _skipped;                           // frames that reused the last output (see Submit)
     private int _loadStarted;                        // 0/1 guard for EnsureLoaded
     private bool _disposed;                           // set in Dispose; checked before Run
 
@@ -64,6 +65,23 @@ internal sealed class AiUpscaler : IDisposable
     /// loop can measure AI throughput as the delta over a sampling window. Frozen
     /// while the AI filter is inactive because <see cref="Submit"/> isn't called.</summary>
     public long CompletedCount { get { lock (_lock) return _completed; } }
+
+    /// <summary>Frames presented to the display: inferences plus frames skipped
+    /// because the source was unchanged (still correct on screen). This — not
+    /// <see cref="CompletedCount"/> — is what the FPS readout should use, otherwise
+    /// a static screen reads as 0 fps (matching macOS <c>presentedCount</c>).</summary>
+    public long PresentedCount { get { lock (_lock) return _completed + _skipped; } }
+
+    // Copy of the source pixels last handed to the model, for unchanged-frame
+    // detection. UI thread only (Submit) — never touched by the worker.
+    private readonly byte[] _cachedFrame = new byte[InW * InH * 4];
+    private bool _cachedFrameValid;
+    // _completed that the inference for _cachedFrame reaches if it succeeds. Until
+    // it does, _cachedFrame only records what was *sent*, not what is on screen —
+    // skipping against it would strand the previous image. Inference can be
+    // abandoned (exception, odd output, stale generation) without advancing
+    // _completed. UI thread only, like _cachedFrame.
+    private long _cachedFrameCompletion;
 
     public AiUpscaler(string modelName = "RealESRGAN_x2")
     {
@@ -138,22 +156,61 @@ internal sealed class AiUpscaler : IDisposable
     /// Submit a 640×400 RGBA frame for upscaling. Non-blocking: copies the pixels
     /// and runs inference on a background thread. Drops the frame if a previous
     /// inference is still running (matches macOS isInferring guard).
+    ///
+    /// <para>Frames byte-identical to the last one submitted are dropped without
+    /// running the model: the previous output is still correct, so re-inferring
+    /// only burns GPU time and power. PC-8801 screens sit still often (menus,
+    /// text, static artwork). Mirrors macOS <c>AIUpscaler.submitFrame</c>.</para>
     /// </summary>
     public void Submit(ReadOnlySpan<byte> rgba, int width, int height)
     {
         if (CurrentState != State.Ready) return;
         if (width != InW || height != InH || rgba.Length < InW * InH * 4) return;
+        ReadOnlySpan<byte> frame = rgba.Slice(0, InW * InH * 4);
 
         int gen;
+        bool haveOutput;
+        long completed;
         lock (_lock)
         {
             if (_disposed || _inferring) return;
             _inferring = true;
             gen = _generation;
+            // Only a completed frame makes a skip safe — otherwise there is
+            // nothing to reuse, and a screen that starts out static would never
+            // get upscaled.
+            haveOutput = _hasFrame;
+            completed = _completed;
         }
 
-        rgba.Slice(0, InW * InH * 4).CopyTo(_inputScratch);
+        // Refreshes the cache as a side effect, so this must run on every frame.
+        bool unchanged = FrameIsUnchanged(frame);
+        if (unchanged && haveOutput && completed >= _cachedFrameCompletion)
+        {
+            lock (_lock)
+            {
+                _skipped++;
+                _inferring = false;
+            }
+            return;
+        }
+
+        // From here we are committed to inferring, so the cached frame is only
+        // trustworthy once this run lands.
+        _cachedFrameCompletion = completed + 1;
+        frame.CopyTo(_inputScratch);
         Task.Run(() => RunInference(gen));
+    }
+
+    /// Whether <paramref name="frame"/> matches the frame last submitted to the
+    /// model. When it does not, the cache is refreshed so the *next* call compares
+    /// against this frame — callers must therefore invoke this once per submit.
+    private bool FrameIsUnchanged(ReadOnlySpan<byte> frame)
+    {
+        if (_cachedFrameValid && frame.SequenceEqual(_cachedFrame)) return true;
+        frame.CopyTo(_cachedFrame);
+        _cachedFrameValid = true;
+        return false;
     }
 
     private void RunInference(int generation)

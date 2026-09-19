@@ -115,7 +115,7 @@ public sealed partial class MainWindow : Window
     private int _drive0Led;
     private int _drive1Led;
     private double _fpsAccum;
-    private long _aiLastCompleted;   // throughput baseline for the AI-filter FPS path
+    private long _aiLastPresented;   // throughput baseline for the AI-filter FPS path
 
     // Matches the macOS status-bar drive LED (Color.red / Color.gray in ContentView.swift).
     private readonly SolidColorBrush _ledOn = new(Microsoft.UI.Colors.Red);
@@ -545,10 +545,10 @@ public sealed partial class MainWindow : Window
         // and frozen while the AI filter is inactive, so the delta naturally reads 0
         // on re-entry and grows from there.
         double fps;
-        if (_screen is not null && _screen.TryGetAiInferenceCount(out long completed))
+        if (_screen is not null && _screen.TryGetAiPresentedCount(out long presented))
         {
-            fps = (completed - _aiLastCompleted) / _fpsAccum;
-            _aiLastCompleted = completed;
+            fps = (presented - _aiLastPresented) / _fpsAccum;
+            _aiLastPresented = presented;
         }
         else
         {
@@ -597,7 +597,16 @@ public sealed partial class MainWindow : Window
             _ocr.TriggerImmediate(_lastFrame.Pixels);
     }
 
-    private void OnReset(object sender, RoutedEventArgs e) => ApplyBootConfig(preserveRam: true);
+    private void OnReset(object sender, RoutedEventArgs e)
+    {
+        ApplyBootConfig(preserveRam: true);
+        // Resetting while paused would otherwise freeze the display on the
+        // instant-post-reset VRAM/CRTC state — garbage the boot ROM only clears
+        // once the CPU runs. Mirrors macOS reset(), which forces the restart so
+        // reset always leaves the machine running. Boot mode / clock changes
+        // keep the pause, as on macOS.
+        if (_paused) OnPauseResume(this, EmptyArgs);
+    }
 
     private void OnBootMode(object sender, RoutedEventArgs e)
     {
