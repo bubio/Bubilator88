@@ -248,6 +248,29 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// <summary>Advance the machine by one 1/60s frame (no rendering).</summary>
     public void RunFrame() => NativeApi.b88_run_frame(_handle);
 
+    /// <summary>
+    /// Run slice <paramref name="index"/> of <paramref name="count"/> roughly
+    /// equal slices of the current frame (mirrors macOS's
+    /// <c>runFrameSliceForMetal</c>). Returns true once the frame has ended —
+    /// the caller should drain audio after every call regardless, but only
+    /// render/present and reset the slice index when this returns true.
+    /// </summary>
+    public bool RunFrameSlice(int index, int count)
+        => NativeApi.b88_run_frame_slice(_handle, index, count) != 0;
+
+    /// <summary>
+    /// Emulated VSYNC frequency in Hz, from the CRTC programming (55.42Hz on
+    /// a 24kHz monitor). Falls back to 60 before the CRTC is set up.
+    /// </summary>
+    public double FrameRate
+    {
+        get
+        {
+            double rate = NativeApi.b88_frame_rate(_handle);
+            return rate > 0 ? rate : 60.0;
+        }
+    }
+
     /// <summary>Composite the current machine state into the internal pixel buffer.</summary>
     public void Render(bool blinkCursor)
     {
@@ -316,8 +339,11 @@ internal sealed unsafe class EmulatorHost : IDisposable
 
         // Keep XAudio2's queued latency near the configured target so the
         // producer (60 Hz frame loop) and consumer (44.1 kHz device) don't drift.
+        // b88_audio_rate_control steers bufferedFrames toward capacityFrames / 2,
+        // so pass target * 2 here (mirrors macOS's AudioOutput.finishDrain:
+        // `pc88.adjustAudioRate(bufferedFrames: fill, capacityFrames: target * 2)`).
         int targetPairs = (int)(SampleRate * (Math.Clamp(AudioBufferMs, 20, 500) / 1000.0));
-        NativeApi.b88_audio_rate_control(_handle, sink.QueuedPairs, targetPairs);
+        NativeApi.b88_audio_rate_control(_handle, sink.QueuedPairs, targetPairs * 2);
         return pairs;
     }
 

@@ -29,8 +29,9 @@ namespace Bubilator88.Windows;
 
 public sealed partial class MainWindow : Window
 {
-    private const double FrameSeconds = 1.0 / 60.0;
     private const int MaxCatchUpFrames = 4;
+    // Slices per frame on the x1 path (matches macOS's audioSlicesPerFrame).
+    private const int AudioSlicesPerFrame = 4;
     // Render ticks a disk LED stays lit after an access pulse (~200 ms @ 60 Hz).
     private const int LedHoldTicks = 12;
     // Approx. non-screen chrome (menu + status + title) in DIPs, for window sizing.
@@ -47,6 +48,7 @@ public sealed partial class MainWindow : Window
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private double _accumulator;
     private double _lastTick;
+    private int _sliceIndex;   // current x1-path slice, 0 up to (exclusive) AudioSlicesPerFrame
     private bool _running;
     private bool _paused;
     private bool _fullscreen;
@@ -332,24 +334,72 @@ public sealed partial class MainWindow : Window
 
         _accumulator += dt;
 
-        int frames = 0;
-        while (_accumulator >= FrameSeconds && frames < MaxCatchUpFrames)
+        // Pace from the emulated VSYNC rate (55.42Hz on a 24kHz monitor), not
+        // a fixed 60Hz — a 1/60s step runs the machine ~8% fast. It follows the
+        // CRTC programming, so it is re-read after every frame.
+        double frameSeconds = 1.0 / _host.FrameRate;
+
+        int frames;
+        if (_emulationSpeed == 1)
         {
-            // Emulation speed N runs N frames per logical 60 Hz frame (matches
-            // macOS EmulationSpeed.framesPerDraw). Audio is drained every emulation frame
-            // so the core buffer never accumulates; the source voice plays the
-            // over-produced samples back at N× (see _audio.SetFrequencyRatio).
-            for (int s = 0; s < _emulationSpeed; s++)
+            // At x1, run the frame in slices (mirrors macOS's audio-subframe
+            // pacing, EmulatorViewModel+Rendering.swift). Audio reaches XAudio2
+            // in ~4.5ms pieces spread over the frame instead of one ~16.7ms
+            // burst, which is what lets a short (e.g. 20ms) buffer setting hold
+            // without underrunning. Rendering/present only happens once the
+            // frame actually ends, not after every slice.
+            const int maxSlices = MaxCatchUpFrames * AudioSlicesPerFrame;
+            double sliceSeconds = frameSeconds / AudioSlicesPerFrame;
+            int slices = 0;
+            frames = 0;
+            while (_accumulator >= sliceSeconds && slices < maxSlices)
             {
-                _host.RunFrame();
+                bool ended = _host.RunFrameSlice(_sliceIndex, AudioSlicesPerFrame);
                 if (_audio is not null) _host.DrainAudio(_audio);
+                _accumulator -= sliceSeconds;
+                slices++;
+                if (ended)
+                {
+                    _sliceIndex = 0;
+                    frames++;
+                    frameSeconds = 1.0 / _host.FrameRate;
+                    sliceSeconds = frameSeconds / AudioSlicesPerFrame;
+                }
+                else
+                {
+                    _sliceIndex++;
+                }
             }
-            _accumulator -= FrameSeconds;
-            frames++;
+            // Drop backlog if we fell too far behind (avoid spiral of death).
+            if (_accumulator > sliceSeconds * maxSlices)
+                _accumulator = 0;
         }
-        // Drop backlog if we fell too far behind (avoid spiral of death).
-        if (_accumulator > FrameSeconds * MaxCatchUpFrames)
-            _accumulator = 0;
+        else
+        {
+            frames = 0;
+            while (_accumulator >= frameSeconds && frames < MaxCatchUpFrames)
+            {
+                // Emulation speed N runs N frames per logical frame (matches
+                // macOS EmulationSpeed.framesPerDraw). Audio is drained every emulation frame
+                // so the core buffer never accumulates; the source voice plays the
+                // over-produced samples back at N× (see _audio.SetFrequencyRatio).
+                for (int s = 0; s < _emulationSpeed; s++)
+                {
+                    _host.RunFrame();
+                    if (_audio is not null) _host.DrainAudio(_audio);
+                }
+                _accumulator -= frameSeconds;
+                frames++;
+                frameSeconds = 1.0 / _host.FrameRate;
+            }
+            // Drop backlog if we fell too far behind (avoid spiral of death).
+            if (_accumulator > frameSeconds * MaxCatchUpFrames)
+                _accumulator = 0;
+            // A full RunFrame() always ends at the same CRTC frame boundary
+            // regardless of where a slice sequence left off, so the next x1
+            // tick starts a fresh frame at slice 0.
+            _sliceIndex = 0;
+        }
 
         if (frames > 0)
         {

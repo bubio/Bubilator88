@@ -20,7 +20,7 @@ windows/Bubilator88.Windows/
 ├── XAudioSink.cs             XAudio2 で 44.1kHz ステレオ float をストリーム (適応レート制御)
 ├── ImageCodec.cs             スクリーンショット PNG/JPEG/HEIC エンコード
 ├── WinSaveState.cs           セーブステート/メタ/サムネイルのファイル入出力
-├── MainWindow.xaml(.cs)      UI + 60Hz フレームループ + 入力/ディスク/メニュー
+├── MainWindow.xaml(.cs)      UI + フレームループ (コアの b88_frame_rate でペース) + 入力/ディスク/メニュー
 ├── MainWindow.SettingsDialog.cs  設定ダイアログ (General/Display/Audio/Keyboard)
 ├── App.xaml(.cs)
 ├── Assets/
@@ -244,7 +244,13 @@ SxS のアクティベーションコンテキストはこれを **exe がある
 - **AI アップスケール**: ONNX Runtime + DirectML で 3 モデル(Fast=SRVGGNet_x2_lite /
   Balanced=SRVGGNet_x2 / Quality=RealESRGAN_x2)を切替(640×400→1280×800)。フィルタ選択で
   モデルを載せ替え。非同期ダブルバッファ、未準備/欠落時は Bicubic フォールバック(macOS パリティ)。
-- **音声**: XAudio2 リングバッファ + 適応レート制御。YM2608 リズム音源サンプル読込。音量・バッファ長設定。
+- **音声**: XAudio2 リングバッファ + 適応レート制御。**音声サブフレーム化**(Emulation Speed
+  x1 時、1フレームを `b88_run_frame_slice` で4スライスに分割し、スライス毎に音声を drain。
+  1バーストが ~16.7ms → ~4.5ms に縮み、短めのバッファ設定でのアンダーラン耐性が向上。
+  macOS の音声サブフレーム化 (`bubio/Bubilator88#193`) に対応。x2〜x16 の早送りは従来通り
+  フレーム一括実行)。フレームループはコアの `b88_frame_rate`(CRTC とモニタ種別から決まる
+  実機のフレームレート。24kHz・25行で 55.42Hz)で毎フレームペースを取り直す — 60Hz 固定で
+  回すと CPU も YM2608 タイマーも約 8% 速くなる。YM2608 リズム音源サンプル読込。音量・バッファ長設定。
   **FDD アクセス音**(シーク/リード音を合成、ドライブ別ステレオ定位、ステータスバーの赤アクセスランプ)は
   メイン音声とは別の専用 XAudio2 エンジンで再生し、出力デバイスを個別に選択可能
   (`NAudio.CoreAudioApi.MMDeviceEnumerator` でデバイス列挙、macOS の `fddSoundDeviceUID` と同じ設計)。
@@ -254,12 +260,16 @@ SxS のアクティベーションコンテキストはこれを **exe がある
   **ゲームコントローラ**(`Windows.Gaming.Input.Gamepad` ポーリング、Dpad/ABXY/ショルダー/
   トリガー/スティックをPC-88キーまたはホストコマンドにマッピング、設定ダイアログの
   Controller タブで「キーを押してバインド」/デフォルト復帰が可能)。
-- **状態保存**: セーブステート(スロット/クイック、メタ・サムネイル)、スクリーンショット(PNG/JPEG/HEIC)、CPU 早送り(×1〜×16)。
+- **状態保存**: セーブステート(スロット/クイック、メタ・サムネイル)、スクリーンショット(PNG/JPEG/HEIC)、Emulation Speed(×1〜×16)。
 - **設定**: General/Display/Audio/Keyboard/Controller タブ(`settings.json` に即時永続化)。
 - **テスト基盤**: シェル純ロジックの xUnit プロジェクト。
 
 ## 未実装(後続 / 別実装枠)
 
+- **モニタ種別 (15kHz/24kHz)・メモリウェイト DIP・CPU オーバークロックの設定 UI**。
+  C ABI (`b88_set_monitor_type` / `b88_set_memory_wait_dip` / `b88_set_cpu_overclock`) と
+  P/Invoke 宣言はあるが、設定画面から選べない。常にコアの既定値 (24kHz = 55.42Hz、
+  ウェイト off、×1) で動く。
 - 触覚フィードバック(SSGノイズ検出→振動。Bubilator88Core の CApi 拡張が必要なため別PRで対応予定)
 - コントローラーのモデル別マッピング / ブランド別アイコン表示(`Windows.Gaming.Input.Gamepad` は
   製品識別情報を提供しないため、v1 は単一のグローバルマッピング)
