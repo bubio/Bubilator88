@@ -3576,6 +3576,16 @@
         }
       }
     },
+    "Preserve Pitch at Fast Speeds" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "倍速時にピッチを維持"
+          }
+        }
+      }
+    },
     "Press a key..." : {
       "extractionState" : "stale",
       "localizations" : {

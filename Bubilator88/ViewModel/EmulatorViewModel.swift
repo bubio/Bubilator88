@@ -421,6 +421,19 @@ final class EmulatorViewModel {
     }
   }
 
+  /// Keep the pitch at non-x1 emulation speeds — persisted via Settings.
+  ///
+  /// The speed unit is chosen when the audio graph is built, so the engine has
+  /// to come back up for the new choice to take; `restartAudio()` is a no-op
+  /// while the emulator is stopped, and `start()` reads the setting anyway.
+  var pitchPreservingSpeed: Bool {
+    get { Settings.shared.pitchPreservingSpeed }
+    set {
+      Settings.shared.pitchPreservingSpeed = newValue
+      restartAudio()
+    }
+  }
+
   /// Update immersive audio 3D positions live (called when user drags channel dots).
   func updateImmersivePositions() {
     audio.updateSpatialPositions()
