@@ -76,6 +76,8 @@ struct DebugCommands: Commands {
 
       Divider()
 
+      Toggle("Preserve Pitch at Fast Speeds", isOn: $viewModel.pitchPreservingSpeed)
+
       Toggle("Force YM2203 (OPN)", isOn: $viewModel.forceOPNMode)
 
       Divider()
