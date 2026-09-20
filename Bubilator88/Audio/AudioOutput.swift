@@ -2,6 +2,23 @@ import AVFoundation
 import Bubilator88Core
 import Synchronization
 
+/// The `rate` shared by the two units that consume the emulator's
+/// over-produced samples at faster-than-x1 emulation speeds. AVFoundation gives
+/// them no common protocol of its own, so `AudioOutput` can only hold whichever
+/// one it built in a single property through this.
+///
+/// `AVAudioUnitVarispeed` resamples — tape fast-forward, so pitch rises with
+/// speed. `AVAudioUnitTimePitch` time-stretches — tempo rises, pitch stays.
+/// The latter is what real hardware does when switched to 8MHz, where the
+/// YM2608 keeps its own clock, but it costs a phase vocoder's latency and CPU,
+/// so Varispeed stays the default (`Settings.pitchPreservingSpeed`).
+private protocol SpeedControlUnit: AVAudioUnit {
+  var rate: Float { get set }
+}
+
+extension AVAudioUnitVarispeed: SpeedControlUnit {}
+extension AVAudioUnitTimePitch: SpeedControlUnit {}
+
 /// CoreAudio output for YM2608 emulator sound.
 ///
 /// Pulls samples from YM2608.audioBuffer via a render callback.
@@ -21,7 +38,7 @@ final class AudioOutput {
   private var audioEngine: AVAudioEngine?
   private let configurationRecovery = AudioConfigurationRecovery()
   private var srcNode: AVAudioSourceNode?
-  private var varispeed: AVAudioUnitVarispeed?
+  private var speedUnit: (any SpeedControlUnit)?
 
   /// The machine whose audio `drainSamples()` pulls.
   ///
@@ -276,7 +293,7 @@ final class AudioOutput {
                                    UInt32(MemoryLayout<UInt32>.size), &frames)
   }
 
-  /// Build the standard stereo audio graph: sourceNode → varispeed → mainMixer
+  /// Build the standard stereo audio graph: sourceNode → speed unit → mainMixer
   private func startStereo(engine: AVAudioEngine) {
     let ms = Settings.shared.audioBufferMs
     bufferLock.lock()
@@ -330,14 +347,18 @@ final class AudioOutput {
       return noErr
     }
 
-    let varispeedNode = AVAudioUnitVarispeed()
+    // Picked once per engine start; the Develop menu's toggle restarts audio
+    // rather than reconnecting the graph underneath a running engine.
+    let speedNode: any SpeedControlUnit = Settings.shared.pitchPreservingSpeed
+      ? AVAudioUnitTimePitch()   // pitch stays at its default 0 cents
+      : AVAudioUnitVarispeed()
     engine.attach(sourceNode)
-    engine.attach(varispeedNode)
-    engine.connect(sourceNode, to: varispeedNode, format: format)
-    engine.connect(varispeedNode, to: engine.mainMixerNode, format: format)
+    engine.attach(speedNode)
+    engine.connect(sourceNode, to: speedNode, format: format)
+    engine.connect(speedNode, to: engine.mainMixerNode, format: format)
 
     self.srcNode = sourceNode
-    self.varispeed = varispeedNode
+    self.speedUnit = speedNode
   }
 
   /// Build immersive audio graph: 8 mono sourceNodes → environmentNode → mainMixer.
@@ -441,8 +462,13 @@ final class AudioOutput {
   }
 
   /// Set playback rate for speed control (1.0 = normal, 2.0 = 2x, etc.).
+  ///
+  /// Whether the pitch follows depends on which unit `startStereo` built, and
+  /// so does how far the rate goes: Varispeed accepts 0.25–4 and clamps x8 and
+  /// x16 down to 4, leaving the ring to overflow and drop the surplus, while
+  /// TimePitch's 1/32–32 keeps up with every speed the menu offers.
   func setRate(_ rate: Float) {
-    varispeed?.rate = rate
+    speedUnit?.rate = rate
     // The render callback's request scales with the rate; don't keep a
     // fast-forward chunk size as the fill floor after returning to x1.
     bufferLock.lock()
@@ -482,7 +508,7 @@ final class AudioOutput {
     if let node = srcNode {
       audioEngine?.detach(node)
     }
-    if let node = varispeed {
+    if let node = speedUnit {
       audioEngine?.detach(node)
     }
     for node in spatialSourceNodes {
@@ -493,7 +519,7 @@ final class AudioOutput {
     }
 
     srcNode = nil
-    varispeed = nil
+    speedUnit = nil
     spatialSourceNodes = []
     environmentNode = nil
     audioEngine = nil

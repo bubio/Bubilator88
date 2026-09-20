@@ -28,6 +28,7 @@ final class Settings {
     static let pseudoStereo              = "pseudoStereo"
     static let cdMix                     = "cdMix"
     static let audioBufferMs             = "audioBufferMs"
+    static let pitchPreservingSpeed      = "pitchPreservingSpeed"
     // The only member whose key differs from its property name: the setting was
     // renamed but the key was deliberately left alone, since changing it would
     // discard the choice of every user who already had it set.
@@ -325,6 +326,15 @@ final class Settings {
     didSet { UserDefaults.standard.set(audioBufferMs, forKey: Keys.audioBufferMs) }
   }
 
+  /// Keep the pitch when the emulation speed is not x1: the sped-up output is
+  /// time-stretched instead of resampled, so the music's tempo rises but its
+  /// notes stay where they were. Off by default — the tape-style pitch rise is
+  /// what every version so far has done, and time-stretching adds latency, CPU
+  /// load and smearing at x8/x16. Takes effect on the next audio engine start.
+  var pitchPreservingSpeed: Bool = false {
+    didSet { UserDefaults.standard.set(pitchPreservingSpeed, forKey: Keys.pitchPreservingSpeed) }
+  }
+
   /// Immersive audio: place YM2608 channels in 3D space (requires compatible headphones).
   var immersiveAudio: Bool = false {
     didSet { UserDefaults.standard.set(immersiveAudio, forKey: Keys.immersiveAudio) }
@@ -591,6 +601,9 @@ final class Settings {
     }
     if let v = UserDefaults.standard.object(forKey: Keys.audioBufferMs) as? Int {
       audioBufferMs = max(20, min(500, v))
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.pitchPreservingSpeed) as? Bool {
+      pitchPreservingSpeed = v
     }
     if let v = UserDefaults.standard.object(forKey: Keys.immersiveAudio) as? Bool {
       immersiveAudio = v
