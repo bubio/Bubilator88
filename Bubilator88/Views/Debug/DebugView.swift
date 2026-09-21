@@ -126,6 +126,7 @@ struct DebugView: View {
       Text("T: \(tStates)")
         .foregroundStyle(.secondary)
     }
+    .padding(.horizontal)
     .font(.callout.monospaced())
   }
 }

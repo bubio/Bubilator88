@@ -19,11 +19,21 @@ struct AudioPane: View {
   @State private var rhythmKey:   UInt8 = 0
   @State private var adpcmActive: Bool  = false
   @State private var underrun:    AudioOutput.UnderrunStats = .init(events: 0, samples: 0, secondsSinceLast: nil,
-                                                                        droppedSamples: 0, targetMs: 0, ioFrames: 0)
+                                                                    droppedSamples: 0, targetMs: 0, ioFrames: 0)
 
   // MARK: - Mute state (ephemeral — resets to all-on when the debug window closes)
 
   @State private var muteMask: PC88.DebugChannelMask = .all
+
+  // MARK: - Meter geometry
+  //
+  // A meter bar has no text to size itself from, so its geometry is tied to
+  // the label underneath it with @ScaledMetric: the bars grow with the user's
+  // text size instead of staying at a fixed pixel size.
+
+  @ScaledMetric(relativeTo: .caption2) private var barWidth:     CGFloat = 22
+  @ScaledMetric(relativeTo: .caption2) private var barHeight:    CGFloat = 36
+  @ScaledMetric(relativeTo: .caption2) private var barMinFill:   CGFloat = 3
 
   // MARK: - Spectrum state
 
@@ -98,37 +108,6 @@ struct AudioPane: View {
             }
           }
 
-          // Row: Underrun diagnostics (buffer dry-out → audible dropout)
-          GroupBox("Underrun") {
-            HStack(spacing: 12) {
-              VStack(alignment: .leading, spacing: 2) {
-                Text("Events: \(underrun.events)")
-                Text("Samples: \(underrun.samples)")
-                if let since = underrun.secondsSinceLast {
-                  Text(String(format: "Last: %.1fs ago", since))
-                } else {
-                  Text("Last: —")
-                }
-              }
-              .font(.system(size: 10, design: .monospaced))
-              .foregroundStyle(underrun.events > 0 ? Color.orange : Color.secondary)
-              VStack(alignment: .leading, spacing: 2) {
-                Text(String(format: "Target: %.1fms", underrun.targetMs))
-                Text("IO: \(underrun.ioFrames) frames")
-                Text("Dropped: \(underrun.droppedSamples)")
-              }
-              .font(.system(size: 10, design: .monospaced))
-              .foregroundStyle(Color.secondary)
-              Spacer()
-              Button("Reset") {
-                viewModel.audio.resetUnderrunStats()
-                underrun = viewModel.audio.underrunSnapshot()
-              }
-              .controlSize(.mini)
-            }
-            .padding(.vertical, 2)
-          }
-
           // Row 2: Rhythm | ADPCM
           HStack(alignment: .top, spacing: 6) {
             GroupBox("Rhythm") {
@@ -159,6 +138,39 @@ struct AudioPane: View {
               .help(muted ? "ADPCM: muted" : "ADPCM: not muted")
               .padding(.vertical, 2)
             }
+          }
+
+          // Row 3: Underrun diagnostics (buffer dry-out → audible dropout).
+          // Kept below the channel rows: it reports on the output stage, not
+          // on a chip voice, so it does not belong between them.
+          GroupBox("Underrun") {
+            HStack(spacing: 12) {
+              VStack(alignment: .leading, spacing: 2) {
+                Text("Events: \(underrun.events)")
+                Text("Samples: \(underrun.samples)")
+                if let since = underrun.secondsSinceLast {
+                  Text(String(format: "Last: %.1fs ago", since))
+                } else {
+                  Text("Last: —")
+                }
+              }
+              .font(.system(.caption, design: .monospaced))
+              .foregroundStyle(underrun.events > 0 ? Color.orange : Color.secondary)
+              VStack(alignment: .leading, spacing: 2) {
+                Text(String(format: "Target: %.1fms", underrun.targetMs))
+                Text("IO: \(underrun.ioFrames) frames")
+                Text("Dropped: \(underrun.droppedSamples)")
+              }
+              .font(.system(.caption, design: .monospaced))
+              .foregroundStyle(Color.secondary)
+              Spacer()
+              Button("Reset") {
+                viewModel.audio.resetUnderrunStats()
+                underrun = viewModel.audio.underrunSnapshot()
+              }
+              .controlSize(.mini)
+            }
+            .padding(.vertical, 2)
           }
         }
         .padding(12)
@@ -247,15 +259,15 @@ struct AudioPane: View {
         ZStack(alignment: .bottom) {
           RoundedRectangle(cornerRadius: 2)
             .fill(muted ? Color.red.opacity(0.25) : Color.secondary.opacity(0.15))
-            .frame(width: 22, height: 36)
+            .frame(width: barWidth, height: barHeight)
           if !muted && isOn {
             RoundedRectangle(cornerRadius: 2)
               .fill(Color.green)
-              .frame(width: 22, height: max(3, 36 * fraction))
+              .frame(width: barWidth, height: max(barMinFill, barHeight * fraction))
           }
         }
         Text(label)
-          .font(.system(size: 8, design: .monospaced))
+          .font(.system(.caption2, design: .monospaced))
           .lineLimit(1)
           .foregroundStyle(muted ? Color.red : (isOn ? Color.primary : Color.secondary))
       }

@@ -177,8 +177,10 @@ final class AudioOutput {
   }
 
   /// Records one render callback's worth of underrun, called off the audio thread's hot loop
-  /// (at most once per callback, not once per frame).
-  private func recordUnderrun(frames: Int) {
+  /// (at most once per callback, not once per frame). `nonisolated` like
+  /// `noteRenderFrames`: the render callback is not on the main actor, and the
+  /// counters it touches are all atomics.
+  private nonisolated func recordUnderrun(frames: Int) {
     guard frames > 0 else { return }
     underrunEventCount.wrappingAdd(1, ordering: .relaxed)
     underrunSampleCount.wrappingAdd(UInt64(frames), ordering: .relaxed)
@@ -270,7 +272,7 @@ final class AudioOutput {
     var size = UInt32(MemoryLayout<AudioDeviceID>.size)
     guard AudioUnitGetProperty(au, kAudioOutputUnitProperty_CurrentDevice,
                                kAudioUnitScope_Global, 0, &deviceID, &size) == noErr,
-          deviceID != 0 else { return }
+      deviceID != 0 else { return }
 
     var frames = preferredDeviceBufferFrames
     var rangeAddr = AudioObjectPropertyAddress(

@@ -41,8 +41,9 @@ struct MemoryPane: View {
       Text("Address:")
       TextField("0000", text: $addressInput)
         .textFieldStyle(.roundedBorder)
-        .frame(width: 80)
         .font(.system(.body, design: .monospaced))
+        .frame(idealWidth: 70)
+        .fixedSize(horizontal: true, vertical: false)
         .onSubmit(applyAddress)
         .help("16-bit address to display, in hex. Accepts 1234, 0x1234 and 1234H.")
 
@@ -57,7 +58,6 @@ struct MemoryPane: View {
         in: 4...64,
         step: 4
       )
-      .frame(width: 160)
       .help("Number of 16-byte rows to show")
     }
     .padding(8)

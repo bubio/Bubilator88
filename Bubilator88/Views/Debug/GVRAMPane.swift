@@ -94,7 +94,7 @@ struct GVRAMPane: View {
         }
       }
       .labelsHidden()
-      .frame(width: 105)
+      .fixedSize()
       .help(session.gvram400LineMode
         ? "Mono = the two 200-line halves combined (640×400). Upper/Lower = one half each."
         : "Composite = the digital 8 colours, R/G/B planes combined. Blue/Red/Green = one plane on its own.")
@@ -105,7 +105,7 @@ struct GVRAMPane: View {
         }
       }
       .labelsHidden()
-      .frame(width: 58)
+      .fixedSize()
       .help("Canvas zoom. ×1 is actual size, ×4 the maximum.")
 
       Toggle("Auto", isOn: Bindable(session.settings).gvramAutoFollow)
