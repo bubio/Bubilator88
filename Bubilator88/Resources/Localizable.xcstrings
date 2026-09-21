@@ -4,9 +4,6 @@
     "" : {
 
     },
-    " " : {
-
-    },
     "  %@ ✓" : {
 
     },
@@ -1788,6 +1785,9 @@
         }
       }
     },
+    "Dropped: %llu" : {
+
+    },
     "Dump Error" : {
       "localizations" : {
         "ja" : {
@@ -1959,6 +1959,9 @@
           }
         }
       }
+    },
+    "Events: %llu" : {
+
     },
     "Every user preference returns to its default. This cannot be undone, and the app must be restarted for all of the changes to take effect." : {
       "comment" : "Confirmation alert body for the Develop menu's Reset Settings",
@@ -2736,6 +2739,9 @@
         }
       }
     },
+    "IO: %lld frames" : {
+
+    },
     "IX" : {
 
     },
@@ -2852,6 +2858,9 @@
           }
         }
       }
+    },
+    "Last: —" : {
+
     },
     "Launch Argument Error" : {
       "comment" : "Alert title: the command-line arguments could not be parsed",
@@ -4239,6 +4248,9 @@
         }
       }
     },
+    "Samples: %llu" : {
+
+    },
     "Save" : {
       "localizations" : {
         "ja" : {
@@ -5425,6 +5437,9 @@
           }
         }
       }
+    },
+    "Underrun" : {
+
     },
     "Unknown boot mode: %@" : {
       "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",

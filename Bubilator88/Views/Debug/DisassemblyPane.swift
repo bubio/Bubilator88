@@ -16,6 +16,12 @@ struct DisassemblyPane: View {
 
   @State private var cachedLines: [DisassembledInstruction] = []
 
+  /// Width of the opcode-bytes column, wide enough for the longest Z80
+  /// encoding ("DD CB dd op"). Rows are laid out independently inside a
+  /// LazyVStack, so this column cannot be sized from its content the way the
+  /// address column is; @ScaledMetric at least keeps it in step with the text.
+  @ScaledMetric(relativeTo: .body) private var opcodeColumnWidth: CGFloat = 92
+
   private func computeLines() -> [DisassembledInstruction] {
     let w = window
     var out: [DisassembledInstruction] = []
@@ -107,7 +113,8 @@ struct DisassemblyPane: View {
   private var disabledPlaceholder: some View {
     VStack(spacing: 6) {
       Image(systemName: "pause.rectangle")
-        .font(.system(size: 32))
+        .font(.largeTitle)
+        .imageScale(.large)
         .foregroundStyle(.secondary)
       Text("Disassembly is off")
         .font(.callout)
@@ -134,29 +141,22 @@ struct DisassemblyPane: View {
       }
       .pickerStyle(.segmented)
       .labelsHidden()
-      .frame(width: 110)
+      .fixedSize()
       .disabled(!session.settings.disasmEnabled)
       .help("Which CPU to disassemble. Main is the Z80 running the game, Sub is the sub board Z80 running DISK.ROM.")
 
-      Button {
-        if session.disasmFollowsPC {
+      Toggle(isOn: Binding(
+        get: { session.disasmFollowsPC },
+        set: { following in
           // Release: freeze at current PC so the user can scroll.
-          session.disasmPinnedAddress = currentPC
-          session.disasmFollowsPC = false
-        } else {
-          session.disasmFollowsPC = true
+          if !following { session.disasmPinnedAddress = currentPC }
+          session.disasmFollowsPC = following
+          session.refresh()
         }
-        session.refresh()
-      } label: {
+      )) {
         Image(systemName: session.disasmFollowsPC ? "pin.fill" : "pin.slash")
-          .foregroundStyle(session.disasmFollowsPC ? AnyShapeStyle(Color.white) : AnyShapeStyle(HierarchicalShapeStyle.primary))
-          .frame(width: 20, height: 16)
-          .padding(.horizontal, 4)
-          .padding(.vertical, 2)
-          .background(session.disasmFollowsPC ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.clear))
-          .clipShape(RoundedRectangle(cornerRadius: 4))
       }
-      .buttonStyle(.plain)
+      .toggleStyle(.button)
       .disabled(!session.settings.disasmEnabled)
       .help("Follow the PC. On pins the view to the current PC and tracks it; off keeps the view fixed.")
 
@@ -174,17 +174,20 @@ struct DisassemblyPane: View {
   private func row(_ inst: DisassembledInstruction) -> some View {
     let isPC = inst.address == currentPC
     HStack(spacing: 8) {
-      Text(isPC ? "▶" : " ")
-        .frame(width: 12)
-        .foregroundStyle(isPC ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(HierarchicalShapeStyle.secondary))
+      // Always laid out, hidden when it does not apply, so the rows below the
+      // PC do not shift sideways as it moves.
+      Text("▶")
+        .opacity(isPC ? 1 : 0)
+        .foregroundStyle(Color.accentColor)
         .help(isPC ? "The next instruction to run, at the current PC" : "")
 
+      // %04X is always four monospaced characters, so every row's address
+      // column comes out the same width on its own.
       Text(String(format: "%04X", inst.address))
-        .frame(width: 44, alignment: .trailing)
         .help("Instruction address, in hex")
 
       Text(byteString(inst.bytes))
-        .frame(width: 92, alignment: .leading)
+        .frame(width: opcodeColumnWidth, alignment: .leading)
         .foregroundStyle(.secondary)
         .help("Opcode bytes")
 

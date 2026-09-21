@@ -110,7 +110,7 @@ struct TextVRAMPane: View {
         }
       }
       .labelsHidden()
-      .frame(width: 58)
+      .fixedSize()
       .help("Canvas zoom level")
 
       Toggle("Attr", isOn: Bindable(session.settings).textvramShowAttrDecode)

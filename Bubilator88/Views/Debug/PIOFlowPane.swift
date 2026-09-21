@@ -107,7 +107,7 @@ struct PIOFlowPane: View {
         }
       }
       .labelsHidden()
-      .frame(width: 70)
+      .fixedSize()
       .help("Filter by the CPU that made the access")
 
       Picker("Port", selection: Bindable(session.settings).pioPortFilter) {
@@ -116,7 +116,7 @@ struct PIOFlowPane: View {
         }
       }
       .labelsHidden()
-      .frame(width: 60)
+      .fixedSize()
       .help("Filter by 8255 port. A/B are the data ports (cross-wired), C is handshake status.")
 
       Toggle("Auto", isOn: Bindable(session.settings).pioAutoFollow)

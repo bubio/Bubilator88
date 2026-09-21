@@ -56,55 +56,55 @@ struct RegisterPane: View {
       Text(title)
         .font(.headline)
 
-      Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 2) {
+      Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 2) {
         GridRow {
-          regCell("PC", word: pc)
-            .help("Program counter — address of the next instruction")
-          regCell("SP", word: sp)
-            .help("Stack pointer; the stack grows downwards")
+          regCell("PC", word: pc,
+                  help: "Program counter — address of the next instruction")
+          regCell("SP", word: sp,
+                  help: "Stack pointer; the stack grows downwards")
         }
         GridRow {
-          regCell("AF", word: af, byteHigh: "A", byteLow: "F")
-            .help("Accumulator (A) and flags (F). ALU results land in A.")
-          regCell("BC", word: bc, byteHigh: "B", byteLow: "C")
-            .help("Register pair BC. C commonly holds the port number for IN/OUT.")
+          regCell("AF", word: af, byteHigh: "A", byteLow: "F",
+                  help: "Accumulator (A) and flags (F). ALU results land in A.")
+          regCell("BC", word: bc, byteHigh: "B", byteLow: "C",
+                  help: "Register pair BC. C commonly holds the port number for IN/OUT.")
         }
         GridRow {
-          regCell("DE", word: de, byteHigh: "D", byteLow: "E")
-            .help("Register pair DE. Commonly the source pointer for block transfer instructions.")
-          regCell("HL", word: hl, byteHigh: "H", byteLow: "L")
-            .help("Register pair HL. The general-purpose 16-bit address register.")
+          regCell("DE", word: de, byteHigh: "D", byteLow: "E",
+                  help: "Register pair DE. Commonly the source pointer for block transfer instructions.")
+          regCell("HL", word: hl, byteHigh: "H", byteLow: "L",
+                  help: "Register pair HL. The general-purpose 16-bit address register.")
         }
         if let ix, let iy {
           GridRow {
-            regCell("IX", word: ix)
-              .help("Index register IX — used by (IX+d) addressing")
-            regCell("IY", word: iy)
-              .help("Index register IY — used by (IY+d) addressing")
+            regCell("IX", word: ix,
+                    help: "Index register IX — used by (IX+d) addressing")
+            regCell("IY", word: iy,
+                    help: "Index register IY — used by (IY+d) addressing")
           }
         }
         if let af2, let bc2 {
           GridRow {
-            regCell("AF'", word: af2)
-              .help("Shadow AF — exchanged by EX AF,AF'")
-            regCell("BC'", word: bc2)
-              .help("Shadow BC — exchanged by EXX")
+            regCell("AF'", word: af2,
+                    help: "Shadow AF — exchanged by EX AF,AF'")
+            regCell("BC'", word: bc2,
+                    help: "Shadow BC — exchanged by EXX")
           }
         }
         if let de2, let hl2 {
           GridRow {
-            regCell("DE'", word: de2)
-              .help("Shadow DE — exchanged by EXX")
-            regCell("HL'", word: hl2)
-              .help("Shadow HL — exchanged by EXX")
+            regCell("DE'", word: de2,
+                    help: "Shadow DE — exchanged by EXX")
+            regCell("HL'", word: hl2,
+                    help: "Shadow HL — exchanged by EXX")
           }
         }
         if let i, let r {
           GridRow {
-            regCell("I", byte: i)
-              .help("Interrupt vector page register. In IM 2 it forms the high byte of the vector table address.")
-            regCell("R", byte: r)
-              .help("Memory refresh counter, incremented on every instruction fetch. Some games use it as a pseudo-random source (LD A,R).")
+            regCell("I", byte: i,
+                    help: "Interrupt vector page register. In IM 2 it forms the high byte of the vector table address.")
+            regCell("R", byte: r,
+                    help: "Memory refresh counter, incremented on every instruction fetch. Some games use it as a pseudo-random source (LD A,R).")
           }
         }
       }
@@ -138,9 +138,25 @@ struct RegisterPane: View {
 
   // MARK: - Helpers
 
-  private func regCell(_ name: String, word: UInt16, byteHigh: String? = nil, byteLow: String? = nil) -> some View {
+  /// One register: a trailing-aligned name cell plus a value cell.
+  ///
+  /// Two cells rather than one padded row, so the enclosing `Grid` sizes the
+  /// name column from the widest name it actually holds. The help text is a
+  /// parameter because a modifier applied at the call site would wrap both
+  /// cells into a single one.
+  @ViewBuilder
+  private func regCell(
+    _ name: String,
+    word: UInt16,
+    byteHigh: String? = nil,
+    byteLow: String? = nil,
+    help: LocalizedStringKey
+  ) -> some View {
+    Text("\(name):")
+      .bold()
+      .gridColumnAlignment(.trailing)
+      .help(help)
     HStack(spacing: 4) {
-      Text("\(name):").bold().frame(width: 36, alignment: .trailing)
       Text(String(format: "%04X", word))
         .font(.system(.body, design: .monospaced))
       if let byteHigh, let byteLow {
@@ -149,14 +165,20 @@ struct RegisterPane: View {
           .foregroundStyle(.secondary)
       }
     }
+    .padding(.trailing, 12)
+    .help(help)
   }
 
-  private func regCell(_ name: String, byte: UInt8) -> some View {
-    HStack(spacing: 4) {
-      Text("\(name):").bold().frame(width: 36, alignment: .trailing)
-      Text(String(format: "%02X", byte))
-        .font(.system(.body, design: .monospaced))
-    }
+  @ViewBuilder
+  private func regCell(_ name: String, byte: UInt8, help: LocalizedStringKey) -> some View {
+    Text("\(name):")
+      .bold()
+      .gridColumnAlignment(.trailing)
+      .help(help)
+    Text(String(format: "%02X", byte))
+      .font(.system(.body, design: .monospaced))
+      .padding(.trailing, 12)
+      .help(help)
   }
 
   /// Format the F register as `S Z - H - P N C`, with set bits in

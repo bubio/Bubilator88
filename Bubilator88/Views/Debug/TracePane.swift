@@ -168,7 +168,7 @@ struct TracePane: View {
       }
       .pickerStyle(.segmented)
       .labelsHidden()
-      .frame(width: 110)
+      .fixedSize()
       .help("Which CPU's instruction history to show. Main and Sub each have a 1024-entry ring buffer.")
 
       Toggle("Auto", isOn: Bindable(session.settings).traceAutoFollow)

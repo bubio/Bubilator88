@@ -25,13 +25,11 @@ struct BreakpointPane: View {
           }
         }
         .labelsHidden()
-        .frame(width: 110)
         .help("What to watch. Main/Sub PC = an instruction fetch at the address, Mem R/W = a bus access, IO R/W = a port access.")
 
         TextField("addr (hex)", text: $session.newBPAddressText)
           .textFieldStyle(.roundedBorder)
           .font(.system(.body, design: .monospaced))
-          .frame(width: 80)
           .onSubmit { session.addNewBreakpoint() }
           .help("Breakpoint address, in hex. Only the low byte is significant for IO ports.")
 
@@ -41,7 +39,6 @@ struct BreakpointPane: View {
           TextField("val", text: $session.newBPValueText)
             .textFieldStyle(.roundedBorder)
             .font(.system(.body, design: .monospaced))
-            .frame(width: 50)
             .onSubmit { session.addNewBreakpoint() }
             .help("Optional byte filter. When set, the breakpoint only fires if the written value matches; leave it empty to fire on any write.")
         }
@@ -52,7 +49,12 @@ struct BreakpointPane: View {
 
         Spacer()
 
-        bulkEnableButton
+        if session.allBreakpointsEnabled {
+          bulkEnableButton
+            .buttonStyle(.borderedProminent)
+        } else {
+          bulkEnableButton
+        }
 
         Button(role: .destructive) {
           session.removeAllBreakpoints()
@@ -89,14 +91,7 @@ struct BreakpointPane: View {
       session.setAllBreakpointsEnabled(!armed)
     } label: {
       Image(systemName: "arrowshape.right.fill")
-        .foregroundStyle(armed ? AnyShapeStyle(Color.white) : AnyShapeStyle(HierarchicalShapeStyle.primary))
-        .frame(width: 20, height: 16)
-        .padding(.horizontal, 4)
-        .padding(.vertical, 2)
-        .background(armed ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.clear))
-        .clipShape(RoundedRectangle(cornerRadius: 4))
     }
-    .buttonStyle(.plain)
     .disabled(session.debugger.breakpoints.isEmpty)
     .help("Enable or disable every breakpoint at once.")
   }
