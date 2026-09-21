@@ -31,7 +31,7 @@ macOSらしいUIと機能を追求しています。
 
 一応、Windows版もあります。
 
-https://github.com/bubio/Bubilator88/releases/tag/win-v1.0.0
+https://github.com/bubio/Bubilator88/releases/tag/win-v1.1.0
 
 ## Features
 
