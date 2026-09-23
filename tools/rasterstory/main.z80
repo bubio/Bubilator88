@@ -1,0 +1,377 @@
+; Mixed-raster adventure scene: upper color graphics are 200-line pixels;
+; lower 400-line pixels are drawn at runtime from the level-1 Kanji ROM.
+
+		cpu		z80
+		relaxed	on
+		org		$4000
+
+Entry:
+		di
+		ld		sp,STACK_TOP
+		ld		hl,VARS
+		ld		de,VARS+1
+		ld		(hl),0
+		ld		bc,VARS_END-VARS-1
+		ldir
+		call	ProbeEnv
+		call	ResetVideo
+		; The color-text layer is transparent spaces. Attribute 5 supplies
+		; white pixels for the monochrome attribute-graphics lower half.
+		ld		a,A_CYAN
+		call	ClearText
+		ld		hl,Palette0
+		call	PalAnalogLoad
+		ld		a,$80
+		out		($54),a
+		ld		a,$C0
+		out		($54),a
+		xor		a
+		out		($52),a
+		ld		a,$5C
+		ld		hl,BlueData
+		call	UnpackPlane
+		ld		a,$5E
+		ld		hl,GreenData
+		call	UnpackPlane
+		call	RenderPanel
+		call	Calibrate
+		ld		hl,(v_dlines)
+		srl		h
+		rr		l
+		srl		h
+		rr		l
+		srl		h
+		rr		l
+		srl		h
+		rr		l
+		ld		a,(v_is4mhz)
+		or		a
+		ld		a,l
+		jr		z,.fastbands
+		sub		5				; palette writes cost more raster time at 4 MHz
+		jr		.bandtime
+.fastbands:
+		sub		3
+.bandtime:
+		call	LinesToLoops
+		ld		(v_w1),hl
+		ld		a,(v_is4mhz)
+		or		a
+		ld		a,5
+		jr		nz,.tailtime
+		ld		a,2
+.tailtime:
+		call	LinesToLoops
+		ld		(v_w2),hl
+Frame:
+		di
+		call	WaitVBlank
+		ld		a,(v_sel2)
+		or		a
+		ld		hl,Palette0
+		jr		z,.palette
+		ld		hl,RoomPalette0
+.palette:
+		call	PalAnalogLoad
+		ld		a,P31_COL200
+		call	SetP31
+		; Never wait for key release here: display timing must run every frame.
+		call	ScanKey
+		ld		b,a
+		ld		a,(v_sel4)
+		cp		b
+		jr		z,Resume
+		ld		a,b
+		ld		(v_sel4),a
+		or		a
+		jr		z,Resume
+		ld		(v_buf),a
+Resume:
+		call	WaitDisplay
+		ld		a,(v_sel2)
+		or		a
+		ld		ix,PaletteTable
+		jr		z,.table
+		ld		ix,RoomPaletteTable
+.table:
+		ld		a,7
+		ld		(v_sel3),a
+.band:
+		ld		hl,(v_w1)
+		call	Delay
+		ld		l,(ix+0)
+		ld		h,(ix+1)
+		inc		ix
+		inc		ix
+		call	PalAnalogLoad
+		ld		a,(v_sel3)
+		dec		a
+		ld		(v_sel3),a
+		jr		nz,.band
+		ld		hl,(v_w1)
+		call	Delay
+		ld		hl,(v_w2)
+		call	Delay
+		ld		a,P31_BW400
+		call	SetP31
+		ld		a,(v_buf)
+		or		a
+		jr		z,Frame
+		ld		b,a
+		xor		a
+		ld		(v_buf),a
+		ld		a,b
+		call	HandleKey
+		jr		Frame
+
+HandleKey:
+		cp		'1'
+		jr		z,.clue
+		cp		'2'
+		jr		z,.window
+		cp		'0'
+		jr		z,.start
+		cp		'3'
+		jr		z,.move
+		ret
+.clue:
+		ld		a,1
+		jr		.dialogue
+.window:
+		ld		a,2
+.dialogue:
+		ld		(v_sel),a
+		jp		DrawDialogue
+.start:
+		xor		a
+		ld		(v_sel2),a
+		ld		(v_sel),a
+		jp		LoadScene
+.move:
+		ld		a,(v_sel2)
+		xor		1
+		ld		(v_sel2),a
+		xor		a
+		ld		(v_sel),a
+		jp		LoadScene
+
+LoadScene:
+		ld		a,(v_sel2)
+		or		a
+		ld		hl,BlueData
+		jr		z,.blue
+		ld		hl,RoomBlueData
+.blue:
+		ld		a,$5C
+		call	UnpackPlane
+		ld		a,(v_sel2)
+		or		a
+		ld		hl,GreenData
+		jr		z,.green
+		ld		hl,RoomGreenData
+.green:
+		ld		a,$5E
+		call	UnpackPlane
+		jp		RenderPanel
+
+; Repaint only the red plane. In 400-line mode this becomes output rows
+; 200-399; in color 200-line mode it shares the upper image addresses.
+RenderPanel:
+		ld		a,$5D
+		ld		hl,PanelBase
+		call	UnpackPlane
+		ld		a,$5D
+		out		($5D),a
+		xor		a
+		out		($EB),a				; idle before the first Kanji ROM read
+		ld		a,(v_sel2)
+		or		a
+		ld		hl,PortTitle
+		jr		z,.title
+		ld		hl,RoomTitle
+.title:
+		ld		de,GVRAM+8*80+2
+		call	DrawKanjiString
+		ld		a,(v_sel2)
+		or		a
+		ld		hl,PortChapter
+		jr		z,.chapter
+		ld		hl,RoomChapter
+.chapter:
+		ld		de,GVRAM+8*80+53
+		call	DrawKanjiString
+		ld		a,(v_sel2)
+		or		a
+		ld		hl,PortChoices
+		jr		z,.choices
+		ld		hl,RoomChoices
+.choices:
+		ld		de,GVRAM+148*80+19
+		call	DrawKanjiString
+		ld		hl,ResetLine
+		ld		de,GVRAM+175*80+19
+		call	DrawKanjiString
+		out		($5F),a
+		jp		DrawDialogue
+
+; Update only the text field. The portrait, border, and choices stay visible
+; while a key action is processed, and the raster loop never waits on a key.
+DrawDialogue:
+		ld		a,$5D
+		out		($5D),a
+		call	ClearDialogue
+		xor		a
+		out		($EB),a
+		ld		a,(v_sel2)
+		or		a
+		jr		nz,.room
+		ld		a,(v_sel)
+		or		a
+		ld		hl,IntroLines
+		jr		z,.lines
+		cp		1
+		ld		hl,ClueLines
+		jr		z,.lines
+		ld		hl,WindowLines
+		jr		.lines
+.room:
+		ld		a,(v_sel)
+		or		a
+		ld		hl,RoomIntroLines
+		jr		z,.lines
+		cp		1
+		ld		hl,RoomClueLines
+		jr		z,.lines
+		ld		hl,RoomWindowLines
+.lines:
+		ld		de,GVRAM+48*80+19
+		call	DrawKanjiString
+		ld		de,GVRAM+76*80+19
+		call	DrawKanjiString
+		ld		de,GVRAM+104*80+19
+		call	DrawKanjiString
+		out		($5F),a
+		ret
+
+ClearDialogue:
+		ld		de,GVRAM+48*80+19
+		ld		c,72
+.row:
+		push	bc
+		ld		h,d
+		ld		l,e
+		ld		b,60
+.byte:
+		ld		(hl),0
+		inc		hl
+		djnz	.byte
+		ld		hl,80
+		add		hl,de
+		ex		de,hl
+		pop		bc
+		dec		c
+		jr		nz,.row
+		ret
+
+; HL = little-endian Kanji ROM word addresses, terminated by $FFFF.
+; DE = byte-aligned upper-left destination in the red GVRAM plane.
+; Each glyph occupies exactly 16x16 real 400-line pixels.
+DrawKanjiString:
+.next:
+		ld		c,(hl)
+		inc		hl
+		ld		b,(hl)
+		inc		hl
+		ld		a,b
+		cp		$FF
+		ret		z
+		push	hl
+		call	DrawKanjiGlyph
+		pop		hl
+		jr		.next
+
+; BC = first of 16 ROM row addresses, DE = upper-left GVRAM address.
+; Port $E9 reads the left eight dots, $E8 the right eight dots.
+DrawKanjiGlyph:
+		ld		l,16
+.row:
+		ld		a,c
+		out		($E8),a
+		ld		a,b
+		out		($E9),a
+		xor		a
+		out		($EA),a
+		nop
+		nop
+		in		a,($E9)
+		ld		(de),a
+		inc		de
+		in		a,($E8)
+		ld		(de),a
+		xor		a
+		out		($EB),a
+		inc		bc
+		push	hl
+		ld		hl,79
+		add		hl,de
+		ex		de,hl
+		pop		hl
+		dec		l
+		jr		nz,.row
+		ld		hl,-1278				; next glyph, same top row
+		add		hl,de
+		ex		de,hl
+		ret
+
+; A selects a plane; HL points to literal/repeat packets terminated by 0.
+; $01-$7F copies literals; $81-$FF repeats the next byte 1-127 times.
+UnpackPlane:
+		ld		c,a
+		out		(c),a
+		ld		de,GVRAM
+.packet:
+		ld		a,(hl)
+		inc		hl
+		or		a
+		jr		z,.done
+		bit		7,a
+		jr		nz,.run
+		ld		b,a
+.literal:
+		ld		a,(hl)
+		ld		(de),a
+		inc		hl
+		inc		de
+		djnz	.literal
+		jr		.packet
+.run:
+		and		$7F
+		ld		b,a
+		ld		a,(hl)
+		inc		hl
+.repeat:
+		ld		(de),a
+		inc		de
+		djnz	.repeat
+		jr		.packet
+.done:
+		out		($5F),a
+		ret
+
+		include	"lib.z80"
+P31_COL200	equ		$19
+P31_BW400	equ		$08
+SetP31:
+		ld		b,a
+		ld		a,(v_is15k)
+		or		a
+		ld		a,b
+		jr		nz,.out
+		or		$20
+.out:
+		ld		(v_p31),a
+		or		$02
+		out		($31),a
+		ret
+
+		include	"assets.inc"
