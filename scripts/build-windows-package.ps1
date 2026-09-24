@@ -1,7 +1,7 @@
 #Requires -Version 7.0
 <#
 .SYNOPSIS
-    Bubilator88 Windows 版を単一 EXE と共有 WinUI ランタイム版の2種類にビルドする。
+    Bubilator88 Windows 版を単一 EXE と共有 WinUI/.NET ランタイム版の2種類にビルドする。
 
 .DESCRIPTION
     1. Swift toolchain の所在と runtime DLL ディレクトリを検出
@@ -192,7 +192,7 @@ if (-not $SkipModelCheck) {
 }
 
 # ---------------------------------------------------------------------------
-# 5. dotnet publish (win-x64, self-contained)
+# 5. dotnet publish (win-x64; .NET は単一 EXE 版だけ self-contained)
 #    Swift for Windows は x86_64-unknown-windows-msvc のみ提供 (arm64 toolchain
 #    が無い) ため、v1 は win-x64 のみを対象とする。
 # ---------------------------------------------------------------------------
@@ -202,8 +202,9 @@ if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
 Step "dotnet publish (win-x64, $Variant, Version=$Version)"
 $csproj = Join-Path $ShellDir 'Bubilator88.Windows.csproj'
 $winAppSdkSelfContained = if ($Variant -eq 'SingleFile') { 'true' } else { 'false' }
+$dotnetSelfContained = if ($Variant -eq 'SingleFile') { 'true' } else { 'false' }
 & dotnet publish $csproj `
-    -c $Configuration -r win-x64 -p:Platform=x64 --self-contained true `
+    -c $Configuration -r win-x64 -p:Platform=x64 --self-contained $dotnetSelfContained `
     -p:WindowsAppSDKSelfContained=$winAppSdkSelfContained `
     -p:PublishSingleFile=false `
     -p:Version=$Version `
@@ -212,6 +213,14 @@ if ($LASTEXITCODE -ne 0) { throw "dotnet publish が失敗しました (exit $LA
 
 if (-not (Test-Path (Join-Path $publishDir 'Bubilator88C.dll'))) {
     throw "発行フォルダに Bubilator88C.dll がありません (csproj の Link 設定を確認)。"
+}
+if ($Variant -eq 'SharedRuntime') {
+    $runtimeConfig = Get-Content (Join-Path $publishDir 'Bubilator88.runtimeconfig.json') -Raw | ConvertFrom-Json
+    if ($runtimeConfig.runtimeOptions.framework.name -ne 'Microsoft.NETCore.App' -or
+        (Test-Path (Join-Path $publishDir 'coreclr.dll')) -or
+        (Test-Path (Join-Path $publishDir 'Microsoft.UI.Xaml.dll'))) {
+        throw '共有ランタイム版に .NET または Windows App SDK 本体が混入しています。'
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -476,12 +485,15 @@ Bubilator88 for Windows $Version — Shared Windows App SDK runtime edition
 Install Windows App SDK runtime 2.5.1 (x64) before starting Bubilator88.exe:
 https://aka.ms/windowsappsdk/2.5/2.5.1/windowsappruntimeinstall-x64.exe
 
+Install .NET Runtime 10 (Windows x64) as well (the SDK or Desktop Runtime also works):
+https://dotnet.microsoft.com/download/dotnet/10.0
+
 Microsoft Visual C++ Redistributable (x64) is also required:
 https://aka.ms/vc14/vc_redist.x64.exe
 
-This ZIP includes the .NET 10 runtime and Swift runtime. Install the Windows
-App SDK runtime once per PC; already installed compatible 2.5.x runtimes can
-be shared by this and other apps. ROM files are not included.
+This ZIP includes the Swift runtime, but not the .NET or Windows App SDK
+runtimes. Install those once per PC; compatible runtimes can be shared by this
+and other apps. ROM files are not included.
 "@ | Set-Content -Path (Join-Path $publishDir 'INSTALL-RUNTIME.txt') -Encoding utf8
 }
 

@@ -159,13 +159,14 @@ pwsh scripts\build-windows-package.ps1 -Version 1.2.3
 ```
 
 コア DLL をビルドし、Fast / Balanced モデル (Git LFS) を確認してから、次の2つを
-同じ Windows App SDK **2.5.1** で発行する。どちらも .NET 10 と必要な Swift DLL を
+同じ Windows App SDK **2.5.1** で発行する。単一 EXE 版は .NET 10 を含み、
+共有ランタイム版は PC に導入された .NET 10 を使う。必要な Swift DLL は両方に
 同梱し、ROM と任意ダウンロードの Quality モデルは含まない。
 
 | ZIP | 内容 | 利用者側の前提 |
 | --- | --- | --- |
 | `Bubilator88-Windows-x64-<Version>-SingleFile.zip` | 単一の `Bubilator88.exe`。初回起動時に依存ファイルを `%TEMP%\.net\` に展開する | Windows App SDK の別途インストールは不要 |
-| `Bubilator88-Windows-x64-<Version>-SharedRuntime.zip` | アプリのフォルダ配布。WinUI 3 の共有ランタイムは含めない | [Windows App SDK 2.5.1 ランタイム (x64)](https://aka.ms/windowsappsdk/2.5/2.5.1/windowsappruntimeinstall-x64.exe) を導入。既に互換のある 2.5 系ランタイムがあれば再導入不要 |
+| `Bubilator88-Windows-x64-<Version>-SharedRuntime.zip` | アプリのフォルダ配布。WinUI 3 と .NET のランタイムは含めない | [Windows App SDK 2.5.1 ランタイム (x64)](https://aka.ms/windowsappsdk/2.5/2.5.1/windowsappruntimeinstall-x64.exe) と [.NET Runtime 10 (Windows x64)](https://dotnet.microsoft.com/download/dotnet/10.0) を導入。互換ランタイムが既にあれば再導入不要 |
 
 どちらの版も [Visual C++ 再頒布可能パッケージ (x64)](https://aka.ms/vc14/vc_redist.x64.exe)
 が必要。通常すでに入っているPCでは追加作業は不要。
@@ -174,7 +175,7 @@ EXE 自体を別名へ変えると起動に失敗しており、ZIP の名前変
 
 #### 共有ランタイム版を試す
 
-まず上記の Windows App SDK ランタイムと、必要なら Visual C++ 再頒布可能パッケージを
+まず上記の Windows App SDK ランタイムと .NET Runtime 10、必要なら Visual C++ 再頒布可能パッケージを
 導入する。すでに導入済みならこの手順は不要。次に
 `dist\Bubilator88-Windows-x64-<Version>-SharedRuntime.zip` を任意のフォルダへ
 展開し、そこにある `Bubilator88.exe` を実行する。`Bubilator88C.dll` や
@@ -202,10 +203,14 @@ SHA-256 の算出も行う。`-Variant SingleFile` または `-Variant SharedRun
 作成できる。主なオプション: `-SkipCoreBuild` (既存 DLL を使い回す)、`-RunCoreTests`、
 `-SwiftRuntimeBin`、`-SkipSmokeTest` (GUI を起動できない環境向け)。CI と Windows
 リリースワークフローも両方を作り、リリースには2つの ZIP を添付する。共有版の
-起動スモークテスト前には CI が Windows App SDK 2.5.1 ランタイムを導入する。
+起動スモークテスト前には CI が Windows App SDK 2.5.1 ランタイムと .NET 10 SDK
+（.NET 10 ランタイムを含む）を導入する。
 
-2026-09-24 のローカル検証では、単一 EXE ZIP が **138.7 MiB**、共有ランタイム ZIP が
-**87.9 MiB**。後者は前者より **50.8 MiB** 小さい。単一 EXE は Swift を PATH から外して
+2026-09-24 のローカル検証では、単一 EXE ZIP が **138.8 MiB**、共有ランタイム ZIP が
+**53.9 MiB**。後者は前者より **84.9 MiB** 小さい (.NET 10 を同梱していた旧共有版は
+87.9 MiB)。共有版の `Bubilator88.runtimeconfig.json` は `Microsoft.NETCore.App` 10
+だけを要求するので、通常の .NET Runtime 10 (x64) で足りる。
+単一 EXE は Swift を PATH から外して
 起動し、展開先のコア DLL・Swift DLL・Fast モデル・アイコンの存在を確認した。
 共有ランタイム版も公式ランタイム導入後に Swift を PATH から外して起動し、
 `Microsoft.UI.Xaml.dll` を共有の `WindowsApps` ディレクトリから、コアと Swift DLL を
