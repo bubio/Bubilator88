@@ -79,6 +79,14 @@ jobs:
           swift --version
           dotnet --version
 
+      - name: Install Windows App SDK 2.5.1 runtime
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP 'WindowsAppRuntimeInstall-x64.exe'
+          Invoke-WebRequest 'https://aka.ms/windowsappsdk/2.5/2.5.1/windowsappruntimeinstall-x64.exe' -OutFile $installer
+          & $installer --quiet
+          if ($LASTEXITCODE -ne 0) { throw "Windows App SDK runtime install failed: $LASTEXITCODE" }
+
       # Bubilator88Core のユニットテストを Windows 上でも回す。
       # ビルドが通っても壊れうる差分 (セーブステート形式、時刻/ロケール依存、
       # エンディアン以外の Foundation 差異) はここでしか捕まらない。
