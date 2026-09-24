@@ -17,7 +17,8 @@
        ロードできるか、(b) アプリが起動してメインウィンドウが出るかを検証
        (バンドル漏れ・prune しすぎの唯一の確実な検出方法 — objdump 静的解析は
        実行時にしか解決されない依存を見落とすため、実ロード/実起動で確認する)
-    8. 発行フォルダを zip 化し、SHA256 を算出。既定では両方作成する
+    8. 共有版はショートカットを表に置き、実ファイルを app\ に収めてから
+       zip 化し、SHA256 を算出。既定では両方作成する
 
     CI (GitHub Actions) と手元ビルドの両方から呼べるよう、GITHUB_OUTPUT が
     設定されていれば single_*/shared_* をそこにも書き出す。
@@ -482,6 +483,9 @@ if ($Variant -eq 'SingleFile') {
     @"
 Bubilator88 for Windows $Version — Shared Windows App SDK runtime edition
 
+Start Bubilator88.lnk after extracting this ZIP. Keep the app folder and
+shortcut together; all application files are inside app.
+
 Install Windows App SDK runtime 2.5.1 (x64) before starting Bubilator88.exe:
 https://aka.ms/windowsappsdk/2.5/2.5.1/windowsappruntimeinstall-x64.exe
 
@@ -650,8 +654,34 @@ $zipName = "$PackageName-Windows-x64-$Version-$Variant.zip"
 $zipPath = Join-Path $OutputDir $zipName
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
 
+if ($Variant -eq 'SharedRuntime') {
+    $packageDir = Join-Path $OutputDir 'package-win-x64-SharedRuntime'
+    if (Test-Path $packageDir) { Remove-Item $packageDir -Recurse -Force }
+    $appDir = Join-Path $packageDir 'app'
+    New-Item -ItemType Directory -Path $appDir -Force | Out-Null
+    Copy-Item -Path (Join-Path $publishDir '*') -Destination $appDir -Recurse
+    Move-Item -Path (Join-Path $appDir 'INSTALL-RUNTIME.txt') -Destination $packageDir
+
+    # Windows stores a relative path alongside the resolved target in a .lnk.
+    # This lets the shortcut survive moving the extracted ZIP to another folder.
+    $shortcutPath = Join-Path $packageDir 'Bubilator88.lnk'
+    $shell = New-Object -ComObject WScript.Shell
+    $shortcut = $shell.CreateShortcut($shortcutPath)
+    $shortcut.TargetPath = Join-Path $appDir $ExeName
+    $shortcut.Save()
+    $shortcut = $null
+    $shell = $null
+    $linkFlags = [BitConverter]::ToUInt32([IO.File]::ReadAllBytes($shortcutPath), 20)
+    if (($linkFlags -band 0x8) -eq 0) {
+        throw '共有版ショートカットに相対パスが保存されていません。'
+    }
+    $archiveDir = $packageDir
+} else {
+    $archiveDir = $publishDir
+}
+
 Step "zip 作成: $zipName"
-Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zipPath -CompressionLevel Optimal
+Compress-Archive -Path (Join-Path $archiveDir '*') -DestinationPath $zipPath -CompressionLevel Optimal
 
 $hash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLower()
 $sizeMb = [math]::Round((Get-Item $zipPath).Length / 1MB, 1)
