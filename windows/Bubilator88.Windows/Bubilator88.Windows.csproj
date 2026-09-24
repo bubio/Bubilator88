@@ -5,6 +5,9 @@
     <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>Bubilator88.Windows</RootNamespace>
+    <!-- Set the host name at build time. Renaming a published WinUI single-file
+         EXE breaks its registration-free activation manifest. -->
+    <AssemblyName>Bubilator88</AssemblyName>
     <!-- App version for local builds (shown in About). Release builds override
          it from the win-v* tag via -p:Version (release-windows.yml). -->
     <Version>1.1.0</Version>
