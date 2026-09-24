@@ -11,17 +11,22 @@ struct Bubilator88App: App {
     Window("Bubilator88", id: "main") {
       ContentView(viewModel: viewModel)
         .onAppear { appDelegate.viewModel = viewModel }
-        // `.b88script` double-click / "Open With" arrives here for both
-        // cold-launch and warm (already-running) opens. requestScriptPlayback
-        // plays immediately if the run loop is up, otherwise defers to
-        // ContentView.onAppear's consumePendingScript() (cold launch may
-        // fire onOpenURL before ROMs load). See AppDelegate for why this
-        // lives in SwiftUI rather than application(_:open:).
+        // `.b88script` / `.d88` double-click / "Open With" arrives here for
+        // both cold-launch and warm (already-running) opens. Both requests
+        // run immediately if the run loop is up, otherwise defer to
+        // ContentView.onAppear's consumePendingScript() / consumePendingLaunch()
+        // (cold launch may fire onOpenURL before ROMs load). See AppDelegate
+        // for why this lives in SwiftUI rather than application(_:open:).
         .onOpenURL { url in
           if url.scheme?.lowercased() == "bubilator88" {
             viewModel.requestLaunch(url: url)
           } else if url.pathExtension.lowercased() == "b88script" {
             viewModel.requestScriptPlayback(url: url)
+          } else if url.isFileURL, url.pathExtension.lowercased() == "d88" {
+            // Same path as `bubilator88://boot?arg=<file>`: validate, mount
+            // (a multi-image file puts its second image in drive 1), boot.
+            viewModel.requestLaunch(request: LaunchRequest(
+              disks: [.init(path: url.path(percentEncoded: false))]))
           }
         }
         .windowResizeBehavior(.disabled)

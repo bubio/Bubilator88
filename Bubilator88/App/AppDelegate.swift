@@ -107,7 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       name: NSWindow.willCloseNotification,
       object: nil
     )
-    // NOTE: document opens (`.b88script` double-click / "Open With") are
+    // NOTE: document opens (`.b88script` / `.d88` double-click / "Open With") are
     // handled by SwiftUI's `.onOpenURL` on the root scene, NOT here.
     //
     // We deliberately do NOT implement `application(_:open:)` nor install a
