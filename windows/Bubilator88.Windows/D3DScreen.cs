@@ -540,6 +540,16 @@ internal sealed unsafe class D3DScreen : IDisposable
         _ => "RealESRGAN_x2",   // AiQuality
     };
 
+    /// <summary>Release a downloaded model before its file is deleted.</summary>
+    public Task ReleaseAiModelAsync(string modelName)
+    {
+        if (_ai is null || _ai.ModelName != modelName) return Task.CompletedTask;
+        var old = _ai;
+        _ai = null;
+        _aiHasUpload = false;
+        return Task.Run(() => old.Dispose());
+    }
+
     /// <summary>Select the active video filter + scanline state (host menu).</summary>
     public void SetFilter(ScreenFilter filter, bool scanlineEnabled)
     {

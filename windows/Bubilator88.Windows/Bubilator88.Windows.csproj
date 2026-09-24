@@ -82,16 +82,10 @@
     </None>
   </ItemGroup>
 
-  <!-- AI upscale models, shared cross-platform from the repo's models\onnx\ folder
-       (the same canonical location a future Linux shell would use):
-         SRVGGNet_x2_lite.onnx  (Fast)      ] self-trained, committed via Git LFS
-         SRVGGNet_x2.onnx       (Balanced)  ]  (run `git lfs pull`)
-         RealESRGAN_x2.onnx     (Quality)   regenerable from public weights
-       Each is Linked to the output ROOT next to the exe, where AiUpscaler finds it
-       by name. Any missing/LFS-pointer model → that AI filter degrades to Bicubic.
-       Regenerate with scripts\convert_srvggnet_onnx.py / convert_realesrgan_onnx.py. -->
+  <!-- Fast and Balanced are bundled. Quality is downloaded on demand into
+       %LOCALAPPDATA%\Bubilator88\DownloadedModels. -->
   <ItemGroup>
-    <None Include="..\..\models\onnx\*.onnx">
+    <None Include="..\..\models\onnx\SRVGGNet_x2*.onnx">
       <Link>%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

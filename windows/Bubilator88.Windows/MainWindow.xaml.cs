@@ -256,6 +256,11 @@ public sealed partial class MainWindow : Window
 
             // Reflect the saved video filter / scanline state and push it to the
             // presenter (the screen was just created with the default filter).
+            if (_videoFilter == "AIQuality" && !AIModelStore.Shared.IsInstalled(AIModelStore.Quality))
+            {
+                _videoFilter = "None";
+                SaveSettings();
+            }
             SyncVideoFilterMenu();
             ApplyVideoFilter();
 
@@ -1300,6 +1305,13 @@ public sealed partial class MainWindow : Window
     {
         if (sender is FrameworkElement fe && fe.Tag is string tag)
         {
+            if (NormalizeFilter(tag) == "AIQuality" &&
+                !AIModelStore.Shared.IsInstalled(AIModelStore.Quality))
+            {
+                SyncVideoFilterMenu();
+                ShowQualityModelPanel();
+                return;
+            }
             _videoFilter = NormalizeFilter(tag);
             SaveSettings();
             ApplyVideoFilter();
@@ -1902,6 +1914,8 @@ public sealed partial class MainWindow : Window
 
     private void OnClosed(object sender, WindowEventArgs e)
     {
+        _aiDownloadCancellation?.Cancel();
+        _aiDownloadPanel = null;
         CompositionTarget.Rendering -= OnRendering;
         // Stop the emulation thread before anything it touches is disposed.
         _loop?.Dispose();

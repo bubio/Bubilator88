@@ -190,6 +190,39 @@ public sealed partial class MainWindow
         integer.Checked += (_, _) => { _fullscreenIntegerScaling = true; ApplyIntegerScaling(); SaveSettings(); caption.Text = FullscreenScalingCaption(); };
 
         panel.Children.Add(Section("Fullscreen", new[] { (FrameworkElement)fit, integer, caption }));
+
+        var model = AIModelStore.Quality;
+        var modelStatus = Caption(AIModelStore.Shared.IsInstalled(model)
+            ? "Quality (Real-ESRGAN x2): downloaded"
+            : "Quality (Real-ESRGAN x2): not downloaded");
+        var deleteModel = new Button
+        {
+            Content = "Delete downloaded model",
+            IsEnabled = AIModelStore.Shared.IsInstalled(model),
+        };
+        deleteModel.Click += async (_, _) =>
+        {
+            deleteModel.IsEnabled = false;
+            try
+            {
+                if (_videoFilter == "AIQuality")
+                {
+                    _videoFilter = "None";
+                    SaveSettings();
+                    SyncVideoFilterMenu();
+                    ApplyVideoFilter();
+                }
+                if (_screen is not null) await _screen.ReleaseAiModelAsync(model.Name);
+                AIModelStore.Shared.Remove(model);
+                modelStatus.Text = "Quality (Real-ESRGAN x2): not downloaded";
+            }
+            catch (Exception ex)
+            {
+                modelStatus.Text = $"Could not delete model: {ex.Message}";
+                deleteModel.IsEnabled = true;
+            }
+        };
+        panel.Children.Add(Section("AI Model", new FrameworkElement[] { modelStatus, deleteModel }));
         return panel;
     }
 

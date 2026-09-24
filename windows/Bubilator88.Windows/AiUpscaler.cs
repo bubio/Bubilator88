@@ -90,7 +90,7 @@ internal sealed class AiUpscaler : IDisposable
 
     /// <summary>
     /// Kick off model loading once (idempotent, non-blocking). Loads the bundled
-    /// model next to the exe (no external override lookup), mirroring macOS.
+    /// bundled model next to the exe, or an installed manifest model.
     /// On any failure the upscaler stays <see cref="State.Unavailable"/> so the
     /// renderer keeps using the Bicubic fallback — it never throws to the caller.
     /// </summary>
@@ -104,12 +104,10 @@ internal sealed class AiUpscaler : IDisposable
 
     private string? FindModel()
     {
-        // Bundle only (next to the exe, where the csproj copies models/onnx/*.onnx).
-        // An external %LOCALAPPDATA%\Bubilator88\Models\ override lookup was removed to
-        // match macOS: the models are always bundled, and a stale override there would
-        // silently shadow the shipped model.
         string path = Path.Combine(AppContext.BaseDirectory, _modelName + ".onnx");
-        return File.Exists(path) ? path : null;
+        if (File.Exists(path)) return path;
+        return _modelName == AIModelStore.Quality.Name
+            ? AIModelStore.Shared.InstalledPath(AIModelStore.Quality) : null;
     }
 
     private void LoadModel()
