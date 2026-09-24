@@ -587,14 +587,27 @@ if ($h -eq [IntPtr]::Zero) {
     if ($app.HasExited) {
         throw "アプリ起動スモークテスト失敗: 起動直後に終了しました (exit $($app.ExitCode))。§6b の prune で必要なファイルまで削っていないか確認してください。"
     }
-    $loadedNames = @($app.Modules | ForEach-Object { $_.ModuleName })
-    foreach ($required in @('Bubilator88C.dll', 'swiftCore.dll', 'Microsoft.UI.Xaml.dll')) {
-        if ($loadedNames -notcontains $required) {
-            Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
-            throw "アプリ起動スモークテスト失敗: $required がロードされていません。"
+    # WinUI がウィンドウを作った直後でも、エミュレータ初期化と Swift DLL の
+    # ロードは続いている。スナップショット一回だけでは起動順に左右される。
+    $requiredModules = @('Bubilator88C.dll', 'swiftCore.dll', 'Microsoft.UI.Xaml.dll')
+    $moduleDeadline = (Get-Date).AddSeconds(30)
+    $missingModules = $requiredModules
+    do {
+        $app.Refresh()
+        if ($app.HasExited) {
+            throw "アプリ起動スモークテスト失敗: DLL ロード待機中に終了しました (exit $($app.ExitCode))。"
         }
+        $loadedModules = @($app.Modules)
+        $loadedNames = @($loadedModules | ForEach-Object { $_.ModuleName })
+        $missingModules = @($requiredModules | Where-Object { $loadedNames -notcontains $_ })
+        if ($missingModules.Count -eq 0) { break }
+        Start-Sleep -Milliseconds 500
+    } while ((Get-Date) -lt $moduleDeadline)
+    if ($missingModules.Count -ne 0) {
+        Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
+        throw "アプリ起動スモークテスト失敗: $($missingModules -join ', ') がロードされていません (検出済み: $($loadedNames -join ', '))。"
     }
-    $coreModule = $app.Modules | Where-Object ModuleName -eq 'Bubilator88C.dll' | Select-Object -First 1
+    $coreModule = $loadedModules | Where-Object ModuleName -eq 'Bubilator88C.dll' | Select-Object -First 1
     $contentDir = Split-Path $coreModule.FileName -Parent
     foreach ($relative in @('SRVGGNet_x2_lite.onnx', 'SRVGGNet_x2.onnx', 'Assets\AppIcon.ico')) {
         if (-not (Test-Path (Join-Path $contentDir $relative))) {
