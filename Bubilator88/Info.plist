@@ -92,6 +92,18 @@
 				<string>com.bubio.bubilator88.timeline-script</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>D88 Disk Image</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.bubio.bubilator88.d88-disk-image</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>
