@@ -73,6 +73,9 @@ ASL_DIR=/path/to/asl-current python3 build.py      # → vramtest.d88
 
 `ASL_DIR` を指定しない場合は PATH 上の `asl` / `p2bin` を使います。
 
+U-1 の途中切り替えをゲーム画面に使った独立した起動ディスクは
+[`../rasterstory/README.md`](../rasterstory/README.md) にあります。
+
 Bubilator88 の BootTester でスクリーンショットを撮るには `shot.py` を使います
 （例: `python3 shot.py r.png --mode n88-v1s R w120` で V1S 起動 → R → 120 フレーム後の画面）。
 
