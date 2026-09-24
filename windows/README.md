@@ -164,13 +164,32 @@ pwsh scripts\build-windows-package.ps1 -Version 1.2.3
 
 | ZIP | 内容 | 利用者側の前提 |
 | --- | --- | --- |
-| `Bubilator88-Windows-x64-<Version>-SingleFile.zip` | 単一の `Bubilator88.Windows.exe`。初回起動時に依存ファイルを `%TEMP%\.net\` に展開する | Windows App SDK の別途インストールは不要 |
+| `Bubilator88-Windows-x64-<Version>-SingleFile.zip` | 単一の `Bubilator88.exe`。初回起動時に依存ファイルを `%TEMP%\.net\` に展開する | Windows App SDK の別途インストールは不要 |
 | `Bubilator88-Windows-x64-<Version>-SharedRuntime.zip` | アプリのフォルダ配布。WinUI 3 の共有ランタイムは含めない | [Windows App SDK 2.5.1 ランタイム (x64)](https://aka.ms/windowsappsdk/2.5/2.5.1/windowsappruntimeinstall-x64.exe) を導入。既に互換のある 2.5 系ランタイムがあれば再導入不要 |
 
 どちらの版も [Visual C++ 再頒布可能パッケージ (x64)](https://aka.ms/vc14/vc_redist.x64.exe)
 が必要。通常すでに入っているPCでは追加作業は不要。
-単一 EXE のファイル名は `Bubilator88.Windows.exe` のまま使う。2.5.1 の検証時に
+単一 EXE のファイル名は `Bubilator88.exe` のまま使う。2.5.1 の検証時に
 EXE 自体を別名へ変えると起動に失敗しており、ZIP の名前変更とは区別する。
+
+#### 共有ランタイム版を試す
+
+まず上記の Windows App SDK ランタイムと、必要なら Visual C++ 再頒布可能パッケージを
+導入する。すでに導入済みならこの手順は不要。次に
+`dist\Bubilator88-Windows-x64-<Version>-SharedRuntime.zip` を任意のフォルダへ
+展開し、そこにある `Bubilator88.exe` を実行する。`Bubilator88C.dll` や
+`swiftCore.dll` は EXE と同じフォルダに置いたままにする。ROM (`N88.ROM` 等) は従来どおり
+`%LOCALAPPDATA%\Bubilator88\` に配置する。配布物に ROM は含まない。
+ランタイムが未導入の PC では起動できないのが共有版の仕様。
+
+開発用に共有版だけを作り直す場合:
+
+```powershell
+pwsh scripts\build-windows-package.ps1 -Version 0.0.0-local -Variant SharedRuntime -SkipCoreBuild
+```
+
+`-SkipCoreBuild` は `windows\Bubilator88.Windows\native\Bubilator88C.dll` が
+既にある場合に使う。コアもビルドし直す場合は外す。
 
 軽量版は展開したフォルダの `INSTALL-RUNTIME.txt` に導入先を記載する。WinUI 3 の
 ランタイムはアプリごとではなく Windows App SDK の共有パッケージとして導入される。

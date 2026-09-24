@@ -87,6 +87,7 @@ if (-not (Test-Path (Join-Path $CoreDir 'Package.swift'))) {
 }
 $CoreDir = (Resolve-Path $CoreDir).Path
 $ShellDir = Join-Path $RepoRoot 'windows\Bubilator88.Windows'
+$ExeName = 'Bubilator88.exe'
 $NativeDir = Join-Path $ShellDir 'native'
 if (-not $OutputDir) { $OutputDir = Join-Path $RepoRoot 'dist' }
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
@@ -457,7 +458,7 @@ if ($Variant -eq 'SingleFile') {
             -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true `
             -p:Version=$Version -o $singleDir
         if ($LASTEXITCODE -ne 0) { throw "単一ファイル publish が失敗しました (exit $LASTEXITCODE)。" }
-        foreach ($sidecar in (Get-ChildItem $singleDir -File | Where-Object { $_.Name -ne 'Bubilator88.Windows.exe' })) {
+        foreach ($sidecar in (Get-ChildItem $singleDir -File | Where-Object { $_.Name -ne $ExeName })) {
             if ($sidecar.Extension -eq '.pdb') { Remove-Item $sidecar.FullName -Force }
             else { throw "単一ファイル publish に予期しない sidecar: $($sidecar.Name)" }
         }
@@ -472,7 +473,7 @@ if ($Variant -eq 'SingleFile') {
     @"
 Bubilator88 for Windows $Version — Shared Windows App SDK runtime edition
 
-Install Windows App SDK runtime 2.5.1 (x64) before starting Bubilator88.Windows.exe:
+Install Windows App SDK runtime 2.5.1 (x64) before starting Bubilator88.exe:
 https://aka.ms/windowsappsdk/2.5/2.5.1/windowsappruntimeinstall-x64.exe
 
 Microsoft Visual C++ Redistributable (x64) is also required:
@@ -561,7 +562,7 @@ if ($h -eq [IntPtr]::Zero) {
     # -----------------------------------------------------------------------
     Step "スモークテスト: アプリを起動してウィンドウ生成を確認"
 
-    $exePath = Join-Path $publishDir 'Bubilator88.Windows.exe'
+    $exePath = Join-Path $publishDir $ExeName
     $psi2 = New-Object System.Diagnostics.ProcessStartInfo
     $psi2.FileName = $exePath
     $psi2.WorkingDirectory = $publishDir

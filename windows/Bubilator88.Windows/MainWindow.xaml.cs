@@ -213,7 +213,7 @@ public sealed partial class MainWindow : Window
             LoadRecent();
 
             // Mount a disk passed on the command line (Explorer "Open with",
-            // drag-drop onto the exe, or `Bubilator88.Windows.exe game.d88`)
+            // drag-drop onto the exe, or `Bubilator88.exe game.d88`)
             // BEFORE the initial boot, so the machine boots from it. Menu mounts
             // during a session, by contrast, never reset (see MountSingleAsync).
             string? diskArg = FindDiskArgument();
