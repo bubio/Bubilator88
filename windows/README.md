@@ -18,6 +18,7 @@ windows/Bubilator88.Windows/
 ├── KeyMapping.cs             VirtualKey → PC-8801 15行マトリクス (US/JIS + テンキー擬似)
 ├── D3DScreen.cs              D3D11 + SwapChainPanel。フィルタ + スキャンライン + レターボックス
 ├── AiUpscaler.cs             ONNX Runtime + DirectML で AI x2 (3モデル切替、非同期ダブルバッファ)
+├── AIModelStore.cs           Quality モデルの任意ダウンロード・検証・保存
 ├── PixelMath.cs              無依存の画素演算ヘルパ (単体テスト対象)
 ├── XAudioSink.cs             XAudio2 で 44.1kHz ステレオ float をストリーム (適応レート制御)
 ├── ImageCodec.cs             スクリーンショット PNG/JPEG/HEIC エンコード
@@ -32,9 +33,10 @@ windows/Bubilator88.Windows/
 
 windows/Bubilator88.Windows.Tests/   シェルの純ロジック xUnit テスト (KeyMapping / PixelMath / FramePublisher など)
 
-AI モデル (3種) は全 OS 共有の `../../models/onnx/*.onnx` から csproj が出力直下へコピーする:
-  SRVGGNet_x2_lite.onnx (Fast) / SRVGGNet_x2.onnx (Balanced) / RealESRGAN_x2.onnx (Quality)
-いずれも Git LFS 管理。source-of-truth と再生成は `../../models/PROVENANCE.md`。
+Fast / Balanced の 2 モデルは `../../models/onnx/` から出力直下へコピーする。
+Quality (`RealESRGAN_x2.onnx`) は初回選択時に確認してからダウンロードし、
+`%LOCALAPPDATA%\Bubilator88\DownloadedModels\` に保存する。
+source-of-truth と再生成は `../../models/PROVENANCE.md`。
 ```
 
 コアは別リポジトリ [bubio/Bubilator88Core](https://github.com/bubio/Bubilator88Core)。
@@ -57,14 +59,14 @@ git lfs install            # マシンごとに一度 (LFS フックを有効化
 git clone git@github.com:bubio/Bubilator88.git
 git clone git@github.com:bubio/Bubilator88Core.git   # コア。Bubilator88 と同じ階層に置く
 cd Bubilator88
-git lfs pull               # AI モデル実体 (models/onnx/*.onnx, 計 ~67MB) を取得
+git lfs pull               # 同梱する Fast / Balanced モデルの実体を取得
 ```
 
 コアの置き場所を変えたときは `BUBILATOR88_CORE_DIR` に設定する
 (`scripts/build-windows-package.ps1` が見る)。
 リリースと CI は、macOS アプリの `Package.resolved` が固定している revision のコアを使う。
 
-> **LFS 注意**: AI モデルは `models/onnx/*.onnx`(Git LFS 管理)。`git lfs pull` 前は
+> **LFS 注意**: 同梱する Fast / Balanced モデルは Git LFS 管理。`git lfs pull` 前は
 > ~133 バイトの**ポインタ**なので、そのままビルドするとモデルが壊れたまま同梱される。
 > `git lfs pull` で実体に展開すること。特に **Fast/Balanced(SRVGGNet)は自前学習で
 > 公開重みが無い**ため、pull しないと再生成もできない(Quality は公開重みから再生成可)。
@@ -110,8 +112,8 @@ python scripts\convert_realesrgan_onnx.py     # RealESRGAN_x2plus.pth を自動D
   (`AiUpscaler.cs`)が行う。
 - Fast/Balanced(SRVGGNet)は公開重みが無いため `.pth`・`.onnx` とも LFS 必須。詳細と
   再生成手順は `..\..\models\PROVENANCE.md`(Balanced はコンパイル済 `.mlmodelc` から復元)。
-- csproj は `models\onnx\*.onnx` を出力直下へコピーする(欠けているモデルはそのフィルタが
-  Bicubic フォールバック)。
+- csproj は Fast / Balanced の 2 モデルだけを出力直下へコピーする。Quality は
+  `models-v1` の ONNX asset から任意ダウンロードする。いずれも未準備なら Bicubic フォールバック。
 
 ### 3. シェルをビルド & 実行
 
@@ -127,7 +129,7 @@ dotnet run -c Release -r win-x64
 >
 > **DLL 配置**: `None Include="native\..."` を `<Link>Bubilator88C.dll</Link>` で**出力直下**に
 > 置かないと P/Invoke が `ERROR_MOD_NOT_FOUND (0x8007007E)` で落ちる(native\ サブフォルダは
-> 探索対象外)。`models\onnx\*.onnx` も同様に出力直下へ Link コピーされる。
+> 探索対象外)。Fast / Balanced の ONNX モデルも出力直下へ Link コピーされる。
 
 > **アプリアイコン**: `Assets\AppIcon.ico` は `..\..\docs\AppIcon.png` から生成したマルチ
 > 解像度 ico (16〜256px)。`<ApplicationIcon>` で exe の Win32 リソースに焼き込まれる
@@ -156,7 +158,7 @@ dotnet test windows\Bubilator88.Windows.Tests\Bubilator88.Windows.Tests.csproj
 pwsh scripts\build-windows-package.ps1 -Version 1.2.3
 ```
 
-コア DLL のビルド → AI モデル (Git LFS) の実体化確認 → `dotnet publish`(win-x64,
+コア DLL のビルド → Fast / Balanced モデル (Git LFS) の実体化確認 → `dotnet publish`(win-x64,
 self-contained)→ Swift ランタイム DLL のバンドル → 未使用ファイルの prune →
 スモークテスト(Swift を PATH から外した状態で `Bubilator88C.dll` がロードでき、
 かつアプリが起動してウィンドウが出るかを検証)→ zip 化 + SHA256
@@ -207,11 +209,16 @@ Swift toolchain が入っていないマシンでもそのまま動く(ROM は�
 > 瞬間に遅延ロードされる DLL で、現状 XAML・コードとも `TextBox` 系は未使用だが、
 > UI を足した途端に落ちる類の削除なのでサイズ以上にリスクが大きい。
 
-#### なぜ「EXE 1 ファイル」にできないか (WindowsAppSDK 1.6 時点)
+#### 単一 EXE 配布の検証 (Windows App SDK 1.6 → 2.5.1)
+
+現在のリリーススクリプトは **Windows App SDK 1.6 系のフォルダ配布**を使う。
+以下の 1.6 系の失敗は当時の検証結果であり、SDK 全般の制約ではない。
+
+##### 1.6 系での失敗
 
 `PublishSingleFile=true` でのビルド自体は通り、160MB 程度の単一 exe が生成される
 (WindowsAppSDK も `Microsoft.WindowsAppSDK.SingleFile.targets` で明示的にサポート
-していると謳っている)。**が、unpackaged + self-contained の構成では起動しない**:
+している)。**しかし、1.6 系では unpackaged + self-contained の構成で起動しなかった**:
 
 ```
 System.Runtime.InteropServices.COMException (0x80040111): ClassFactory は要求されたクラスを提供できません
@@ -219,7 +226,7 @@ System.Runtime.InteropServices.COMException (0x80040111): ClassFactory は要求
    at Microsoft.UI.Xaml.Application.Start(...)
 ```
 
-原因は WinUI3 の**登録不要 (reg-free) WinRT 活性化**。`obj\...\Manifests\app.manifest`
+当時の調査では WinUI3 の**登録不要 (reg-free) WinRT 活性化**が原因と推定した。`obj\...\Manifests\app.manifest`
 に 1808 個の `<winrtv1:activatableClass>` が生成され、それぞれ
 `<asmv3:file name="Microsoft.ui.xaml.dll">` のような**ファイル名だけ**の参照になっている。
 SxS のアクティベーションコンテキストはこれを **exe があるディレクトリ**基準で解決する
@@ -231,12 +238,42 @@ SxS のアクティベーションコンテキストはこれを **exe がある
 
 前提条件 (`EnableMsixTooling` / `WindowsPackageType=None` /
 `IncludeAllContentForSelfExtract` / `WindowsAppSdkUndockedRegFreeWinRTInitialize`) は
-すべて満たした上でこの結果なので、**アーキテクチャ上の制約ではなく 1.6 の不具合**の
-可能性がある。WindowsAppSDK を上げたときは再検証する価値がある。
+すべて満たした上での結果だった。
 
-現状の配布形態は**「exe + 同階層の DLL 群」のフォルダ配布**が前提となる。
-どうしても 1 ファイルで配りたい場合は、この発行フォルダを自己解凍 exe (7-Zip SFX 等)
-で包むか、初回起動時に展開する薄いランチャ exe を別途用意するしかない。
+##### 2.5.1 での再検証 (2026-09-24、Windows 11 / win-x64)
+
+ソースを独立した検証用ディレクトリへコピーし、Windows App SDK を `2.5.1` に固定。
+`PublishSingleFile=true`、`IncludeAllContentForSelfExtract=true`、`SelfContained=true` を
+追加して `dotnet publish -c Release -r win-x64` を実行した。既存の
+`WindowsPackageType=None`、`WindowsAppSDKSelfContained=true`、`EnableMsixTooling=true`
+は維持。**単一 EXE の発行と起動は成功した**。Swift toolchain のランタイムを PATH から
+外した状態で `Bubilator88` のメインウィンドウが開き、Swift コア DLL・`swiftCore.dll`・
+D3D11 のロードと、コアの実行ログを確認した。1.6 系の `0x80040111` は再現しなかった。
+
+ただし、最初の発行ではウィンドウだけが開き、Swift コアはロードされなかった。
+現行スクリプトは `dotnet publish` **後**に Swift ランタイム DLL をコピーするため、
+単一 EXE には入らない。検証では、現行フォルダ配布物に含まれる Swift 依存 DLL 17 個を
+発行 **前**に `Content` として出力直下へ組み込んで解消した。モデル 3 個も EXE に含まれ、
+起動時の展開先に存在することを確認した。
+
+この時点で単一ファイル版をリリースするには、次の対応と検証が必要:
+
+- `AiUpscaler.cs` のモデル探索と `MainWindow.xaml.cs` のタイトルバーアイコン探索は
+  `AppContext.BaseDirectory` (EXE の場所) を見るが、モデルと `Assets/AppIcon.ico` は
+  `%TEMP%\.net\Bubilator88.Windows\<hash>\` に展開される。展開先を参照できるようにし、
+  AI フィルタ 3 種とアイコン表示を実操作で確認する。
+- EXE を別名へ変更すると起動直後に `0xC000027B` で終了した。配布時の名前変更を避ける
+  だけでなく、ダウンロード時の自動改名も想定して対処または配布方法を決める。
+  同様の報告: <https://github.com/microsoft/WindowsAppSDK/issues/6248>。
+- ディスク操作、音声、設定、セーブ状態、AI 推論は未検証。単一ファイル起動時の展開と
+  遅延ロードを含めて回帰確認する。
+
+検証用 EXE は **416.7 MiB**、それだけを ZIP 圧縮すると **198.1 MiB**。現行の
+prune 済みフォルダ版 ZIP (**165 MB**) とは SDK バージョンと削減処理が異なるため、
+単純なサイズ比較はできないが、単一ファイル化は容量削減策ではない。公式手順も
+依存ファイルを初回起動時に一時ディレクトリへ展開する方式としている:
+<https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/unpackage-winui-app#single-file-exe>。
+検証用のソースと発行物は削除済み。現行リリース設定・スクリプトは未変更。
 
 ## 実装済み機能
 
@@ -244,8 +281,15 @@ SxS のアクティベーションコンテキストはこれを **exe がある
 - **映像**: D3D11。None/Linear/Bicubic/CRT/xBRZ/Enhanced/**AI (Fast/Balanced/Quality)** の
   フィルタ + スキャンライン。ウィンドウ ×1/×2/×4(固定・永続)、フルスクリーン(整数スケーリング切替)、レターボックス。
 - **AI アップスケール**: ONNX Runtime + DirectML で 3 モデル(Fast=SRVGGNet_x2_lite /
-  Balanced=SRVGGNet_x2 / Quality=RealESRGAN_x2)を切替(640×400→1280×800)。フィルタ選択で
-  モデルを載せ替え。非同期ダブルバッファ、未準備/欠落時は Bicubic フォールバック(macOS パリティ)。
+  Balanced=SRVGGNet_x2 / Quality=RealESRGAN_x2)を切替(640×400→1280×800)。Fast / Balanced は同梱。
+  Quality は初回選択時に確認、ダウンロード進捗、再試行・キャンセルを表示。サイズと SHA-256 を
+  検証してから保存し、設定画面で削除できる。保存済みフィルターのモデルが起動時に欠けていれば
+  None に戻す。未準備時は Bicubic フォールバック。
+
+Quality のダウンロード先は `models-v1/RealESRGAN_x2.onnx`。2026-09-24 に公開し、
+公開 URL から取得したファイルのサイズと SHA-256 がマニフェストと一致することを確認した。
+ファイルは 67,072,862 bytes、SHA-256
+`74786f9a2680d8c887f51c74131b2233d0f8910c5e5307e1beee71f69a88a4f0`。
 - **音声**: XAudio2 リングバッファ + 適応レート制御。**音声サブフレーム化**(Emulation Speed
   x1 時、1フレームを `b88_run_frame_slice` で4スライスに分割し、スライス毎に音声を drain。
   1バーストが ~16.7ms → ~4.5ms に縮み、短めのバッファ設定でのアンダーラン耐性が向上。

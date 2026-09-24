@@ -157,7 +157,7 @@ if (-not $SkipModelCheck) {
     $modelsDir = Join-Path $RepoRoot 'models\onnx'
     # LFS 未 pull のポインタファイルは ~130 バイトなので、実体化の目安に十分な閾値。
     $minRealSizeBytes = 4096
-    foreach ($m in @('SRVGGNet_x2_lite.onnx', 'SRVGGNet_x2.onnx', 'RealESRGAN_x2.onnx')) {
+    foreach ($m in @('SRVGGNet_x2_lite.onnx', 'SRVGGNet_x2.onnx')) {
         $p = Join-Path $modelsDir $m
         if (-not (Test-Path $p)) {
             throw "$p が見つかりません。'git lfs pull' を実行してください (-SkipModelCheck で無視可)。"
