@@ -17,56 +17,17 @@ extension EmulatorViewModel {
     // Create directory if needed
     try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
 
-    // N88-BASIC ROM
-    let n88Path = appSupport.appending(component: "N88.ROM")
-    if let data = try? Data(contentsOf: n88Path) {
-      pc88.loadROM(.n88Basic, data: Array(data))
+    let roms = BIOSFiles.load(from: appSupport)
+    for (rom, data) in roms {
+      pc88.loadROM(rom, data: data)
+    }
+    if roms.contains(where: { $0.0 == .n88Basic }) {
       romLoaded = true
     } else {
       showAlert(
         title: String(localized: "ROM Not Found", comment: ""),
         message: "N88.ROM not found in \(appSupport.path)"
       )
-    }
-
-    // N-BASIC ROM (optional — needed for N88-BASIC boot sequence)
-    if let data = try? Data(contentsOf: appSupport.appending(component: "N80.ROM")) {
-      pc88.loadROM(.nBasic, data: Array(data))
-    }
-
-    // Font ROM (optional — built-in ASCII font used as fallback)
-    let fontPath = appSupport.appending(component: "FONT.ROM")
-    if let data = try? Data(contentsOf: fontPath) {
-      pc88.loadROM(.font, data: Array(data))
-    }
-
-    // Kanji ROM Level 1 (optional)
-    let kanji1Path = appSupport.appending(component: "KANJI1.ROM")
-    if let data = try? Data(contentsOf: kanji1Path) {
-      pc88.loadROM(.kanji1, data: Array(data))
-    }
-
-    // Kanji ROM Level 2 (optional)
-    let kanji2Path = appSupport.appending(component: "KANJI2.ROM")
-    if let data = try? Data(contentsOf: kanji2Path) {
-      pc88.loadROM(.kanji2, data: Array(data))
-    }
-
-    // DISK.ROM (sub-CPU firmware, 8KB)
-    let diskROMPath = appSupport.appending(component: "DISK.ROM")
-    if let data = try? Data(contentsOf: diskROMPath) {
-      pc88.loadROM(.disk, data: Array(data))
-    }
-
-    // N88 Extended ROM banks (0-3, 8KB each)
-    for bank in 0..<4 {
-      let primary = appSupport.appending(component: "N88_\(bank).ROM")
-      let alt = appSupport.appending(component: "N88EXT\(bank).ROM")
-      if let data = try? Data(contentsOf: primary) {
-        pc88.loadROM(.n88Ext(bank: bank), data: Array(data))
-      } else if let data = try? Data(contentsOf: alt) {
-        pc88.loadROM(.n88Ext(bank: bank), data: Array(data))
-      }
     }
 
     // Install extended RAM (capacity from Settings; default 128KB).

@@ -9,6 +9,7 @@
 			<key>QLSupportedContentTypes</key>
 			<array>
 				<string>com.bubio.bubilator88.save-state</string>
+				<string>com.bubio.bubilator88.d88-disk-image</string>
 			</array>
 			<key>QLThumbnailMinimumDimension</key>
 			<integer>0</integer>
