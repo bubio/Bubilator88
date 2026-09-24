@@ -20,8 +20,8 @@
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
 
-    <!-- Unpackaged, self-contained: ships as a plain exe + Bubilator88C.dll,
-         matching the "native exe + DLL" deployment goal. -->
+    <!-- The package script selects self-contained or shared Windows App SDK
+         at publish time. Local builds retain the existing self-contained mode. -->
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
 
@@ -44,7 +44,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.*" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.*" />
     <!-- Thin native bindings: D3D11 + DXGI + runtime HLSL compile + XAudio2. -->
     <PackageReference Include="Vortice.Direct3D11" Version="3.6.*" />
@@ -80,6 +80,15 @@
       <Link>Bubilator88C.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <!-- Single-file publishing must see Swift dependencies before bundling. The
+       package script stages the PE import closure here and removes it after. -->
+  <ItemGroup Condition="'$(PublishSingleFile)' == 'true'">
+    <Content Include="singlefile-runtime\*.dll">
+      <Link>%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <!-- Fast and Balanced are bundled. Quality is downloaded on demand into

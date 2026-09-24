@@ -104,8 +104,8 @@ internal sealed class AiUpscaler : IDisposable
 
     private string? FindModel()
     {
-        string path = Path.Combine(AppContext.BaseDirectory, _modelName + ".onnx");
-        if (File.Exists(path)) return path;
+        string? path = DeploymentFiles.Find(_modelName + ".onnx");
+        if (path is not null) return path;
         return _modelName == AIModelStore.Quality.Name
             ? AIModelStore.Shared.InstalledPath(AIModelStore.Quality) : null;
     }

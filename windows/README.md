@@ -158,21 +158,46 @@ dotnet test windows\Bubilator88.Windows.Tests\Bubilator88.Windows.Tests.csproj
 pwsh scripts\build-windows-package.ps1 -Version 1.2.3
 ```
 
-コア DLL のビルド → Fast / Balanced モデル (Git LFS) の実体化確認 → `dotnet publish`(win-x64,
-self-contained)→ Swift ランタイム DLL のバンドル → 未使用ファイルの prune →
-スモークテスト(Swift を PATH から外した状態で `Bubilator88C.dll` がロードでき、
-かつアプリが起動してウィンドウが出るかを検証)→ zip 化 + SHA256
-算出、まで一括で行う。`dist\Bubilator88-Windows-x64-<Version>.zip` に出力され、
-Swift toolchain が入っていないマシンでもそのまま動く(ROM は同梱しない、従来通り
-ユーザが `%LOCALAPPDATA%\Bubilator88\` に配置)。CI (`.github/workflows/release-windows.yml`)
-もこのスクリプトを呼ぶ。主なオプション: `-SkipCoreBuild`(既存 DLL を使い回す)/
-`-RunCoreTests`(`swift test` を先に実行)/ `-SwiftRuntimeBin`(Runtimes ディレクトリの
-自動検出に失敗する場合の明示指定)/ `-SkipSmokeTest`(ロード検証とアプリ起動検証を
-飛ばす。GUI を起動できない環境向け)。
+コア DLL をビルドし、Fast / Balanced モデル (Git LFS) を確認してから、次の2つを
+同じ Windows App SDK **2.5.1** で発行する。どちらも .NET 10 と必要な Swift DLL を
+同梱し、ROM と任意ダウンロードの Quality モデルは含まない。
+
+| ZIP | 内容 | 利用者側の前提 |
+| --- | --- | --- |
+| `Bubilator88-Windows-x64-<Version>-SingleFile.zip` | 単一の `Bubilator88.Windows.exe`。初回起動時に依存ファイルを `%TEMP%\.net\` に展開する | Windows App SDK の別途インストールは不要 |
+| `Bubilator88-Windows-x64-<Version>-SharedRuntime.zip` | アプリのフォルダ配布。WinUI 3 の共有ランタイムは含めない | [Windows App SDK 2.5.1 ランタイム (x64)](https://aka.ms/windowsappsdk/2.5/2.5.1/windowsappruntimeinstall-x64.exe) を導入。既に互換のある 2.5 系ランタイムがあれば再導入不要 |
+
+どちらの版も [Visual C++ 再頒布可能パッケージ (x64)](https://aka.ms/vc14/vc_redist.x64.exe)
+が必要。通常すでに入っているPCでは追加作業は不要。
+単一 EXE のファイル名は `Bubilator88.Windows.exe` のまま使う。2.5.1 の検証時に
+EXE 自体を別名へ変えると起動に失敗しており、ZIP の名前変更とは区別する。
+
+軽量版は展開したフォルダの `INSTALL-RUNTIME.txt` に導入先を記載する。WinUI 3 の
+ランタイムはアプリごとではなく Windows App SDK の共有パッケージとして導入される。
+同一の 2.5 系内では更新されたランタイムをブートストラッパーが選択するが、別の
+メジャー/マイナー系列だけを導入済みでも、このアプリの 2.5 系依存を満たさない。
+ランタイムは各アプリの ZIP に含めないので、複数アプリ・更新間で共有できる。
+
+スクリプトは依存 Swift DLL の選別、未使用ファイルの削除、起動スモークテスト、ZIP と
+SHA-256 の算出も行う。`-Variant SingleFile` または `-Variant SharedRuntime` で片方だけ
+作成できる。主なオプション: `-SkipCoreBuild` (既存 DLL を使い回す)、`-RunCoreTests`、
+`-SwiftRuntimeBin`、`-SkipSmokeTest` (GUI を起動できない環境向け)。CI と Windows
+リリースワークフローも両方を作り、リリースには2つの ZIP を添付する。共有版の
+起動スモークテスト前には CI が Windows App SDK 2.5.1 ランタイムを導入する。
+
+2026-09-24 のローカル検証では、単一 EXE ZIP が **138.7 MiB**、共有ランタイム ZIP が
+**87.9 MiB**。後者は前者より **50.8 MiB** 小さい。単一 EXE は Swift を PATH から外して
+起動し、展開先のコア DLL・Swift DLL・Fast モデル・アイコンの存在を確認した。
+共有ランタイム版も公式ランタイム導入後に Swift を PATH から外して起動し、
+`Microsoft.UI.Xaml.dll` を共有の `WindowsApps` ディレクトリから、コアと Swift DLL を
+配布フォルダからロードすることを確認した。AI 推論・ディスク操作等の操作回帰は
+この発行テストには含まない。
 
 #### 配布物のスリム化 (§6 / §6b)
 
-配布フォルダのファイル数とサイズを抑えるため、スクリプトは 2 段階で削る:
+共有ランタイム版のファイル数とサイズを抑えるため、スクリプトは 2 段階で削る。
+単一 EXE 版では Swift DLL の依存クロージャだけを発行前に取り込み、展開が必要な
+Windows App SDK のファイルは EXE に内包する:
 
 1. **Swift ランタイムは依存クロージャのみ** — `Runtimes\...\usr\bin\*.dll` を全部
    コピーせず、`Bubilator88C.dll` の PE インポートテーブルを `llvm-objdump -p`
@@ -202,16 +227,17 @@ Swift toolchain が入っていないマシンでもそのまま動く(ROM は�
    安全側 (= 同梱する) に倒れるので、機能追加時に気づかず壊れることはない。
 
 削りすぎていないかは §7 のスモークテスト(実際に exe を起動してメインウィンドウが
-出るまで確認する)が検出する。結果: **414 エントリ / 353MB → 287 エントリ / 324MB**
-(zip は 181MB → 165MB)。
+出るまで確認する)が検出する。旧 1.6 系フォルダ版の測定では
+**414 エントリ / 353MB → 287 エントリ / 324MB** (zip は 181MB → 165MB)。
+現行の共有版は Windows App SDK 自体を同梱しない。
 
-> **`WinUIEdit.dll` (3.4MB) はあえて残している**。`TextBox` / `RichEditBox` を使った
+> **旧フォルダ版では `WinUIEdit.dll` (3.4MB) をあえて残していた**。`TextBox` / `RichEditBox` を使った
 > 瞬間に遅延ロードされる DLL で、現状 XAML・コードとも `TextBox` 系は未使用だが、
 > UI を足した途端に落ちる類の削除なのでサイズ以上にリスクが大きい。
 
 #### 単一 EXE 配布の検証 (Windows App SDK 1.6 → 2.5.1)
 
-現在のリリーススクリプトは **Windows App SDK 1.6 系のフォルダ配布**を使う。
+現在のリリーススクリプトは **Windows App SDK 2.5.1** で単一 EXE 版と共有ランタイム版を作る。
 以下の 1.6 系の失敗は当時の検証結果であり、SDK 全般の制約ではない。
 
 ##### 1.6 系での失敗
@@ -256,7 +282,7 @@ D3D11 のロードと、コアの実行ログを確認した。1.6 系の `0x800
 発行 **前**に `Content` として出力直下へ組み込んで解消した。モデル 3 個も EXE に含まれ、
 起動時の展開先に存在することを確認した。
 
-この時点で単一ファイル版をリリースするには、次の対応と検証が必要:
+当時、単一ファイル版をリリースするには、次の対応と検証が必要だった:
 
 - `AiUpscaler.cs` のモデル探索と `MainWindow.xaml.cs` のタイトルバーアイコン探索は
   `AppContext.BaseDirectory` (EXE の場所) を見るが、モデルと `Assets/AppIcon.ico` は
@@ -273,7 +299,7 @@ prune 済みフォルダ版 ZIP (**165 MB**) とは SDK バージョンと削減
 単純なサイズ比較はできないが、単一ファイル化は容量削減策ではない。公式手順も
 依存ファイルを初回起動時に一時ディレクトリへ展開する方式としている:
 <https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/unpackage-winui-app#single-file-exe>。
-検証用のソースと発行物は削除済み。現行リリース設定・スクリプトは未変更。
+この検証用のソースと発行物は削除済み。現行の 2.5.1 対応については上の §5 を参照。
 
 ## 実装済み機能
 

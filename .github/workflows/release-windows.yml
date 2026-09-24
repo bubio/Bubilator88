@@ -34,7 +34,8 @@ jobs:
     timeout-minutes: 60
     outputs:
       version: ${{ steps.version.outputs.version }}
-      sha256: ${{ steps.package.outputs.sha256 }}
+      single_sha256: ${{ steps.package.outputs.single_sha256 }}
+      shared_sha256: ${{ steps.package.outputs.shared_sha256 }}
 
     steps:
       - uses: actions/checkout@v7
@@ -77,6 +78,14 @@ jobs:
           "ref=$ref"         >> $env:GITHUB_OUTPUT
           "version=$version" >> $env:GITHUB_OUTPUT
 
+      - name: Install shared Windows App SDK runtime for smoke test
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP 'WindowsAppRuntimeInstall-x64.exe'
+          Invoke-WebRequest 'https://aka.ms/windowsappsdk/2.5/2.5.1/windowsappruntimeinstall-x64.exe' -OutFile $installer
+          & $installer --quiet
+          if ($LASTEXITCODE -ne 0) { throw "Windows App SDK runtime install failed: $LASTEXITCODE" }
+
       - name: Build & package
         id: package
         shell: pwsh
@@ -89,15 +98,19 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.package.outputs.zip_name }}
-          path: ${{ steps.package.outputs.zip_path }}
+          name: Bubilator88-Windows-${{ steps.version.outputs.version }}
+          path: |
+            ${{ steps.package.outputs.single_zip_path }}
+            ${{ steps.package.outputs.shared_zip_path }}
           retention-days: 14
 
       - name: Attach zip to Release
         if: github.event_name != 'workflow_dispatch'
         uses: softprops/action-gh-release@v3
         with:
-          files: ${{ steps.package.outputs.zip_path }}
+          files: |
+            ${{ steps.package.outputs.single_zip_path }}
+            ${{ steps.package.outputs.shared_zip_path }}
           tag_name: ${{ steps.version.outputs.ref }}
           draft: false
           prerelease: false
