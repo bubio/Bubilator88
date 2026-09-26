@@ -8,86 +8,88 @@ struct DebugCommands: Commands {
 
   var body: some Commands {
     CommandMenu("Develop") {
-      Button("Debugger…") {
-        openWindow(id: "debugger")
-      }
-      .keyboardShortcut("d", modifiers: [.command, .shift])
+      Group {
+        Button("Debugger…") {
+          openWindow(id: "debugger")
+        }
+        .keyboardShortcut("d", modifiers: [.command, .shift])
 
-      Divider()
+        Divider()
 
-      #if DEBUG
-      Button("Dump Text DMA Snapshot") {
-        viewModel.dumpTextDMASnapshotToDefaultPath()
-      }
-      #endif
-      Button("Dump Memory…") {
-        viewModel.dumpMemoryViaSavePanel()
-      }
+        #if DEBUG
+        Button("Dump Text DMA Snapshot") {
+          viewModel.dumpTextDMASnapshotToDefaultPath()
+        }
+        #endif
+        Button("Dump Memory…") {
+          viewModel.dumpMemoryViaSavePanel()
+        }
 
-      Divider()
+        Divider()
 
-      Button("Play Script…") {
-        viewModel.openAndPlayScript()
-      }
-      .disabled(viewModel.isRecordingScript)
-      if viewModel.isPlayingScript {
-        Button("Stop Script Playback") {
-          viewModel.cancelScriptPlayback()
+        Button("Play Script…") {
+          viewModel.openAndPlayScript()
+        }
+        .disabled(viewModel.isRecordingScript)
+        if viewModel.isPlayingScript {
+          Button("Stop Script Playback") {
+            viewModel.cancelScriptPlayback()
+          }
+        }
+
+        if !viewModel.isRecordingScript {
+          Button("Record Script…") {
+            viewModel.startScriptRecording()
+          }
+          .disabled(viewModel.isPlayingScript)
+        } else {
+          Button("Stop Recording and Save…") {
+            viewModel.stopScriptRecordingAndSave()
+          }
+        }
+
+        Divider()
+
+        Button("Open BIOS ROM Folder") {
+          Self.openBIOSROMFolder()
+        }
+
+        Button("Reset Settings") {
+          Self.resetSettings()
+        }
+
+        Divider()
+
+        Toggle("Show Text Layer", isOn: $viewModel.debugTextLayerEnabled)
+
+        Toggle("Exempt Text from Scanlines", isOn: $viewModel.debugTextScanlineExempt)
+          .disabled(!viewModel.effectiveScanlineEnabled)
+
+        Divider()
+
+        Toggle("FM", isOn: $viewModel.fmEnabled)
+
+        Toggle("SSG", isOn: $viewModel.ssgEnabled)
+
+        Toggle("ADPCM", isOn: $viewModel.adpcmEnabled)
+
+        Toggle("Rhythm", isOn: $viewModel.rhythmEnabled)
+
+        Divider()
+
+        Toggle("Preserve Pitch at Fast Speeds", isOn: $viewModel.pitchPreservingSpeed)
+
+        Toggle("Force YM2203 (OPN)", isOn: $viewModel.forceOPNMode)
+
+        Divider()
+
+        Picker("CPU Overclock", selection: $viewModel.cpuOverclock) {
+          Text("1× (Real)").tag(1)
+          Text("2×").tag(2)
+          Text("4×").tag(4)
         }
       }
-
-      if !viewModel.isRecordingScript {
-        Button("Record Script…") {
-          viewModel.startScriptRecording()
-        }
-        .disabled(viewModel.isPlayingScript)
-      } else {
-        Button("Stop Recording and Save…") {
-          viewModel.stopScriptRecordingAndSave()
-        }
-      }
-
-      Divider()
-
-      Button("Open BIOS ROM Folder") {
-        Self.openBIOSROMFolder()
-      }
-
-      Button("Reset Settings") {
-        Self.resetSettings()
-      }
-
-      Divider()
-
-      Toggle("Show Text Layer", isOn: $viewModel.debugTextLayerEnabled)
-
-      Toggle("Exempt Text from Scanlines", isOn: $viewModel.debugTextScanlineExempt)
-        .disabled(!viewModel.effectiveScanlineEnabled)
-
-      Divider()
-
-      Toggle("FM", isOn: $viewModel.fmEnabled)
-
-      Toggle("SSG", isOn: $viewModel.ssgEnabled)
-
-      Toggle("ADPCM", isOn: $viewModel.adpcmEnabled)
-
-      Toggle("Rhythm", isOn: $viewModel.rhythmEnabled)
-
-      Divider()
-
-      Toggle("Preserve Pitch at Fast Speeds", isOn: $viewModel.pitchPreservingSpeed)
-
-      Toggle("Force YM2203 (OPN)", isOn: $viewModel.forceOPNMode)
-
-      Divider()
-
-      Picker("CPU Overclock", selection: $viewModel.cpuOverclock) {
-        Text("1× (Real)").tag(1)
-        Text("2×").tag(2)
-        Text("4×").tag(4)
-      }
-
+      .disabled(!viewModel.allows(.develop))
     }
   }
 

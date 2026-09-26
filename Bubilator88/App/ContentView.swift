@@ -228,7 +228,8 @@ struct ContentView: View {
   }
 
   private func handleDiskDrop(providers: [NSItemProvider]) -> Bool {
-    guard providers.count == 1, let provider = providers.first else { return false }
+    guard viewModel.allows(.media),
+          providers.count == 1, let provider = providers.first else { return false }
     let acceptedExts: Set<String> = [
       "d88", "d77", "2d", "2hd",
       "m3u", "m3u8",

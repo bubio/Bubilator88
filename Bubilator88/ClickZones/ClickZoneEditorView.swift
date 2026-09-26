@@ -66,6 +66,11 @@ struct ClickZoneEditorView: View {
       stopRecording()
       viewModel.endClickZoneEditing()
     }
+    // Turning the PC-8801 mouse on from Settings makes click zones unusable,
+    // so the session cannot go on.
+    .onChange(of: Settings.shared.mouseEnabled) { _, enabled in
+      if enabled { dismissWindow(id: Self.windowID) }
+    }
     .onChange(of: viewModel.selectedClickZoneID) {
       stopRecording()
       selectedSteps.removeAll()

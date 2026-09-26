@@ -336,6 +336,16 @@
         }
       }
     },
+    "Close the click zone editor first." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先にクリック領域の編集ウィンドウを閉じてください。"
+          }
+        }
+      }
+    },
     "Cursor Keys + RETURN" : {
       "comment" : "Click-zone preset name, from ClickZonePresets.json",
       "localizations" : {
@@ -604,6 +614,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "領域はまだありません。"
+          }
+        }
+      }
+    },
+    "Not Available Now" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在は使用できません"
           }
         }
       }

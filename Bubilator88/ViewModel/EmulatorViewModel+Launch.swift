@@ -43,6 +43,7 @@ extension EmulatorViewModel {
   /// Runs immediately once the draw loop is up, otherwise defers to
   /// `consumePendingLaunch()` in `ContentView.onAppear`.
   func requestLaunch(request: LaunchRequest) {
+    guard checkAllowed(.media) else { return }
     if isRunning && metalView != nil {
       performLaunch(request)
     } else {

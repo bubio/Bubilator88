@@ -38,6 +38,7 @@ extension EmulatorViewModel {
   /// nothing boots. So: replay immediately if the draw loop is running,
   /// otherwise defer to onAppear.
   func requestScriptPlayback(url: URL) {
+    guard checkAllowed(.script) else { return }
     if isRunning && metalView != nil {
       playScript(url: url)
     } else {

@@ -51,13 +51,17 @@ struct Bubilator88App: App {
 
       CommandGroup(replacing: .undoRedo) { }
       CommandGroup(replacing: .pasteboard) {
-        Button("Copy Screen") { viewModel.copyScreenshotToClipboard() }
-          .keyboardShortcut("c", modifiers: .command)
-        Button("Copy Text") { viewModel.copyTextToPasteboard() }
-          .keyboardShortcut("c", modifiers: [.command, .shift])
+        Group {
+          Button("Copy Screen") { viewModel.copyScreenshotToClipboard() }
+            .keyboardShortcut("c", modifiers: .command)
+          Button("Copy Text") { viewModel.copyTextToPasteboard() }
+            .keyboardShortcut("c", modifiers: [.command, .shift])
+        }
+        .disabled(!viewModel.allows(.capture))
         Divider()
         Button("Paste Text") { viewModel.pasteTextFromPasteboard() }
           .keyboardShortcut("v", modifiers: .command)
+          .disabled(!viewModel.allows(.input))
       }
       CommandGroup(replacing: .textEditing) { }
 

@@ -6,19 +6,22 @@ struct ControlCommands: Commands {
 
   var body: some Commands {
     CommandMenu("Control") {
-      Button {
-        viewModel.volumeUp()
-      } label: {
-        Label("Increase Volume", systemImage: "speaker.plus")
-      }
-      .keyboardShortcut(.upArrow, modifiers: .command)
+      Group {
+        Button {
+          viewModel.volumeUp()
+        } label: {
+          Label("Increase Volume", systemImage: "speaker.plus")
+        }
+        .keyboardShortcut(.upArrow, modifiers: .command)
 
-      Button {
-        viewModel.volumeDown()
-      } label: {
-        Label("Decrease Volume", systemImage: "speaker.minus")
+        Button {
+          viewModel.volumeDown()
+        } label: {
+          Label("Decrease Volume", systemImage: "speaker.minus")
+        }
+        .keyboardShortcut(.downArrow, modifiers: .command)
       }
-      .keyboardShortcut(.downArrow, modifiers: .command)
+      .disabled(!viewModel.allows(.audio))
 
       Divider()
 
@@ -26,6 +29,7 @@ struct ControlCommands: Commands {
         Text("Romaji Kana Input")
       }
       .keyboardShortcut("k", modifiers: [.command, .option])
+      .disabled(!viewModel.allows(.input))
 
       Divider()
 
@@ -37,6 +41,7 @@ struct ControlCommands: Commands {
       .pickerStyle(.inline)
       .disabled(viewModel.videoRecorder.isRecording
         || viewModel.audioRecorder.isRecording)
+      .disabled(!viewModel.allows(.emulation))
 
       Divider()
 
@@ -50,6 +55,7 @@ struct ControlCommands: Commands {
           systemImage: "camera"
         )
       }
+      .disabled(!viewModel.allows(.capture))
 
       Button {
         viewModel.toggleRecording()
@@ -75,6 +81,7 @@ struct ControlCommands: Commands {
       .disabled(viewModel.videoRecorder.isRecording
         || (!viewModel.audioRecorder.isRecording
           && viewModel.emulationSpeed != .x1))
+      .disabled(!viewModel.allows(.recording))
 
       Button {
         viewModel.toggleVideoRecording()
@@ -100,6 +107,7 @@ struct ControlCommands: Commands {
       .disabled(viewModel.audioRecorder.isRecording
         || (!viewModel.videoRecorder.isRecording
           && viewModel.emulationSpeed != .x1))
+      .disabled(!viewModel.allows(.recording))
 
       Divider()
 
@@ -117,44 +125,48 @@ struct ControlCommands: Commands {
       } label: {
         Label("Rewind (Hold ⌘Z)", systemImage: "gobackward")
       }
+      .disabled(!viewModel.allows(.state))
 
       Divider()
 
-      Button {
-        viewModel.quickSave()
-      } label: {
-        Label("Quick Save", systemImage: "square.and.arrow.down")
-      }
-      .keyboardShortcut("s", modifiers: .command)
+      Group {
+        Button {
+          viewModel.quickSave()
+        } label: {
+          Label("Quick Save", systemImage: "square.and.arrow.down")
+        }
+        .keyboardShortcut("s", modifiers: .command)
 
-      Button {
-        viewModel.quickLoad()
-      } label: {
-        Label("Quick Load", systemImage: "square.and.arrow.up")
-      }
-      .keyboardShortcut("l", modifiers: .command)
-      .disabled(!viewModel.hasQuickSave)
+        Button {
+          viewModel.quickLoad()
+        } label: {
+          Label("Quick Load", systemImage: "square.and.arrow.up")
+        }
+        .keyboardShortcut("l", modifiers: .command)
+        .disabled(!viewModel.hasQuickSave)
 
-      if viewModel.hasQuickSave {
-        Text(viewModel.quickSaveInfo)
-          .font(.caption)
-      }
+        if viewModel.hasQuickSave {
+          Text(viewModel.quickSaveInfo)
+            .font(.caption)
+        }
 
-      Divider()
+        Divider()
 
-      Button {
-        viewModel.saveStateSheetMode = .save
-        viewModel.showingSaveStateSheet = true
-      } label: {
-        Label("Save State...", systemImage: "tray.and.arrow.down")
-      }
+        Button {
+          viewModel.saveStateSheetMode = .save
+          viewModel.showingSaveStateSheet = true
+        } label: {
+          Label("Save State...", systemImage: "tray.and.arrow.down")
+        }
 
-      Button {
-        viewModel.saveStateSheetMode = .load
-        viewModel.showingSaveStateSheet = true
-      } label: {
-        Label("Load State...", systemImage: "tray.and.arrow.up")
+        Button {
+          viewModel.saveStateSheetMode = .load
+          viewModel.showingSaveStateSheet = true
+        } label: {
+          Label("Load State...", systemImage: "tray.and.arrow.up")
+        }
       }
+      .disabled(!viewModel.allows(.state))
     }
   }
 }

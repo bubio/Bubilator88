@@ -73,120 +73,126 @@ struct DiskCommands: Commands {
 
   var body: some Commands {
     CommandMenu("Disk") {
-      // Drive 1 submenu
-      driveSubmenu(drive: 0)
+      Group {
+        // Drive 1 submenu
+        driveSubmenu(drive: 0)
 
-      // Drive 2 submenu
-      driveSubmenu(drive: 1)
+        // Drive 2 submenu
+        driveSubmenu(drive: 1)
 
-      Divider()
+        Divider()
 
-      Menu {
-        Button {
-          viewModel.diskPickerDrive = -1
-          viewModel.showingDiskPicker = true
+        Menu {
+          Button {
+            viewModel.diskPickerDrive = -1
+            viewModel.showingDiskPicker = true
+          } label: {
+            Label("Mount...", systemImage: "opticaldiscdrive")
+          }
+          .keyboardShortcut("3", modifiers: .command)
+
+          Button {
+            viewModel.ejectDisk(drive: 0)
+            viewModel.ejectDisk(drive: 1)
+          } label: {
+            Label("Eject", systemImage: "eject")
+          }
+          .disabled(viewModel.drive0Name == "Empty" && viewModel.drive1Name == "Empty")
         } label: {
-          Label("Mount...", systemImage: "opticaldiscdrive")
+          Label("Drive 1&2", image: "FloppyDisk")
         }
-        .keyboardShortcut("3", modifiers: .command)
+
+        Divider()
 
         Button {
-          viewModel.ejectDisk(drive: 0)
-          viewModel.ejectDisk(drive: 1)
+          viewModel.createBlankDisk()
         } label: {
-          Label("Eject", systemImage: "eject")
+          Label("Create Blank Disk...", systemImage: "plus.circle")
         }
-        .disabled(viewModel.drive0Name == "Empty" && viewModel.drive1Name == "Empty")
-      } label: {
-        Label("Drive 1&2", image: "FloppyDisk")
-      }
+        .keyboardShortcut("n", modifiers: [.command, .shift])
 
-      Divider()
+        Button {
+          viewModel.exportCachedDisks()
+        } label: {
+          Label("Export Cached Disks...", systemImage: "square.and.arrow.up")
+        }
 
-      Button {
-        viewModel.createBlankDisk()
-      } label: {
-        Label("Create Blank Disk...", systemImage: "plus.circle")
-      }
-      .keyboardShortcut("n", modifiers: [.command, .shift])
+        Divider()
 
-      Button {
-        viewModel.exportCachedDisks()
-      } label: {
-        Label("Export Cached Disks...", systemImage: "square.and.arrow.up")
-      }
-
-      Divider()
-
-      // Recent Files submenu
-      Menu("Recent Files") {
-        if Settings.shared.recentDiskFiles.isEmpty {
-          Text("No Recent Files")
-        } else {
-          ForEach(Settings.shared.recentDiskFiles) { entry in
-            Button("\(entry.displayName) — \(entry.displayDir)") {
-              viewModel.mountRecentFile(entry)
+        // Recent Files submenu
+        Menu("Recent Files") {
+          if Settings.shared.recentDiskFiles.isEmpty {
+            Text("No Recent Files")
+          } else {
+            ForEach(Settings.shared.recentDiskFiles) { entry in
+              Button("\(entry.displayName) — \(entry.displayDir)") {
+                viewModel.mountRecentFile(entry)
+              }
+            }
+            Divider()
+            Button {
+              Settings.shared.clearRecentFiles()
+            } label: {
+              Label("Clear Recent Files", systemImage: "trash")
             }
           }
-          Divider()
-          Button {
-            Settings.shared.clearRecentFiles()
-          } label: {
-            Label("Clear Recent Files", systemImage: "trash")
-          }
         }
       }
+      .disabled(!viewModel.allows(.media))
     }
 
     CommandMenu("Tape") {
-      Text(viewModel.tapeDisplayLabel).disabled(true)
+      Group {
+        Text(viewModel.tapeDisplayLabel).disabled(true)
 
-      Divider()
+        Divider()
 
-      Button {
-        viewModel.showingTapePicker = true
-      } label: {
-        Label {
-          Text("Open...")
-        } icon: {
-          Image("Cassete")
+        Button {
+          viewModel.showingTapePicker = true
+        } label: {
+          Label {
+            Text("Open...")
+          } icon: {
+            Image("Cassete")
+          }
         }
-      }
-      .keyboardShortcut("t", modifiers: [.command, .shift])
+        .keyboardShortcut("t", modifiers: [.command, .shift])
 
-      Button {
-        viewModel.rewindTape()
-      } label: {
-        Label("Rewind", systemImage: "backward.end")
-      }
-      .disabled(!viewModel.isTapeMounted)
+        Button {
+          viewModel.rewindTape()
+        } label: {
+          Label("Rewind", systemImage: "backward.end")
+        }
+        .disabled(!viewModel.isTapeMounted)
 
-      Button {
-        viewModel.ejectTape()
-      } label: {
-        Label("Eject", systemImage: "eject")
-      }
-      .disabled(!viewModel.isTapeMounted)
+        Button {
+          viewModel.ejectTape()
+        } label: {
+          Label("Eject", systemImage: "eject")
+        }
+        .disabled(!viewModel.isTapeMounted)
 
-      Divider()
+        Divider()
 
-      Menu("Recent Files") {
-        if Settings.shared.recentTapeFiles.isEmpty {
-          Text("No Recent Files")
-        } else {
-          ForEach(Settings.shared.recentTapeFiles) { entry in
-            Button("\(entry.displayName) — \(entry.displayDir)") {
-              viewModel.mountRecentTape(entry)
+        Menu("Recent Files") {
+          if Settings.shared.recentTapeFiles.isEmpty {
+            Text("No Recent Files")
+          } else {
+            ForEach(Settings.shared.recentTapeFiles) { entry in
+              Button("\(entry.displayName) — \(entry.displayDir)") {
+                viewModel.mountRecentTape(entry)
+              }
+            }
+            Divider()
+            Button {
+              Settings.shared.clearRecentTapeFiles()
+            } label: {
+              Label("Clear Recent Files", systemImage: "trash")
             }
           }
-          Divider()
-          Button {
-            Settings.shared.clearRecentTapeFiles()
-          } label: {
-            Label("Clear Recent Files", systemImage: "trash")
-          }
         }
       }
+      .disabled(!viewModel.allows(.media))
     }
   }
 }
