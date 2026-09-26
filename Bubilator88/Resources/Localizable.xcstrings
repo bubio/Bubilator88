@@ -106,6 +106,26 @@
         }
       }
     },
+    "%@ Copy" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ のコピー"
+          }
+        }
+      }
+    },
+    "%lld disk(s) use this layout. They will no longer have click zones." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 枚のディスクがこのレイアウトを使っています。削除すると、それらのディスクではクリック領域が使えなくなります。"
+          }
+        }
+      }
+    },
     "(%@=%@ %@=%@)" : {
       "localizations" : {
         "en" : {
@@ -256,6 +276,572 @@
         }
       }
     },
+    "Clear Keys" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーを消去"
+          }
+        }
+      }
+    },
+    "Click a zone on the screen to type its keys, for games without mouse support. The layout assigned to the mounted disk is used." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画面上の領域をクリックすると、登録したキーを入力します。マウス非対応のゲーム向けです。マウント中のディスクに割り当てたレイアウトが使われます。"
+          }
+        }
+      }
+    },
+    "Click Zone Layouts" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリック領域のレイアウト"
+          }
+        }
+      }
+    },
+    "Click Zones" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリック領域"
+          }
+        }
+      }
+    },
+    "Click zones cannot be used while mouse input is on. Turn off Enable Mouse Input in Settings > Mouse." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マウス入力がオンの間はクリック領域を使用できません。設定 > マウス で「マウス入力を有効にする」をオフにしてください。"
+          }
+        }
+      }
+    },
+    "Click Zones Unavailable" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリック領域を使用できません"
+          }
+        }
+      }
+    },
+    "Cursor Keys + RETURN" : {
+      "comment" : "Click-zone preset name, from ClickZonePresets.json",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カーソルキー + RETURN"
+          }
+        }
+      }
+    },
+    "Delete Zone" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "領域を削除"
+          }
+        }
+      }
+    },
+    "Delete “%@”?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@”を削除しますか？"
+          }
+        }
+      }
+    },
+    "Delete…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除…"
+          }
+        }
+      }
+    },
+    "Disks Using This Layout" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このレイアウトを使うディスク"
+          }
+        }
+      }
+    },
+    "Disks using this layout" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このレイアウトを使うディスクの数"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完了"
+          }
+        }
+      }
+    },
+    "Drag on the emulator screen to add a zone. Drag a zone to move it, or the handles of the selected zone to resize it. Close this window to finish editing." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エミュレータ画面をドラッグすると領域を追加します。領域をドラッグすると移動、選択中の領域のハンドルをドラッグするとサイズを変更します。編集を終えるにはこのウィンドウを閉じます。"
+          }
+        }
+      }
+    },
+    "Drag steps to reorder them." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ステップはドラッグで並べ替えられます。"
+          }
+        }
+      }
+    },
+    "Duplicate" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複製"
+          }
+        }
+      }
+    },
+    "Duplicate and Edit…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複製して編集…"
+          }
+        }
+      }
+    },
+    "Edit…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "編集…"
+          }
+        }
+      }
+    },
+    "Enable Click Zones" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリック領域を有効にする"
+          }
+        }
+      }
+    },
+    "Export…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エクスポート…"
+          }
+        }
+      }
+    },
+    "Function Keys f1–f5" : {
+      "comment" : "Click-zone preset name, from ClickZonePresets.json",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファンクションキー f1〜f5"
+          }
+        }
+      }
+    },
+    "Height" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高さ"
+          }
+        }
+      }
+    },
+    "Hold %lldf" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "押下 %lldf"
+          }
+        }
+      }
+    },
+    "Import Failed" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インポート失敗"
+          }
+        }
+      }
+    },
+    "Import…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インポート…"
+          }
+        }
+      }
+    },
+    "In screen pixels (640 × 400)." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画面上のピクセル単位 (640 × 400) です。"
+          }
+        }
+      }
+    },
+    "Keys" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キー"
+          }
+        }
+      }
+    },
+    "Label" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ラベル"
+          }
+        }
+      }
+    },
+    "Mount a disk to assign this layout to it." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ディスクをマウントすると、このレイアウトを割り当てられます。"
+          }
+        }
+      }
+    },
+    "Name" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名前"
+          }
+        }
+      }
+    },
+    "New Layout" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新規レイアウト"
+          }
+        }
+      }
+    },
+    "No keys yet. Press Record, then type the keys." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーが未登録です。「記録」を押してからキーを入力してください。"
+          }
+        }
+      }
+    },
+    "No zones yet." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "領域はまだありません。"
+          }
+        }
+      }
+    },
+    "Number Keys 1–9" : {
+      "comment" : "Click-zone preset name, from ClickZonePresets.json",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "数字キー 1〜9"
+          }
+        }
+      }
+    },
+    "Numeric Keypad 8 Directions" : {
+      "comment" : "Click-zone preset name, from ClickZonePresets.json",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テンキー 8 方向"
+          }
+        }
+      }
+    },
+    "Position" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "位置"
+          }
+        }
+      }
+    },
+    "Preset" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プリセット"
+          }
+        }
+      }
+    },
+    "Presets cannot be changed; editing one makes a copy. Double-click a layout to edit it, or Control-click for more." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プリセットは変更できません。編集するとコピーが作られます。レイアウトはダブルクリックで編集でき、Control キーを押しながらクリックするとその他の操作ができます。"
+          }
+        }
+      }
+    },
+    "Record" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記録"
+          }
+        }
+      }
+    },
+    "Recording: keys pressed together become one step." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記録中: 同時に押したキーは 1 ステップになります。"
+          }
+        }
+      }
+    },
+    "Remove Step" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ステップを削除"
+          }
+        }
+      }
+    },
+    "RETURN (Whole Screen)" : {
+      "comment" : "Click-zone preset name, from ClickZonePresets.json",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RETURN（画面全体）"
+          }
+        }
+      }
+    },
+    "Select a zone to set its keys." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーを設定する領域を選択してください。"
+          }
+        }
+      }
+    },
+    "Selected Zone" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択中の領域"
+          }
+        }
+      }
+    },
+    "Size" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サイズ"
+          }
+        }
+      }
+    },
+    "SPACE (Whole Screen)" : {
+      "comment" : "Click-zone preset name, from ClickZonePresets.json",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SPACE（画面全体）"
+          }
+        }
+      }
+    },
+    "Stop Recording" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記録を停止"
+          }
+        }
+      }
+    },
+    "Turn off mouse input to use click zones." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリック領域を使うには、マウス入力をオフにしてください。"
+          }
+        }
+      }
+    },
+    "Unassign" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "割り当てを解除"
+          }
+        }
+      }
+    },
+    "Uses “%@”" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@”を使用中"
+          }
+        }
+      }
+    },
+    "Wait %lldf" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待機 %lldf"
+          }
+        }
+      }
+    },
+    "Width" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "幅"
+          }
+        }
+      }
+    },
+    "X" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "X"
+          }
+        }
+      }
+    },
+    "Y" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Y"
+          }
+        }
+      }
+    },
+    "Zone %lld" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "領域 %lld"
+          }
+        }
+      }
+    },
+    "Zones" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "領域"
+          }
+        }
+      }
+    },
     "© 2026 bubio. Licensed under GPL v2.0" : {
       "comment" : "About dialog copyright",
       "localizations" : {
@@ -281,6 +867,16 @@
     },
     "==" : {
 
+    },
+    "“%@” is not a click-zone layout file." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@”はクリック領域のレイアウトファイルではありません。"
+          }
+        }
+      }
     },
     "−%.1fs" : {
       "comment" : "Rewind elapsed-seconds label",

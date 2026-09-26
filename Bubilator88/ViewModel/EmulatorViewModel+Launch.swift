@@ -83,6 +83,7 @@ extension EmulatorViewModel {
     cancelScriptRecording()
     stop()
     cancelPasteQueue()
+    cancelClickZonePlayer()
 
     if let system = req.system {
       _bootModeStorage = system

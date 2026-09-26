@@ -66,6 +66,24 @@
 				</array>
 			</dict>
 		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.bubio.bubilator88.click-zones</string>
+			<key>UTTypeDescription</key>
+			<string>Bubilator88 Click Zone Layout</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>b88zones</string>
+				</array>
+			</dict>
+		</dict>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>

@@ -805,6 +805,21 @@ final class EmulatorViewModel {
   @ObservationIgnored nonisolated(unsafe) let pasteQueue = TextPasteQueue()
   @ObservationIgnored nonisolated let pasteQueueLock = NSLock()
 
+  /// Plays the key sequence of a clicked click zone; ticked next to the paste
+  /// queue. Carries its own lock.
+  @ObservationIgnored nonisolated let clickZonePlayer = ClickZonePlayer()
+
+  /// The user layout being edited, while the click-zone editor is open. Edits
+  /// go to this copy and are written to `ClickZoneStore` as each completes.
+  var clickZoneEditingLayout: ClickZoneLayout?
+  /// The zone selected in the editor.
+  var selectedClickZoneID: UUID?
+  /// Whether the editor is recording keys into the selected zone. While it
+  /// is, Delete is a key to record rather than "delete the zone".
+  var isRecordingClickZoneKeys = false
+  /// Whether emulation was running when the editor paused it.
+  @ObservationIgnored var clickZoneEditPausedEmulation = false
+
   /// Romaji → half-width katakana input mode (host-side IME). When on, typed
   /// letters are converted to kana and injected via `pasteQueue` instead of
   /// reaching the matrix directly. Intentionally NOT persisted — always starts
@@ -1285,6 +1300,7 @@ final class EmulatorViewModel {
     cancelScriptRecording()
     stop()
     cancelPasteQueue()
+    cancelClickZonePlayer()
     let mode = _bootModeStorage
     let sw1 = mode.dipSw1
     let sw2Base = mode.dipSw2
@@ -1793,6 +1809,19 @@ final class EmulatorViewModel {
       cancelPasteQueue()
       return
     }
+    // The click-zone editor owns the keyboard while it is open: Delete
+    // removes the selected zone and nothing reaches the paused machine.
+    if isEditingClickZones {
+      if (keyCode == 0x33 || keyCode == 0x75) && !isRecordingClickZoneKeys {
+        deleteSelectedClickZone()
+      }
+      return
+    }
+    // ESC during a click-zone sequence cancels it, like a paste.
+    if keyCode == 0x35 && !clickZonePlayer.isIdle {
+      cancelClickZonePlayer()
+      return
+    }
     guard let key = KeyMapping.pc88Key(for: keyCode) else { return }
     // Recording rides along with the event so `ScriptRecorder` stays confined
     // to the emulation thread, in the same order the matrix sees the press.
@@ -1800,6 +1829,7 @@ final class EmulatorViewModel {
   }
 
   func keyUp(_ keyCode: UInt16) {
+    guard !isEditingClickZones else { return }
     guard let key = KeyMapping.pc88Key(for: keyCode) else { return }
     postInput(.releaseKey(key, record: true))
   }

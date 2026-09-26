@@ -1,0 +1,518 @@
+[
+  {
+    "id": "C11C0000-0000-4000-8000-000000000001",
+    "name": "RETURN (Whole Screen)",
+    "zones": [
+      {
+        "label": "RETURN",
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 640,
+          "height": 400
+        },
+        "steps": [
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "C11C0000-0000-4000-8000-000000000002",
+    "name": "SPACE (Whole Screen)",
+    "zones": [
+      {
+        "label": "SPACE",
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 640,
+          "height": 400
+        },
+        "steps": [
+          {
+            "keys": [
+              "space"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "C11C0000-0000-4000-8000-000000000003",
+    "name": "Cursor Keys + RETURN",
+    "zones": [
+      {
+        "label": "↑",
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 640,
+          "height": 100
+        },
+        "steps": [
+          {
+            "keys": [
+              "up"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "↓",
+        "rect": {
+          "x": 0,
+          "y": 300,
+          "width": 640,
+          "height": 100
+        },
+        "steps": [
+          {
+            "keys": [
+              "down"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "←",
+        "rect": {
+          "x": 0,
+          "y": 100,
+          "width": 160,
+          "height": 200
+        },
+        "steps": [
+          {
+            "keys": [
+              "left"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "→",
+        "rect": {
+          "x": 480,
+          "y": 100,
+          "width": 160,
+          "height": 200
+        },
+        "steps": [
+          {
+            "keys": [
+              "right"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "RETURN",
+        "rect": {
+          "x": 160,
+          "y": 100,
+          "width": 320,
+          "height": 200
+        },
+        "steps": [
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "C11C0000-0000-4000-8000-000000000004",
+    "name": "Numeric Keypad 8 Directions",
+    "zones": [
+      {
+        "label": "↖",
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 213,
+          "height": 133
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp7"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "↑",
+        "rect": {
+          "x": 213,
+          "y": 0,
+          "width": 214,
+          "height": 133
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp8"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "↗",
+        "rect": {
+          "x": 427,
+          "y": 0,
+          "width": 213,
+          "height": 133
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp9"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "←",
+        "rect": {
+          "x": 0,
+          "y": 133,
+          "width": 213,
+          "height": 134
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp4"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "5",
+        "rect": {
+          "x": 213,
+          "y": 133,
+          "width": 214,
+          "height": 134
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp5"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "→",
+        "rect": {
+          "x": 427,
+          "y": 133,
+          "width": 213,
+          "height": 134
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp6"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "↙",
+        "rect": {
+          "x": 0,
+          "y": 267,
+          "width": 213,
+          "height": 133
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp1"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "↓",
+        "rect": {
+          "x": 213,
+          "y": 267,
+          "width": 214,
+          "height": 133
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp2"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "↘",
+        "rect": {
+          "x": 427,
+          "y": 267,
+          "width": 213,
+          "height": 133
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp3"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "C11C0000-0000-4000-8000-000000000005",
+    "name": "Number Keys 1–9",
+    "zones": [
+      {
+        "label": "1",
+        "rect": {
+          "x": 0,
+          "y": 360,
+          "width": 71,
+          "height": 40
+        },
+        "steps": [
+          {
+            "keys": [
+              "1"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "2",
+        "rect": {
+          "x": 71,
+          "y": 360,
+          "width": 71,
+          "height": 40
+        },
+        "steps": [
+          {
+            "keys": [
+              "2"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "3",
+        "rect": {
+          "x": 142,
+          "y": 360,
+          "width": 71,
+          "height": 40
+        },
+        "steps": [
+          {
+            "keys": [
+              "3"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "4",
+        "rect": {
+          "x": 213,
+          "y": 360,
+          "width": 71,
+          "height": 40
+        },
+        "steps": [
+          {
+            "keys": [
+              "4"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "5",
+        "rect": {
+          "x": 284,
+          "y": 360,
+          "width": 72,
+          "height": 40
+        },
+        "steps": [
+          {
+            "keys": [
+              "5"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "6",
+        "rect": {
+          "x": 356,
+          "y": 360,
+          "width": 71,
+          "height": 40
+        },
+        "steps": [
+          {
+            "keys": [
+              "6"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "7",
+        "rect": {
+          "x": 427,
+          "y": 360,
+          "width": 71,
+          "height": 40
+        },
+        "steps": [
+          {
+            "keys": [
+              "7"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "8",
+        "rect": {
+          "x": 498,
+          "y": 360,
+          "width": 71,
+          "height": 40
+        },
+        "steps": [
+          {
+            "keys": [
+              "8"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "9",
+        "rect": {
+          "x": 569,
+          "y": 360,
+          "width": 71,
+          "height": 40
+        },
+        "steps": [
+          {
+            "keys": [
+              "9"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "C11C0000-0000-4000-8000-000000000006",
+    "name": "Function Keys f1–f5",
+    "zones": [
+      {
+        "label": "f1",
+        "rect": {
+          "x": 0,
+          "y": 384,
+          "width": 128,
+          "height": 16
+        },
+        "steps": [
+          {
+            "keys": [
+              "f1"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "f2",
+        "rect": {
+          "x": 128,
+          "y": 384,
+          "width": 128,
+          "height": 16
+        },
+        "steps": [
+          {
+            "keys": [
+              "f2"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "f3",
+        "rect": {
+          "x": 256,
+          "y": 384,
+          "width": 128,
+          "height": 16
+        },
+        "steps": [
+          {
+            "keys": [
+              "f3"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "f4",
+        "rect": {
+          "x": 384,
+          "y": 384,
+          "width": 128,
+          "height": 16
+        },
+        "steps": [
+          {
+            "keys": [
+              "f4"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "f5",
+        "rect": {
+          "x": 512,
+          "y": 384,
+          "width": 128,
+          "height": 16
+        },
+        "steps": [
+          {
+            "keys": [
+              "f5"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -56,6 +56,11 @@ struct ContentView: View {
         .onChange(of: Settings.shared.mouseJoyMode, initial: true) { _, newValue in
           viewModel.mouseJoyMode = newValue
         }
+        if viewModel.clickZonesAvailable || viewModel.isEditingClickZones {
+          GeometryReader { geo in
+            ClickZoneOverlayView(viewModel: viewModel, fit: screenFit(for: geo.size))
+          }
+        }
         if viewModel.translationManager.isSessionActive {
           TranslationOverlayView(
             detectionRects: viewModel.translationManager.isOverlayVisible
@@ -238,6 +243,13 @@ struct ContentView: View {
     return true
   }
 
+  /// Where the emulator image sits in a container of `size`, matching the
+  /// Metal view's aspect-fit (and integer scaling in fullscreen).
+  private func screenFit(for size: CGSize) -> ScreenFit {
+    ScreenFit(container: size,
+              integerScaling: viewModel.isFullScreen && Settings.shared.fullscreenIntegerScaling)
+  }
+
   @ViewBuilder
   private var screenView: some View {
     ZStack {
@@ -247,22 +259,11 @@ struct ContentView: View {
           // Match Metal view's aspect-fit (and integer scaling in
           // fullscreen) so the overlay aligns with the actual
           // displayed image and doesn't stretch into the letterbox.
-          let displayW: CGFloat = 640
-          let displayH: CGFloat = 400
-          let scale: CGFloat = {
-            if viewModel.isFullScreen,
-               Settings.shared.fullscreenIntegerScaling {
-              let s = max(1, min(Int(geo.size.width / displayW),
-                                 Int(geo.size.height / displayH)))
-              return CGFloat(s)
-            }
-            return min(geo.size.width / displayW,
-                       geo.size.height / displayH)
-          }()
-          let w = displayW * scale
-          let h = displayH * scale
-          let x = (geo.size.width - w) / 2
-          let y = (geo.size.height - h) / 2
+          let frame = screenFit(for: geo.size).imageFrame
+          let w = frame.width
+          let h = frame.height
+          let x = frame.minX
+          let y = frame.minY
 
           TimelineView(.animation) { ctx in
             let p = session.progress(at: ctx.date)

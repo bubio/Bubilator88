@@ -72,6 +72,7 @@ final class Settings {
     static let mouseEnabled              = "mouseEnabled"
     static let mouseJoyMode              = "mouseJoyMode"
     static let mouseSensitivity          = "mouseSensitivity"
+    static let clickZonesEnabled         = "clickZonesEnabled"
 
     // Keyboard
     static let arrowKeysAsNumpad         = "arrowKeysAsNumpad"
@@ -408,6 +409,13 @@ final class Settings {
     didSet { UserDefaults.standard.set(mouseSensitivity, forKey: Keys.mouseSensitivity) }
   }
 
+  /// Enable click zones: screen rectangles that type a key sequence when
+  /// clicked, for games without mouse support. Only in effect while
+  /// `mouseEnabled` is off.
+  var clickZonesEnabled: Bool = false {
+    didSet { UserDefaults.standard.set(clickZonesEnabled, forKey: Keys.clickZonesEnabled) }
+  }
+
   // MARK: - Keyboard
 
   /// Map arrow keys to numpad (↑→8, ↓→2, ←→4, →→6).
@@ -642,6 +650,9 @@ final class Settings {
     }
     if let v = UserDefaults.standard.object(forKey: Keys.mouseSensitivity) {
       mouseSensitivity = (v as? NSNumber)?.floatValue ?? 0.5
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.clickZonesEnabled) as? Bool {
+      clickZonesEnabled = v
     }
     if let v = UserDefaults.standard.object(forKey: Keys.arrowKeysAsNumpad) as? Bool {
       arrowKeysAsNumpad = v
