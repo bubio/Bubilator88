@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// The click-zone editor window: the layout's name, the disks that use it,
-/// the zone list and the selected zone's label, position, size and key
-/// sequence, laid out like the Settings window. Zones can also be drawn and
+/// The click-zone editor window: the layout's name and the disks that use it
+/// across the top, then the zone list beside the selected zone's label,
+/// position, size and key sequence. Zones can also be drawn and
 /// moved directly on the emulator screen (`ClickZoneOverlayView`).
 ///
 /// Opened from Settings > Mouse, which starts the editing session;
@@ -19,6 +19,7 @@ struct ClickZoneEditorView: View {
   @State private var keyMonitor: Any?
   /// Rows selected in the step list, by index.
   @State private var selectedSteps: Set<Int> = []
+  @State private var showsDisks = false
 
   private var store: ClickZoneStore { ClickZoneStore.shared }
   private var layout: ClickZoneLayout? { viewModel.clickZoneEditingLayout }
@@ -28,37 +29,27 @@ struct ClickZoneEditorView: View {
   }
 
   var body: some View {
-    Form {
+    // The zone list and the selected zone's details sit side by side, so the
+    // details stay in view however many zones the layout has.
+    VStack(spacing: 0) {
       if let layout {
-        Section {
-          TextField("Name", text: Binding(
-            get: { layout.name },
-            set: { newValue in viewModel.editClickZones { $0.name = newValue } }
-          ))
-          Text("Drag on the emulator screen to add a zone. Drag a zone to move it, or the handles of the selected zone to resize it. Close this window to finish editing.")
-            .settingsDescriptionStyle()
+        header(layout)
+        Divider()
+        HSplitView {
+          zoneList(layout)
+            .frame(minWidth: 200, idealWidth: 240, maxWidth: 360)
+          detail
+            .frame(minWidth: 420, maxWidth: .infinity)
         }
-
-        disksSection(layout)
-
-        Section("Zones") {
-          if layout.zones.isEmpty {
-            Text("No zones yet.")
-              .settingsDescriptionStyle()
-          }
-          ForEach(Array(layout.zones.enumerated()), id: \.element.id) { index, zone in
-            zoneRow(zone, index: index)
-          }
-        }
-
-        if let zone = selectedZone {
-          zoneSection(zone)
-          keysSection(zone)
-        }
+        Divider()
+        Text("Drag on the emulator screen to add a zone. Drag a zone to move it, or the handles of the selected zone to resize it. Close this window to finish editing.")
+          .settingsDescriptionStyle()
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.horizontal, 12)
+          .padding(.vertical, 8)
       }
     }
-    .formStyle(.grouped)
-    .frame(minWidth: 380, minHeight: 480)
+    .frame(minWidth: 640, minHeight: 420)
     .onAppear {
       if !viewModel.isEditingClickZones { dismissWindow(id: Self.windowID) }
     }
@@ -77,16 +68,49 @@ struct ClickZoneEditorView: View {
     }
   }
 
+  // MARK: - Header
+
+  /// The layout's name and the disks that use it: set once and rarely
+  /// touched, so they share one row and the disks open in a popover.
+  private func header(_ layout: ClickZoneLayout) -> some View {
+    HStack {
+      TextField("Name", text: Binding(
+        get: { layout.name },
+        set: { newValue in viewModel.editClickZones { $0.name = newValue } }
+      ))
+      .textFieldStyle(.roundedBorder)
+      .frame(maxWidth: 280)
+      Spacer()
+      Button {
+        showsDisks.toggle()
+      } label: {
+        Label {
+          Text("\(store.assignments(to: layout.id).count) Disk(s)")
+        } icon: {
+          FloppyDiskIcon()
+        }
+      }
+      .help("Disks Using This Layout")
+      .popover(isPresented: $showsDisks, arrowEdge: .bottom) {
+        disksPopover(layout)
+      }
+    }
+    .padding(.horizontal, 12)
+    .padding(.vertical, 8)
+  }
+
   // MARK: - Disks
 
   /// Which disks use this layout, file by file: every image of each mounted
   /// file (whichever drive it is in), and the disks of other files already
   /// assigned. The file's checkbox assigns or removes all of its images.
-  private func disksSection(_ layout: ClickZoneLayout) -> some View {
+  private func disksPopover(_ layout: ClickZoneLayout) -> some View {
     let mounted = [viewModel.drive0Info, viewModel.drive1Info].compactMap { $0 }
     let files = ClickZoneDiskFile.list(
       mounted: mounted, assigned: store.assignments(to: layout.id).map(\.disk))
-    return Section("Disks Using This Layout") {
+    return VStack(alignment: .leading, spacing: 8) {
+      Text("Disks Using This Layout")
+        .font(.headline)
       if mounted.isEmpty {
         Text("Mount a disk to assign this layout to it.")
           .settingsDescriptionStyle()
@@ -97,10 +121,12 @@ struct ClickZoneEditorView: View {
           diskRow(node, layout: layout)
         }
         .listStyle(.bordered)
-        .sizedToContentList()
+        .frame(minHeight: 120, idealHeight: 200)
       }
     }
     .toggleStyle(.checkbox)
+    .padding()
+    .frame(width: 380)
   }
 
   /// A file row (all of its disks at once) or a disk row.
@@ -142,23 +168,84 @@ struct ClickZoneEditorView: View {
 
   // MARK: - Zones
 
-  private func zoneRow(_ zone: ClickZone, index: Int) -> some View {
-    let selected = zone.id == viewModel.selectedClickZoneID
-    return Button {
-      viewModel.selectedClickZoneID = zone.id
-    } label: {
-      HStack {
-        Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-          .foregroundStyle(selected ? Color.accentColor : .secondary)
-        Text(zone.label.isEmpty ? String(localized: "Zone \(index + 1)") : zone.label)
-        Spacer()
-        Text(zone.steps.map(\.displayName).joined(separator: " "))
-          .foregroundStyle(.secondary)
-          .lineLimit(1)
+  /// Every zone of the layout, scrolling on its own. List order is drawing
+  /// order: a later zone lies on top and takes the click where zones overlap.
+  private func zoneList(_ layout: ClickZoneLayout) -> some View {
+    VStack(spacing: 0) {
+      ScrollViewReader { proxy in
+        List(selection: $viewModel.selectedClickZoneID) {
+          Section("Zones") {
+            ForEach(Array(layout.zones.enumerated()), id: \.element.id) { index, zone in
+              zoneRow(zone, index: index)
+                .tag(zone.id)
+                .contextMenu {
+                  Button("Delete Zone", role: .destructive) {
+                    viewModel.selectedClickZoneID = zone.id
+                    viewModel.deleteSelectedClickZone()
+                  }
+                }
+            }
+            .onMove { from, to in
+              viewModel.editClickZones { $0.zones.move(fromOffsets: from, toOffset: to) }
+            }
+          }
+        }
+        .onDeleteCommand { viewModel.deleteSelectedClickZone() }
+        .overlay {
+          if layout.zones.isEmpty {
+            Text("No zones yet.")
+              .settingsDescriptionStyle()
+          }
+        }
+        // A zone picked on the emulator screen may be scrolled out of view.
+        .onChange(of: viewModel.selectedClickZoneID) { _, id in
+          if let id { withAnimation { proxy.scrollTo(id) } }
+        }
       }
-      .contentShape(Rectangle())
+      Divider()
+      HStack {
+        Button {
+          viewModel.deleteSelectedClickZone()
+        } label: {
+          Image(systemName: "minus")
+        }
+        .buttonStyle(.borderless)
+        .disabled(viewModel.selectedClickZoneID == nil)
+        .help("Delete Zone")
+        Spacer()
+      }
+      .padding(6)
     }
-    .buttonStyle(.plain)
+  }
+
+  private func zoneRow(_ zone: ClickZone, index: Int) -> some View {
+    HStack {
+      Text(zone.label.isEmpty ? String(localized: "Zone \(index + 1)") : zone.label)
+        .lineLimit(1)
+      Spacer()
+      Text(zone.steps.map(\.displayName).joined(separator: " "))
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+        .truncationMode(.tail)
+    }
+  }
+
+  /// The selected zone's rectangle and keys, or a hint when none is selected.
+  @ViewBuilder
+  private var detail: some View {
+    if let zone = selectedZone {
+      Form {
+        zoneSection(zone)
+        keysSection(zone)
+      }
+      .formStyle(.grouped)
+    } else {
+      Text("Select a zone in the list or on the emulator screen.")
+        .settingsDescriptionStyle()
+        .multilineTextAlignment(.center)
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
   }
 
   private func zoneSection(_ zone: ClickZone) -> some View {
@@ -181,12 +268,6 @@ struct ClickZoneEditorView: View {
       }
       Text("In screen pixels (640 × 400).")
         .settingsDescriptionStyle()
-      HStack {
-        Spacer()
-        Button("Delete Zone", role: .destructive) {
-          viewModel.deleteSelectedClickZone()
-        }
-      }
     }
   }
 
@@ -243,8 +324,6 @@ struct ClickZoneEditorView: View {
           }
           .disabled(selectedSteps.isEmpty)
           .help("Remove Step")
-          Text("Drag steps to reorder them.")
-            .settingsDescriptionStyle()
         }
       }
       if viewModel.isRecordingClickZoneKeys {
@@ -354,6 +433,16 @@ struct ClickZoneEditorView: View {
     default:
       return nil
     }
+  }
+}
+
+/// The floppy icon the status bar shows for the drives.
+struct FloppyDiskIcon: View {
+  var body: some View {
+    Image("FloppyDisk")
+      .renderingMode(.template)
+      .resizable()
+      .frame(width: 12, height: 12)
   }
 }
 

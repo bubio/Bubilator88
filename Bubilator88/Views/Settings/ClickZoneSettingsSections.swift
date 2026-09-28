@@ -110,9 +110,13 @@ struct ClickZoneSettingsSections: View {
       Text(store.displayName(of: layout))
       Spacer()
       if diskCount > 0 {
-        Label("\(diskCount)", systemImage: "opticaldiscdrive")
-          .foregroundStyle(.secondary)
-          .help("Disks using this layout")
+        Label {
+          Text("\(diskCount)")
+        } icon: {
+          FloppyDiskIcon()
+        }
+        .foregroundStyle(.secondary)
+        .help("Disks using this layout")
       }
       if store.isPreset(layout.id) {
         Text("Preset")

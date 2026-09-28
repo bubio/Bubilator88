@@ -116,6 +116,16 @@
         }
       }
     },
+    "%lld Disk(s)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 枚のディスク"
+          }
+        }
+      }
+    },
     "%lld disk(s) use this layout. They will no longer have click zones." : {
       "localizations" : {
         "ja" : {
@@ -427,16 +437,6 @@
         }
       }
     },
-    "Drag steps to reorder them." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ステップはドラッグで並べ替えられます。"
-          }
-        }
-      }
-    },
     "Duplicate" : {
       "localizations" : {
         "ja" : {
@@ -717,6 +717,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "RETURN（画面全体）"
+          }
+        }
+      }
+    },
+    "Select a zone in the list or on the emulator screen." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一覧かエミュレータ画面で領域を選択してください。"
           }
         }
       }

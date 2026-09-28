@@ -120,7 +120,7 @@ struct Bubilator88App: App {
     Window("Click Zones", id: ClickZoneEditorView.windowID) {
       ClickZoneEditorView(viewModel: viewModel)
     }
-    .defaultSize(width: 360, height: 480)
+    .defaultSize(width: 720, height: 520)
     .windowResizability(.contentMinSize)
     .commandsRemoved()
   }
