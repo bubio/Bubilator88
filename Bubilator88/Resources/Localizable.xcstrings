@@ -286,6 +286,16 @@
         }
       }
     },
+    "Added %lld zone(s)." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 個の領域を追加しました。"
+          }
+        }
+      }
+    },
     "Clear Keys" : {
       "localizations" : {
         "ja" : {
@@ -393,6 +403,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "削除…"
+          }
+        }
+      }
+    },
+    "Detect Zones from Screen Text" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画面の文字から領域を検出"
           }
         }
       }
@@ -604,6 +624,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "キーが未登録です。「記録」を押してからキーを入力してください。"
+          }
+        }
+      }
+    },
+    "No new text found." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい文字は見つかりませんでした。"
           }
         }
       }

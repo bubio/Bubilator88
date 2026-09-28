@@ -118,6 +118,22 @@ extension EmulatorViewModel {
     selectedClickZoneID = zone.id
   }
 
+  /// Add a zone for each text line OCR finds on the paused screen
+  /// (`ClickZoneDetector`), leaving out lines already covered. Returns how
+  /// many zones were added.
+  func detectClickZones() async -> Int {
+    guard let layoutID = clickZoneEditingLayout?.id else { return 0 }
+    let buffer = emuQueue.sync { Array(pixelBuffer) }
+    let lines = await Task.detached(priority: .userInitiated) {
+      await ScreenTextRecognizer.recognize(pixelBuffer: buffer, width: 640, height: 400)
+    }.value
+    // The session may have closed, or moved to another layout, while OCR ran.
+    guard let layout = clickZoneEditingLayout, layout.id == layoutID, let lines else { return 0 }
+    let found = ClickZoneDetector.zones(from: lines, existing: layout.zones)
+    editClickZones { $0.zones += found }
+    return found.count
+  }
+
   func deleteSelectedClickZone() {
     guard let id = selectedClickZoneID else { return }
     editClickZones { $0.zones.removeAll { $0.id == id } }

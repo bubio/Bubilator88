@@ -19,6 +19,9 @@ struct ClickZoneEditorView: View {
   /// Rows selected in the step list, by index.
   @State private var selectedSteps: Set<Int> = []
   @State private var showsDisks = false
+  @State private var isDetecting = false
+  /// What the last zone detection found, shown briefly beside its button.
+  @State private var detectionMessage: String?
 
   private var store: ClickZoneStore { ClickZoneStore.shared }
   private var layout: ClickZoneLayout? { viewModel.clickZoneEditingLayout }
@@ -207,9 +210,48 @@ struct ClickZoneEditorView: View {
         .buttonStyle(.borderless)
         .disabled(viewModel.selectedClickZoneID == nil)
         .help("Delete Zone")
+        Divider()
+          .frame(height: 16)
+        if isDetecting {
+          ProgressView()
+            .controlSize(.small)
+        } else {
+          Button {
+            detectZones()
+          } label: {
+            Image(systemName: "text.viewfinder")
+          }
+          .buttonStyle(.borderless)
+          .help("Detect Zones from Screen Text")
+        }
+        if let detectionMessage {
+          Text(detectionMessage)
+            .settingsDescriptionStyle()
+            .lineLimit(1)
+            .truncationMode(.tail)
+        }
         Spacer()
       }
       .padding(6)
+      // The result is news only for a moment.
+      .task(id: detectionMessage) {
+        guard detectionMessage != nil else { return }
+        try? await Task.sleep(for: .seconds(4))
+        detectionMessage = nil
+      }
+    }
+  }
+
+  /// Read the paused screen's text and add a zone for each line.
+  private func detectZones() {
+    isDetecting = true
+    detectionMessage = nil
+    Task {
+      let added = await viewModel.detectClickZones()
+      isDetecting = false
+      detectionMessage = added > 0
+        ? String(localized: "Added \(added) zone(s).")
+        : String(localized: "No new text found.")
     }
   }
 
