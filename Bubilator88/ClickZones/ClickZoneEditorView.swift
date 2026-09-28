@@ -1,19 +1,18 @@
 import AppKit
 import SwiftUI
 
-/// The click-zone editor window: the layout's name and the disks that use it
-/// across the top, then the zone list beside the selected zone's label,
-/// position, size and key sequence. Zones can also be drawn and
-/// moved directly on the emulator screen (`ClickZoneOverlayView`).
+/// The click-zone editor: the layout's name and the disks that use it across
+/// the top, then the zone list beside the selected zone's label, position,
+/// size and key sequence. Zones can also be drawn and moved directly on the
+/// emulator screen (`ClickZoneOverlayView`).
 ///
-/// Opened from Settings > Mouse, which starts the editing session;
-/// closing the window ends it. A window restored at launch has no session and
-/// closes itself.
+/// A sheet on the Settings window, presented while an editing session is
+/// open: Settings stays blocked, so nothing there (mouse input, deleting the
+/// layout) can pull the session out from under the editor, while the main
+/// window stays usable for drawing. Dismissing the sheet ends the session.
 struct ClickZoneEditorView: View {
-  static let windowID = "click-zone-editor"
-
   @Bindable var viewModel: EmulatorViewModel
-  @Environment(\.dismissWindow) private var dismissWindow
+  @Environment(\.dismiss) private var dismiss
 
   @State private var recorder = ClickZoneKeyRecorder()
   @State private var keyMonitor: Any?
@@ -42,25 +41,21 @@ struct ClickZoneEditorView: View {
             .frame(minWidth: 420, maxWidth: .infinity)
         }
         Divider()
-        Text("Drag on the emulator screen to add a zone. Drag a zone to move it, or the handles of the selected zone to resize it. Close this window to finish editing.")
-          .settingsDescriptionStyle()
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 12)
-          .padding(.vertical, 8)
+        HStack {
+          Text("Drag on the emulator screen to add a zone. Drag a zone to move it, or the handles of the selected zone to resize it.")
+            .settingsDescriptionStyle()
+            .frame(maxWidth: .infinity, alignment: .leading)
+          Button("Done") { dismiss() }
+            .keyboardShortcut(.defaultAction)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
       }
     }
-    .frame(minWidth: 640, minHeight: 420)
-    .onAppear {
-      if !viewModel.isEditingClickZones { dismissWindow(id: Self.windowID) }
-    }
+    .frame(minWidth: 640, idealWidth: 720, minHeight: 420, idealHeight: 520)
     .onDisappear {
       stopRecording()
       viewModel.endClickZoneEditing()
-    }
-    // Turning the PC-8801 mouse on from Settings makes click zones unusable,
-    // so the session cannot go on.
-    .onChange(of: Settings.shared.mouseEnabled) { _, enabled in
-      if enabled { dismissWindow(id: Self.windowID) }
     }
     .onChange(of: viewModel.selectedClickZoneID) {
       stopRecording()

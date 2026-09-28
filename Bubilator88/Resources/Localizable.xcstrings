@@ -427,12 +427,12 @@
         }
       }
     },
-    "Drag on the emulator screen to add a zone. Drag a zone to move it, or the handles of the selected zone to resize it. Close this window to finish editing." : {
+    "Drag on the emulator screen to add a zone. Drag a zone to move it, or the handles of the selected zone to resize it." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "エミュレータ画面をドラッグすると領域を追加します。領域をドラッグすると移動、選択中の領域のハンドルをドラッグするとサイズを変更します。編集を終えるにはこのウィンドウを閉じます。"
+            "value" : "エミュレータ画面をドラッグすると領域を追加します。領域をドラッグすると移動、選択中の領域のハンドルをドラッグするとサイズを変更します。"
           }
         }
       }

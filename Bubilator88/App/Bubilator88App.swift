@@ -114,14 +114,5 @@ struct Bubilator88App: App {
     // The View menu already exposes "Software Keyboard"; drop the
     // auto-generated Window menu duplicate.
     .commandsRemoved()
-
-    // Click-zone editor. Opened from Control > Edit Click Zones…, which
-    // starts the editing session; closing the window ends it.
-    Window("Click Zones", id: ClickZoneEditorView.windowID) {
-      ClickZoneEditorView(viewModel: viewModel)
-    }
-    .defaultSize(width: 720, height: 520)
-    .windowResizability(.contentMinSize)
-    .commandsRemoved()
   }
 }

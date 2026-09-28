@@ -1,25 +1,45 @@
-import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
 extension UTType {
   /// An exported click-zone layout (`.b88zones`), declared in Info.plist.
-  static let clickZoneLayout = UTType(exportedAs: "com.bubio.bubilator88.click-zones")
+  nonisolated static let clickZoneLayout = UTType(exportedAs: "com.bubio.bubilator88.click-zones")
+}
+
+/// An exported layout's bytes, for `.fileExporter`.
+nonisolated struct ClickZoneLayoutDocument: FileDocument {
+  static let readableContentTypes: [UTType] = [.clickZoneLayout]
+
+  var data: Data
+
+  init(data: Data) {
+    self.data = data
+  }
+
+  init(configuration: ReadConfiguration) throws {
+    data = configuration.file.regularFileContents ?? Data()
+  }
+
+  func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+    FileWrapper(regularFileWithContents: data)
+  }
 }
 
 /// The click-zone sections of Settings > Mouse: turn the feature on, and
 /// manage layouts — the bundled presets and the user's own. Editing opens the
-/// editor window, where a layout is also assigned to disks. Placed inside the
-/// tab's Form.
+/// editor as a sheet, where a layout is also assigned to disks. Placed inside
+/// the tab's Form.
 struct ClickZoneSettingsSections: View {
   let viewModel: EmulatorViewModel
   @Environment(Settings.self) private var settings
-  @Environment(\.openWindow) private var openWindow
-  @Environment(\.dismissWindow) private var dismissWindow
 
   @State private var selection: UUID?
   @State private var pendingDelete: ClickZoneLayout?
   @State private var errorMessage: String?
+  @State private var showsImporter = false
+  /// The layout being exported and its file contents, while the save panel
+  /// is up.
+  @State private var exporting: (name: String, document: ClickZoneLayoutDocument)?
 
   private var store: ClickZoneStore { ClickZoneStore.shared }
 
@@ -62,7 +82,24 @@ struct ClickZoneSettingsSections: View {
 
         HStack {
           Button("New Layout") { createLayout() }
-          Button("Import…") { importLayout() }
+          Button("Import…") { showsImporter = true }
+            // The open and save panels are sheets on the Settings window, on
+            // separate views: SwiftUI keeps only one file panel per view.
+            .fileImporter(isPresented: $showsImporter, allowedContentTypes: [.clickZoneLayout]) { result in
+              if case .success(let url) = result { importLayout(from: url) }
+            }
+            .background(
+              Color.clear.fileExporter(
+                isPresented: Binding(get: { exporting != nil }, set: { if !$0 { exporting = nil } }),
+                document: exporting?.document,
+                contentType: .clickZoneLayout,
+                defaultFilename: exporting?.name
+              ) { result in
+                if case .failure(let error) = result {
+                  viewModel.showAlert(title: String(localized: "Export Failed"), message: error.localizedDescription)
+                }
+              }
+            )
           Spacer()
           Button(selectedIsPreset ? "Duplicate and Edit…" : "Edit…") {
             if let selection { edit(selection) }
@@ -72,6 +109,12 @@ struct ClickZoneSettingsSections: View {
         Text("Presets cannot be changed; editing one makes a copy. Double-click a layout to edit it, or Control-click for more.")
           .settingsDescriptionStyle()
       }
+    }
+    .sheet(isPresented: Binding(
+      get: { viewModel.isEditingClickZones },
+      set: { if !$0 { viewModel.endClickZoneEditing() } }
+    )) {
+      ClickZoneEditorView(viewModel: viewModel)
     }
     .confirmationDialog(
       deleteTitle,
@@ -149,9 +192,7 @@ struct ClickZoneSettingsSections: View {
       target = copy.id
     }
     selection = target
-    if viewModel.beginClickZoneEditing(layoutID: target) {
-      openWindow(id: ClickZoneEditorView.windowID)
-    }
+    viewModel.beginClickZoneEditing(layoutID: target)
   }
 
   /// Make an empty layout, assigned to every mounted disk, and edit it.
@@ -182,18 +223,15 @@ struct ClickZoneSettingsSections: View {
   private func delete(_ layout: ClickZoneLayout) {
     if viewModel.clickZoneEditingLayout?.id == layout.id {
       viewModel.endClickZoneEditing()
-      dismissWindow(id: ClickZoneEditorView.windowID)
     }
     store.delete(layout.id)
     if selection == layout.id { selection = nil }
     pendingDelete = nil
   }
 
-  private func importLayout() {
-    let panel = NSOpenPanel()
-    panel.allowedContentTypes = [.clickZoneLayout]
-    panel.allowsMultipleSelection = false
-    guard panel.runModal() == .OK, let url = panel.url else { return }
+  private func importLayout(from url: URL) {
+    let accessing = url.startAccessingSecurityScopedResource()
+    defer { if accessing { url.stopAccessingSecurityScopedResource() } }
     do {
       let layout = try store.importLayout(from: Data(contentsOf: url))
       selection = layout.id
@@ -203,12 +241,9 @@ struct ClickZoneSettingsSections: View {
   }
 
   private func export(_ layout: ClickZoneLayout) {
-    let panel = NSSavePanel()
-    panel.allowedContentTypes = [.clickZoneLayout]
-    panel.nameFieldStringValue = store.displayName(of: layout)
-    guard panel.runModal() == .OK, let url = panel.url else { return }
     do {
-      try store.exportData(for: layout.id).write(to: url, options: .atomic)
+      exporting = (store.displayName(of: layout),
+                   ClickZoneLayoutDocument(data: try store.exportData(for: layout.id)))
     } catch {
       viewModel.showAlert(title: String(localized: "Export Failed"), message: error.localizedDescription)
     }
