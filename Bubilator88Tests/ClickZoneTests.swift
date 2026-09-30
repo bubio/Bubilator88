@@ -428,3 +428,57 @@ struct ClickZoneRectTests {
       == ClickZoneRect(x: 0, y: 0, width: 640, height: 400))
   }
 }
+
+struct ClickZoneNavigationTests {
+
+  private func zone(_ x: Int, _ y: Int, _ w: Int = 100, _ h: Int = 20) -> ClickZone {
+    ClickZone(rect: ClickZoneRect(x: x, y: y, width: w, height: h))
+  }
+
+  // A 2×2 grid plus one zone far below.
+  private let a = ClickZone(rect: ClickZoneRect(x: 0, y: 0, width: 100, height: 20))
+  private let b = ClickZone(rect: ClickZoneRect(x: 200, y: 4, width: 100, height: 20))
+  private let c = ClickZone(rect: ClickZoneRect(x: 0, y: 100, width: 100, height: 20))
+  private let d = ClickZone(rect: ClickZoneRect(x: 200, y: 100, width: 100, height: 20))
+  private var zones: [ClickZone] { [d, c, b, a] }
+
+  @Test("十字キーはその方向で最も近いゾーンへ動く")
+  func directions() {
+    #expect(ClickZoneNavigation.move(from: a.id, .right, in: zones) == b.id)
+    #expect(ClickZoneNavigation.move(from: a.id, .down, in: zones) == c.id)
+    #expect(ClickZoneNavigation.move(from: d.id, .left, in: zones) == c.id)
+    #expect(ClickZoneNavigation.move(from: d.id, .up, in: zones) == b.id)
+  }
+
+  @Test("その方向にゾーンが無ければ動かない")
+  func stays() {
+    #expect(ClickZoneNavigation.move(from: a.id, .up, in: zones) == a.id)
+    #expect(ClickZoneNavigation.move(from: a.id, .left, in: zones) == a.id)
+  }
+
+  @Test("メニューは横ずれが多少あっても次の行へ進む")
+  func menuColumn() {
+    let m = [zone(100, 100, 200), zone(100, 130, 80), zone(300, 300, 40)]
+    #expect(ClickZoneNavigation.move(from: m[0].id, .down, in: m) == m[1].id)
+  }
+
+  @Test("フォーカスが無ければ読み順の先頭。ゾーンが無ければ nil")
+  func noFocus() {
+    #expect(ClickZoneNavigation.move(from: nil, .down, in: zones) == a.id)
+    #expect(ClickZoneNavigation.move(from: UUID(), .down, in: zones) == a.id)
+    #expect(ClickZoneNavigation.move(from: nil, .down, in: []) == nil)
+    #expect(ClickZoneNavigation.cycle(from: nil, forward: true, in: []) == nil)
+  }
+
+  @Test("読み順は上から下、同じ行は左から右。多少の段差は同じ行とみなす")
+  func readingOrder() {
+    #expect(ClickZoneNavigation.readingOrder(zones).map(\.id) == [a.id, b.id, c.id, d.id])
+  }
+
+  @Test("シーケンス移動は端で回り込む")
+  func cycleWraps() {
+    #expect(ClickZoneNavigation.cycle(from: a.id, forward: true, in: zones) == b.id)
+    #expect(ClickZoneNavigation.cycle(from: d.id, forward: true, in: zones) == a.id)
+    #expect(ClickZoneNavigation.cycle(from: a.id, forward: false, in: zones) == d.id)
+  }
+}

@@ -73,6 +73,7 @@ final class Settings {
     static let mouseJoyMode              = "mouseJoyMode"
     static let mouseSensitivity          = "mouseSensitivity"
     static let clickZonesEnabled         = "clickZonesEnabled"
+    static let clickZoneNavigationButton = "clickZoneNavigationButton"
 
     // Keyboard
     static let arrowKeysAsNumpad         = "arrowKeysAsNumpad"
@@ -416,6 +417,14 @@ final class Settings {
     didSet { UserDefaults.standard.set(clickZonesEnabled, forKey: Keys.clickZonesEnabled) }
   }
 
+  /// The controller button that switches click zone navigation on and off
+  /// (`ControllerButton.rawValue`), empty for none. While on, the D-pad and
+  /// left stick move a focus between zones, the shoulders step through them
+  /// in reading order, A plays the focused zone and B leaves navigation.
+  var clickZoneNavigationButton: String = ControllerButton.buttonSelect.rawValue {
+    didSet { UserDefaults.standard.set(clickZoneNavigationButton, forKey: Keys.clickZoneNavigationButton) }
+  }
+
   // MARK: - Keyboard
 
   /// Map arrow keys to numpad (↑→8, ↓→2, ←→4, →→6).
@@ -653,6 +662,9 @@ final class Settings {
     }
     if let v = UserDefaults.standard.object(forKey: Keys.clickZonesEnabled) as? Bool {
       clickZonesEnabled = v
+    }
+    if let v = UserDefaults.standard.string(forKey: Keys.clickZoneNavigationButton) {
+      clickZoneNavigationButton = v
     }
     if let v = UserDefaults.standard.object(forKey: Keys.arrowKeysAsNumpad) as? Bool {
       arrowKeysAsNumpad = v

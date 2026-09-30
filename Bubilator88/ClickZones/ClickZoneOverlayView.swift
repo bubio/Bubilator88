@@ -32,9 +32,15 @@ private struct ClickZonePlayLayer: View {
     ZStack(alignment: .topLeading) {
       ForEach(zones) { zone in
         let frame = fit.toView(zone.rect.cgRect)
+        // While a controller steers the zones they all show faintly, and the
+        // focused one stands out.
+        let navigating = viewModel.isNavigatingClickZones
+        let focused = navigating && viewModel.focusedClickZoneID == zone.id
+        let lit = hovered == zone.id || focused
         Rectangle()
-          .fill(Color.accentColor.opacity(hovered == zone.id ? 0.15 : 0))
-          .strokeBorder(Color.accentColor.opacity(hovered == zone.id ? 0.8 : 0), lineWidth: 1)
+          .fill(Color.accentColor.opacity(focused ? 0.3 : lit ? 0.15 : 0))
+          .strokeBorder(Color.accentColor.opacity(focused ? 1 : lit ? 0.8 : navigating ? 0.4 : 0),
+                        lineWidth: focused ? 2 : 1)
           .contentShape(Rectangle())
           .frame(width: frame.width, height: frame.height)
           .offset(x: frame.minX, y: frame.minY)

@@ -817,6 +817,10 @@ final class EmulatorViewModel {
   /// Whether the editor is recording keys into the selected zone. While it
   /// is, Delete is a key to record rather than "delete the zone".
   var isRecordingClickZoneKeys = false
+  /// Whether a controller is steering click zones (see
+  /// `Settings.clickZoneNavigationButton`), and the zone it has focused.
+  var isNavigatingClickZones = false
+  var focusedClickZoneID: UUID?
   /// Whether emulation was running when the editor paused it.
   @ObservationIgnored var clickZoneEditPausedEmulation = false
 

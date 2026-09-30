@@ -57,6 +57,14 @@ struct ClickZoneSettingsSections: View {
           }
         }
         .settingsDescriptionStyle()
+        Picker("Controller Navigation Button", selection: $settings.clickZoneNavigationButton) {
+          Text("None").tag("")
+          ForEach(ControllerButton.allCases) { button in
+            Text(button.displayName).tag(button.rawValue)
+          }
+        }
+        Text("Press it to steer the zones with a controller: the D-pad moves between zones, the shoulder buttons step through them in order, A plays the zone and B leaves navigation. Without zones, the button keeps its usual mapping.")
+          .settingsDescriptionStyle()
       }
 
       Section("Click Zone Layouts") {
