@@ -121,7 +121,8 @@ final class ClickZoneStore {
   @discardableResult
   func duplicate(_ id: UUID, name: String) -> ClickZoneLayout? {
     guard let source = layout(id: id) else { return nil }
-    let copy = ClickZoneLayout(name: uniqueName(name), zones: source.zones)
+    let copy = ClickZoneLayout(name: uniqueName(name), zones: source.zones,
+                               mouseBindings: source.mouseBindings)
     userLayouts.append(copy)
     save()
     return copy
@@ -149,14 +150,16 @@ final class ClickZoneStore {
     guard let layout = layout(id: id) else { throw CocoaError(.fileNoSuchFile) }
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-    return try encoder.encode(ClickZoneLayoutFile(name: displayName(of: layout), zones: layout.zones))
+    return try encoder.encode(ClickZoneLayoutFile(
+      name: displayName(of: layout), zones: layout.zones, mouseBindings: layout.mouseBindings))
   }
 
   /// Add the layout in a `.b88zones` file as a new user layout.
   @discardableResult
   func importLayout(from data: Data) throws -> ClickZoneLayout {
     let file = try JSONDecoder().decode(ClickZoneLayoutFile.self, from: data)
-    let layout = ClickZoneLayout(name: uniqueName(file.name), zones: file.zones)
+    let layout = ClickZoneLayout(name: uniqueName(file.name), zones: file.zones,
+                                 mouseBindings: file.mouseBindings)
     userLayouts.append(layout)
     save()
     return layout

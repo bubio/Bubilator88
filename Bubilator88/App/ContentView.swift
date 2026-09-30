@@ -46,6 +46,7 @@ struct ContentView: View {
           onRomajiKeyDown: { viewModel.handleRomajiKeyDown($0) },
           onMouseMove: { viewModel.injectMouseMovement(dx: $0, dy: $1) },
           onMouseButton: { viewModel.setMouseButton(left: $0, right: $1) },
+          onZoneMouseInput: { viewModel.playClickZoneMouseButton($0) },
           mouseCaptureEnabled: Settings.shared.mouseEnabled,
           mouseSensitivity: Settings.shared.mouseSensitivity,
           onCaptureChange: { viewModel.mouseCapturing = $0 }

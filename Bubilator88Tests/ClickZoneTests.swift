@@ -268,6 +268,43 @@ struct ClickZoneStoreTests {
     #expect(imported.zones.map(\.steps) == mine.zones.map(\.steps))
   }
 
+  @Test("マウスボタン割り当ては保存・複製・書き出しで保たれ、空にすると外れる")
+  func mouseBindingsRoundTrip() throws {
+    let url = tempURL()
+    defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+    let store = makeStore(url)
+    var mine = store.create(name: "Mine")
+    mine.setSteps([ClickZoneStep(keys: ["shift"])], for: .right)
+    mine.setSteps([ClickZoneStep(keys: ["8"])], for: .wheelUp)
+    mine.setSteps([ClickZoneStep(keys: ["esc"])], for: .button5)
+    mine.setSteps([], for: .button5)
+    store.update(mine)
+    #expect(mine.steps(for: .button5).isEmpty)
+    #expect(mine.mouseBindings.keys.sorted() == ["right", "wheelUp"])
+
+    #expect(makeStore(url).userLayouts == [mine])
+    let copy = try #require(store.duplicate(mine.id, name: "Copy"))
+    #expect(copy.mouseBindings == mine.mouseBindings)
+    let imported = try store.importLayout(from: try store.exportData(for: mine.id))
+    #expect(imported.steps(for: .wheelUp).map(\.keys) == [["8"]])
+  }
+
+  @Test("mouseBindings の無い旧レイアウトも読める")
+  func layoutWithoutMouseBindings() throws {
+    let json = #"{"id":"00000000-0000-0000-0000-000000000009","name":"Old","zones":[]}"#
+    let layout = try JSONDecoder().decode(ClickZoneLayout.self, from: Data(json.utf8))
+    #expect(layout.mouseBindings.isEmpty)
+  }
+
+  @Test("NSEvent のボタン番号を割り当て対象に対応づける。左は対象外")
+  func mouseButtonNumbers() {
+    #expect(ClickZoneMouseButton(buttonNumber: 0) == nil)
+    #expect(ClickZoneMouseButton(buttonNumber: 1) == .right)
+    #expect(ClickZoneMouseButton(buttonNumber: 3) == .button4)
+    #expect(ClickZoneMouseButton(buttonNumber: 4) == .button5)
+    #expect(ClickZoneMouseButton(buttonNumber: 5) == nil)
+  }
+
   @Test("不正なファイルの読み込みは失敗し、何も追加しない")
   func importRejectsGarbage() {
     let store = makeStore()

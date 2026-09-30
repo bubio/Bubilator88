@@ -213,17 +213,66 @@ nonisolated struct ClickZone: Codable, Equatable, Identifiable, Sendable {
   }
 }
 
-/// A named set of zones. Bundled presets and the user's own layouts share this
-/// type; which one a layout is follows from where `ClickZoneStore` keeps it.
+/// A mouse input other than a left click that a layout can bind to a key
+/// sequence. The raw values are the keys of `ClickZoneLayout.mouseBindings`.
+nonisolated enum ClickZoneMouseButton: String, Codable, CaseIterable, Identifiable, Sendable {
+  case right, middle, button4, button5, wheelUp, wheelDown
+
+  var id: String { rawValue }
+
+  /// The button for an `NSEvent.buttonNumber` of a right or other mouse
+  /// button. Button 0 is the left one, which clicks zones.
+  init?(buttonNumber: Int) {
+    switch buttonNumber {
+    case 1: self = .right
+    case 2: self = .middle
+    case 3: self = .button4
+    case 4: self = .button5
+    default: return nil
+    }
+  }
+
+  var isWheel: Bool { self == .wheelUp || self == .wheelDown }
+}
+
+/// A named set of zones and mouse-button bindings. Bundled presets and the
+/// user's own layouts share this type; which one a layout is follows from
+/// where `ClickZoneStore` keeps it.
 nonisolated struct ClickZoneLayout: Codable, Equatable, Identifiable, Sendable {
   var id: UUID
   var name: String
   var zones: [ClickZone]
+  /// Key sequences of the other mouse inputs, by `ClickZoneMouseButton.rawValue`.
+  /// A string key keeps the JSON an object that can be written by hand.
+  var mouseBindings: [String: [ClickZoneStep]]
 
-  init(id: UUID = UUID(), name: String, zones: [ClickZone] = []) {
+  init(id: UUID = UUID(), name: String, zones: [ClickZone] = [],
+       mouseBindings: [String: [ClickZoneStep]] = [:]) {
     self.id = id
     self.name = name
     self.zones = zones
+    self.mouseBindings = mouseBindings
+  }
+
+  private enum CodingKeys: String, CodingKey { case id, name, zones, mouseBindings }
+
+  /// `mouseBindings` may be left out: layouts saved before it existed have none.
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    id = try c.decode(UUID.self, forKey: .id)
+    name = try c.decode(String.self, forKey: .name)
+    zones = try c.decode([ClickZone].self, forKey: .zones)
+    mouseBindings = try c.decodeIfPresent([String: [ClickZoneStep]].self, forKey: .mouseBindings) ?? [:]
+  }
+
+  /// The keys `button` types, empty when it is unbound.
+  func steps(for button: ClickZoneMouseButton) -> [ClickZoneStep] {
+    mouseBindings[button.rawValue] ?? []
+  }
+
+  /// Bind `button` to `steps`; no steps unbinds it.
+  mutating func setSteps(_ steps: [ClickZoneStep], for button: ClickZoneMouseButton) {
+    mouseBindings[button.rawValue] = steps.isEmpty ? nil : steps
   }
 }
 
@@ -276,4 +325,20 @@ nonisolated struct ClickZoneDiskFile: Equatable, Identifiable {
 nonisolated struct ClickZoneLayoutFile: Codable, Sendable {
   var name: String
   var zones: [ClickZone]
+  var mouseBindings: [String: [ClickZoneStep]]
+
+  init(name: String, zones: [ClickZone], mouseBindings: [String: [ClickZoneStep]] = [:]) {
+    self.name = name
+    self.zones = zones
+    self.mouseBindings = mouseBindings
+  }
+
+  private enum CodingKeys: String, CodingKey { case name, zones, mouseBindings }
+
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    name = try c.decode(String.self, forKey: .name)
+    zones = try c.decode([ClickZone].self, forKey: .zones)
+    mouseBindings = try c.decodeIfPresent([String: [ClickZoneStep]].self, forKey: .mouseBindings) ?? [:]
+  }
 }

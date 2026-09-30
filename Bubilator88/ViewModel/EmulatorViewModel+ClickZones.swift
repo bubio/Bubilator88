@@ -40,6 +40,16 @@ extension EmulatorViewModel {
     clickZonePlayer.start(zone.steps)
   }
 
+  /// Play the keys the active layout binds to a mouse input. Returns whether
+  /// the input is bound, so the caller consumes the event; a bound input
+  /// pressed while a sequence is still playing is consumed and dropped.
+  func playClickZoneMouseButton(_ button: ClickZoneMouseButton) -> Bool {
+    guard clickZonesAvailable, !isEditingClickZones,
+          let steps = activeClickZoneLayout?.steps(for: button), !steps.isEmpty else { return false }
+    clickZonePlayer.start(steps)
+    return true
+  }
+
   /// Advance the sequence by one frame. Emulation thread, next to
   /// `tickPasteQueue()`, so the keys are applied directly.
   nonisolated func tickClickZonePlayer() {

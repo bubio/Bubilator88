@@ -19,6 +19,9 @@ struct ClickZoneEditorView: View {
   /// Rows selected in the step list, by index.
   @State private var selectedSteps: Set<Int> = []
   @State private var showsDisks = false
+  @State private var showsMouseButtons = false
+  /// The mouse input whose keys are being recorded, while the popover records.
+  @State private var recordingButton: ClickZoneMouseButton?
   @State private var isDetecting = false
   /// What the last zone detection found, shown briefly beside its button.
   @State private var detectionMessage: String?
@@ -80,6 +83,15 @@ struct ClickZoneEditorView: View {
       .frame(maxWidth: 280)
       Spacer()
       Button {
+        showsMouseButtons.toggle()
+      } label: {
+        Label("Mouse Buttons", systemImage: "computermouse")
+      }
+      .help("Keys for the right button, wheel and other buttons")
+      .popover(isPresented: $showsMouseButtons, arrowEdge: .bottom) {
+        mouseButtonsPopover(layout)
+      }
+      Button {
         showsDisks.toggle()
       } label: {
         Label {
@@ -95,6 +107,52 @@ struct ClickZoneEditorView: View {
     }
     .padding(.horizontal, 12)
     .padding(.vertical, 8)
+  }
+
+  // MARK: - Mouse buttons
+
+  /// The keys typed by the right, middle and extra buttons and the wheel,
+  /// anywhere on the screen. Each row records its own sequence.
+  private func mouseButtonsPopover(_ layout: ClickZoneLayout) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Mouse Buttons")
+        .font(.headline)
+      Text("Keys typed by a mouse input anywhere on the screen. A middle button binding replaces turbo.")
+        .settingsDescriptionStyle()
+      ForEach(ClickZoneMouseButton.allCases) { button in
+        let steps = layout.steps(for: button)
+        let recording = recordingButton == button
+        HStack {
+          Text(button.title)
+            .frame(width: 100, alignment: .leading)
+          Text(recording ? String(localized: "Press keys…")
+            : steps.isEmpty ? "—" : steps.map(\.displayName).joined(separator: " "))
+            .font(.body.monospaced())
+            .foregroundStyle(steps.isEmpty && !recording ? .secondary : .primary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+          Spacer()
+          Button {
+            recording ? stopRecording() : startRecording(button: button)
+          } label: {
+            Image(systemName: recording ? "stop.circle" : "record.circle")
+          }
+          .buttonStyle(.borderless)
+          .help(recording ? "Stop Recording" : "Record")
+          Button {
+            viewModel.editClickZones { $0.setSteps([], for: button) }
+          } label: {
+            Image(systemName: "xmark.circle")
+          }
+          .buttonStyle(.borderless)
+          .disabled(steps.isEmpty)
+          .help("Clear Keys")
+        }
+      }
+    }
+    .padding()
+    .frame(width: 420)
+    .onDisappear { stopRecording() }
   }
 
   // MARK: - Disks
@@ -426,6 +484,24 @@ struct ClickZoneEditorView: View {
   /// Events are consumed so they neither type into this window nor reach the
   /// emulator; ⌘ shortcuts still pass through.
   private func startRecording(into id: UUID) {
+    record { step in
+      viewModel.editClickZone(id: id) { $0.steps.append(step) }
+    }
+  }
+
+  /// Record the keys of a mouse input, replacing what it typed.
+  private func startRecording(button: ClickZoneMouseButton) {
+    var first = true
+    record { step in
+      viewModel.editClickZones { layout in
+        layout.setSteps((first ? [] : layout.steps(for: button)) + [step], for: button)
+      }
+      first = false
+    }
+    recordingButton = button
+  }
+
+  private func record(_ onStep: @escaping (ClickZoneStep) -> Void) {
     stopRecording()
     recorder = ClickZoneKeyRecorder()
     viewModel.isRecordingClickZoneKeys = true
@@ -436,9 +512,7 @@ struct ClickZoneEditorView: View {
       guard let (keyCode, down) = Self.keyTransition(event),
             let key = KeyMapping.pc88Key(for: keyCode) else { return nil }
       let step = down ? recorder.keyDown(key) : recorder.keyUp(key)
-      if let step {
-        viewModel.editClickZone(id: id) { $0.steps.append(step) }
-      }
+      if let step { onStep(step) }
       return nil
     }
   }
@@ -446,6 +520,7 @@ struct ClickZoneEditorView: View {
   private func stopRecording() {
     if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
     keyMonitor = nil
+    recordingButton = nil
     viewModel.isRecordingClickZoneKeys = false
   }
 
@@ -469,6 +544,19 @@ struct ClickZoneEditorView: View {
       return (code, event.modifierFlags.contains(flag))
     default:
       return nil
+    }
+  }
+}
+
+extension ClickZoneMouseButton {
+  var title: LocalizedStringKey {
+    switch self {
+    case .right: "Right Button"
+    case .middle: "Middle Button"
+    case .button4: "Button 4"
+    case .button5: "Button 5"
+    case .wheelUp: "Wheel Up"
+    case .wheelDown: "Wheel Down"
     }
   }
 }

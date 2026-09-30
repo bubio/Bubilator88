@@ -296,6 +296,26 @@
         }
       }
     },
+    "Button 4" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ボタン4"
+          }
+        }
+      }
+    },
+    "Button 5" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ボタン5"
+          }
+        }
+      }
+    },
     "Clear Keys" : {
       "localizations" : {
         "ja" : {
@@ -578,6 +598,26 @@
         }
       }
     },
+    "Keys for the right button, wheel and other buttons" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右ボタン・ホイール・その他のボタンに割り当てるキー"
+          }
+        }
+      }
+    },
+    "Keys typed by a mouse input anywhere on the screen. A middle button binding replaces turbo." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画面上のどこでもマウス操作でキーを入力します。中ボタンに割り当てるとターボは無効になります。"
+          }
+        }
+      }
+    },
     "Label" : {
       "localizations" : {
         "ja" : {
@@ -588,12 +628,32 @@
         }
       }
     },
+    "Middle Button" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中ボタン"
+          }
+        }
+      }
+    },
     "Mount a disk to assign this layout to it." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ディスクをマウントすると、このレイアウトを割り当てられます。"
+          }
+        }
+      }
+    },
+    "Mouse Buttons" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マウスボタン"
           }
         }
       }
@@ -710,6 +770,16 @@
         }
       }
     },
+    "Press keys…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーを押してください…"
+          }
+        }
+      }
+    },
     "Record" : {
       "localizations" : {
         "ja" : {
@@ -747,6 +817,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "RETURN（画面全体）"
+          }
+        }
+      }
+    },
+    "Right Button" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右ボタン"
           }
         }
       }
@@ -848,6 +928,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "待機 %lldf"
+          }
+        }
+      }
+    },
+    "Wheel Down" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホイール下"
+          }
+        }
+      }
+    },
+    "Wheel Up" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホイール上"
           }
         }
       }

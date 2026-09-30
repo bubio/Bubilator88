@@ -19,6 +19,9 @@ struct KeyEventView: NSViewRepresentable {
   var onMouseMove: ((Int, Int) -> Void)?
   /// Left/right button state.
   var onMouseButton: ((Bool, Bool) -> Void)?
+  /// Offers a right/other button press or a wheel notch to the click zone
+  /// layout. Returns true when the layout binds it, and the event is consumed.
+  var onZoneMouseInput: ((ClickZoneMouseButton) -> Bool)?
   /// Whether bus-mouse capture is active (mirrors Settings.mouseEnabled).
   var mouseCaptureEnabled: Bool = false
   /// Movement sensitivity multiplier.
@@ -34,6 +37,7 @@ struct KeyEventView: NSViewRepresentable {
     view.onRomajiKeyDown = onRomajiKeyDown
     view.onMouseMove = onMouseMove
     view.onMouseButton = onMouseButton
+    view.onZoneMouseInput = onZoneMouseInput
     view.onCaptureChange = onCaptureChange
     view.mouseSensitivity = mouseSensitivity
     view.setMouseCaptureEnabled(mouseCaptureEnabled)
@@ -47,6 +51,7 @@ struct KeyEventView: NSViewRepresentable {
     nsView.onRomajiKeyDown = onRomajiKeyDown
     nsView.onMouseMove = onMouseMove
     nsView.onMouseButton = onMouseButton
+    nsView.onZoneMouseInput = onZoneMouseInput
     nsView.onCaptureChange = onCaptureChange
     nsView.mouseSensitivity = mouseSensitivity
     nsView.setMouseCaptureEnabled(mouseCaptureEnabled)
@@ -64,6 +69,7 @@ class KeyCaptureNSView: NSView {
   private var romajiConsumed: Set<UInt16> = []
   var onMouseMove: ((Int, Int) -> Void)?
   var onMouseButton: ((Bool, Bool) -> Void)?
+  var onZoneMouseInput: ((ClickZoneMouseButton) -> Bool)?
   var onCaptureChange: ((Bool) -> Void)?
   var mouseSensitivity: Float = 1.0
 
@@ -262,28 +268,79 @@ class KeyCaptureNSView: NSView {
     // Right button.
     monitors.append(NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [weak self] event in
       guard let self, self.window?.isKeyWindow == true else { return event }
+      if self.offerToZones(event) { return nil }
       if self.capturing { self.rightHeld = true; self.onMouseButton?(self.leftHeld, true) }
       return self.capturing ? nil : event  // suppress context menu while captured
     } as Any)
 
     monitors.append(NSEvent.addLocalMonitorForEvents(matching: .rightMouseUp) { [weak self] event in
       guard let self, self.window?.isKeyWindow == true else { return event }
+      if self.zoneConsumed.remove(event.buttonNumber) != nil { return nil }
       if self.capturing { self.rightHeld = false; self.onMouseButton?(self.leftHeld, false) }
       return self.capturing ? nil : event
     } as Any)
 
-    // Middle mouse button → turbo mode
+    // Middle mouse button → turbo mode, unless the click zone layout binds it.
+    // Other buttons (4, 5) only serve the click zone layout.
     monitors.append(NSEvent.addLocalMonitorForEvents(matching: .otherMouseDown) { [weak self] event in
       guard let self, self.window?.isKeyWindow == true else { return event }
+      if self.offerToZones(event) { return nil }
       if event.buttonNumber == 2 { self.onTurbo?(true) }
       return event
     } as Any)
 
     monitors.append(NSEvent.addLocalMonitorForEvents(matching: .otherMouseUp) { [weak self] event in
       guard let self, self.window?.isKeyWindow == true else { return event }
+      if self.zoneConsumed.remove(event.buttonNumber) != nil { return nil }
       if event.buttonNumber == 2 { self.onTurbo?(false) }
       return event
     } as Any)
+
+    // Wheel → click zone layout.
+    monitors.append(NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+      guard let self, self.window?.isKeyWindow == true else { return event }
+      return self.offerWheelToZones(event) ? nil : event
+    } as Any)
+  }
+
+  /// Button numbers whose press went to the click zone layout, so the
+  /// matching release is swallowed too.
+  private var zoneConsumed: Set<Int> = []
+  /// Wheel movement not yet enough for a notch, in points.
+  private var wheelAccum: CGFloat = 0
+  /// Points of trackpad scrolling that make one notch. A wheel's own notches
+  /// each count as one.
+  private static let wheelNotch: CGFloat = 8
+
+  /// Offer a button press inside the screen to the layout.
+  private func offerToZones(_ event: NSEvent) -> Bool {
+    guard !capturing, eventInsideView(event),
+          let button = ClickZoneMouseButton(buttonNumber: event.buttonNumber),
+          onZoneMouseInput?(button) == true else { return false }
+    zoneConsumed.insert(event.buttonNumber)
+    return true
+  }
+
+  /// Turn wheel movement inside the screen into notches for the layout. The
+  /// direction follows the wheel, not the system's "natural scrolling".
+  private func offerWheelToZones(_ event: NSEvent) -> Bool {
+    guard !capturing, eventInsideView(event), let onZoneMouseInput else { return false }
+    var delta = event.scrollingDeltaY
+    if event.isDirectionInvertedFromDevice { delta = -delta }
+    if event.phase.contains(.began) { wheelAccum = 0 }
+    guard delta != 0 else { return false }
+    var notches = 0
+    if event.hasPreciseScrollingDeltas {
+      if (wheelAccum > 0) != (delta > 0) { wheelAccum = 0 }
+      wheelAccum += delta
+      notches = Int(wheelAccum / Self.wheelNotch)
+      wheelAccum -= CGFloat(notches) * Self.wheelNotch
+    } else {
+      notches = delta > 0 ? 1 : -1
+    }
+    let button: ClickZoneMouseButton = notches > 0 ? .wheelUp : .wheelDown
+    guard notches != 0 else { return false }
+    return onZoneMouseInput(button)
   }
 
   private var leftHeld: Bool = false
