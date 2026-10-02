@@ -111,13 +111,13 @@ struct ClickZoneEditorView: View {
 
   // MARK: - Mouse buttons
 
-  /// The keys typed by the right, middle and extra buttons and the wheel,
-  /// anywhere on the screen. Each row records its own sequence.
+  /// The key typed by the right and extra buttons and the wheel, anywhere on
+  /// the screen. Each row records one key.
   private func mouseButtonsPopover(_ layout: ClickZoneLayout) -> some View {
     VStack(alignment: .leading, spacing: 8) {
       Text("Mouse Buttons")
         .font(.headline)
-      Text("Keys typed by a mouse input anywhere on the screen. A middle button binding replaces turbo.")
+      Text("One key typed by a mouse input anywhere on the screen. The middle button stays turbo.")
         .settingsDescriptionStyle()
       ForEach(ClickZoneMouseButton.allCases) { button in
         let steps = layout.steps(for: button)
@@ -125,7 +125,7 @@ struct ClickZoneEditorView: View {
         HStack {
           Text(button.title)
             .frame(width: 100, alignment: .leading)
-          Text(recording ? String(localized: "Press keys…")
+          Text(recording ? String(localized: "Press a key…")
             : steps.isEmpty ? "—" : steps.map(\.displayName).joined(separator: " "))
             .font(.body.monospaced())
             .foregroundStyle(steps.isEmpty && !recording ? .secondary : .primary)
@@ -489,14 +489,13 @@ struct ClickZoneEditorView: View {
     }
   }
 
-  /// Record the keys of a mouse input, replacing what it typed.
+  /// Record the key of a mouse input, replacing what it typed.
   private func startRecording(button: ClickZoneMouseButton) {
-    var first = true
     record { step in
-      viewModel.editClickZones { layout in
-        layout.setSteps((first ? [] : layout.steps(for: button)) + [step], for: button)
-      }
-      first = false
+      // One key per input: the first key pressed, then recording ends.
+      guard let key = step.keys.first else { return }
+      viewModel.editClickZones { $0.setSteps([ClickZoneStep(keys: [key])], for: button) }
+      stopRecording()
     }
     recordingButton = button
   }
@@ -552,7 +551,6 @@ extension ClickZoneMouseButton {
   var title: LocalizedStringKey {
     switch self {
     case .right: "Right Button"
-    case .middle: "Middle Button"
     case .button4: "Button 4"
     case .button5: "Button 5"
     case .wheelUp: "Wheel Up"

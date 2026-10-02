@@ -274,6 +274,7 @@ struct ClickZoneStoreTests {
     defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
     let store = makeStore(url)
     var mine = store.create(name: "Mine")
+    mine.mouseBindings = [:]
     mine.setSteps([ClickZoneStep(keys: ["shift"])], for: .right)
     mine.setSteps([ClickZoneStep(keys: ["8"])], for: .wheelUp)
     mine.setSteps([ClickZoneStep(keys: ["esc"])], for: .button5)
@@ -289,17 +290,37 @@ struct ClickZoneStoreTests {
     #expect(imported.steps(for: .wheelUp).map(\.keys) == [["8"]])
   }
 
-  @Test("mouseBindings の無い旧レイアウトも読める")
+  @Test("新規レイアウトは既定の割り当てで始まり、キー名はすべて解決できる")
+  func defaultMouseBindings() throws {
+    let layout = makeStore().create(name: "New")
+    #expect(layout.steps(for: .right).map(\.keys) == [["shift"]])
+    #expect(layout.steps(for: .button4).map(\.keys) == [["return"]])
+    #expect(layout.steps(for: .button5).map(\.keys) == [["esc"]])
+    #expect(layout.steps(for: .wheelUp).map(\.keys) == [["kp8"]])
+    #expect(layout.steps(for: .wheelDown).map(\.keys) == [["kp2"]])
+    for button in ClickZoneMouseButton.allCases {
+      for step in layout.steps(for: button) { #expect(step.resolvedKeys.count == step.keys.count) }
+    }
+  }
+
+  @Test("mouseBindings を空にして保存したレイアウトは空のまま読める")
+  func clearedBindingsStayCleared() throws {
+    let json = #"{"id":"00000000-0000-0000-0000-00000000000A","name":"Bare","zones":[],"mouseBindings":{}}"#
+    #expect(try JSONDecoder().decode(ClickZoneLayout.self, from: Data(json.utf8)).mouseBindings.isEmpty)
+  }
+
+  @Test("mouseBindings の無い旧レイアウトは既定の割り当てになる")
   func layoutWithoutMouseBindings() throws {
     let json = #"{"id":"00000000-0000-0000-0000-000000000009","name":"Old","zones":[]}"#
     let layout = try JSONDecoder().decode(ClickZoneLayout.self, from: Data(json.utf8))
-    #expect(layout.mouseBindings.isEmpty)
+    #expect(layout.mouseBindings == ClickZoneLayout.defaultMouseBindings)
   }
 
   @Test("NSEvent のボタン番号を割り当て対象に対応づける。左は対象外")
   func mouseButtonNumbers() {
     #expect(ClickZoneMouseButton(buttonNumber: 0) == nil)
     #expect(ClickZoneMouseButton(buttonNumber: 1) == .right)
+    #expect(ClickZoneMouseButton(buttonNumber: 2) == nil)
     #expect(ClickZoneMouseButton(buttonNumber: 3) == .button4)
     #expect(ClickZoneMouseButton(buttonNumber: 4) == .button5)
     #expect(ClickZoneMouseButton(buttonNumber: 5) == nil)

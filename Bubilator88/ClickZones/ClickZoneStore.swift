@@ -111,7 +111,8 @@ final class ClickZoneStore {
   /// Add an empty user layout.
   @discardableResult
   func create(name: String) -> ClickZoneLayout {
-    let layout = ClickZoneLayout(name: uniqueName(name))
+    let layout = ClickZoneLayout(name: uniqueName(name),
+                                 mouseBindings: ClickZoneLayout.defaultMouseBindings)
     userLayouts.append(layout)
     save()
     return layout

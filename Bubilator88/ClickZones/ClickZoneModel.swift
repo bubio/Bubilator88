@@ -216,16 +216,16 @@ nonisolated struct ClickZone: Codable, Equatable, Identifiable, Sendable {
 /// A mouse input other than a left click that a layout can bind to a key
 /// sequence. The raw values are the keys of `ClickZoneLayout.mouseBindings`.
 nonisolated enum ClickZoneMouseButton: String, Codable, CaseIterable, Identifiable, Sendable {
-  case right, middle, button4, button5, wheelUp, wheelDown
+  case right, button4, button5, wheelUp, wheelDown
 
   var id: String { rawValue }
 
   /// The button for an `NSEvent.buttonNumber` of a right or other mouse
-  /// button. Button 0 is the left one, which clicks zones.
+  /// button. Button 0 is the left one, which clicks zones; button 2, the
+  /// middle one, is turbo and cannot be bound.
   init?(buttonNumber: Int) {
     switch buttonNumber {
     case 1: self = .right
-    case 2: self = .middle
     case 3: self = .button4
     case 4: self = .button5
     default: return nil
@@ -256,13 +256,25 @@ nonisolated struct ClickZoneLayout: Codable, Equatable, Identifiable, Sendable {
 
   private enum CodingKeys: String, CodingKey { case id, name, zones, mouseBindings }
 
-  /// `mouseBindings` may be left out: layouts saved before it existed have none.
+  /// The bindings a layout starts with, and gets when its file has none.
+  static let defaultMouseBindings: [String: [ClickZoneStep]] = [
+    ClickZoneMouseButton.right.rawValue: [ClickZoneStep(keys: ["shift"])],
+    ClickZoneMouseButton.button4.rawValue: [ClickZoneStep(keys: ["return"])],
+    ClickZoneMouseButton.button5.rawValue: [ClickZoneStep(keys: ["esc"])],
+    ClickZoneMouseButton.wheelUp.rawValue: [ClickZoneStep(keys: ["kp8"])],
+    ClickZoneMouseButton.wheelDown.rawValue: [ClickZoneStep(keys: ["kp2"])],
+  ]
+
+  /// `mouseBindings` may be left out, as in layouts saved before it existed
+  /// and in hand-written presets: they get the defaults. One that is present,
+  /// even empty, is kept, so unbinding every input sticks.
   init(from decoder: Decoder) throws {
     let c = try decoder.container(keyedBy: CodingKeys.self)
     id = try c.decode(UUID.self, forKey: .id)
     name = try c.decode(String.self, forKey: .name)
     zones = try c.decode([ClickZone].self, forKey: .zones)
-    mouseBindings = try c.decodeIfPresent([String: [ClickZoneStep]].self, forKey: .mouseBindings) ?? [:]
+    mouseBindings = try c.decodeIfPresent([String: [ClickZoneStep]].self, forKey: .mouseBindings)
+      ?? Self.defaultMouseBindings
   }
 
   /// The keys `button` types, empty when it is unbound.
@@ -339,6 +351,7 @@ nonisolated struct ClickZoneLayoutFile: Codable, Sendable {
     let c = try decoder.container(keyedBy: CodingKeys.self)
     name = try c.decode(String.self, forKey: .name)
     zones = try c.decode([ClickZone].self, forKey: .zones)
-    mouseBindings = try c.decodeIfPresent([String: [ClickZoneStep]].self, forKey: .mouseBindings) ?? [:]
+    mouseBindings = try c.decodeIfPresent([String: [ClickZoneStep]].self, forKey: .mouseBindings)
+      ?? ClickZoneLayout.defaultMouseBindings
   }
 }

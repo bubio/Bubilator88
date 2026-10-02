@@ -618,32 +618,12 @@
         }
       }
     },
-    "Keys typed by a mouse input anywhere on the screen. A middle button binding replaces turbo." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "画面上のどこでもマウス操作でキーを入力します。中ボタンに割り当てるとターボは無効になります。"
-          }
-        }
-      }
-    },
     "Label" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ラベル"
-          }
-        }
-      }
-    },
-    "Middle Button" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "中ボタン"
           }
         }
       }
@@ -750,6 +730,16 @@
         }
       }
     },
+    "One key typed by a mouse input anywhere on the screen. The middle button stays turbo." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画面上のどこでもマウス操作で1つのキーを入力します。中ボタンはターボのままです。"
+          }
+        }
+      }
+    },
     "Position" : {
       "localizations" : {
         "ja" : {
@@ -780,22 +770,22 @@
         }
       }
     },
+    "Press a key…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーを押してください…"
+          }
+        }
+      }
+    },
     "Press it to steer the zones with a controller: the D-pad moves between zones, the shoulder buttons step through them in order, A plays the zone and B leaves navigation. Without zones, the button keeps its usual mapping." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "押すとコントローラでゾーンを操作できます。十字キーでゾーン間を移動、ショルダーボタンで順番に移動、Aで実行、Bで操作を終了します。ゾーンが無いときは通常の割り当てのままです。"
-          }
-        }
-      }
-    },
-    "Press keys…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キーを押してください…"
           }
         }
       }

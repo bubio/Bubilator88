@@ -280,8 +280,8 @@ class KeyCaptureNSView: NSView {
       return self.capturing ? nil : event
     } as Any)
 
-    // Middle mouse button → turbo mode, unless the click zone layout binds it.
-    // Other buttons (4, 5) only serve the click zone layout.
+    // Middle mouse button → turbo mode. Buttons 4 and 5 serve the click zone
+    // layout.
     monitors.append(NSEvent.addLocalMonitorForEvents(matching: .otherMouseDown) { [weak self] event in
       guard let self, self.window?.isKeyWindow == true else { return event }
       if self.offerToZones(event) { return nil }
