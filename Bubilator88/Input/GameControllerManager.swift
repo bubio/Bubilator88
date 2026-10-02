@@ -535,7 +535,24 @@ final class GameControllerManager {
 
   // MARK: - Lifecycle
 
+  /// Whether the handlers are installed. Both `start` and `stop` may be
+  /// called more than once, from emulation and from Settings.
+  private var isStarted = false
+
+  /// Start or stop to match `Settings.controllerInputNeeded`, once emulation
+  /// is running. Called when a setting that decides it changes.
+  func refresh(viewModel: EmulatorViewModel) {
+    guard viewModel.isRunning || isStarted else { return }
+    if Settings.shared.controllerInputNeeded {
+      start(viewModel: viewModel)
+    } else {
+      stop()
+    }
+  }
+
   func start(viewModel: EmulatorViewModel) {
+    guard !isStarted else { return }
+    isStarted = true
     self.viewModel = viewModel
 
     NotificationCenter.default.addObserver(
@@ -555,6 +572,7 @@ final class GameControllerManager {
   }
 
   func stop() {
+    isStarted = false
     GCController.stopWirelessControllerDiscovery()
     NotificationCenter.default.removeObserver(self)
     releaseAllKeys()
@@ -646,7 +664,7 @@ final class GameControllerManager {
 
     // Set up haptics for SSG noise-driven feedback
     haptics?.stop()
-    if Settings.shared.controllerHapticEnabled {
+    if Settings.shared.gameControllerEnabled && Settings.shared.controllerHapticEnabled {
       let h = ControllerHaptics(controller: controller)
       h.start()
       haptics = h
@@ -771,13 +789,17 @@ final class GameControllerManager {
     } else if zoneNavConsumed.remove(button) != nil {
       return
     }
+    // With the game controller off, the controller only steers click zones.
+    guard Settings.shared.gameControllerEnabled else { return }
     handleButton(m.action(for: button), pressed: pressed)
   }
 
   /// Click zone navigation, on a button press. Returns whether it took the
   /// press. The toggle button switches navigation on and off; while it is on,
   /// the D-pad and stick move the focus, the shoulders step through the zones
-  /// in reading order, A plays the focused zone and B leaves navigation.
+  /// in reading order, the confirm button plays the focused zone and B leaves
+  /// navigation. Every other button is swallowed, so nothing reaches the game
+  /// while the focus moves.
   private func handleClickZoneNavigation(_ button: ControllerButton) -> Bool {
     guard let vm = viewModel else { return false }
     let toggle = Settings.shared.clickZoneNavigationButton
@@ -789,6 +811,10 @@ final class GameControllerManager {
       return true
     }
     guard vm.checkClickZoneNavigation() else { return false }
+    if button.rawValue == Settings.shared.clickZoneConfirmButton {
+      vm.activateFocusedClickZone()
+      return true
+    }
     switch button {
     case .dpadUp: vm.moveClickZoneFocus(.up)
     case .dpadDown: vm.moveClickZoneFocus(.down)
@@ -796,9 +822,8 @@ final class GameControllerManager {
     case .dpadRight: vm.moveClickZoneFocus(.right)
     case .leftShoulder: vm.cycleClickZoneFocus(forward: false)
     case .rightShoulder: vm.cycleClickZoneFocus(forward: true)
-    case .buttonA: vm.activateFocusedClickZone()
     case .buttonB: vm.endClickZoneNavigation()
-    default: return false
+    default: break
     }
     return true
   }

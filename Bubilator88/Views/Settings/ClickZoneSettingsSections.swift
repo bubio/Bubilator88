@@ -49,6 +49,9 @@ struct ClickZoneSettingsSections: View {
       Section("Click Zones") {
         Toggle("Enable Click Zones", isOn: $settings.clickZonesEnabled)
           .disabled(settings.mouseEnabled)
+          .onChange(of: settings.clickZonesEnabled) {
+            viewModel.gameController.refresh(viewModel: viewModel)
+          }
         Group {
           if settings.mouseEnabled {
             Text("Turn off mouse input to use click zones.")
@@ -63,7 +66,12 @@ struct ClickZoneSettingsSections: View {
             Text(button.displayName).tag(button.rawValue)
           }
         }
-        Text("Press it to steer the zones with a controller: the D-pad moves between zones, the shoulder buttons step through them in order, A plays the zone and B leaves navigation. Without zones, the button keeps its usual mapping.")
+        Picker("Controller Confirm Button", selection: $settings.clickZoneConfirmButton) {
+          ForEach(ControllerButton.allCases) { button in
+            Text(button.displayName).tag(button.rawValue)
+          }
+        }
+        Text("Press the navigation button to steer the zones with a controller: the D-pad moves between zones, the shoulder buttons step through them in order, the confirm button plays the zone and B leaves navigation. Other buttons do nothing meanwhile. Without zones, the navigation button keeps its usual mapping.")
           .settingsDescriptionStyle()
       }
 

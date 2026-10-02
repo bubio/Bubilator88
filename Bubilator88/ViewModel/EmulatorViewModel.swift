@@ -1022,7 +1022,7 @@ final class EmulatorViewModel {
       fddSound.volume = FDDSound.volume(for: Settings.shared.fddSoundVolumeLevel)
       fddSound.start(outputDeviceUID: Settings.shared.fddSoundDeviceUID)
     }
-    if Settings.shared.gameControllerEnabled {
+    if Settings.shared.controllerInputNeeded {
       gameController.start(viewModel: self)
     }
 

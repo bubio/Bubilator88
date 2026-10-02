@@ -57,6 +57,18 @@ private struct ClickZonePlayLayer: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    .overlay(alignment: .top) {
+      if viewModel.isNavigatingClickZones {
+        Text("Zone Navigation — B: Exit")
+          .font(.caption)
+          .padding(.horizontal, 8)
+          .padding(.vertical, 3)
+          .background(.black.opacity(0.7), in: Capsule())
+          .foregroundStyle(.white)
+          .padding(.top, 6)
+          .allowsHitTesting(false)
+      }
+    }
   }
 }
 

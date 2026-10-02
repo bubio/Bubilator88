@@ -17,11 +17,7 @@ struct ControllerSettingsTab: View {
       Section {
         Toggle("Enable Game Controller", isOn: $settings.gameControllerEnabled)
           .onChange(of: settings.gameControllerEnabled) { _, newValue in
-            if newValue {
-              gc.start(viewModel: viewModel)
-            } else {
-              gc.stop()
-            }
+            gc.refresh(viewModel: viewModel)
           }
 
         if gc.connectedControllers.isEmpty {
