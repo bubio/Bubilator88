@@ -1,7 +1,7 @@
 import Foundation
 import Logging
 
-/// Click-zone layouts and which disk uses which.
+/// Control-zone layouts and which disk uses which.
 ///
 /// Presets are bundled and read-only; changing one means duplicating it into a
 /// user layout. User layouts and the disk assignments are persisted as one

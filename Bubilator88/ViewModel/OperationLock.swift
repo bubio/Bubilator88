@@ -34,7 +34,7 @@ nonisolated enum LockableOperation: CaseIterable, Sendable {
 /// Add a case here, list what it allows, and report it from
 /// `EmulatorViewModel.operationLocks` — entry points need no change.
 nonisolated enum OperationLock: Hashable, Sendable {
-  /// A click-zone layout is being edited: emulation is paused and the screen
+  /// A control-zone layout is being edited: emulation is paused and the screen
   /// must hold still, so nothing may change the machine or the mounted disks.
   case clickZoneEditing
 
@@ -53,7 +53,7 @@ nonisolated enum OperationLock: Hashable, Sendable {
   var refusalMessage: String {
     switch self {
     case .clickZoneEditing:
-      String(localized: "Close the click zone editor first.")
+      String(localized: "Close the control zone editor first.")
     }
   }
 }

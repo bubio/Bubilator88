@@ -126,12 +126,12 @@
         }
       }
     },
-    "%lld disk(s) use this layout. They will no longer have click zones." : {
+    "%lld disk(s) use this layout. They will no longer have control zones." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld 枚のディスクがこのレイアウトを使っています。削除すると、それらのディスクではクリック領域が使えなくなります。"
+            "value" : "%lld 枚のディスクがこのレイアウトを使っています。削除すると、それらのディスクでは操作領域が使えなくなります。"
           }
         }
       }
@@ -336,52 +336,52 @@
         }
       }
     },
-    "Click Zone Layouts" : {
+    "Control Zone Layouts" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クリック領域のレイアウト"
+            "value" : "操作領域のレイアウト"
           }
         }
       }
     },
-    "Click Zones" : {
+    "Control Zones" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クリック領域"
+            "value" : "操作領域"
           }
         }
       }
     },
-    "Click zones cannot be used while mouse input is on. Turn off Enable Mouse Input in Settings > Mouse." : {
+    "Control zones cannot be used while mouse input is on. Turn off Enable Mouse Input in Settings > Mouse." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "マウス入力がオンの間はクリック領域を使用できません。設定 > マウス で「マウス入力を有効にする」をオフにしてください。"
+            "value" : "マウス入力がオンの間は操作領域を使用できません。設定 > マウス で「マウス入力を有効にする」をオフにしてください。"
           }
         }
       }
     },
-    "Click Zones Unavailable" : {
+    "Control Zones Unavailable" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クリック領域を使用できません"
+            "value" : "操作領域を使用できません"
           }
         }
       }
     },
-    "Close the click zone editor first." : {
+    "Close the control zone editor first." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "先にクリック領域の編集ウィンドウを閉じてください。"
+            "value" : "先に操作領域の編集ウィンドウを閉じてください。"
           }
         }
       }
@@ -407,7 +407,7 @@
       }
     },
     "Cursor Keys + RETURN" : {
-      "comment" : "Click-zone preset name, from ClickZonePresets.json",
+      "comment" : "Control-zone preset name, from ClickZonePresets.json",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -527,12 +527,12 @@
         }
       }
     },
-    "Enable Click Zones" : {
+    "Enable Control Zones" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クリック領域を有効にする"
+            "value" : "操作領域を有効にする"
           }
         }
       }
@@ -548,7 +548,7 @@
       }
     },
     "Function Keys f1–f5" : {
-      "comment" : "Click-zone preset name, from ClickZonePresets.json",
+      "comment" : "Control-zone preset name, from ClickZonePresets.json",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -719,7 +719,7 @@
       }
     },
     "Number Keys 1–9" : {
-      "comment" : "Click-zone preset name, from ClickZonePresets.json",
+      "comment" : "Control-zone preset name, from ClickZonePresets.json",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -730,7 +730,7 @@
       }
     },
     "Numeric Keypad 8 Directions" : {
-      "comment" : "Click-zone preset name, from ClickZonePresets.json",
+      "comment" : "Control-zone preset name, from ClickZonePresets.json",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -831,7 +831,7 @@
       }
     },
     "RETURN (Whole Screen)" : {
-      "comment" : "Click-zone preset name, from ClickZonePresets.json",
+      "comment" : "Control-zone preset name, from ClickZonePresets.json",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -892,7 +892,7 @@
       }
     },
     "SPACE (Whole Screen)" : {
-      "comment" : "Click-zone preset name, from ClickZonePresets.json",
+      "comment" : "Control-zone preset name, from ClickZonePresets.json",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -912,12 +912,12 @@
         }
       }
     },
-    "Turn off mouse input to use click zones." : {
+    "Turn off mouse input to use control zones." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クリック領域を使うには、マウス入力をオフにしてください。"
+            "value" : "操作領域を使うには、マウス入力をオフにしてください。"
           }
         }
       }
@@ -1058,12 +1058,12 @@
     "==" : {
 
     },
-    "“%@” is not a click-zone layout file." : {
+    "“%@” is not a control-zone layout file." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%@”はクリック領域のレイアウトファイルではありません。"
+            "value" : "“%@”は操作領域のレイアウトファイルではありません。"
           }
         }
       }

@@ -7,7 +7,7 @@ import Vision
 nonisolated private let ocrLog = Logger(label: "App.OCR")
 
 /// Reads the text on the emulator screen with Vision OCR, for the translation
-/// overlay and click-zone detection.
+/// overlay and control-zone detection.
 ///
 /// Pipeline: pixelBuffer → Scale4x → invert → sharpen → Vision OCR. The
 /// upscale and sharpening give Vision's recognizer the stroke width it needs

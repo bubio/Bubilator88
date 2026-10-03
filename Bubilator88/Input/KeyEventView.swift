@@ -19,7 +19,7 @@ struct KeyEventView: NSViewRepresentable {
   var onMouseMove: ((Int, Int) -> Void)?
   /// Left/right button state.
   var onMouseButton: ((Bool, Bool) -> Void)?
-  /// Offers a right/other button press or a wheel notch to the click zone
+  /// Offers a right/other button press or a wheel notch to the control zone
   /// layout. Returns true when the layout binds it, and the event is consumed.
   var onZoneMouseInput: ((ClickZoneMouseButton) -> Bool)?
   /// Whether bus-mouse capture is active (mirrors Settings.mouseEnabled).
@@ -280,7 +280,7 @@ class KeyCaptureNSView: NSView {
       return self.capturing ? nil : event
     } as Any)
 
-    // Middle mouse button → turbo mode. Buttons 4 and 5 serve the click zone
+    // Middle mouse button → turbo mode. Buttons 4 and 5 serve the control zone
     // layout.
     monitors.append(NSEvent.addLocalMonitorForEvents(matching: .otherMouseDown) { [weak self] event in
       guard let self, self.window?.isKeyWindow == true else { return event }
@@ -296,14 +296,14 @@ class KeyCaptureNSView: NSView {
       return event
     } as Any)
 
-    // Wheel → click zone layout.
+    // Wheel → control zone layout.
     monitors.append(NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
       guard let self, self.window?.isKeyWindow == true else { return event }
       return self.offerWheelToZones(event) ? nil : event
     } as Any)
   }
 
-  /// Button numbers whose press went to the click zone layout, so the
+  /// Button numbers whose press went to the control zone layout, so the
   /// matching release is swallowed too.
   private var zoneConsumed: Set<Int> = []
   /// Wheel movement not yet enough for a notch, in points.

@@ -2,7 +2,7 @@ import Bubilator88Core
 import CoreGraphics
 import Foundation
 
-// Click zones let a game with no mouse support be played with the mouse: a
+// Control zones let a game with no mouse support be played with the mouse: a
 // rectangle on the 640×400 screen, clicked, types a registered key sequence.
 // Zones are grouped into named layouts, and each disk is assigned a layout.
 // Disks are identified by file name and D88 image name rather than by path

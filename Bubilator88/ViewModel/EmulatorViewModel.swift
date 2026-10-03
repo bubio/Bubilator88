@@ -805,11 +805,11 @@ final class EmulatorViewModel {
   @ObservationIgnored nonisolated(unsafe) let pasteQueue = TextPasteQueue()
   @ObservationIgnored nonisolated let pasteQueueLock = NSLock()
 
-  /// Plays the key sequence of a clicked click zone; ticked next to the paste
+  /// Plays the key sequence of a clicked control zone; ticked next to the paste
   /// queue. Carries its own lock.
   @ObservationIgnored nonisolated let clickZonePlayer = ClickZonePlayer()
 
-  /// The user layout being edited, while the click-zone editor is open. Edits
+  /// The user layout being edited, while the control-zone editor is open. Edits
   /// go to this copy and are written to `ClickZoneStore` as each completes.
   var clickZoneEditingLayout: ClickZoneLayout?
   /// The zone selected in the editor.
@@ -817,7 +817,7 @@ final class EmulatorViewModel {
   /// Whether the editor is recording keys into the selected zone. While it
   /// is, Delete is a key to record rather than "delete the zone".
   var isRecordingClickZoneKeys = false
-  /// Whether a controller is steering click zones (see
+  /// Whether a controller is steering control zones (see
   /// `Settings.clickZoneNavigationButton`), and the zone it has focused.
   var isNavigatingClickZones = false
   var focusedClickZoneID: UUID?
@@ -1813,7 +1813,7 @@ final class EmulatorViewModel {
       cancelPasteQueue()
       return
     }
-    // The click-zone editor owns the keyboard while it is open: Delete
+    // The control-zone editor owns the keyboard while it is open: Delete
     // removes the selected zone and nothing reaches the paused machine.
     if isEditingClickZones {
       if (keyCode == 0x33 || keyCode == 0x75) && !isRecordingClickZoneKeys {
@@ -1821,7 +1821,7 @@ final class EmulatorViewModel {
       }
       return
     }
-    // ESC during a click-zone sequence cancels it, like a paste.
+    // ESC during a control-zone sequence cancels it, like a paste.
     if keyCode == 0x35 && !clickZonePlayer.isIdle {
       cancelClickZonePlayer()
       return

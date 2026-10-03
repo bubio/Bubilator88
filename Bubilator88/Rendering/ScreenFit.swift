@@ -4,7 +4,7 @@ import CoreGraphics
 ///
 /// The same fit `EmulatorMetalView` draws with: aspect-fit, or whole-number
 /// scaling when fullscreen integer scaling is on, centred either way. SwiftUI
-/// overlays that must line up with the image (the reset dissolve, click zones)
+/// overlays that must line up with the image (the reset dissolve, control zones)
 /// use this rather than repeating the math.
 nonisolated struct ScreenFit: Equatable {
   static let screenSize = CGSize(width: 640, height: 400)

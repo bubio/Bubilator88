@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 extension UTType {
-  /// An exported click-zone layout (`.b88zones`), declared in Info.plist.
+  /// An exported control-zone layout (`.b88zones`), declared in Info.plist.
   nonisolated static let clickZoneLayout = UTType(exportedAs: "com.bubio.bubilator88.click-zones")
 }
 
@@ -25,7 +25,7 @@ nonisolated struct ClickZoneLayoutDocument: FileDocument {
   }
 }
 
-/// The click-zone sections of Settings > Mouse: turn the feature on, and
+/// The control-zone sections of Settings > Mouse: turn the feature on, and
 /// manage layouts — the bundled presets and the user's own. Editing opens the
 /// editor as a sheet, where a layout is also assigned to disks. Placed inside
 /// the tab's Form.
@@ -46,15 +46,15 @@ struct ClickZoneSettingsSections: View {
   var body: some View {
     @Bindable var settings = settings
     Group {
-      Section("Click Zones") {
-        Toggle("Enable Click Zones", isOn: $settings.clickZonesEnabled)
+      Section("Control Zones") {
+        Toggle("Enable Control Zones", isOn: $settings.clickZonesEnabled)
           .disabled(settings.mouseEnabled)
           .onChange(of: settings.clickZonesEnabled) {
             viewModel.gameController.refresh(viewModel: viewModel)
           }
         Group {
           if settings.mouseEnabled {
-            Text("Turn off mouse input to use click zones.")
+            Text("Turn off mouse input to use control zones.")
           } else {
             Text("Click a zone on the screen to type its keys, for games without mouse support. The layout assigned to the mounted disk is used.")
           }
@@ -75,7 +75,7 @@ struct ClickZoneSettingsSections: View {
           .settingsDescriptionStyle()
       }
 
-      Section("Click Zone Layouts") {
+      Section("Control Zone Layouts") {
         List(selection: $selection) {
           ForEach(store.allLayouts) { layout in
             layoutRow(layout)
@@ -141,7 +141,7 @@ struct ClickZoneSettingsSections: View {
       }
     } message: {
       if let pendingDelete {
-        Text("\(store.assignments(to: pendingDelete.id).count) disk(s) use this layout. They will no longer have click zones.")
+        Text("\(store.assignments(to: pendingDelete.id).count) disk(s) use this layout. They will no longer have control zones.")
       }
     }
     .alert(
@@ -252,7 +252,7 @@ struct ClickZoneSettingsSections: View {
       let layout = try store.importLayout(from: Data(contentsOf: url))
       selection = layout.id
     } catch {
-      errorMessage = String(localized: "“\(url.lastPathComponent)” is not a click-zone layout file.")
+      errorMessage = String(localized: "“\(url.lastPathComponent)” is not a control-zone layout file.")
     }
   }
 

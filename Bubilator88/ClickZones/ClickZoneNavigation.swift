@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// Moving a focus between click zones, for playing them from a controller:
+/// Moving a focus between control zones, for playing them from a controller:
 /// the D-pad steps to the zone in that direction, the shoulders walk the
 /// zones in reading order, like the tab order of a form.
 nonisolated enum ClickZoneNavigation {

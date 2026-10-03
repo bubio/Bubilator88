@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Click zones drawn over the emulator screen.
+/// Control zones drawn over the emulator screen.
 ///
 /// In play mode each zone is an invisible click target that outlines itself
 /// on hover; everywhere else, clicks fall through to the views below. While

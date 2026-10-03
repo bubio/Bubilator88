@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The click-zone editor: the layout's name and the disks that use it across
+/// The control-zone editor: the layout's name and the disks that use it across
 /// the top, then the zone list beside the selected zone's label, position,
 /// size and key sequence. Zones can also be drawn and moved directly on the
 /// emulator screen (`ClickZoneOverlayView`).

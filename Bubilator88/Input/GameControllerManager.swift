@@ -774,11 +774,11 @@ final class GameControllerManager {
   /// Host shortcuts currently held by a controller button (to emit matching keyUp on release).
   private var pressedShortcuts: [HostShortcut] = []
 
-  /// Buttons whose press click zone navigation took, so their release is
+  /// Buttons whose press control zone navigation took, so their release is
   /// swallowed too.
   private var zoneNavConsumed: Set<ControllerButton> = []
 
-  /// A controller button goes to click zone navigation first, then to its
+  /// A controller button goes to control zone navigation first, then to its
   /// mapping.
   private func handle(_ button: ControllerButton, mapping m: ControllerButtonMapping, pressed: Bool) {
     if pressed {
@@ -789,7 +789,7 @@ final class GameControllerManager {
     } else if zoneNavConsumed.remove(button) != nil {
       return
     }
-    // With the game controller off, the controller only steers click zones.
+    // With the game controller off, the controller only steers control zones.
     guard Settings.shared.gameControllerEnabled else { return }
     handleButton(m.action(for: button), pressed: pressed)
   }

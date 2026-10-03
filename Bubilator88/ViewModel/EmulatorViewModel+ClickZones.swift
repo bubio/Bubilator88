@@ -3,7 +3,7 @@ import Foundation
 
 extension EmulatorViewModel {
 
-  /// Click zones are usable only while the PC-8801 mouse is off: with the bus
+  /// Control zones are usable only while the PC-8801 mouse is off: with the bus
   /// mouse on, a click captures the pointer for the game instead.
   var clickZonesAvailable: Bool {
     Settings.shared.clickZonesEnabled && !Settings.shared.mouseEnabled
@@ -123,8 +123,8 @@ extension EmulatorViewModel {
   func beginClickZoneEditing(layoutID: UUID) -> Bool {
     if Settings.shared.mouseEnabled {
       showAlert(
-        title: String(localized: "Click Zones Unavailable"),
-        message: String(localized: "Click zones cannot be used while mouse input is on. Turn off Enable Mouse Input in Settings > Mouse."))
+        title: String(localized: "Control Zones Unavailable"),
+        message: String(localized: "Control zones cannot be used while mouse input is on. Turn off Enable Mouse Input in Settings > Mouse."))
       return false
     }
     let store = ClickZoneStore.shared

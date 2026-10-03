@@ -1,6 +1,6 @@
 import Bubilator88Core
 
-/// Turns key presses in the click-zone editor into sequence steps.
+/// Turns key presses in the control-zone editor into sequence steps.
 ///
 /// Keys pressed together make one step, in the order they went down; the step
 /// is complete once every one of them is released.

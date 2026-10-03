@@ -2,7 +2,7 @@ import Bubilator88Core
 import CoreGraphics
 import Foundation
 
-/// Turns the text lines OCR found on the screen into click zones, so a menu
+/// Turns the text lines OCR found on the screen into control zones, so a menu
 /// need not be drawn line by line.
 ///
 /// Every line becomes a zone. A line that starts with an item number

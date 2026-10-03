@@ -1,7 +1,7 @@
 import Bubilator88Core
 import Foundation
 
-/// Plays a click zone's key sequence into the keyboard matrix, one frame at a
+/// Plays a control zone's key sequence into the keyboard matrix, one frame at a
 /// time.
 ///
 /// The main thread starts a sequence on a click and the emulation loop ticks

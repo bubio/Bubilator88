@@ -411,7 +411,7 @@ final class Settings {
     didSet { UserDefaults.standard.set(mouseSensitivity, forKey: Keys.mouseSensitivity) }
   }
 
-  /// Enable click zones: screen rectangles that type a key sequence when
+  /// Enable control zones: screen rectangles that type a key sequence when
   /// clicked, for games without mouse support. Only in effect while
   /// `mouseEnabled` is off.
   var clickZonesEnabled: Bool = false {
@@ -419,13 +419,13 @@ final class Settings {
   }
 
   /// Whether the controller handlers should run: for playing the game, or,
-  /// with "Enable Game Controller" off, just for click zone navigation, which
+  /// with "Enable Game Controller" off, just for control zone navigation, which
   /// then sends nothing to the game.
   var controllerInputNeeded: Bool {
     gameControllerEnabled || clickZonesEnabled
   }
 
-  /// The controller button that switches click zone navigation on and off
+  /// The controller button that switches control zone navigation on and off
   /// (`ControllerButton.rawValue`), empty for none. While on, the D-pad and
   /// left stick move a focus between zones, the shoulders step through them
   /// in reading order, `clickZoneConfirmButton` plays the focused zone and B

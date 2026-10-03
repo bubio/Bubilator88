@@ -70,7 +70,7 @@
 			<key>UTTypeIdentifier</key>
 			<string>com.bubio.bubilator88.click-zones</string>
 			<key>UTTypeDescription</key>
-			<string>Bubilator88 Click Zone Layout</string>
+			<string>Bubilator88 Control Zone Layout</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.json</string>
