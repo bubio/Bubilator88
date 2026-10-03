@@ -2,8 +2,7 @@ import CoreGraphics
 import Foundation
 
 /// Moving a focus between control zones, for playing them from a controller:
-/// the D-pad steps to the zone in that direction, the shoulders walk the
-/// zones in reading order, like the tab order of a form.
+/// the D-pad steps to the zone in that direction.
 nonisolated enum ClickZoneNavigation {
 
   enum Direction: Sendable {
@@ -35,15 +34,6 @@ nonisolated enum ClickZoneNavigation {
       if best == nil || score < best!.score { best = (zone.id, score) }
     }
     return best?.id ?? origin.id
-  }
-
-  /// The zone after (or before) `current` in reading order, wrapping around.
-  static func cycle(from current: UUID?, forward: Bool, in zones: [ClickZone]) -> UUID? {
-    let ordered = readingOrder(zones)
-    guard !ordered.isEmpty else { return nil }
-    guard let i = ordered.firstIndex(where: { $0.id == current }) else { return ordered[0].id }
-    let n = ordered.count
-    return ordered[(i + (forward ? 1 : n - 1)) % n].id
   }
 
   /// Top to bottom, then left to right. A zone whose top is within half the

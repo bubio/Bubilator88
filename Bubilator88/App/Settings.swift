@@ -73,7 +73,7 @@ final class Settings {
     static let mouseJoyMode              = "mouseJoyMode"
     static let mouseSensitivity          = "mouseSensitivity"
     static let clickZonesEnabled         = "clickZonesEnabled"
-    static let clickZoneNavigationButton = "clickZoneNavigationButton"
+    static let clickZoneUsesController   = "clickZoneUsesController"
     static let clickZoneConfirmButton    = "clickZoneConfirmButton"
 
     // Keyboard
@@ -418,24 +418,17 @@ final class Settings {
     didSet { UserDefaults.standard.set(clickZonesEnabled, forKey: Keys.clickZonesEnabled) }
   }
 
-  /// Whether the controller handlers should run: for playing the game, or,
-  /// with "Enable Game Controller" off, just for control zone navigation, which
-  /// then sends nothing to the game.
-  var controllerInputNeeded: Bool {
-    gameControllerEnabled || clickZonesEnabled
+  /// Dedicate the controller's D-pad, left stick and confirm button to control
+  /// zones: they move a focus between the zones and play the focused one, and
+  /// cannot be mapped to keys. Only in effect while the game controller is
+  /// enabled and the mounted disk has a layout with zones; otherwise the
+  /// buttons keep their mapping.
+  var clickZoneUsesController: Bool = true {
+    didSet { UserDefaults.standard.set(clickZoneUsesController, forKey: Keys.clickZoneUsesController) }
   }
 
-  /// The controller button that switches control zone navigation on and off
-  /// (`ControllerButton.rawValue`), empty for none. While on, the D-pad and
-  /// left stick move a focus between zones, the shoulders step through them
-  /// in reading order, `clickZoneConfirmButton` plays the focused zone and B
-  /// leaves navigation. Every other button is held back from the game.
-  var clickZoneNavigationButton: String = ControllerButton.buttonStart.rawValue {
-    didSet { UserDefaults.standard.set(clickZoneNavigationButton, forKey: Keys.clickZoneNavigationButton) }
-  }
-
-  /// The controller button that plays the focused zone's keys during click
-  /// zone navigation (`ControllerButton.rawValue`).
+  /// The controller button that plays the focused control zone's keys
+  /// (`ControllerButton.rawValue`).
   var clickZoneConfirmButton: String = ControllerButton.buttonX.rawValue {
     didSet { UserDefaults.standard.set(clickZoneConfirmButton, forKey: Keys.clickZoneConfirmButton) }
   }
@@ -678,8 +671,8 @@ final class Settings {
     if let v = UserDefaults.standard.object(forKey: Keys.clickZonesEnabled) as? Bool {
       clickZonesEnabled = v
     }
-    if let v = UserDefaults.standard.string(forKey: Keys.clickZoneNavigationButton) {
-      clickZoneNavigationButton = v
+    if let v = UserDefaults.standard.object(forKey: Keys.clickZoneUsesController) as? Bool {
+      clickZoneUsesController = v
     }
     if let v = UserDefaults.standard.string(forKey: Keys.clickZoneConfirmButton) {
       clickZoneConfirmButton = v

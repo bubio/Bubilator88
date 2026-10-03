@@ -539,17 +539,6 @@ final class GameControllerManager {
   /// called more than once, from emulation and from Settings.
   private var isStarted = false
 
-  /// Start or stop to match `Settings.controllerInputNeeded`, once emulation
-  /// is running. Called when a setting that decides it changes.
-  func refresh(viewModel: EmulatorViewModel) {
-    guard viewModel.isRunning || isStarted else { return }
-    if Settings.shared.controllerInputNeeded {
-      start(viewModel: viewModel)
-    } else {
-      stop()
-    }
-  }
-
   func start(viewModel: EmulatorViewModel) {
     guard !isStarted else { return }
     isStarted = true
@@ -664,7 +653,7 @@ final class GameControllerManager {
 
     // Set up haptics for SSG noise-driven feedback
     haptics?.stop()
-    if Settings.shared.gameControllerEnabled && Settings.shared.controllerHapticEnabled {
+    if Settings.shared.controllerHapticEnabled {
       let h = ControllerHaptics(controller: controller)
       h.start()
       haptics = h
@@ -774,43 +763,29 @@ final class GameControllerManager {
   /// Host shortcuts currently held by a controller button (to emit matching keyUp on release).
   private var pressedShortcuts: [HostShortcut] = []
 
-  /// Buttons whose press control zone navigation took, so their release is
+  /// Buttons whose press went to control zones, so their release is
   /// swallowed too.
-  private var zoneNavConsumed: Set<ControllerButton> = []
+  private var zoneConsumed: Set<ControllerButton> = []
 
-  /// A controller button goes to control zone navigation first, then to its
+  /// A controller button goes to the control zones first, then to its
   /// mapping.
   private func handle(_ button: ControllerButton, mapping m: ControllerButtonMapping, pressed: Bool) {
     if pressed {
-      if handleClickZoneNavigation(button) {
-        zoneNavConsumed.insert(button)
+      if handleControlZones(button) {
+        zoneConsumed.insert(button)
         return
       }
-    } else if zoneNavConsumed.remove(button) != nil {
+    } else if zoneConsumed.remove(button) != nil {
       return
     }
-    // With the game controller off, the controller only steers control zones.
-    guard Settings.shared.gameControllerEnabled else { return }
     handleButton(m.action(for: button), pressed: pressed)
   }
 
-  /// Click zone navigation, on a button press. Returns whether it took the
-  /// press. The toggle button switches navigation on and off; while it is on,
-  /// the D-pad and stick move the focus, the shoulders step through the zones
-  /// in reading order, the confirm button plays the focused zone and B leaves
-  /// navigation. Every other button is swallowed, so nothing reaches the game
-  /// while the focus moves.
-  private func handleClickZoneNavigation(_ button: ControllerButton) -> Bool {
-    guard let vm = viewModel else { return false }
-    let toggle = Settings.shared.clickZoneNavigationButton
-    if !toggle.isEmpty, button.rawValue == toggle {
-      let wasOn = vm.isNavigatingClickZones
-      guard vm.toggleClickZoneNavigation() else { return false }
-      // Keys held for the game must not stay down under the new mode.
-      if !wasOn { releaseAllKeys() }
-      return true
-    }
-    guard vm.checkClickZoneNavigation() else { return false }
+  /// While control zones use the controller, the D-pad and stick move the
+  /// focus and the confirm button plays the focused zone. Returns whether
+  /// the press was taken.
+  private func handleControlZones(_ button: ControllerButton) -> Bool {
+    guard let vm = viewModel, vm.controlZonesUseController else { return false }
     if button.rawValue == Settings.shared.clickZoneConfirmButton {
       vm.activateFocusedClickZone()
       return true
@@ -820,10 +795,7 @@ final class GameControllerManager {
     case .dpadDown: vm.moveClickZoneFocus(.down)
     case .dpadLeft: vm.moveClickZoneFocus(.left)
     case .dpadRight: vm.moveClickZoneFocus(.right)
-    case .leftShoulder: vm.cycleClickZoneFocus(forward: false)
-    case .rightShoulder: vm.cycleClickZoneFocus(forward: true)
-    case .buttonB: vm.endClickZoneNavigation()
-    default: break
+    default: return false
     }
     return true
   }

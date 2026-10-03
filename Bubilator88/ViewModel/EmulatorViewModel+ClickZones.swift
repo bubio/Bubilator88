@@ -65,45 +65,22 @@ extension EmulatorViewModel {
     clickZonePlayer.cancel { releaseKey($0.key) }
   }
 
-  // MARK: - Controller navigation
+  // MARK: - Controller
 
-  /// Switch navigation on or off. Returns false, and changes nothing, when
-  /// there are no zones to navigate, so the caller can let the button do its
-  /// usual job. Switching on focuses the first zone.
-  @discardableResult
-  func toggleClickZoneNavigation() -> Bool {
-    if isNavigatingClickZones {
-      endClickZoneNavigation()
-      return true
-    }
-    guard clickZonesAvailable, !isEditingClickZones,
-          let zones = activeClickZoneLayout?.zones, !zones.isEmpty else { return false }
-    focusedClickZoneID = ClickZoneNavigation.cycle(from: focusedClickZoneID, forward: true, in: zones)
-    isNavigatingClickZones = true
-    return true
+  /// Whether the controller's D-pad, stick and confirm button are dedicated
+  /// to control zones right now: the setting is on and the mounted disk has
+  /// zones to move between. Otherwise those buttons keep their mapping.
+  var controlZonesUseController: Bool {
+    Settings.shared.gameControllerEnabled && Settings.shared.clickZoneUsesController
+      && clickZonesAvailable && !isEditingClickZones
+      && activeClickZoneLayout?.zones.isEmpty == false
   }
 
-  func endClickZoneNavigation() {
-    isNavigatingClickZones = false
-  }
-
-  /// Whether navigation is in effect: on, and its zones still there. Ends
-  /// navigation when they are gone (the disk changed, the editor opened).
-  func checkClickZoneNavigation() -> Bool {
-    guard isNavigatingClickZones else { return false }
-    if clickZonesAvailable, !isEditingClickZones, activeClickZoneLayout != nil { return true }
-    isNavigatingClickZones = false
-    return false
-  }
-
+  /// Move the focus to the nearest zone in `direction`. The first press only
+  /// shows the focus, on the first zone in reading order.
   func moveClickZoneFocus(_ direction: ClickZoneNavigation.Direction) {
     guard let zones = activeClickZoneLayout?.zones else { return }
     focusedClickZoneID = ClickZoneNavigation.move(from: focusedClickZoneID, direction, in: zones)
-  }
-
-  func cycleClickZoneFocus(forward: Bool) {
-    guard let zones = activeClickZoneLayout?.zones else { return }
-    focusedClickZoneID = ClickZoneNavigation.cycle(from: focusedClickZoneID, forward: forward, in: zones)
   }
 
   /// Play the focused zone's keys.

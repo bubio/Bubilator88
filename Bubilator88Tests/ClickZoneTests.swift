@@ -488,18 +488,10 @@ struct ClickZoneNavigationTests {
     #expect(ClickZoneNavigation.move(from: nil, .down, in: zones) == a.id)
     #expect(ClickZoneNavigation.move(from: UUID(), .down, in: zones) == a.id)
     #expect(ClickZoneNavigation.move(from: nil, .down, in: []) == nil)
-    #expect(ClickZoneNavigation.cycle(from: nil, forward: true, in: []) == nil)
   }
 
   @Test("読み順は上から下、同じ行は左から右。多少の段差は同じ行とみなす")
   func readingOrder() {
     #expect(ClickZoneNavigation.readingOrder(zones).map(\.id) == [a.id, b.id, c.id, d.id])
-  }
-
-  @Test("シーケンス移動は端で回り込む")
-  func cycleWraps() {
-    #expect(ClickZoneNavigation.cycle(from: a.id, forward: true, in: zones) == b.id)
-    #expect(ClickZoneNavigation.cycle(from: d.id, forward: true, in: zones) == a.id)
-    #expect(ClickZoneNavigation.cycle(from: a.id, forward: false, in: zones) == d.id)
   }
 }

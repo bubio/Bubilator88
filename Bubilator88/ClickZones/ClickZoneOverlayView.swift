@@ -34,7 +34,7 @@ private struct ClickZonePlayLayer: View {
         let frame = fit.toView(zone.rect.cgRect)
         // While a controller steers the zones they all show faintly, and the
         // focused one stands out.
-        let navigating = viewModel.isNavigatingClickZones
+        let navigating = viewModel.controlZonesUseController
         let focused = navigating && viewModel.focusedClickZoneID == zone.id
         let lit = hovered == zone.id || focused
         Rectangle()
@@ -57,18 +57,6 @@ private struct ClickZonePlayLayer: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .overlay(alignment: .top) {
-      if viewModel.isNavigatingClickZones {
-        Text("Zone Navigation — B: Exit")
-          .font(.caption)
-          .padding(.horizontal, 8)
-          .padding(.vertical, 3)
-          .background(.black.opacity(0.7), in: Capsule())
-          .foregroundStyle(.white)
-          .padding(.top, 6)
-          .allowsHitTesting(false)
-      }
-    }
   }
 }
 

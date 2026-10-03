@@ -817,9 +817,7 @@ final class EmulatorViewModel {
   /// Whether the editor is recording keys into the selected zone. While it
   /// is, Delete is a key to record rather than "delete the zone".
   var isRecordingClickZoneKeys = false
-  /// Whether a controller is steering control zones (see
-  /// `Settings.clickZoneNavigationButton`), and the zone it has focused.
-  var isNavigatingClickZones = false
+  /// The zone a controller has focused (see `controlZonesUseController`).
   var focusedClickZoneID: UUID?
   /// Whether emulation was running when the editor paused it.
   @ObservationIgnored var clickZoneEditPausedEmulation = false
@@ -1022,7 +1020,7 @@ final class EmulatorViewModel {
       fddSound.volume = FDDSound.volume(for: Settings.shared.fddSoundVolumeLevel)
       fddSound.start(outputDeviceUID: Settings.shared.fddSoundDeviceUID)
     }
-    if Settings.shared.controllerInputNeeded {
+    if Settings.shared.gameControllerEnabled {
       gameController.start(viewModel: self)
     }
 

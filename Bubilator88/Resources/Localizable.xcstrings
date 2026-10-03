@@ -336,6 +336,16 @@
         }
       }
     },
+    "Confirm Button" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "決定ボタン"
+          }
+        }
+      }
+    },
     "Control Zone Layouts" : {
       "localizations" : {
         "ja" : {
@@ -382,26 +392,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "先に操作領域の編集ウィンドウを閉じてください。"
-          }
-        }
-      }
-    },
-    "Controller Confirm Button" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コントローラの決定ボタン"
-          }
-        }
-      }
-    },
-    "Controller Navigation Button" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コントローラ操作の切替ボタン"
           }
         }
       }
@@ -790,16 +780,6 @@
         }
       }
     },
-    "Press the navigation button to steer the zones with a controller: the D-pad moves between zones, the shoulder buttons step through them in order, the confirm button plays the zone and B leaves navigation. Other buttons do nothing meanwhile. Without zones, the navigation button keeps its usual mapping." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "操作の切替ボタンを押すとコントローラでゾーンを操作できます。十字キーでゾーン間を移動、ショルダーボタンで順番に移動、決定ボタンで実行、Bで終了します。その間、他のボタンは何もしません。ゾーンが無いときは切替ボタンも通常の割り当てのままです。"
-          }
-        }
-      }
-    },
     "Record" : {
       "localizations" : {
         "ja" : {
@@ -912,6 +892,16 @@
         }
       }
     },
+    "The D-pad and left stick move between the control zones on the screen, and the confirm button plays the zone's keys. These buttons cannot be mapped to keys, as long as the mounted disk has control zones." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "十字キーと左スティックで画面上の操作領域の間を移動し、決定ボタンでその領域のキーを入力します。マウント中のディスクに操作領域がある間、これらのボタンはキーに割り当てられません。"
+          }
+        }
+      }
+    },
     "Turn off mouse input to use control zones." : {
       "localizations" : {
         "ja" : {
@@ -928,6 +918,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "割り当てを解除"
+          }
+        }
+      }
+    },
+    "Use for Control Zones" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作領域に使う"
           }
         }
       }
@@ -1008,16 +1008,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "領域 %lld"
-          }
-        }
-      }
-    },
-    "Zone Navigation — B: Exit" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ゾーン操作 — B: 終了"
           }
         }
       }
