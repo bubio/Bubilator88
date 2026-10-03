@@ -189,7 +189,7 @@ struct ClickZoneSettingsSections: View {
     var target = id
     if store.isPreset(id), let layout = store.layout(id: id),
        let copy = duplicate(layout) {
-      store.assign(viewModel.mountedClickZoneDisks, to: copy.id)
+      store.assignAvailable(viewModel.mountedClickZoneDisks, to: copy.id, replacing: id)
       target = copy.id
     }
     selection = target
@@ -199,7 +199,7 @@ struct ClickZoneSettingsSections: View {
   /// Make an empty layout, assigned to every mounted disk, and edit it.
   private func createLayout() {
     let layout = store.create(name: String(localized: "New Layout"))
-    store.assign(viewModel.mountedClickZoneDisks, to: layout.id)
+    store.assignAvailable(viewModel.mountedClickZoneDisks, to: layout.id)
     edit(layout.id)
   }
 

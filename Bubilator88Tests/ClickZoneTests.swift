@@ -326,6 +326,32 @@ struct ClickZoneStoreTests {
     #expect(ClickZoneMouseButton(buttonNumber: 5) == nil)
   }
 
+  @Test("新規割り当ては未割り当てのディスクだけ。他のレイアウトを使うディスクは奪わない")
+  func assignAvailableKeepsOthers() {
+    let store = makeStore()
+    let mine = store.create(name: "Mine")
+    let fresh = store.create(name: "Fresh")
+    let diskC = ClickZoneDiskKey(fileName: "other.d88", imageName: "")
+    store.assign(diskA, to: mine.id)
+    store.assign(diskC, to: preset.id)
+    store.assignAvailable([diskA, diskB, diskC], to: fresh.id)
+    #expect(store.layoutID(assignedTo: diskA) == mine.id)
+    #expect(store.layoutID(assignedTo: diskB) == fresh.id)
+    #expect(store.layoutID(assignedTo: diskC) == preset.id)
+  }
+
+  @Test("replacing に指定したレイアウトのディスクは付け替わる（プリセットのコピー編集）")
+  func assignAvailableReplacing() {
+    let store = makeStore()
+    let mine = store.create(name: "Mine")
+    let copy = store.create(name: "Copy")
+    store.assign(diskA, to: preset.id)
+    store.assign(diskB, to: mine.id)
+    store.assignAvailable([diskA, diskB], to: copy.id, replacing: preset.id)
+    #expect(store.layoutID(assignedTo: diskA) == copy.id)
+    #expect(store.layoutID(assignedTo: diskB) == mine.id)
+  }
+
   @Test("不正なファイルの読み込みは失敗し、何も追加しない")
   func importRejectsGarbage() {
     let store = makeStore()

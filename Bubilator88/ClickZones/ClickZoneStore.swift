@@ -93,6 +93,16 @@ final class ClickZoneStore {
     save()
   }
 
+  /// Make those of `disks` that have no layout yet, or use `replacing`, use
+  /// `layoutID`. A disk with another layout keeps it: a new layout must not
+  /// take over a game that already has one.
+  func assignAvailable(_ disks: [ClickZoneDiskKey], to layoutID: UUID, replacing: UUID? = nil) {
+    assign(disks.filter { disk in
+      guard let current = self.layoutID(assignedTo: disk) else { return true }
+      return current == replacing
+    }, to: layoutID)
+  }
+
   func assign(_ disk: ClickZoneDiskKey, to layoutID: UUID) {
     assign([disk], to: layoutID)
   }

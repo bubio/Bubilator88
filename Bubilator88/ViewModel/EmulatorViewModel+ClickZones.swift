@@ -16,7 +16,7 @@ extension EmulatorViewModel {
   }
 
   /// Every disk of every mounted file, whichever drive holds it: what a new
-  /// layout is assigned to from the start.
+  /// layout is assigned to from the start, where they have no layout yet.
   var mountedClickZoneDisks: [ClickZoneDiskKey] {
     ClickZoneDiskFile.list(mounted: [drive0Info, drive1Info].compactMap { $0 }, assigned: [])
       .flatMap(\.images)
