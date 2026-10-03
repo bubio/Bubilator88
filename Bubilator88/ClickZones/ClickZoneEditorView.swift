@@ -247,6 +247,7 @@ struct ClickZoneEditorView: View {
           }
         }
         .onDeleteCommand { viewModel.deleteSelectedClickZone() }
+        .focusListOnChange(of: viewModel.selectedClickZoneID)
         .overlay {
           if layout.zones.isEmpty {
             Text("No zones yet.")
@@ -410,6 +411,7 @@ struct ClickZoneEditorView: View {
         .listStyle(.bordered)
         .alternatingRowBackgrounds()
         .sizedToContentList()
+        .focusListOnChange(of: selectedSteps)
         .onDeleteCommand { removeSelectedSteps(from: zone) }
         HStack {
           Button {

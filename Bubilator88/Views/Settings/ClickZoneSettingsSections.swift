@@ -69,6 +69,7 @@ struct ClickZoneSettingsSections: View {
         .listStyle(.bordered)
         .alternatingRowBackgrounds()
         .sizedToContentList()
+        .focusListOnChange(of: selection)
         .contextMenu(forSelectionType: UUID.self) { ids in
           if let id = ids.first, let layout = store.layout(id: id) {
             contextMenu(for: layout)
