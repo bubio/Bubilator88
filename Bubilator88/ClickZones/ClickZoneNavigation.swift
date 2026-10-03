@@ -14,8 +14,10 @@ nonisolated enum ClickZoneNavigation {
   /// on `current` when no zone lies that way.
   ///
   /// A zone lies "that way" when its center is past the current center along
-  /// the direction; the nearest wins, with a sideways offset counting double
-  /// so a menu's next line beats a zone far to the side.
+  /// the direction; the nearest wins. The sideways cost is the empty space
+  /// between the two zones' extents, counted double, so zones overlapping in
+  /// a column (a menu whose lines differ in width) count as straight ahead,
+  /// and a zone off to the side loses to the next line.
   static func move(from current: UUID?, _ direction: Direction, in zones: [ClickZone]) -> UUID? {
     guard let origin = zones.first(where: { $0.id == current }) else { return readingOrder(zones).first?.id }
     let c = center(origin)
@@ -24,10 +26,10 @@ nonisolated enum ClickZoneNavigation {
       let p = center(zone)
       let dx = p.x - c.x, dy = p.y - c.y
       let (along, across): (CGFloat, CGFloat) = switch direction {
-      case .up: (-dy, abs(dx))
-      case .down: (dy, abs(dx))
-      case .left: (-dx, abs(dy))
-      case .right: (dx, abs(dy))
+      case .up: (-dy, gap(origin.rect.x, origin.rect.width, zone.rect.x, zone.rect.width))
+      case .down: (dy, gap(origin.rect.x, origin.rect.width, zone.rect.x, zone.rect.width))
+      case .left: (-dx, gap(origin.rect.y, origin.rect.height, zone.rect.y, zone.rect.height))
+      case .right: (dx, gap(origin.rect.y, origin.rect.height, zone.rect.y, zone.rect.height))
       }
       guard along > 0 else { continue }
       let score = along + 2 * across
@@ -48,6 +50,11 @@ nonisolated enum ClickZoneNavigation {
       }
     }
     return rows.flatMap { $0.sorted { $0.rect.x < $1.rect.x } }
+  }
+
+  /// The space between two intervals on an axis, zero when they overlap.
+  private static func gap(_ a: Int, _ aLength: Int, _ b: Int, _ bLength: Int) -> CGFloat {
+    CGFloat(max(0, max(a, b) - min(a + aLength, b + bLength)))
   }
 
   private static func center(_ zone: ClickZone) -> CGPoint {

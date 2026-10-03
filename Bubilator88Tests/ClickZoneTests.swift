@@ -483,6 +483,17 @@ struct ClickZoneNavigationTests {
     #expect(ClickZoneNavigation.move(from: m[0].id, .down, in: m) == m[1].id)
   }
 
+  @Test("幅の違う項目が混ざるメニューでも上下で全項目を順に辿れる")
+  func menuWithNarrowItem() {
+    // 実際のメニュー: 「取調室に行く」だけ幅が狭く、中心が右の項目より左にずれる。
+    let m = [zone(454, 165, 182, 20), zone(452, 187, 118, 23), zone(454, 207, 182, 24),
+             zone(454, 231, 182, 25)]
+    #expect(ClickZoneNavigation.move(from: m[0].id, .down, in: m) == m[1].id)
+    #expect(ClickZoneNavigation.move(from: m[1].id, .down, in: m) == m[2].id)
+    #expect(ClickZoneNavigation.move(from: m[2].id, .up, in: m) == m[1].id)
+    #expect(ClickZoneNavigation.move(from: m[1].id, .up, in: m) == m[0].id)
+  }
+
   @Test("フォーカスが無ければ読み順の先頭。ゾーンが無ければ nil")
   func noFocus() {
     #expect(ClickZoneNavigation.move(from: nil, .down, in: zones) == a.id)
