@@ -136,6 +136,7 @@ struct ClickZoneEditorView: View {
             recording ? stopRecording() : startRecording(button: button)
           } label: {
             Image(systemName: recording ? "stop.circle" : "record.circle")
+              .iconButtonHitArea()
           }
           .buttonStyle(.borderless)
           .help(recording ? "Stop Recording" : "Record")
@@ -143,6 +144,7 @@ struct ClickZoneEditorView: View {
             viewModel.editClickZones { $0.setSteps([], for: button) }
           } label: {
             Image(systemName: "xmark.circle")
+              .iconButtonHitArea()
           }
           .buttonStyle(.borderless)
           .disabled(steps.isEmpty)
@@ -265,6 +267,7 @@ struct ClickZoneEditorView: View {
           viewModel.deleteSelectedClickZone()
         } label: {
           Image(systemName: "minus")
+            .iconButtonHitArea()
         }
         .buttonStyle(.borderless)
         .disabled(viewModel.selectedClickZoneID == nil)
@@ -279,6 +282,7 @@ struct ClickZoneEditorView: View {
             detectZones()
           } label: {
             Image(systemName: "text.viewfinder")
+              .iconButtonHitArea()
           }
           .buttonStyle(.borderless)
           .help("Detect Zones from Screen Text")
@@ -558,6 +562,15 @@ extension ClickZoneMouseButton {
     case .wheelUp: "Wheel Up"
     case .wheelDown: "Wheel Down"
     }
+  }
+}
+
+extension View {
+  /// A fixed, fully clickable area for the icon of a borderless button, whose
+  /// hit area is otherwise just the glyph's own pixels.
+  func iconButtonHitArea() -> some View {
+    frame(width: 24, height: 20)
+      .contentShape(Rectangle())
   }
 }
 
