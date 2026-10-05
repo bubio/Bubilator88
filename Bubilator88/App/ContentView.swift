@@ -66,7 +66,8 @@ struct ContentView: View {
           TranslationOverlayView(
             detectionRects: viewModel.translationManager.isOverlayVisible
               ? viewModel.translationManager.ocrDetectionRects
-              : []
+              : [],
+            fit: screenFit(for:)
           )
           .opacity(viewModel.translationManager.isOverlayVisible ? 1 : 0)
           .translationTask(viewModel.translationManager.configuration) { session in
