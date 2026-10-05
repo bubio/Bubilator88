@@ -1,5 +1,6 @@
 import AVFoundation
 import CoreAudio
+import Logging
 import Synchronization
 
 /// Synthesized floppy disk drive access sounds.
@@ -10,6 +11,8 @@ import Synchronization
 /// Drive identification is baked into stereo buffers (drive 0 = left-leaning,
 /// drive 1 = right-leaning).
 final class FDDSound {
+
+  private let logger = Logger(label: "App.FDDSound")
 
   private var engine: AVAudioEngine?
   private let configurationRecovery = AudioConfigurationRecovery()
@@ -59,6 +62,10 @@ final class FDDSound {
   /// UID of the most recently applied output device, kept so it can be
   /// reapplied when the engine restarts.
   private var currentOutputDeviceUID: String = ""
+  /// Listener for the system default output changing, so an explicit device
+  /// choice can be taken back (see `startDefaultOutputObservation`).
+  private var defaultOutputListener: AudioObjectPropertyListenerBlock?
+  private var reclaimWorkItem: DispatchWorkItem?
 
   init() {
     let fmt = AVAudioFormat(
@@ -163,6 +170,7 @@ final class FDDSound {
       self.engine = engine
       self.playerNodes = nodes
       isEnabled = true
+      startDefaultOutputObservation()
       configurationRecovery.observe(engine) { [weak self, weak engine] in
         guard let self, let engine, self.isEnabled, self.engine === engine else { return }
         if !engine.isRunning { try engine.start() }
@@ -182,6 +190,54 @@ final class FDDSound {
     guard isEnabled else { return }
     stop()
     start(outputDeviceUID: uid)
+  }
+
+  private static var defaultOutputAddress = AudioObjectPropertyAddress(
+    mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+    mScope: kAudioObjectPropertyScopeGlobal,
+    mElement: kAudioObjectPropertyElementMain
+  )
+
+  /// Takes an explicit device choice back after the system default output
+  /// changes.
+  ///
+  /// AudioToolbox moves every engine's output unit to a
+  /// "CADefaultDeviceAggregate" when the default output changes — even one
+  /// pinned to another device — and posts no `AVAudioEngineConfigurationChange`
+  /// for it. The move lands a few tens of milliseconds after the HAL
+  /// notification, so the engine is rebuilt on the chosen device once it has
+  /// settled. With "System Default" selected there is nothing to take back.
+  private func startDefaultOutputObservation() {
+    guard defaultOutputListener == nil else { return }
+    let listener: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+      self?.scheduleReclaimOutputDevice()
+    }
+    var address = Self.defaultOutputAddress
+    let status = AudioObjectAddPropertyListenerBlock(
+      AudioObjectID(kAudioObjectSystemObject), &address, DispatchQueue.main, listener)
+    if status == noErr { defaultOutputListener = listener }
+  }
+
+  private func stopDefaultOutputObservation() {
+    reclaimWorkItem?.cancel()
+    reclaimWorkItem = nil
+    guard let listener = defaultOutputListener else { return }
+    var address = Self.defaultOutputAddress
+    AudioObjectRemovePropertyListenerBlock(
+      AudioObjectID(kAudioObjectSystemObject), &address, DispatchQueue.main, listener)
+    defaultOutputListener = nil
+  }
+
+  private func scheduleReclaimOutputDevice() {
+    reclaimWorkItem?.cancel()
+    guard isEnabled, !currentOutputDeviceUID.isEmpty else { return }
+    let item = DispatchWorkItem { [weak self] in
+      guard let self, self.isEnabled, !self.currentOutputDeviceUID.isEmpty else { return }
+      self.logger.info("default output changed: rebuilding on \(self.currentOutputDeviceUID)")
+      self.applyOutputDeviceUID(self.currentOutputDeviceUID)
+    }
+    reclaimWorkItem = item
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: item)
   }
 
   /// Assigns a CoreAudio device to an engine's outputNode. Call before starting
@@ -214,6 +270,7 @@ final class FDDSound {
   }
 
   func stop() {
+    stopDefaultOutputObservation()
     configurationRecovery.stop()
     for node in playerNodes { node.stop() }
     engine?.stop()
