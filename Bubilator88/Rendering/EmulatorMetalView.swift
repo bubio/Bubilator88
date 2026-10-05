@@ -60,6 +60,11 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   /// (`is400LineMode`) that used to be read off the live bus.
   private var currentFrame: FrameSlot?
   private var lastPublishedCount: Int = 0
+  /// Set when the last frame must be presented again without a new one from
+  /// the machine (resize, full screen, filter change). While the emulator is
+  /// paused the draw loop is idle, so nothing else would redraw the view and
+  /// the stale drawable would be stretched to the new size.
+  private var needsRepresent = false
 
   // FPS measurement
   private var fpsLastTime: CFTimeInterval = 0
@@ -99,6 +104,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
     currentFilter = filter
     currentScanlineEnabled = scanlineEnabled
     currentTextScanlineExempt = textScanlineExempt
+    requestRepresent()
 
     if previousFilter.requiresAIUpscale && !filter.requiresAIUpscale {
       aiUpscaler?.releaseResources()
@@ -437,7 +443,21 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   // MARK: - MTKViewDelegate
 
   func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-    // No-op: texture size is fixed at 640×400
+    // Texture size is fixed at 640×400; only the presentation needs redoing.
+    requestRepresent()
+  }
+
+  /// Present the current frame again. A running draw loop picks the flag up
+  /// on its next tick; while it is idle, draw once explicitly — deferred, since
+  /// this is also called from `drawableSizeWillChange`, before the new size
+  /// is in effect.
+  func requestRepresent() {
+    needsRepresent = true
+    guard isPaused else { return }
+    DispatchQueue.main.async { [weak self] in
+      guard let self, self.isPaused, self.needsRepresent else { return }
+      self.draw()
+    }
   }
 
   func draw(in view: MTKView) {
@@ -447,7 +467,8 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
     // presents whatever frame is finished. A draw with nothing new to show
     // (the display refreshes faster than the machine produces frames) does no
     // GPU work at all.
-    var newFrame = false
+    var newFrame = needsRepresent && currentFrame != nil
+    needsRepresent = false
     if let slot = viewModel.framePublisher.acquireLatest() {
       currentFrame = slot
       newFrame = true
@@ -848,11 +869,16 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
         MainActor.assumeIsolated { self?.updateDrawLoop() }
       },
       nc.addObserver(forName: NSWindow.didEnterFullScreenNotification, object: window, queue: .main) { [weak self] _ in
-        MainActor.assumeIsolated { self?.startMouseMonitor() }
+        MainActor.assumeIsolated {
+          self?.startMouseMonitor()
+          // The fullscreen styleMask is only set by now, after the size change.
+          self?.requestRepresent()
+        }
       },
       nc.addObserver(forName: NSWindow.didExitFullScreenNotification, object: window, queue: .main) { [weak self] _ in
         MainActor.assumeIsolated {
           self?.stopMouseMonitor()
+          self?.requestRepresent()
           self?.viewModel.showFullScreenOverlay = false
         }
       },
