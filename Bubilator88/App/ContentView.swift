@@ -227,6 +227,7 @@ struct ContentView: View {
       }
     }
     .animation(.easeInOut(duration: 0.25), value: viewModel.currentToast != nil)
+    .background(TouchBarInstaller(viewModel: viewModel))
   }
 
   private func handleDiskDrop(providers: [NSItemProvider]) -> Bool {

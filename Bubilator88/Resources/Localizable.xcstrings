@@ -3682,6 +3682,16 @@
         }
       }
     },
+    "Load" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ロード"
+          }
+        }
+      }
+    },
     "Load failed" : {
       "localizations" : {
         "ja" : {
@@ -5079,6 +5089,16 @@
         }
       }
     },
+    "Save to Slot" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "セーブ"
+          }
+        }
+      }
+    },
     "Save State" : {
       "localizations" : {
         "ja" : {
@@ -5591,6 +5611,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "録画を開始…"
+          }
+        }
+      }
+    },
+    "State" : {
+      "comment" : "Touch Bar button that opens the save-state slots",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ステート"
           }
         }
       }
