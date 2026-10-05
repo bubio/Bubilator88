@@ -21,6 +21,7 @@ struct AboutView: View {
 
   private let credits: [Credit] = [
     Credit(category: String(localized: "FM Synthesis", comment: "About credit category"), title: "fmgen", author: "cisc", url: "http://retropc.net/cisc/sound/"),
+    Credit(category: String(localized: "Rhythm Samples", comment: "About credit category"), title: "2608modoki2", author: "メモル", url: "http://sound.jp/jaime/"),
     Credit(category: String(localized: "Reference", comment: "About credit category"), title: "QUASI88", author: "S.Fukunaga", url: "https://www.eonet.ne.jp/~showtime/quasi88/"),
     Credit(category: String(localized: "Reference", comment: "About credit category"), title: "common source code project", author: "Takeda Toshiya", url: "https://takeda-toshiya.my.coocan.jp/common/index.html"),
     Credit(category: String(localized: "Reference", comment: "About credit category"), title: "X88000", author: "Manuke", url: "https://quagma.sakura.ne.jp/manuke/x88000.html"),

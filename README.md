@@ -175,6 +175,7 @@ git submodule update --init docs/develop
 - **FM 合成エンジン**: [fmgen](http://retropc.net/cisc/sound/) by cisc — Swift への移植
   (利用条件は [Bubilator88Core](https://github.com/bubio/Bubilator88Core) の
   `Sources/FMSynthesis/fmgen-readme.txt`、改変内容は同ディレクトリの `fmgen-changes.md` を参照)
+- **リズム音源**: 2608modoki2 by メモル — BIOS 側のリズム音源 WAV が無いときの代替として同梱（[配布元](http://sound.jp/jaime/)、組み込み自由）
 - **参考エミュレーター**: [QUASI88](https://www.eonet.ne.jp/~showtime/quasi88/) by S.Fukunaga — ビヘイビアリファレンスとして参照
 - **参考エミュレーター**: [common source code project](https://takeda-toshiya.my.coocan.jp/common/index.html) by Takeda Toshiya — BubiC-8801MA として参照
 - **参考エミュレーター**: [X88000](https://quagma.sakura.ne.jp/manuke/x88000.html) by Manuke — Z80 未文書化命令や細部の実装リファレンスとして参照

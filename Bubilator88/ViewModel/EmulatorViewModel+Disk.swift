@@ -33,14 +33,19 @@ extension EmulatorViewModel {
     // Install extended RAM (capacity from Settings; default 128KB).
     pc88.installExtRAM(cards: Settings.shared.extramCards, banksPerCard: 4)
 
-    // YM2608 rhythm WAV samples (fmgen format: signed 16-bit PCM)
-    let rhythmFiles = ["2608_BD.WAV", "2608_SD.WAV", "2608_TOP.WAV",
-                       "2608_HH.WAV", "2608_TOM.WAV", "2608_RIM.WAV"]
-    for (index, filename) in rhythmFiles.enumerated() {
-      let path = appSupport.appending(component: filename)
-      if let wavData = try? Data(contentsOf: path),
-         let (samples, sampleRate) = parseWAV(wavData) {
-        pc88.loadRhythmSample(index: index, data: samples, sampleRate: sampleRate)
+    // YM2608 rhythm WAV samples (fmgen format: signed 16-bit PCM). A file in
+    // Application Support wins; otherwise the bundled stand-in is used so the
+    // rhythm part is never silent.
+    let rhythmNames = ["BD", "SD", "TOP", "HH", "TOM", "RIM"]
+    for (index, name) in rhythmNames.enumerated() {
+      let userFile = appSupport.appending(component: "2608_\(name).WAV")
+      let bundled = Bundle.main.url(forResource: "Rhythm_\(name)", withExtension: "wav")
+      for url in [userFile, bundled].compactMap({ $0 }) {
+        if let wavData = try? Data(contentsOf: url),
+           let (samples, sampleRate) = parseWAV(wavData) {
+          pc88.loadRhythmSample(index: index, data: samples, sampleRate: sampleRate)
+          break
+        }
       }
     }
   }
