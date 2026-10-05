@@ -113,7 +113,7 @@ brew install --cask bubio/bubilator88/bubilator88
 
 ## ROM Files
 
-PC-8801 の起動には実機の ROM ファイルおよびリズム音源用 WAV ファイルが必要です（本プロジェクトには含まれていません）。
+PC-8801 の起動には実機の ROM ファイルが必要です（本プロジェクトには含まれていません）。リズム音源用 WAV は無くても代替音で鳴ります。
 
 *~/Library/Application Support/Bubilator88/* に配置してください。
 
@@ -129,13 +129,19 @@ PC-8801 の起動には実機の ROM ファイルおよびリズム音源用 WAV
 ├── N88_1.ROM        N88 拡張 ROM バンク 1
 ├── N88_2.ROM        N88 拡張 ROM バンク 2
 ├── N88_3.ROM        N88 拡張 ROM バンク 3
-├── 2608_BD.WAV      YM2608 リズム音源（バスドラム）
+├── 2608_BD.WAV      YM2608 リズム音源（バスドラム）※任意。無ければ同梱の代替音
 ├── 2608_SD.WAV      YM2608 リズム音源（スネア）
 ├── 2608_TOP.WAV     YM2608 リズム音源（シンバル）
 ├── 2608_HH.WAV      YM2608 リズム音源（ハイハット）
 ├── 2608_TOM.WAV     YM2608 リズム音源（タム）
 └── 2608_RIM.WAV     YM2608 リズム音源（リムショット）
 ```
+
+### 実機の ROM が無い場合: pbios（代替 BIOS）
+
+cisc 氏が公開している起動専用の代替 BIOS
+[pbios](http://retropc.net/cisc/m88/download.html) の `n88.rom` と `disk.rom` を
+`N88.ROM` と `DISK.ROM` として置くと、BASIC を使わないソフトの一部が起動します。
 
 ## Development
 
