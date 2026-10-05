@@ -1333,6 +1333,8 @@ final class EmulatorViewModel {
     activeClock8MHz = use8MHz
     if romLoaded { loadROMs() }
     if resetTranslation { translationManager.hardReset() }
+    // `pc88.reset` cleared the matrix itself.
+    heldKeys.removeAll()
     clearRewindBuffer()
     renderScreen()
     if wasRunning { start() }
@@ -1535,6 +1537,9 @@ final class EmulatorViewModel {
       showToast(saveStateLoadErrorMessage(loadError))
       return
     }
+    // The state carries its own key matrix, which says nothing about what the
+    // user is physically holding. Same reasoning as a rewind.
+    releaseAllKeys()
     let meta: SaveMeta? = loadMeta(for: path)
     // Outside the `if let meta` below on purpose. The restored CRTC geometry
     // was chosen by software for one particular monitor; leaving the machine
@@ -1836,6 +1841,14 @@ final class EmulatorViewModel {
     postInput(.releaseKey(key, record: true))
   }
 
+  /// Keys the host currently holds down on the emulated keyboard, whichever way
+  /// they got there (keyboard, controller, Touch Bar). Mirrors the matrix as
+  /// this layer drives it, for UI that has to show a held key.
+  ///
+  /// Cleared wherever the machine's own matrix is replaced or reset: a state
+  /// load and a reset (a rewind goes through `releaseAllKeys()`).
+  private(set) var heldKeys: Set<PC88Key> = []
+
   /// Press a PC-8801 key directly (used by game controller).
   func pressKey(_ key: PC88Key) {
     postInput(.pressKey(key, record: false))
@@ -1896,6 +1909,12 @@ final class EmulatorViewModel {
   /// nothing that would drain the queue, so the event is applied inline —
   /// keys pressed while paused still reach the matrix, as they always have.
   private func postInput(_ event: InputEvent) {
+    switch event {
+    case .pressKey(let key, _): heldKeys.insert(key)
+    case .releaseKey(let key, _): heldKeys.remove(key)
+    case .releaseAllKeys: heldKeys.removeAll()
+    default: break
+    }
     inputQueue.post(event)
     // Draining inline is only safe when nothing else is touching the machine.
     // `isRunning` alone does not establish that: `stop()` clears it *before*
