@@ -62,6 +62,7 @@ struct VideoRecordingFormatTests {
 /// pinning the locale to `en_US_POSIX`, the `yyyy` pattern resolves to
 /// era years on Japanese calendar locales — "20260424" turns into
 /// "00080424", which breaks file sorting and confuses users.
+@MainActor
 struct StableTimestampTests {
 
   /// Fixed reference point: 2026-04-24 12:34:56 UTC (Gregorian).

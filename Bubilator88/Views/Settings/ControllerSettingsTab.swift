@@ -48,6 +48,19 @@ struct ControllerSettingsTab: View {
           .settingsDescriptionStyle()
       }
 
+      Section("Control Zones") {
+        Toggle("Use for Control Zones", isOn: $settings.clickZoneUsesController)
+          .disabled(!settings.gameControllerEnabled)
+        Picker("Confirm Button", selection: $settings.clickZoneConfirmButton) {
+          ForEach(ControllerButton.allCases.filter { !Self.directionButtons.contains($0) }) { button in
+            Text(button.displayName).tag(button.rawValue)
+          }
+        }
+        .disabled(!settings.gameControllerEnabled || !settings.clickZoneUsesController)
+        Text("The D-pad and left stick move between the control zones on the screen, and the confirm button plays the zone's keys. These buttons cannot be mapped to keys, as long as the mounted disk has control zones.")
+          .settingsDescriptionStyle()
+      }
+
       if let active = gc.activeControllerInfo, settings.gameControllerEnabled {
         let category = active.productCategory
         let currentMapping = settings.controllerMappings[category] ?? ControllerButtonMapping()
@@ -59,6 +72,7 @@ struct ControllerSettingsTab: View {
               brand: active.brand,
               mapping: currentMapping,
               isListening: listeningButton == button,
+              isReserved: isReservedForControlZones(button),
               onAssign: { startListening(for: button, category: category) },
               onClear: {
                 var m = currentMapping
@@ -78,6 +92,14 @@ struct ControllerSettingsTab: View {
     }
     .formStyle(.grouped)
     .onDisappear { cancelListening() }
+  }
+
+  private static let directionButtons: Set<ControllerButton> = [.dpadUp, .dpadDown, .dpadLeft, .dpadRight]
+
+  /// Buttons that control zones use while they use the controller.
+  private func isReservedForControlZones(_ button: ControllerButton) -> Bool {
+    guard settings.clickZoneUsesController else { return false }
+    return Self.directionButtons.contains(button) || button.rawValue == settings.clickZoneConfirmButton
   }
 
   private func startListening(for button: ControllerButton, category: String) {
@@ -166,12 +188,14 @@ struct ButtonMappingRow: View {
   let brand: ControllerButton.Brand
   let mapping: ControllerButtonMapping
   let isListening: Bool
+  /// Taken by control zones: shown, but not mappable.
+  var isReserved: Bool = false
   let onAssign: () -> Void
   let onClear: () -> Void
 
   var body: some View {
     let action = mapping.action(for: button)
-    let labelText = isListening ? "Press a key..." : label(for: action)
+    let labelText = isReserved ? String(localized: "Control Zones") : isListening ? "Press a key..." : label(for: action)
 
     HStack {
       if let symbol = button.sfSymbolName(for: brand) {
@@ -182,9 +206,10 @@ struct ButtonMappingRow: View {
       Spacer()
       Button(labelText) { onAssign() }
         .buttonStyle(.bordered)
-        .foregroundStyle(isListening ? .orange : action.isNone ? .secondary : .primary)
+        .foregroundStyle(isListening ? .orange : action.isNone || isReserved ? .secondary : .primary)
         .font(.caption)
-      if !action.isNone {
+        .disabled(isReserved)
+      if !action.isNone && !isReserved {
         Button(role: .destructive) {
           onClear()
         } label: {

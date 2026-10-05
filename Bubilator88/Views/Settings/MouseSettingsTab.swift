@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct MouseSettingsTab: View {
+  let viewModel: EmulatorViewModel
   @Environment(Settings.self) private var settings
 
   var body: some View {
@@ -27,6 +28,7 @@ struct MouseSettingsTab: View {
         Text("Click the emulation screen to capture the pointer; press Control+Esc to release.")
           .settingsDescriptionStyle()
       }
+      ClickZoneSettingsSections(viewModel: viewModel)
     }
     .formStyle(.grouped)
   }

@@ -535,7 +535,13 @@ final class GameControllerManager {
 
   // MARK: - Lifecycle
 
+  /// Whether the handlers are installed. Both `start` and `stop` may be
+  /// called more than once, from emulation and from Settings.
+  private var isStarted = false
+
   func start(viewModel: EmulatorViewModel) {
+    guard !isStarted else { return }
+    isStarted = true
     self.viewModel = viewModel
 
     NotificationCenter.default.addObserver(
@@ -555,6 +561,7 @@ final class GameControllerManager {
   }
 
   func stop() {
+    isStarted = false
     GCController.stopWirelessControllerDiscovery()
     NotificationCenter.default.removeObserver(self)
     releaseAllKeys()
@@ -689,60 +696,60 @@ final class GameControllerManager {
 
     // D-pad
     gamepad.dpad.up.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .dpadUp), pressed: pressed)
+      self?.handle(.dpadUp, mapping: m, pressed: pressed)
     }
     gamepad.dpad.down.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .dpadDown), pressed: pressed)
+      self?.handle(.dpadDown, mapping: m, pressed: pressed)
     }
     gamepad.dpad.left.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .dpadLeft), pressed: pressed)
+      self?.handle(.dpadLeft, mapping: m, pressed: pressed)
     }
     gamepad.dpad.right.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .dpadRight), pressed: pressed)
+      self?.handle(.dpadRight, mapping: m, pressed: pressed)
     }
 
     // Face buttons
     gamepad.buttonA.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .buttonA), pressed: pressed)
+      self?.handle(.buttonA, mapping: m, pressed: pressed)
     }
     gamepad.buttonB.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .buttonB), pressed: pressed)
+      self?.handle(.buttonB, mapping: m, pressed: pressed)
     }
     gamepad.buttonX.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .buttonX), pressed: pressed)
+      self?.handle(.buttonX, mapping: m, pressed: pressed)
     }
     gamepad.buttonY.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .buttonY), pressed: pressed)
+      self?.handle(.buttonY, mapping: m, pressed: pressed)
     }
 
     // Shoulders and triggers
     gamepad.leftShoulder.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .leftShoulder), pressed: pressed)
+      self?.handle(.leftShoulder, mapping: m, pressed: pressed)
     }
     gamepad.rightShoulder.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .rightShoulder), pressed: pressed)
+      self?.handle(.rightShoulder, mapping: m, pressed: pressed)
     }
     gamepad.leftTrigger.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .leftTrigger), pressed: pressed)
+      self?.handle(.leftTrigger, mapping: m, pressed: pressed)
     }
     gamepad.rightTrigger.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .rightTrigger), pressed: pressed)
+      self?.handle(.rightTrigger, mapping: m, pressed: pressed)
     }
 
     // Menu buttons
     gamepad.buttonMenu.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .buttonStart), pressed: pressed)
+      self?.handle(.buttonStart, mapping: m, pressed: pressed)
     }
     gamepad.buttonOptions?.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .buttonSelect), pressed: pressed)
+      self?.handle(.buttonSelect, mapping: m, pressed: pressed)
     }
 
     // Stick buttons
     gamepad.leftThumbstickButton?.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .leftStickButton), pressed: pressed)
+      self?.handle(.leftStickButton, mapping: m, pressed: pressed)
     }
     gamepad.rightThumbstickButton?.pressedChangedHandler = { [weak self] _, _, pressed in
-      self?.handleButton(m.action(for: .rightStickButton), pressed: pressed)
+      self?.handle(.rightStickButton, mapping: m, pressed: pressed)
     }
 
     // Left stick (analog → digital with hysteresis)
@@ -755,6 +762,43 @@ final class GameControllerManager {
 
   /// Host shortcuts currently held by a controller button (to emit matching keyUp on release).
   private var pressedShortcuts: [HostShortcut] = []
+
+  /// Buttons whose press went to control zones, so their release is
+  /// swallowed too.
+  private var zoneConsumed: Set<ControllerButton> = []
+
+  /// A controller button goes to the control zones first, then to its
+  /// mapping.
+  private func handle(_ button: ControllerButton, mapping m: ControllerButtonMapping, pressed: Bool) {
+    if pressed {
+      if handleControlZones(button) {
+        zoneConsumed.insert(button)
+        return
+      }
+    } else if zoneConsumed.remove(button) != nil {
+      return
+    }
+    handleButton(m.action(for: button), pressed: pressed)
+  }
+
+  /// While control zones use the controller, the D-pad and stick move the
+  /// focus and the confirm button plays the focused zone. Returns whether
+  /// the press was taken.
+  private func handleControlZones(_ button: ControllerButton) -> Bool {
+    guard let vm = viewModel, vm.controlZonesUseController else { return false }
+    if button.rawValue == Settings.shared.clickZoneConfirmButton {
+      vm.activateFocusedClickZone()
+      return true
+    }
+    switch button {
+    case .dpadUp: vm.moveClickZoneFocus(.up)
+    case .dpadDown: vm.moveClickZoneFocus(.down)
+    case .dpadLeft: vm.moveClickZoneFocus(.left)
+    case .dpadRight: vm.moveClickZoneFocus(.right)
+    default: return false
+    }
+    return true
+  }
 
   private func handleButton(_ action: ButtonAction, pressed: Bool) {
     switch action {
@@ -887,10 +931,10 @@ final class GameControllerManager {
     let newLeft  = stickState.left  ? (x < -releaseThreshold) : (x < -deadzone)
     let newRight = stickState.right ? (x > releaseThreshold)  : (x > deadzone)
 
-    if newUp    != stickState.up    { handleButton(m.action(for: .dpadUp),    pressed: newUp) }
-    if newDown  != stickState.down  { handleButton(m.action(for: .dpadDown),  pressed: newDown) }
-    if newLeft  != stickState.left  { handleButton(m.action(for: .dpadLeft),  pressed: newLeft) }
-    if newRight != stickState.right { handleButton(m.action(for: .dpadRight), pressed: newRight) }
+    if newUp    != stickState.up    { handle(.dpadUp, mapping: m, pressed: newUp) }
+    if newDown  != stickState.down  { handle(.dpadDown, mapping: m, pressed: newDown) }
+    if newLeft  != stickState.left  { handle(.dpadLeft, mapping: m, pressed: newLeft) }
+    if newRight != stickState.right { handle(.dpadRight, mapping: m, pressed: newRight) }
 
     stickState = (newUp, newDown, newLeft, newRight)
   }

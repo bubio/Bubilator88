@@ -75,6 +75,10 @@ struct SoftwareKeyboardView: View {
       }
     }
     .frame(width: canvasWidth, height: canvasHeight)
+    // The keys are gestures, not controls, so `.disabled` alone would not
+    // stop them.
+    .allowsHitTesting(viewModel.allows(.input))
+    .opacity(viewModel.allows(.input) ? 1 : 0.5)
     .padding(Self.padding)
     .background(Color(nsColor: .windowBackgroundColor))
     .fixedSize()

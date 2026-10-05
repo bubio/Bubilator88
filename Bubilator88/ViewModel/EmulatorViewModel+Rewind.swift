@@ -120,6 +120,7 @@ extension EmulatorViewModel {
   /// switch to `stepRewindBack()` on its next tick.
   func startRewindHold() {
     if isRewinding { return }
+    if !allows(.state) { return }
     if !isRunning { return }  // no draw loop = nothing to rewind into
     if videoRecorder.isRecording || audioRecorder.isRecording { return }
     if rewindSnapshotCount == 0 { return }

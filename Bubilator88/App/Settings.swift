@@ -72,6 +72,9 @@ final class Settings {
     static let mouseEnabled              = "mouseEnabled"
     static let mouseJoyMode              = "mouseJoyMode"
     static let mouseSensitivity          = "mouseSensitivity"
+    static let clickZonesEnabled         = "clickZonesEnabled"
+    static let clickZoneUsesController   = "clickZoneUsesController"
+    static let clickZoneConfirmButton    = "clickZoneConfirmButton"
 
     // Keyboard
     static let arrowKeysAsNumpad         = "arrowKeysAsNumpad"
@@ -408,6 +411,28 @@ final class Settings {
     didSet { UserDefaults.standard.set(mouseSensitivity, forKey: Keys.mouseSensitivity) }
   }
 
+  /// Enable control zones: screen rectangles that type a key sequence when
+  /// clicked, for games without mouse support. Only in effect while
+  /// `mouseEnabled` is off.
+  var clickZonesEnabled: Bool = false {
+    didSet { UserDefaults.standard.set(clickZonesEnabled, forKey: Keys.clickZonesEnabled) }
+  }
+
+  /// Dedicate the controller's D-pad, left stick and confirm button to control
+  /// zones: they move a focus between the zones and play the focused one, and
+  /// cannot be mapped to keys. Only in effect while the game controller is
+  /// enabled and the mounted disk has a layout with zones; otherwise the
+  /// buttons keep their mapping.
+  var clickZoneUsesController: Bool = true {
+    didSet { UserDefaults.standard.set(clickZoneUsesController, forKey: Keys.clickZoneUsesController) }
+  }
+
+  /// The controller button that plays the focused control zone's keys
+  /// (`ControllerButton.rawValue`).
+  var clickZoneConfirmButton: String = ControllerButton.buttonX.rawValue {
+    didSet { UserDefaults.standard.set(clickZoneConfirmButton, forKey: Keys.clickZoneConfirmButton) }
+  }
+
   // MARK: - Keyboard
 
   /// Map arrow keys to numpad (↑→8, ↓→2, ←→4, →→6).
@@ -642,6 +667,15 @@ final class Settings {
     }
     if let v = UserDefaults.standard.object(forKey: Keys.mouseSensitivity) {
       mouseSensitivity = (v as? NSNumber)?.floatValue ?? 0.5
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.clickZonesEnabled) as? Bool {
+      clickZonesEnabled = v
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.clickZoneUsesController) as? Bool {
+      clickZoneUsesController = v
+    }
+    if let v = UserDefaults.standard.string(forKey: Keys.clickZoneConfirmButton) {
+      clickZoneConfirmButton = v
     }
     if let v = UserDefaults.standard.object(forKey: Keys.arrowKeysAsNumpad) as? Bool {
       arrowKeysAsNumpad = v
