@@ -33,27 +33,26 @@ struct AboutView: View {
   ]
 
   var body: some View {
-    VStack(spacing: 12) {
-      if let icon = NSImage(named: NSImage.applicationIconName) {
-        Image(nsImage: icon)
-          .resizable()
-          .frame(width: 96, height: 96)
+    VStack(spacing: 8) {
+      HStack(spacing: 12) {
+        if let icon = NSImage(named: NSImage.applicationIconName) {
+          Image(nsImage: icon)
+            .resizable()
+            .frame(width: 48, height: 48)
+        }
+
+        VStack(alignment: .leading, spacing: 2) {
+          Text("Bubilator88")
+            .font(.title2)
+            .fontWeight(.bold)
+
+          Text("Version \(appVersion) (\(buildNumber))", comment: "About dialog version")
+            .font(.callout)
+            .foregroundStyle(.tertiary)
+        }
       }
 
-      Text("Bubilator88")
-        .font(.title)
-        .fontWeight(.bold)
-
-      Text("NEC PC-8801mkIISR Emulator for macOS", comment: "About dialog subtitle")
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
-
-      Text("Version \(appVersion) (\(buildNumber))", comment: "About dialog version")
-        .font(.callout)
-        .foregroundStyle(.tertiary)
-
       Divider()
-        .padding(.horizontal, 20)
 
       ScrollView {
         Grid(alignment: .topLeading, horizontalSpacing: 12, verticalSpacing: 8) {
@@ -100,16 +99,15 @@ struct AboutView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 4)
       }
-      .frame(maxHeight: 260)
+      .frame(minHeight: 200, idealHeight: 340, maxHeight: .infinity)
 
       Divider()
-        .padding(.horizontal, 20)
 
       Text("© 2026 bubio. Licensed under GPL v2.0", comment: "About dialog copyright")
         .font(.caption)
         .foregroundStyle(.tertiary)
     }
-    .padding(24)
+    .padding(16)
     .frame(width: 460)
   }
 }

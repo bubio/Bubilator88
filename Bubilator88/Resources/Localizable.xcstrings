@@ -3967,17 +3967,6 @@
         }
       }
     },
-    "NEC PC-8801mkIISR Emulator for macOS" : {
-      "comment" : "About dialog subtitle",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "NEC PC-8801mkIISR以降 macOS エミュレータ"
-          }
-        }
-      }
-    },
     "No controller connected." : {
       "localizations" : {
         "ja" : {
