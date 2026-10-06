@@ -121,6 +121,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // Letting SwiftUI keep ownership via `.onOpenURL` avoids both: it fires
     // for cold AND warm opens, never touches the window, and the internal
     // display loop comes up alive. (Verified end-to-end, 2026-06-05.)
+
+    Task { await UpdateChecker.shared.checkOnLaunch() }
   }
 
   func applicationWillTerminate(_ notification: Notification) {

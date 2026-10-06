@@ -43,6 +43,12 @@ final class Settings {
     static let resetAnimationEnabled     = "resetAnimationEnabled"
     static let showTapeInStatusBar       = "showTapeInStatusBar"
 
+    // Update check
+    static let automaticUpdateCheck      = "automaticUpdateCheck"
+    static let lastUpdateCheck           = "lastUpdateCheck"
+    static let updateRemindAfter         = "updateRemindAfter"
+    static let skippedUpdateVersion      = "skippedUpdateVersion"
+
     // Video
     static let videoFilter               = "videoFilter"
     static let scanlineEnabled           = "scanlineEnabled"
@@ -168,6 +174,28 @@ final class Settings {
   /// Play a Thanos-style dissolve animation when the user resets the machine.
   var resetAnimationEnabled: Bool = true {
     didSet { UserDefaults.standard.set(resetAnimationEnabled, forKey: Keys.resetAnimationEnabled) }
+  }
+
+  // MARK: - Update Check
+
+  /// Check the release feed for a newer version at launch.
+  var automaticUpdateCheck: Bool = true {
+    didSet { UserDefaults.standard.set(automaticUpdateCheck, forKey: Keys.automaticUpdateCheck) }
+  }
+
+  /// When the release feed was last fetched by the launch check.
+  var lastUpdateCheck: Date? {
+    didSet { UserDefaults.standard.set(lastUpdateCheck, forKey: Keys.lastUpdateCheck) }
+  }
+
+  /// "Remind Me Later" was chosen; the launch check stays quiet until then.
+  var updateRemindAfter: Date? {
+    didSet { UserDefaults.standard.set(updateRemindAfter, forKey: Keys.updateRemindAfter) }
+  }
+
+  /// A version the user chose to skip, as written in the release tag (`v1.6.0`).
+  var skippedUpdateVersion: String? {
+    didSet { UserDefaults.standard.set(skippedUpdateVersion, forKey: Keys.skippedUpdateVersion) }
   }
 
   // MARK: - Video Filter
@@ -625,6 +653,12 @@ final class Settings {
     if let v = UserDefaults.standard.object(forKey: Keys.resetAnimationEnabled) as? Bool {
       resetAnimationEnabled = v
     }
+    if let v = UserDefaults.standard.object(forKey: Keys.automaticUpdateCheck) as? Bool {
+      automaticUpdateCheck = v
+    }
+    lastUpdateCheck = UserDefaults.standard.object(forKey: Keys.lastUpdateCheck) as? Date
+    updateRemindAfter = UserDefaults.standard.object(forKey: Keys.updateRemindAfter) as? Date
+    skippedUpdateVersion = UserDefaults.standard.string(forKey: Keys.skippedUpdateVersion)
     if let v = UserDefaults.standard.object(forKey: Keys.audioBufferMs) as? Int {
       audioBufferMs = max(20, min(500, v))
     }
