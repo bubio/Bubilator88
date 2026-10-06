@@ -56,7 +56,8 @@ extension EmulatorViewModel {
   /// shows the groups to switch on.
   func useCheatPreset(_ preset: CheatPreset) {
     guard let diskFiles = cheatTargetDiskFiles() else { return }
-    CheatStore.shared.importSet(name: preset.title, text: preset.text, for: diskFiles)
+    CheatStore.shared.importSet(name: preset.title, text: preset.text, for: diskFiles,
+                                preset: preset.title)
     syncActiveCheats()
   }
 

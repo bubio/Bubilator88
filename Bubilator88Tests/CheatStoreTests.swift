@@ -92,4 +92,34 @@ struct CheatStoreTests {
     #expect(store.notes(of: set) == ["ロードしてから有効にしてください。"])
     #expect(store.groups(of: set).map(\.notes) == [["戦闘勝利時に増えます"]])
   }
+
+  @Test("プリセットから作ったセットは、同梱プリセットが変わると本文が追従し、同名の項目は ON のまま残る")
+  func setsFollowTheirPreset() {
+    let url = tempURL()
+    defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+    let old = CheatPreset(title: "ファンタジアン", text: "# HP MAX\n3000D014 00FF\n# GOLD MAX\n8000D018 7FFF\n")
+    let store = CheatStore(fileURL: url, presets: [old])
+    let set = store.importSet(name: old.title, text: old.text, for: ["F.D88"], preset: old.title)
+    store.setGroup(0, enabled: true, in: set.id)
+    store.setGroup(1, enabled: true, in: set.id)
+
+    let new = CheatPreset(title: "ファンタジアン",
+                          text: "# GOLD MAX\n8000D018 7FFF\n8000D058 7FFF\n# HP MAX（全員）\n3000D014 00FF\n")
+    let reloaded = CheatStore(fileURL: url, presets: [new])
+    let found = try! #require(reloaded.set(for: ["F.D88"]))
+    #expect(found.text == new.text)
+    #expect(found.enabledGroups == [0])  // GOLD MAX moved to 0; HP MAX was renamed
+  }
+
+  @Test("出典の行がある、プリセット名のセットは、記録がなくてもプリセットから作ったものとして扱う")
+  func legacyPresetSetsAreAdopted() {
+    let url = tempURL()
+    defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+    let store = CheatStore(fileURL: url)
+    store.importSet(name: "Ys", text: "# HP\n8000A000 FFFF\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n", for: ["YS.D88"])
+    let newer = CheatPreset(title: "Ys", text: "# HP\n8000A000 FFFF\n8000A002 FFFF\n")
+    let reloaded = CheatStore(fileURL: url, presets: [newer])
+    #expect(reloaded.set(for: ["YS.D88"])?.text == newer.text)
+    #expect(reloaded.set(for: ["YS.D88"])?.preset == "Ys")
+  }
 }

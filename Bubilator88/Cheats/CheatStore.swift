@@ -17,6 +17,10 @@ nonisolated struct CheatSet: Codable, Equatable, Identifiable, Sendable {
   var diskFiles: [String]
   /// Indices of the groups switched on, remembered across launches.
   var enabledGroups: Set<Int> = []
+  /// The title of the bundled preset this set was made from, if any. Such a
+  /// set follows the bundle: `CheatStore` replaces its text when the preset
+  /// changes.
+  var preset: String?
 
   func applies(to fileName: String) -> Bool {
     diskFiles.contains { Self.sameFile($0, fileName) }
@@ -41,7 +45,9 @@ nonisolated struct CheatPreset: Codable, Equatable, Sendable {
 /// The bundled presets (`CheatPresets.json`, generated from KAJA's list by
 /// `scripts/par_list_to_presets.py`) are offered for the user to pick: disk
 /// file names differ from copy to copy, so a preset cannot find its game by
-/// itself. Picking one copies it into a set like an imported file.
+/// itself. Picking one copies it into a set like an imported file, which
+/// remembers the preset and takes its text again on load whenever a newer
+/// bundle has changed it.
 @Observable
 final class CheatStore {
   static let shared = CheatStore(fileURL: defaultFileURL, presets: bundledPresets())
@@ -122,12 +128,12 @@ final class CheatStore {
   /// Add a set for `diskFiles`, all its groups off. The disks leave whatever
   /// set they had, and a set left with no disks is dropped.
   @discardableResult
-  func importSet(name: String, text: String, for diskFiles: [String]) -> CheatSet {
+  func importSet(name: String, text: String, for diskFiles: [String], preset: String? = nil) -> CheatSet {
     for i in sets.indices {
       sets[i].diskFiles.removeAll { file in diskFiles.contains { CheatSet.sameFile($0, file) } }
     }
     sets.removeAll { $0.diskFiles.isEmpty }
-    let set = CheatSet(name: name, text: text, diskFiles: diskFiles)
+    let set = CheatSet(name: name, text: text, diskFiles: diskFiles, preset: preset)
     sets.append(set)
     prune()
     save()
@@ -167,7 +173,37 @@ final class CheatStore {
       sets = try JSONDecoder().decode(StoredFile.self, from: data).sets
     } catch {
       Self.log.error("Failed to read \(fileURL.path): \(error)")
+      return
     }
+    if followPresets() { save() }
+  }
+
+  /// Bring sets made from a preset up to the bundled text. Groups stay on
+  /// where a group of the same name survives. Returns whether anything
+  /// changed.
+  private func followPresets() -> Bool {
+    var changed = false
+    for i in sets.indices {
+      // Sets saved before `preset` existed: a preset's title and its credit
+      // line identify them.
+      if sets[i].preset == nil, sets[i].text.contains("; 出典: KAJA"),
+         presets.contains(where: { $0.title == sets[i].name })
+      {
+        sets[i].preset = sets[i].name
+        changed = true
+      }
+      guard let title = sets[i].preset,
+            let preset = presets.first(where: { $0.title == title }),
+            preset.text != sets[i].text
+      else { continue }
+      let old = PATFile.parse(sets[i].text)
+      let enabledNames = Set(sets[i].enabledGroups.filter(old.indices.contains).map { old[$0].name })
+      let new = PATFile.parse(preset.text)
+      sets[i].text = preset.text
+      sets[i].enabledGroups = Set(new.indices.filter { enabledNames.contains(new[$0].name) })
+      changed = true
+    }
+    return changed
   }
 
   private func save() {
