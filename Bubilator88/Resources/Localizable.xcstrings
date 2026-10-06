@@ -3499,16 +3499,6 @@
         }
       }
     },
-    "Looks for a newer release on GitHub at most once a day." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GitHub で新しいリリースを確認します（1日1回まで）。"
-          }
-        }
-      }
-    },
     "Lower values reduce latency but may cause crackling." : {
       "localizations" : {
         "ja" : {
@@ -4782,6 +4772,27 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "実行を再開"
+          }
+        }
+      }
+    },
+    "Resume where you left off" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前回の続きから再開"
+          }
+        }
+      }
+    },
+    "Resumed" : {
+      "comment" : "Toast after restoring the state saved at the last quit",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再開しました"
           }
         }
       }
@@ -6682,6 +6693,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ホイール上"
+          }
+        }
+      }
+    },
+    "When on, the next launch continues where you left off." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ONにすると次回起動時に続きから開始できます。"
           }
         }
       }
