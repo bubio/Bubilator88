@@ -55,9 +55,13 @@ VARIANTS = {
 }
 
 # Games whose headings have no codes of their own because the list says
-# "same as" another game: those headings take the other game's codes.
+# "same as" another game: those headings take the other game's group of the
+# same name, its notes and codes, followed by the codes of the game's own
+# group named second. XANADU シナリオ２ reads "ＸＡＮＡＤＵと同様。ただし開始時に
+# SUMを調べるので、-SUM CHECK PASS- これを同時に入力する必要があります", so each
+# inherited group carries SUM CHECK PASS with it.
 SAME_AS = {
-    "ＸＡＮＡＤＵ シナリオ２": "ＸＡＮＡＤＵ",
+    "ＸＡＮＡＤＵ シナリオ２": ("ＸＡＮＡＤＵ", "SUM CHECK PASS"),
 }
 
 END = "[戻る]"
@@ -130,12 +134,15 @@ def parse_groups(body: list[str]) -> tuple[list[str], list[tuple[str, list[str]]
     return preamble, groups
 
 
-def build_preset(title: str, body: list[str], base: list[str] | None) -> dict:
+def build_preset(title: str, body: list[str],
+                 same_as: tuple[list[str], str] | None) -> dict:
     preamble, groups = parse_groups(body)
-    if base is not None:
+    if same_as is not None:
+        base, companion = same_as
         inherited = dict(parse_groups(base)[1])
+        extra = [l for l in dict(groups)[companion] if CODE.match(l)]
         groups = [(name, lines if any(CODE.match(l) for l in lines)
-                   else lines + [l for l in inherited.get(name, []) if CODE.match(l)])
+                   else lines + inherited[name] + extra)
                   for name, lines in groups]
     assert all(any(CODE.match(l) for l in lines) for _, lines in groups), f"{title}: empty group"
 
@@ -177,7 +184,8 @@ def main(argv: list[str]) -> int:
     end = lines.index(END, starts[-1])
     bodies = {title: lines[start + 1:stop]
               for title, start, stop in zip(TITLES, starts, starts[1:] + [end])}
-    presets = [build_preset(title, bodies[title], bodies.get(SAME_AS.get(title, "")))
+    presets = [build_preset(title, bodies[title],
+                            (bodies[SAME_AS[title][0]], SAME_AS[title][1]) if title in SAME_AS else None)
                for title in TITLES]
 
     output.write_text(json.dumps({"source": SOURCE, "presets": presets},
