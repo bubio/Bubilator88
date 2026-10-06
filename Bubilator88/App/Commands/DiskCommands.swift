@@ -91,9 +91,6 @@ struct DiskCommands: Commands {
           viewModel.disableAllCheats()
         }
         .disabled(set.enabledGroups.isEmpty)
-        Button("Remove Cheat File") {
-          viewModel.removeActiveCheatSet()
-        }
         Divider()
       }
       let noDisk = viewModel.drive0Info == nil && viewModel.drive1Info == nil

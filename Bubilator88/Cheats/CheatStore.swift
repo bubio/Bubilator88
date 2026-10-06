@@ -138,12 +138,6 @@ final class CheatStore {
     save()
   }
 
-  func remove(_ id: UUID) {
-    sets.removeAll { $0.id == id }
-    prune()
-    save()
-  }
-
   private func prune() {
     let ids = Set(sets.map(\.id))
     parsed = parsed.filter { ids.contains($0.key) }

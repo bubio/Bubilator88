@@ -909,17 +909,6 @@
         }
       }
     },
-    "Remove Cheat File" : {
-      "comment" : "Cheats submenu: forget the cheat file imported for the mounted disks",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "チートファイルを削除"
-          }
-        }
-      }
-    },
     "Remove Step" : {
       "localizations" : {
         "ja" : {

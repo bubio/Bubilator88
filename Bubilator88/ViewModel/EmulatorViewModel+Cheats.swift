@@ -88,12 +88,6 @@ extension EmulatorViewModel {
     syncActiveCheats()
   }
 
-  func removeActiveCheatSet() {
-    guard let set = activeCheatSet else { return }
-    CheatStore.shared.remove(set.id)
-    syncActiveCheats()
-  }
-
   /// Hand the loop the codes it should run. Main thread only; call it
   /// whenever the mounted disks or the store change.
   func syncActiveCheats() {
