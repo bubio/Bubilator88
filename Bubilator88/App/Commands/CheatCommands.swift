@@ -10,13 +10,22 @@ struct CheatCommands: Commands {
     CommandMenu("Cheats") {
       Group {
         if let set = viewModel.activeCheatSet {
-          Text(set.name).disabled(true)
+          // Notes go in each item's subtitle: many codes mean nothing
+          // without them ("EXPいっぱい" only grows after a won battle).
+          Button {} label: {
+            Text(set.name)
+            subtitle(CheatStore.shared.notes(of: set))
+          }
+          .disabled(true)
           let groups = CheatStore.shared.groups(of: set)
           ForEach(groups.indices, id: \.self) { index in
-            Toggle(groups[index].name.isEmpty ? PATFile.unnamedGroupName : groups[index].name,
-                   isOn: Binding(
-                     get: { viewModel.isCheatGroupEnabled(index) },
-                     set: { viewModel.setCheatGroup(index, enabled: $0) }))
+            let group = groups[index]
+            Toggle(isOn: Binding(
+              get: { viewModel.isCheatGroupEnabled(index) },
+              set: { viewModel.setCheatGroup(index, enabled: $0) })) {
+                Text(group.name.isEmpty ? PATFile.unnamedGroupName : group.name)
+                subtitle(group.notes)
+              }
           }
           Divider()
           Button("Disable All Cheats") {
@@ -40,6 +49,14 @@ struct CheatCommands: Commands {
         .disabled(noDisk)
       }
       .disabled(!viewModel.allows(.media))
+    }
+  }
+
+  /// A menu item's subtitle: the notes one per line, or nothing.
+  @ViewBuilder
+  private func subtitle(_ notes: [String]) -> some View {
+    if !notes.isEmpty {
+      Text(verbatim: notes.joined(separator: "\n"))
     }
   }
 }

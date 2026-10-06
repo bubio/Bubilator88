@@ -15,7 +15,11 @@ Bubilator88/Resources/CheatPresets.json.
 The page is a run of game titles, each followed by `- heading -` lines and the
 codes under them, with prose notes in between. Titles cannot be told from
 notes by shape alone, so they are listed in TITLES below; a new revision of
-the list needs that updated. Notes become `;` comments. A code line giving
+the list needs that updated. Notes become `;` comments: those about the whole
+game at the top of the file, where the app shows them under the game's name,
+and those about one group under its `#` line, where `PATFile.parse` makes
+them the group's notes (see parse_groups). The source is credited on the last
+line. A code line giving
 alternative addresses for different releases (`D0004F48 3195 | D0002808
 C195`) becomes one group per release, named by VARIANTS or numbered.
 """
@@ -98,15 +102,29 @@ def alternatives(line: str) -> list[str]:
 
 
 def parse_groups(body: list[str]) -> tuple[list[str], list[tuple[str, list[str]]]]:
+    """Split a game's lines into its notes and its groups.
+
+    A note right under a heading describes that group, and stays with it as a
+    `;` line before its codes, where `PATFile.parse` takes it for the group's
+    notes. A note under a heading that has no codes leads into the next
+    heading (XANADU シナリオ2: "…SUMを調べるので、" / -SUM CHECK PASS- /
+    "これを同時に…"), so it moves there. A note after a group's codes is about
+    the whole game, so it joins the notes at the top.
+    """
     preamble: list[str] = []
     groups: list[tuple[str, list[str]]] = []
     for line in body:
         heading = HEADING.match(line)
         if heading:
-            groups.append((display(heading.group(1)), []))
-        elif CODE.match(line) or not groups:
-            (groups[-1][1] if groups else preamble).append(
-                line if CODE.match(line) else "; " + line)
+            carried: list[str] = []
+            if groups and not any(CODE.match(l) for l in groups[-1][1]):
+                carried = groups[-1][1][:]
+                groups[-1][1].clear()
+            groups.append((display(heading.group(1)), carried))
+        elif CODE.match(line):
+            groups[-1][1].append(line)
+        elif not groups or any(CODE.match(l) for l in groups[-1][1]):
+            preamble.append("; " + line)
         else:
             groups[-1][1].append("; " + line)
     return preamble, groups
@@ -121,7 +139,7 @@ def build_preset(title: str, body: list[str], base: list[str] | None) -> dict:
                   for name, lines in groups]
     assert all(any(CODE.match(l) for l in lines) for _, lines in groups), f"{title}: empty group"
 
-    out = [f"; {display(title)}", f"; 出典: {SOURCE}"] + preamble
+    out = preamble[:]
     names: list[str] = []
     for name, lines in groups:
         counts = {len(alternatives(l)) for l in lines if CODE.match(l) and "|" in l}
@@ -140,6 +158,7 @@ def build_preset(title: str, body: list[str], base: list[str] | None) -> dict:
     single = re.compile(r"^[0-9A-F]{8} [0-9A-F]{4}$")
     assert all(single.match(l) for l in out if not l.startswith(("#", ";"))), title
     assert not any("|" in l and l.startswith(";") and re.search(r"[0-9A-F]{8}", l) for l in out), title
+    out.append(f"; 出典: {SOURCE}")
     return {"title": display(title), "text": "\n".join(out) + "\n"}
 
 

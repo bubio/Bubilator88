@@ -76,4 +76,20 @@ struct CheatStoreTests {
     store.importSet(name: preset.title, text: preset.text, for: ["ys2_a.d88"])
     #expect(store.set(for: ["YS2_A.D88"])?.name == "Ys2")
   }
+
+  @Test("ファイル先頭のコメントはゲーム全体の注意書き、見出し直後のコメントはグループの説明になる")
+  func notesForTheMenu() {
+    let text = """
+    ; ロードしてから有効にしてください。
+    # EXPいっぱい
+    ; 戦闘勝利時に増えます
+    D0009C98 97FE
+    80009C98 963E
+    ; 出典: どこか
+    """
+    let store = CheatStore(fileURL: tempURL())
+    let set = store.importSet(name: "CRIMSON", text: text, for: ["CRIMSON.D88"])
+    #expect(store.notes(of: set) == ["ロードしてから有効にしてください。"])
+    #expect(store.groups(of: set).map(\.notes) == [["戦闘勝利時に増えます"]])
+  }
 }

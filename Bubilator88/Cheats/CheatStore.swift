@@ -100,6 +100,18 @@ final class CheatStore {
     return groups
   }
 
+  /// The `;` comment lines at the top of the file, before any group or code:
+  /// notes about the whole game. Group notes are in `PATGroup.notes`.
+  func notes(of set: CheatSet) -> [String] {
+    var notes: [String] = []
+    for line in set.text.split(whereSeparator: \.isNewline) {
+      guard line.hasPrefix(";") else { break }
+      let note = line.dropFirst().trimmingCharacters(in: .whitespaces)
+      if !note.isEmpty { notes.append(note) }
+    }
+    return notes
+  }
+
   /// The codes of the groups switched on, in group order.
   func enabledCodes(of set: CheatSet) -> [[PATCode]] {
     groups(of: set).enumerated()
