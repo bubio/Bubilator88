@@ -68,6 +68,7 @@ struct Bubilator88App: App {
       EmulatorCommands(viewModel: viewModel)
       ViewCommands(viewModel: viewModel)
       DiskCommands(viewModel: viewModel)
+      CheatCommands(viewModel: viewModel)
       ControlCommands(viewModel: viewModel)
       if viewModel.showDebugMenu {
         DebugCommands(viewModel: viewModel)
