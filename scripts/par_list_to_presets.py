@@ -64,6 +64,35 @@ SAME_AS = {
     "ＸＡＮＡＤＵ シナリオ２": ("ＸＡＮＡＤＵ", "SUM CHECK PASS"),
 }
 
+# Games whose list gives codes for the first party member and a rule for the
+# others. Each group that has a code the rule applies to also gets that code
+# for members 2-4, so switching it on covers the whole party: (which codes the
+# rule touches, how member n's address follows from member 1's, and the name
+# of the first member to drop from the group's name). n is 1 for member 2.
+#
+# - 英雄伝説: "800073xy の x を 4,8,C にすると２人目、３人目、４人目" — 80
+#   codes at 73xx, plus 0x40 per member. The D0 guard at 7330 stays.
+# - 英雄伝説２: "80007Bxy の x を 4,8,C に" — likewise at 7Bxx.
+# - ファンタジアン: "2人目以降は、D0xyに+40H×n" — codes at D0xx. The list
+#   does not say how many members there are; four is the most that keeps
+#   member n's last address (D03F + 40H×3 = D0FF) inside D0xy.
+# - SORCERIAN: "２、３、４人目は各コードのXXXX50XXの、50を51/52/53に" — every
+#   code at 50xx, its E0 guard included.
+PARTY = {
+    "ドラゴンスレイヤー 英雄伝説": (
+        lambda op, a: op == 0x80 and a >> 8 == 0x73, lambda a, n: a + 0x40 * n, "セリオス ",
+        "800073xy の x を 4,8,C に"),
+    "ドラゴンスレイヤー 英雄伝説２": (
+        lambda op, a: op == 0x80 and a >> 8 == 0x7B, lambda a, n: a + 0x40 * n, "アトラス ",
+        "80007Bxy の x を 4,8,C に"),
+    "ファンタジアン": (
+        lambda op, a: a >> 8 == 0xD0, lambda a, n: a + 0x40 * n, "",
+        "D0xy に +40H×n"),
+    "ＳＯＲＣＥＲＩＡＮ": (
+        lambda op, a: a >> 8 == 0x50, lambda a, n: a + 0x100 * n, "",
+        "XXXX50XX の 50 を 51/52/53 に"),
+}
+
 END = "[戻る]"
 PAGE_FURNITURE = re.compile(
     r"^(=== page|PC88-PAR改造部屋$|\d{4}/\d\d/\d\d \d\d:\d\d$|https://web\.archive|"
@@ -134,6 +163,30 @@ def parse_groups(body: list[str]) -> tuple[list[str], list[tuple[str, list[str]]
     return preamble, groups
 
 
+def whole_party(title: str, name: str, lines: list[str]) -> tuple[str, list[str]]:
+    """The group extended to members 2-4 by the game's PARTY rule, if the
+    rule touches any of its codes; otherwise unchanged."""
+    applies, address, leader, rule = PARTY[title]
+    codes = [l for l in lines if CODE.match(l)]
+
+    def touched(line: str) -> bool:
+        return applies(int(line[:2], 16), int(line[4:8], 16))
+
+    if not any(touched(l) for l in codes):
+        return name, lines
+    extra = []
+    for n in (1, 2, 3):
+        for l in codes:
+            if touched(l):
+                new = address(int(l[4:8], 16), n)
+                assert new <= 0xFFFF, f"{title} / {name}"
+                l = f"{l[:4]}{new:04X}{l[8:]}"
+            extra.append(l)
+    note = f"; 2〜4人目の分も含む（資料の注記「{rule}」による）"
+    notes = [l for l in lines if not CODE.match(l)]
+    return f"{name.removeprefix(leader)}（全員）", notes + [note] + codes + extra
+
+
 def build_preset(title: str, body: list[str],
                  same_as: tuple[list[str], str] | None) -> dict:
     preamble, groups = parse_groups(body)
@@ -145,6 +198,8 @@ def build_preset(title: str, body: list[str],
                    else lines + inherited[name] + extra)
                   for name, lines in groups]
     assert all(any(CODE.match(l) for l in lines) for _, lines in groups), f"{title}: empty group"
+    if title in PARTY:
+        groups = [whole_party(title, name, lines) for name, lines in groups]
 
     out = preamble[:]
     names: list[str] = []
