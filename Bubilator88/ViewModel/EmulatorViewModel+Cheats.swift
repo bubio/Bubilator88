@@ -22,7 +22,9 @@ extension EmulatorViewModel {
     let panel = NSOpenPanel()
     panel.allowsMultipleSelection = false
     panel.canChooseDirectories = false
-    panel.allowedContentTypes = [UTType(filenameExtension: "pat"), .plainText, .data].compactMap { $0 }
+    // Only `.pat`. The extension has no declared type of its own, so this is
+    // the dynamic type for it, which matches the extension in any case.
+    panel.allowedContentTypes = [UTType(filenameExtension: "pat", conformingTo: .data)].compactMap { $0 }
     panel.message = String(localized: "Choose a cheat file (.pat) for the mounted disks",
                            comment: "Prompt in the open panel for importing an 88PAR .pat file")
     guard panel.runModal() == .OK, let url = panel.url else { return }
