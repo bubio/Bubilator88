@@ -1465,6 +1465,16 @@ final class EmulatorViewModel {
   private func performSave(to path: URL) {
     let wasRunning = isRunning
     if wasRunning { stop() }
+    writeSaveState(to: path)
+    saveStateRevision += 1
+    if wasRunning { start() }
+    showToast(String(localized: "State saved", comment: ""))
+  }
+
+  /// Serializes the machine and its app metadata into `path`. The caller must
+  /// have `stop()`ped the run loop: the thumbnail is read straight out of
+  /// `pixelBuffer`.
+  private func writeSaveState(to path: URL) {
     // Capture thumbnail on main thread (pixelBuffer access)
     let thumbData = captureThumbnail()
     // Only the serialization needs the machine; the file write must stay
@@ -1507,9 +1517,6 @@ final class EmulatorViewModel {
     }
     try? FileManager.default.createDirectory(at: Self.saveStateDir, withIntermediateDirectories: true)
     try? Data(stateData).write(to: path, options: .atomic)
-    saveStateRevision += 1
-    if wasRunning { start() }
-    showToast(String(localized: "State saved", comment: ""))
   }
 
   private func performLoad(from path: URL) {
@@ -1517,6 +1524,18 @@ final class EmulatorViewModel {
       showToast(String(localized: "Save state not found", comment: ""))
       return
     }
+    do {
+      try applySaveState(fileData, from: path)
+      showToast(String(localized: "State loaded", comment: ""))
+    } catch {
+      showToast(saveStateLoadErrorMessage(error))
+    }
+  }
+
+  /// Replaces the machine with the state in `fileData` and brings the UI and
+  /// Settings in line with it. Restarts the run loop if it was running, also
+  /// when the load throws. On a throw the machine may be partly restored.
+  private func applySaveState(_ fileData: Data, from path: URL) throws {
     // Loading replaces the whole machine state, so a live script player /
     // recorder would be operating on a different machine than it began on
     // (corrupt recording, player injecting into the wrong state). Tear them
@@ -1538,8 +1557,7 @@ final class EmulatorViewModel {
     }
     if let loadError {
       if wasRunning { start() }
-      showToast(saveStateLoadErrorMessage(loadError))
-      return
+      throw loadError
     }
     // The state carries its own key matrix, which says nothing about what the
     // user is physically holding. Same reasoning as a rewind.
@@ -1616,7 +1634,6 @@ final class EmulatorViewModel {
     renderScreen()
     clearRewindBuffer()
     if wasRunning { start() }
-    showToast(String(localized: "State loaded", comment: ""))
   }
 
   private func saveStateLoadErrorMessage(_ error: Error) -> String {
@@ -1723,6 +1740,67 @@ final class EmulatorViewModel {
                            currentImageIndex: 0, fileName: fileName,
                            imageGroups: [DiskImageGroup(d88FileName: fileName,
                                                         startIndex: 0, count: 1)])
+  }
+
+  // MARK: - Resume
+
+  /// Written on every quit regardless of `Settings.resumeOnLaunch`; the
+  /// setting only decides whether the next launch restores it. Kept apart
+  /// from the quick-save file and the slots so it never overwrites either.
+  private var resumeStatePath: URL {
+    Self.saveStateDir.appending(component: "resume.b88s")
+  }
+
+  /// Saves the machine for the next launch. Called from
+  /// `applicationWillTerminate`, so it neither restarts the run loop nor
+  /// shows a toast. Quitting from the menu does not stop emulation first,
+  /// hence the `stop()`.
+  func saveResumeState() {
+    guard romLoaded else { return }
+    if isRunning { stop() }
+    writeSaveState(to: resumeStatePath)
+  }
+
+  /// Restores the state saved at the last quit, when the setting asks for it
+  /// and nothing was opened at launch: a disk, URL, script or command-line
+  /// argument means the user wants that instead. Must run after `loadROMs()`,
+  /// whose `installExtRAM` would replace the extended RAM the state restores,
+  /// and before `start()`.
+  ///
+  /// - Returns: the toast to show once the machine is running, or nil when
+  ///   nothing was attempted. A toast shown here would be replaced by
+  ///   `start()`'s own.
+  func restoreResumeStateIfNeeded() -> String? {
+    guard Settings.shared.resumeOnLaunch, romLoaded,
+          pendingScriptURL == nil, pendingLaunchRequest == nil,
+          !hasCommandLineLaunch,
+          let fileData = try? Data(contentsOf: resumeStatePath) else { return nil }
+    do {
+      try applySaveState(fileData, from: resumeStatePath)
+      return String(localized: "Resumed", comment: "Toast after restoring the state saved at the last quit")
+    } catch {
+      // A failed load may leave the machine partly restored, including disks
+      // the UI does not know about. Nothing was mounted before this point, so
+      // ejecting everything and resetting gives an ordinary cold boot.
+      emuQueue.sync {
+        pc88.ejectDisk(drive: 0)
+        pc88.ejectDisk(drive: 1)
+        pc88.ejectTape()
+      }
+      performReset(resetTranslation: false)
+      return saveStateLoadErrorMessage(error)
+    }
+  }
+
+  /// Whether the process was launched with arguments that boot something.
+  /// Malformed arguments count too: `requestLaunchFromCommandLine()` reports
+  /// them, and resuming underneath that alert would be surprising.
+  private var hasCommandLineLaunch: Bool {
+    do {
+      return try LaunchRequest.fromCommandLine() != nil
+    } catch {
+      return true
+    }
   }
 
   func quickSave() { performSave(to: quickSavePath) }

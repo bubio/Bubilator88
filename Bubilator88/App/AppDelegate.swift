@@ -137,6 +137,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       viewModel?.flushScriptRecordingIfNeeded()
       // Flush unwritten disk changes to their files.
       viewModel?.diskWriteBackScheduler.flushAll()
+      // After the flush, so the disk files and the state's embedded images
+      // agree.
+      viewModel?.saveResumeState()
     }
     if let monitor = shortcutMonitor {
       NSEvent.removeMonitor(monitor)
@@ -205,6 +208,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
     guard lastTerminateWasShortcut else { return .terminateNow }
     lastTerminateWasShortcut = false
+    // Nothing is lost when the next launch resumes, so there is nothing to
+    // confirm.
+    if MainActor.assumeIsolated({ Settings.shared.resumeOnLaunch }) { return .terminateNow }
     guard let host = mainEmulatorWindow() else {
       // Fallback: no host window → plain modal.
       MainActor.assumeIsolated { viewModel?.beginQuitDissolve() }
@@ -330,6 +336,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       // Only gate Cmd+W for the main emulator window. Settings /
       // About / Help sheets should still close with a single keypress.
       if let emu = emulatorKeyWindow(), NSApp.keyWindow === emu {
+        if MainActor.assumeIsolated({ Settings.shared.resumeOnLaunch }) {
+          // Same reasoning as Cmd+Q. Closed on the next run-loop turn, like
+          // the sheet path, so the keyDown finishes dispatching first.
+          DispatchQueue.main.async { emu.close() }
+          return nil
+        }
         requestCloseConfirmation(for: emu)
         return nil  // swallow so AppKit doesn't close the window now
       }

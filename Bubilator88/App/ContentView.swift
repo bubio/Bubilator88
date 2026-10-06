@@ -126,8 +126,12 @@ struct ContentView: View {
     .animation(.easeInOut(duration: 0.3), value: viewModel.showFullScreenOverlay)
     .onAppear {
       viewModel.loadROMs()
+      // Before `start()`, so the machine never runs a frame of a cold boot
+      // first; the toast waits until after it so `start()` cannot replace it.
+      let resumeToast = viewModel.restoreResumeStateIfNeeded()
       viewModel.renderScreen()
       viewModel.start()
+      if let resumeToast { viewModel.showToast(resumeToast) }
       // A `.b88script` double-clicked to launch the app is held until
       // here, so it plays only after ROMs + run loop are live.
       viewModel.consumePendingScript()

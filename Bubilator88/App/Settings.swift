@@ -45,6 +45,7 @@ final class Settings {
 
     // Update check
     static let automaticUpdateCheck      = "automaticUpdateCheck"
+    static let resumeOnLaunch            = "resumeOnLaunch"
     static let lastUpdateCheck           = "lastUpdateCheck"
     static let updateRemindAfter         = "updateRemindAfter"
     static let skippedUpdateVersion      = "skippedUpdateVersion"
@@ -181,6 +182,12 @@ final class Settings {
   /// Check the release feed for a newer version at launch.
   var automaticUpdateCheck: Bool = true {
     didSet { UserDefaults.standard.set(automaticUpdateCheck, forKey: Keys.automaticUpdateCheck) }
+  }
+
+  /// Restore the state saved at the last quit when the app launches. The
+  /// state is saved on every quit either way; this only gates the restore.
+  var resumeOnLaunch: Bool = false {
+    didSet { UserDefaults.standard.set(resumeOnLaunch, forKey: Keys.resumeOnLaunch) }
   }
 
   /// When the release feed was last fetched by the launch check.
@@ -655,6 +662,9 @@ final class Settings {
     }
     if let v = UserDefaults.standard.object(forKey: Keys.automaticUpdateCheck) as? Bool {
       automaticUpdateCheck = v
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.resumeOnLaunch) as? Bool {
+      resumeOnLaunch = v
     }
     lastUpdateCheck = UserDefaults.standard.object(forKey: Keys.lastUpdateCheck) as? Date
     updateRemindAfter = UserDefaults.standard.object(forKey: Keys.updateRemindAfter) as? Date

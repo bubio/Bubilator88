@@ -43,9 +43,13 @@ struct GeneralSettingsTab: View {
       }
 
       Section {
-        Toggle("Check for updates at launch", isOn: $settings.automaticUpdateCheck)
-        Text("Looks for a newer release on GitHub at most once a day.")
+        Toggle("Resume where you left off", isOn: $settings.resumeOnLaunch)
+        Text("When on, the next launch continues where you left off.")
           .settingsDescriptionStyle()
+      }
+
+      Section {
+        Toggle("Check for updates at launch", isOn: $settings.automaticUpdateCheck)
       }
 
       Section {
