@@ -112,7 +112,8 @@ struct ContentView: View {
       }
     }
     .overlay(alignment: .bottom) {
-      if viewModel.isFullScreen && viewModel.showFullScreenOverlay {
+      if viewModel.isFullScreen && viewModel.showFullScreenOverlay
+        && !viewModel.suppressesFullScreenOverlay {
         statusBar
           .frame(maxWidth: 1280)
           .padding(.horizontal, 16)
