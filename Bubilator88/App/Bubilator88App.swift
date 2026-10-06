@@ -65,11 +65,15 @@ struct Bubilator88App: App {
       }
       CommandGroup(replacing: .textEditing) { }
 
-      EmulatorCommands(viewModel: viewModel)
-      ViewCommands(viewModel: viewModel)
-      DiskCommands(viewModel: viewModel)
-      CheatCommands(viewModel: viewModel)
-      ControlCommands(viewModel: viewModel)
+      // Grouped because a commands builder takes at most ten children on
+      // older toolchains.
+      Group {
+        EmulatorCommands(viewModel: viewModel)
+        ViewCommands(viewModel: viewModel)
+        DiskCommands(viewModel: viewModel)
+        CheatCommands(viewModel: viewModel)
+        ControlCommands(viewModel: viewModel)
+      }
       if viewModel.showDebugMenu {
         DebugCommands(viewModel: viewModel)
       }
