@@ -809,6 +809,10 @@ final class EmulatorViewModel {
   /// queue. Carries its own lock.
   @ObservationIgnored nonisolated let clickZonePlayer = ClickZonePlayer()
 
+  /// The enabled cheat groups of the active set, run by `applyCheats()` each
+  /// frame. Written on `emuQueue` by `syncActiveCheats()`.
+  @ObservationIgnored nonisolated(unsafe) var activeCheatCodes: [[PATCode]] = []
+
   /// The user layout being edited, while the control-zone editor is open. Edits
   /// go to this copy and are written to `ClickZoneStore` as each completes.
   var clickZoneEditingLayout: ClickZoneLayout?
@@ -1587,6 +1591,7 @@ final class EmulatorViewModel {
     // Reconstruct MountedDiskInfo from saved source URL or restored disk
     drive0Info = reconstructDiskInfo(drive: 0, meta: meta)
     drive1Info = reconstructDiskInfo(drive: 1, meta: meta)
+    syncActiveCheats()
     drive0WriteProtected = pc88.isWriteProtected(drive: 0)
     drive1WriteProtected = pc88.isWriteProtected(drive: 1)
     // Cassette bytes round-trip inside the state file itself; only the UI's

@@ -1,4 +1,5 @@
 import SwiftUI
+import Bubilator88Core
 
 /// Disk Menu
 struct DiskCommands: Commands {
@@ -71,6 +72,39 @@ struct DiskCommands: Commands {
     }
   }
 
+  /// The 88PAR groups of the cheat file imported for the mounted disks.
+  @ViewBuilder
+  private var cheatsSubmenu: some View {
+    let set = viewModel.activeCheatSet
+    Menu {
+      if let set {
+        Text(set.name).disabled(true)
+        let groups = CheatStore.shared.groups(of: set)
+        ForEach(groups.indices, id: \.self) { index in
+          Toggle(groups[index].name.isEmpty ? PATFile.unnamedGroupName : groups[index].name,
+                 isOn: Binding(
+                   get: { viewModel.isCheatGroupEnabled(index) },
+                   set: { viewModel.setCheatGroup(index, enabled: $0) }))
+        }
+        Divider()
+        Button("Disable All Cheats") {
+          viewModel.disableAllCheats()
+        }
+        .disabled(set.enabledGroups.isEmpty)
+        Button("Remove Cheat File") {
+          viewModel.removeActiveCheatSet()
+        }
+        Divider()
+      }
+      Button("Import Cheat File...") {
+        viewModel.openCheatFile()
+      }
+      .disabled(viewModel.drive0Info == nil && viewModel.drive1Info == nil)
+    } label: {
+      Label("Cheats", systemImage: "wand.and.stars")
+    }
+  }
+
   var body: some Commands {
     CommandMenu("Disk") {
       Group {
@@ -101,6 +135,10 @@ struct DiskCommands: Commands {
         } label: {
           Label("Drive 1&2", image: "FloppyDisk")
         }
+
+        Divider()
+
+        cheatsSubmenu
 
         Divider()
 

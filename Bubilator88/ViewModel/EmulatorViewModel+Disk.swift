@@ -135,6 +135,7 @@ extension EmulatorViewModel {
       drive1Info = state.info
       drive1WriteProtected = state.writeProtected
     }
+    syncActiveCheats()
   }
 
   // MARK: - Disk Operations

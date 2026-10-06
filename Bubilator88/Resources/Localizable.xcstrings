@@ -316,6 +316,50 @@
         }
       }
     },
+    "Cannot Import Cheat File" : {
+      "comment" : "Alert title: a .pat cheat file could not be imported",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チートファイルを読み込めません"
+          }
+        }
+      }
+    },
+    "Cheat file imported: %@" : {
+      "comment" : "Toast after importing a .pat cheat file. %@ is the file name",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チートファイルを読み込みました: %@"
+          }
+        }
+      }
+    },
+    "Cheats" : {
+      "comment" : "Disk menu submenu holding the 88PAR cheat code groups",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チート"
+          }
+        }
+      }
+    },
+    "Choose a cheat file (.pat) for the mounted disks" : {
+      "comment" : "Prompt in the open panel for importing an 88PAR .pat file",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マウント中のディスク用のチートファイル (.pat) を選択してください"
+          }
+        }
+      }
+    },
     "Clear Keys" : {
       "localizations" : {
         "ja" : {
@@ -457,6 +501,17 @@
         }
       }
     },
+    "Disable All Cheats" : {
+      "comment" : "Cheats submenu: switch every cheat group off",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべてのチートを無効にする"
+          }
+        }
+      }
+    },
     "Disks Using This Layout" : {
       "localizations" : {
         "ja" : {
@@ -578,6 +633,17 @@
         }
       }
     },
+    "Import Cheat File..." : {
+      "comment" : "Cheats submenu: import a .pat file for the mounted disks",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チートファイルを読み込む..."
+          }
+        }
+      }
+    },
     "Import Failed" : {
       "localizations" : {
         "ja" : {
@@ -644,6 +710,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ディスクをマウントすると、このレイアウトを割り当てられます。"
+          }
+        }
+      }
+    },
+    "Mount the game's disk first. Cheat codes are kept for the mounted disks." : {
+      "comment" : "Alert message: a cheat file was imported with no disk mounted",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先にゲームのディスクをマウントしてください。チートコードはマウント中のディスクに結びつけて保存されます。"
           }
         }
       }
@@ -810,6 +887,17 @@
         }
       }
     },
+    "Remove Cheat File" : {
+      "comment" : "Cheats submenu: forget the cheat file imported for the mounted disks",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チートファイルを削除"
+          }
+        }
+      }
+    },
     "Remove Step" : {
       "localizations" : {
         "ja" : {
@@ -929,6 +1017,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "十字キーと左スティックで画面上の操作領域の間を移動し、決定ボタンでその領域のキーを入力します。マウント中のディスクに操作領域がある間、これらのボタンはキーに割り当てられません。"
+          }
+        }
+      }
+    },
+    "The file contains no cheat codes." : {
+      "comment" : "Alert message: the chosen .pat file has no codes",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このファイルにはチートコードが含まれていません。"
           }
         }
       }

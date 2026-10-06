@@ -240,7 +240,12 @@ struct ContentView: View {
       "zip", "lzh", "lha", "cab", "rar"
     ]
     _ = provider.loadObject(ofClass: URL.self) { url, _ in
-      guard let url, acceptedExts.contains(url.pathExtension.lowercased()) else { return }
+      guard let url else { return }
+      if url.pathExtension.lowercased() == "pat" {
+        Task { @MainActor in viewModel.importCheatFile(url: url) }
+        return
+      }
+      guard acceptedExts.contains(url.pathExtension.lowercased()) else { return }
       Task { @MainActor in
         viewModel.mountDisk(url: url, drive: -1)
       }
