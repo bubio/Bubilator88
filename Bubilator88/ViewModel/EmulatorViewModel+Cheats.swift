@@ -49,12 +49,13 @@ extension EmulatorViewModel {
     showToast(String(localized: "Cheat file imported: \(url.lastPathComponent)"))
   }
 
-  /// Use a bundled preset for every mounted disk file. Its groups start off.
+  /// Use a bundled preset for every mounted disk file. Its groups start off,
+  /// so nothing is applied yet and no toast says otherwise: reopening the menu
+  /// shows the groups to switch on.
   func useCheatPreset(_ preset: CheatPreset) {
     guard let diskFiles = cheatTargetDiskFiles() else { return }
     CheatStore.shared.importSet(name: preset.title, text: preset.text, for: diskFiles)
     syncActiveCheats()
-    showToast(String(localized: "Cheats set for the mounted disks: \(preset.title)"))
   }
 
   /// The mounted disk files, each once, or nil after explaining that a disk
