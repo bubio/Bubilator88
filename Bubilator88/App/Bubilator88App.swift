@@ -47,6 +47,9 @@ struct Bubilator88App: App {
         Button("About Bubilator88") {
           showAbout = true
         }
+        Button("Check for Updates…") {
+          Task { await UpdateChecker.shared.checkNow() }
+        }
       }
 
       CommandGroup(replacing: .undoRedo) { }

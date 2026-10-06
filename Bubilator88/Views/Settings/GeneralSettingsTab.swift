@@ -43,6 +43,12 @@ struct GeneralSettingsTab: View {
       }
 
       Section {
+        Toggle("Check for updates at launch", isOn: $settings.automaticUpdateCheck)
+        Text("Looks for a newer release on GitHub at most once a day.")
+          .settingsDescriptionStyle()
+      }
+
+      Section {
         Toggle("Show Develop Menu", isOn: $viewModel.showDebugMenu)
       }
     }
