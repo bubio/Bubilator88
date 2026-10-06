@@ -248,10 +248,10 @@ struct ContentView: View {
   }
 
   /// Where the emulator image sits in a container of `size`, matching the
-  /// Metal view's aspect-fit (and integer scaling in fullscreen).
+  /// Metal view's fullscreen scaling mode.
   private func screenFit(for size: CGSize) -> ScreenFit {
     ScreenFit(container: size,
-              integerScaling: viewModel.isFullScreen && Settings.shared.fullscreenIntegerScaling)
+              mode: viewModel.isFullScreen ? Settings.shared.fullscreenScaling : .fit)
   }
 
   @ViewBuilder

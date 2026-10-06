@@ -77,6 +77,28 @@ fragment float4 fragmentLinear(VertexOut in [[stage_in]],
     return float4(color.rgb * sl, 1.0);
 }
 
+// MARK: - Sharp Bilinear
+
+// Nearest-neighbour inside each texel, bilinear only across the thin seam
+// between texels. Used for the fullscreen 4:3 mode, where the 1.2 vertical
+// stretch is not a whole number: plain nearest repeats every fifth row and
+// plain bilinear blurs every edge. Always samples with its own linear sampler.
+fragment float4 fragmentSharpBilinear(VertexOut in [[stage_in]],
+                                       texture2d<float> tex [[texture(0)]],
+                                       sampler s [[sampler(0)]],
+                                       constant FilterParams &params [[buffer(0)]]) {
+    constexpr sampler linearSampler(filter::linear, address::clamp_to_edge);
+    float2 texel = in.texCoord * params.textureDimensions;
+    float2 scale = max(params.outputDimensions / params.textureDimensions, float2(1.0));
+    float2 region = 0.5 - 0.5 / scale;
+    float2 fromCenter = fract(texel) - 0.5;
+    float2 offset = (fromCenter - clamp(fromCenter, -region, region)) * scale + 0.5;
+    float2 uv = (floor(texel) + offset) / params.textureDimensions;
+    float4 color = tex.sample(linearSampler, uv);
+    float sl = scanlineMultiplier(in.texCoord, params, tex);
+    return float4(color.rgb * sl, 1.0);
+}
+
 // MARK: - Bicubic (Catmull-Rom)
 
 static float catmullRomWeight(float x) {

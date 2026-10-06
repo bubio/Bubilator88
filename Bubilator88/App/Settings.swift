@@ -47,7 +47,8 @@ final class Settings {
     static let videoFilter               = "videoFilter"
     static let scanlineEnabled           = "scanlineEnabled"
     static let windowScale               = "windowScale"
-    static let fullscreenIntegerScaling  = "fullscreenIntegerScaling"
+    static let fullscreenIntegerScaling  = "fullscreenIntegerScaling"  // legacy Bool, read once for migration
+    static let fullscreenScaling         = "fullscreenScaling"
 
     // Screenshot
     static let screenshotFormat          = "screenshotFormat"
@@ -186,9 +187,9 @@ final class Settings {
     didSet { UserDefaults.standard.set(windowScale, forKey: Keys.windowScale) }
   }
 
-  /// Fullscreen scaling mode: true = integer scaling (pixel-perfect), false = fit to screen.
-  var fullscreenIntegerScaling: Bool = false {
-    didSet { UserDefaults.standard.set(fullscreenIntegerScaling, forKey: Keys.fullscreenIntegerScaling) }
+  /// Fullscreen scaling mode: fit to screen, integer scaling (pixel-perfect), or 4:3 pixel-aspect correction.
+  var fullscreenScaling: FullscreenScaling = .fit {
+    didSet { UserDefaults.standard.set(fullscreenScaling.rawValue, forKey: Keys.fullscreenScaling) }
   }
 
   /// Show cassette tape icon in the status bar.
@@ -729,8 +730,12 @@ final class Settings {
       scriptRecordingAutoSave = v
     }
     scriptRecordingDirectory = UserDefaults.standard.string(forKey: Keys.scriptRecordingDirectory)
-    if let v = UserDefaults.standard.object(forKey: Keys.fullscreenIntegerScaling) as? Bool {
-      fullscreenIntegerScaling = v
+    if let raw = UserDefaults.standard.string(forKey: Keys.fullscreenScaling),
+       let v = FullscreenScaling(rawValue: raw) {
+      fullscreenScaling = v
+    } else if let legacy = UserDefaults.standard.object(forKey: Keys.fullscreenIntegerScaling) as? Bool {
+      // Before the 4:3 option existed this was a Bool.
+      fullscreenScaling = legacy ? .integer : .fit
     }
     if let v = UserDefaults.standard.string(forKey: Keys.videoFilter) {
       videoFilter = v

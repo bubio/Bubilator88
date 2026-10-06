@@ -30,6 +30,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   private let viewModel: EmulatorViewModel
   private var commandQueue: MTLCommandQueue?
   private var pipelineStates: [EmulatorViewModel.VideoFilter: MTLRenderPipelineState] = [:]
+  private var sharpBilinearPipeline: MTLRenderPipelineState?  // fullscreen 4:3 mode, for None / Linear
   private var enhancedPass1Pipeline: MTLRenderPipelineState?  // high-quality pass for Enhanced (rgba8Unorm target)
   private var crtAccumulatePipeline: MTLRenderPipelineState?  // CRT phosphor pass 1 (rgba8Unorm target)
   private var crtCompositePipeline: MTLRenderPipelineState?   // CRT phosphor pass 2 (screen)
@@ -152,6 +153,14 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
       } catch {
         NSLog("Failed to create pipeline state for \(filter.rawValue): \(error)")
       }
+    }
+
+    if let fn = library.makeFunction(name: "fragmentSharpBilinear") {
+      let desc = MTLRenderPipelineDescriptor()
+      desc.vertexFunction = vertexFunction
+      desc.fragmentFunction = fn
+      desc.colorAttachments[0].pixelFormat = colorPixelFormat
+      sharpBilinearPipeline = try? device.makeRenderPipelineState(descriptor: desc)
     }
 
     // Build Enhanced pass 1 pipeline (high-quality shader → rgba8Unorm render target)
@@ -336,7 +345,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   private func selectActiveSource() -> (texture: MTLTexture, pipeline: MTLRenderPipelineState)? {
     let is400 = currentFrame?.is400LineMode ?? false
     let tex: MTLTexture?
-    let pipe: MTLRenderPipelineState?
+    var pipe: MTLRenderPipelineState?
     if currentFilter.requiresAIUpscale, let aiTex = aiUpscaler?.latestOutputTexture() {
       // AI Upscale: use pre-upscaled texture with passthrough pipeline
       tex = aiTex
@@ -353,6 +362,14 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
       // None, or 400-line mode: standard 640x400 texture
       tex = texture
       pipe = pipelineStates[currentFilter]
+    }
+    // Fullscreen 4:3 stretches 400 rows to 480, which only stays crisp with
+    // sharp bilinear. Filters with their own upscaling are left as they are.
+    if (currentFilter == .none || currentFilter == .linear),
+       Settings.shared.fullscreenScaling == .aspect43,
+       window?.styleMask.contains(.fullScreen) == true,
+       let sharp = sharpBilinearPipeline {
+      pipe = sharp
     }
     if let t = tex, let p = pipe { return (t, p) }
     return nil
@@ -519,16 +536,10 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
       let drawW = vpW, drawH = vpH
       // Always use 640x400 display aspect regardless of texture resolution
       // (filters may use 640x200 texture, but output should be 16:10)
-      let displayW = 640.0, displayH = 400.0
-      if Settings.shared.fullscreenIntegerScaling {
-        let intScale = max(1, min(Int(drawW / displayW), Int(drawH / displayH)))
-        vpW = displayW * Double(intScale)
-        vpH = displayH * Double(intScale)
-      } else {
-        let scale = min(drawW / displayW, drawH / displayH)
-        vpW = displayW * scale
-        vpH = displayH * scale
-      }
+      let size = ScreenFit(container: CGSize(width: drawW, height: drawH),
+                           mode: Settings.shared.fullscreenScaling).imageSize
+      vpW = Double(size.width)
+      vpH = Double(size.height)
     }
 
     // --- Pass 1: for Enhanced, render high-quality (de-dithering) to intermediate texture ---
@@ -670,19 +681,10 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
       let drawW = Double(d.texture.width)
       let drawH = Double(d.texture.height)
       if let window = self.window, window.styleMask.contains(.fullScreen) {
-        let displayW = 640.0, displayH = 400.0
-        let vpW: Double, vpH: Double
-        if Settings.shared.fullscreenIntegerScaling {
-          let intScale = max(1, min(Int(drawW / displayW), Int(drawH / displayH)))
-          vpW = displayW * Double(intScale)
-          vpH = displayH * Double(intScale)
-        } else {
-          let scale = min(drawW / displayW, drawH / displayH)
-          vpW = displayW * scale
-          vpH = displayH * scale
-        }
-        width = max(1, Int(vpW))
-        height = max(1, Int(vpH))
+        let size = ScreenFit(container: CGSize(width: drawW, height: drawH),
+                             mode: Settings.shared.fullscreenScaling).imageSize
+        width = max(1, Int(size.width))
+        height = max(1, Int(size.height))
       } else {
         width = d.texture.width
         height = d.texture.height

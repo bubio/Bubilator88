@@ -7,20 +7,30 @@ struct DisplaySettingsTab: View {
   @Environment(Settings.self) private var settings
   @State private var availableLanguages: [TranslationLanguage] = TranslationLanguage.defaultList
 
+  private func scalingDescription(_ mode: FullscreenScaling) -> LocalizedStringKey {
+    switch mode {
+    case .fit:
+      "Fill the screen as much as possible while maintaining aspect ratio."
+    case .integer:
+      "Pixel-perfect display with black borders. No scaling artifacts."
+    case .aspect43:
+      "Stretch vertically by 1.2 to match the pixel shape of 4:3 monitors. Edges stay sharp."
+    }
+  }
+
   var body: some View {
     // `@Environment` hands back the object, not bindings; this is the
     // Observation-era way to get `$settings` back inside the body.
     @Bindable var settings = settings
     Form {
       Section("Fullscreen") {
-        Picker("Scaling Mode", selection: $settings.fullscreenIntegerScaling) {
-          Text("Fit to Screen").tag(false)
-          Text("Integer Scaling").tag(true)
+        Picker("Scaling Mode", selection: $settings.fullscreenScaling) {
+          Text("Fit to Screen").tag(FullscreenScaling.fit)
+          Text("Integer Scaling").tag(FullscreenScaling.integer)
+          Text("Correct Aspect Ratio (4:3)").tag(FullscreenScaling.aspect43)
         }
         .pickerStyle(.radioGroup)
-        Text(settings.fullscreenIntegerScaling
-          ? "Pixel-perfect display with black borders. No scaling artifacts."
-          : "Fill the screen as much as possible while maintaining aspect ratio.")
+        Text(scalingDescription(settings.fullscreenScaling))
           .settingsDescriptionStyle()
       }
 
