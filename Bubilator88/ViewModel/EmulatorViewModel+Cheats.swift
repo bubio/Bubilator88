@@ -31,15 +31,7 @@ extension EmulatorViewModel {
 
   /// Import a `.pat` file for every mounted disk file. Its groups start off.
   func importCheatFile(url: URL) {
-    let diskFiles = cheatDiskFiles.compactMap { $0 }
-      .reduce(into: [String]()) { files, file in
-        if !files.contains(where: { CheatSet.sameFile($0, file) }) { files.append(file) }
-      }
-    guard !diskFiles.isEmpty else {
-      showAlert(title: String(localized: "Cannot Import Cheat File"),
-                message: String(localized: "Mount the game's disk first. Cheat codes are kept for the mounted disks."))
-      return
-    }
+    guard let diskFiles = cheatTargetDiskFiles() else { return }
     let text: String
     do {
       text = PATFile.decodeText(try Data(contentsOf: url))
@@ -55,6 +47,29 @@ extension EmulatorViewModel {
     CheatStore.shared.importSet(name: url.lastPathComponent, text: text, for: diskFiles)
     syncActiveCheats()
     showToast(String(localized: "Cheat file imported: \(url.lastPathComponent)"))
+  }
+
+  /// Use a bundled preset for every mounted disk file. Its groups start off.
+  func useCheatPreset(_ preset: CheatPreset) {
+    guard let diskFiles = cheatTargetDiskFiles() else { return }
+    CheatStore.shared.importSet(name: preset.title, text: preset.text, for: diskFiles)
+    syncActiveCheats()
+    showToast(String(localized: "Cheats set for the mounted disks: \(preset.title)"))
+  }
+
+  /// The mounted disk files, each once, or nil after explaining that a disk
+  /// must be mounted first.
+  private func cheatTargetDiskFiles() -> [String]? {
+    let diskFiles = cheatDiskFiles.compactMap { $0 }
+      .reduce(into: [String]()) { files, file in
+        if !files.contains(where: { CheatSet.sameFile($0, file) }) { files.append(file) }
+      }
+    guard !diskFiles.isEmpty else {
+      showAlert(title: String(localized: "Cannot Import Cheat File"),
+                message: String(localized: "Mount the game's disk first. Cheat codes are kept for the mounted disks."))
+      return nil
+    }
+    return diskFiles
   }
 
   func isCheatGroupEnabled(_ index: Int) -> Bool {

@@ -30,10 +30,21 @@ nonisolated struct CheatSet: Codable, Equatable, Identifiable, Sendable {
   }
 }
 
+/// A game's codes bundled with the app, in `.pat` form.
+nonisolated struct CheatPreset: Codable, Equatable, Sendable {
+  var title: String
+  var text: String
+}
+
 /// Imported cheat files, persisted as one JSON file written on every change.
+///
+/// The bundled presets (`CheatPresets.json`, generated from KAJA's list by
+/// `scripts/par_list_to_presets.py`) are offered for the user to pick: disk
+/// file names differ from copy to copy, so a preset cannot find its game by
+/// itself. Picking one copies it into a set like an imported file.
 @Observable
 final class CheatStore {
-  static let shared = CheatStore(fileURL: defaultFileURL)
+  static let shared = CheatStore(fileURL: defaultFileURL, presets: bundledPresets())
 
   private static let log = Logger(label: "App.Cheats")
 
@@ -44,13 +55,31 @@ final class CheatStore {
       .appendingPathComponent("Cheats.json")
   }
 
+  /// The presets in `CheatPresets.json`, sorted by title.
+  static func bundledPresets() -> [CheatPreset] {
+    guard let url = Bundle.main.url(forResource: "CheatPresets", withExtension: "json") else {
+      log.error("CheatPresets.json is missing from the bundle")
+      return []
+    }
+    struct File: Decodable { var presets: [CheatPreset] }
+    do {
+      return try JSONDecoder().decode(File.self, from: Data(contentsOf: url)).presets
+        .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+    } catch {
+      log.error("Failed to read CheatPresets.json: \(error)")
+      return []
+    }
+  }
+
+  let presets: [CheatPreset]
   private(set) var sets: [CheatSet] = []
   /// Parsed groups by set, so menus do not reparse on every redraw.
   @ObservationIgnored private var parsed: [UUID: [PATGroup]] = [:]
   private let fileURL: URL
 
-  init(fileURL: URL) {
+  init(fileURL: URL, presets: [CheatPreset] = []) {
     self.fileURL = fileURL
+    self.presets = presets
     load()
   }
 

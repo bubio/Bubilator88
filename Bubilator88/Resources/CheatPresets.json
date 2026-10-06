@@ -1,0 +1,281 @@
+{
+  "source": "KAJA「PC88-PAR改造部屋」(2001)",
+  "presets": [
+    {
+      "title": "天地を喰らう",
+      "text": "; 天地を喰らう\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP減らない\nD0004275 52ED\n80004275 0000\n# DEF減らない\nD0004239 42ED\n80004239 0000\n# 仲間にお金渡すとたくさん\nD0004BA6 52ED\n80004BA6 983E\nD0004BC1 E4DA\n80004BC1 983E\n# 仲間全員戦闘毎LVUP\n; (上げまくると数値が戻る事があるので注意)\nD000B2D6 5938\n8000B2D6 0000\nD000B296 B292\n8000B296 B298\n"
+    },
+    {
+      "title": "女神転生",
+      "text": "; 女神転生\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP減らない\nD0000928 52ED\n80000928 0000\nD0004790 52ED\n80004790 0000\nD00047B7 52ED\n800047B7 0000\n# MP減らない\nD00019DF 222B\n300019DF 00C9\n# LEVEL敵1体で上昇\nD0004412 1838\n80004412 0000\n# MAXHP上昇時最大\nD0003888 0638\n80003888 0000\n"
+    },
+    {
+      "title": "メルヘンヴェール",
+      "text": "; メルヘンヴェール\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP最大\nD000838A 0238\n3000838B 0000\nD00083F9 0238\n300083FA 0000\n# ダメージ受けない\nD00083C7 7C19\n300083C7 0000\n"
+    },
+    {
+      "title": "ヴァリス",
+      "text": "; ヴァリス\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# ダメージ受けない\nD000102C 0A3A\n3000102C 0021\nD000102F C0B7\n8000102F FF36\nD0001031 563A\n30001031 00C9\n"
+    },
+    {
+      "title": "ヴァリス2",
+      "text": "; ヴァリス2\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# ダメージ受けない\nD00012E9 0CE6\n300012E9 00C9\n# JEWEL減らない\nD0000917 393A\n30000917 00C9\nD0000A64 3921\n30000A64 00C9\n"
+    },
+    {
+      "title": "ヴェイグス",
+      "text": "; ヴェイグス\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# ダメージ受けない\nD0003A3B 8421\n30003A3B 00C9\n# バーニア減らない\nD0003A2F 8221\n30003A2F 00C9\n"
+    },
+    {
+      "title": "XZR",
+      "text": "; XZR\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# GOLD取得時MAX\nD000EB4C 0330\n8000EB4C 0000\n# EXP取得時MAX\nD000EB77 68DC\n8000EB77 68CD\n# HP減らない\nD000327C 3291\n8000327C 3200\nD00039A2 3291\n800039A2 3200\n# MP減らない\nD000354A B891\n8000354A B800\nD0003C44 B891\n80003C44 B800\n"
+    },
+    {
+      "title": "XZR2",
+      "text": "; XZR2\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# GOLD取得時MAX\nD00029FC 0330\n800029FC 0030\nD00039EC 21D0\n800039EC 2100\n# EXP取得時MAX\nD00029E7 0330\n800029E7 0030\n# HP減らない\nD00028DD 3296\n800028DD 3200\nD000275F 3296\n8000275F 3200\n# MP減らない\nD0002A70 D891\n80002A70 D8B7\nD000293A D891\n8000293A D8B7\n"
+    },
+    {
+      "title": "STAR SYMPHONY",
+      "text": "; STAR SYMPHONY\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP減らない\nD0009B65 903A\n80009B65 9038\nD000BBE9 6822\n8000BBE9 0118\n# MAXHP最大\nD000B0FE B106\n8000B0FE B100\n"
+    },
+    {
+      "title": "VALNA",
+      "text": "; VALNA\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# MAXHP,MP MAX\nD000A290 C9C9\n8000A353 A028\n# HP MAX\nD000A290 C9C9\n3000A42E 00A0\n# GOLD MAX\nD000A290 C9C9\n8000A357 FFFF\n"
+    },
+    {
+      "title": "DINOSAUR",
+      "text": "; DINOSAUR\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# EXP MAX\n8000EC2C FFFF\n8000ECAC FFFF\n8000ED2C FFFF\n8000EDAC FFFF\n8000EE2C FFFF\n# GOLD MAX\n8000EFD6 FFFF\n"
+    },
+    {
+      "title": "死霊戦線",
+      "text": "; 死霊戦線\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# PF MAX\n3000BE05 00FF\n3000BE07 00FF\n# MF MAX\n3000BE09 00FF\n3000BE0B 00FF\n"
+    },
+    {
+      "title": "死霊戦線2",
+      "text": "; 死霊戦線2\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP MAX\n3000EA8D 0064\n3000EB23 0064\n"
+    },
+    {
+      "title": "ARGO",
+      "text": "; ARGO\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP 250固定\n3000E00A 00FA\nD000E00A FAFA\n3000E00B 0000\n# EXP 600000固定\n8000E00D EA60\nD000E00E EAEA\n8000E00F 0000\n# GOLD 60000固定\n8000E03A EA60\nD000E03B EAEA\n3000E03C 0000\n# FOOD 200固定\n3000E03D 00C8\nD000E03D C8C8\n3000E03E 0000\n# MORAL 200固定\n3000E02F 00C8\nD000E02F C8C8\n3000E030 0000\n"
+    },
+    {
+      "title": "MID GARTS",
+      "text": "; MID GARTS\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP 1600固定\n800063A4 0640\n800063A6 0640\nD00063A7 0606\n300063A8 0000\n# SPELL COUNT ∞\n300063A1 00FF\n300063A3 00FF\nD00063A1 FFFF\n300063A2 0000\nD00063A3 FFFF\n300063A4 0000\n"
+    },
+    {
+      "title": "PHYCHIC WAR",
+      "text": "; PHYCHIC WAR\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# EXP 65535固定\n80008D80 FFFF\n80008DA2 FFFF\n80008DC4 FFFF\n80008DE6 FFFF\n# HP減らない\nD0005845 42ED\n80005845 0000\n"
+    },
+    {
+      "title": "WORLD GOLF 2",
+      "text": "; WORLD GOLF 2\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# PLAYER LEVEL\n3000E50C 0004\n# CLUB\n8000E512 0101\n8000E514 0101\n"
+    },
+    {
+      "title": "WORLD GOLF 3",
+      "text": "; WORLD GOLF 3\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# PLAYER LEVEL\n3000A800 0004\n# CLUB\n8000A801 0101\n8000A803 0101\n"
+    },
+    {
+      "title": "ARCUS",
+      "text": "; ARCUS\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# ENCOUNT無し\nD0001BDE 893A\n80001BDE 89C9\n# HP減らない\nD00048D3 3890\n800048D3 3800\n# ジェダお金MAX\nD000C060 C806\n8000C07C FFFF\n"
+    },
+    {
+      "title": "ARCUS 2",
+      "text": "; ARCUS 2\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP減らない\nD000266F DD2B\n8000266F DD00\nD0003653 42ED\n80003653 0000\nD0003B70 42ED\n80003B70 0000\nD00040AA 52ED\n800040AA 0000\nD00040EB 52ED\n800040EB 0000\nD000421A 52ED\n8000421A 0000\n# お金減らない\nD000292C 52ED\n8000292C 0000\nD0003228 42ED\n80003228 0000\n# 会話WINDOW速度UP\nD000676C F938\n8000676C 0038\n"
+    },
+    {
+      "title": "抜忍伝説",
+      "text": "; 抜忍伝説\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# ENCOUNT無し\nD00060F6 FEC2\n800060F6 FEC3\nD0006112 1AC2\n80006112 1AC3\n# MAP狭くならない\n3000EE57 0000\n"
+    },
+    {
+      "title": "ADVANCED FANTASIAN",
+      "text": "; ADVANCED FANTASIAN\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# ランダムエンカウント無し\nD000D415 3281\n8000D415 3280\n# GOLD 9999\n; (OP/ED等ではOFFにして下さい)\n800050D7 270F\n8000518D 270F\n80005243 270F\n800052F9 270F\n800053AF 270F\n# EXP 9999\n; (同上)\n800050E7 270F\n8000519D 270F\n80005253 270F\n80005309 270F\n800053BF 270F\n"
+    },
+    {
+      "title": "ナイルの涙",
+      "text": "; ナイルの涙\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# FOOD MAX\n8000BE10 9999\n3000BE12 0099\n"
+    },
+    {
+      "title": "英雄ヤマトタケル",
+      "text": "; 英雄ヤマトタケル\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# 耐久力MAX固定\n8002F224 0190\n"
+    },
+    {
+      "title": "GANDHARA",
+      "text": "; GANDHARA\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# SPEED UP\nD0009081 FA38\n80009081 0038\nD0003832 FA20\n80003832 0020\n# DEC CUT\n; 各パラメータが減少しなくなります\nD0008E57 917E\n80008E57 C9AF\n# INC MAX\n; 各パラメータが増えた時にMAX\nD0008E80 3ED0\n80008E80 3E00\n# EXPほどほど\n; 上のコードと同時に使い、\n; Lv上がりすぎると逆に弱くなる^^;のでほどほどに制限します\nD0008E80 3E00\n30008717 0090\n"
+    },
+    {
+      "title": "DRAGON KNIGHT",
+      "text": "; DRAGON KNIGHT\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# GOLD MAX\nD000C000 E8C3\n8000C2D3 EA60\n# EXP MAX\nD000C000 E8C3\n8000C2D7 EA60\n"
+    },
+    {
+      "title": "DRAGON KNIGHT 2",
+      "text": "; DRAGON KNIGHT 2\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# JEL MAX\nD000C000 8BC3\n8000C32D F618\n# EXP MAX\nD000C000 8BC3\n8000C31D F618\nD000C000 8BC3\n8000C34F F618\nD000C000 8BC3\n8000C381 F618\n"
+    },
+    {
+      "title": "SILVER GHOST",
+      "text": "; SILVER GHOST\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP減らない\nD00001EA 18C8\n300001EA 00C9\nD000371A C3D0\n3000371A 00C9\nD0003823 473C\n30003823 00C9\n"
+    },
+    {
+      "title": "RUNE WORTH",
+      "text": "; RUNE WORTH\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# GOLD\n8002F00B 0F42\n# HP\n8002F002 00DC\n# HP-MAX\n8002F004 00DC\n# MAGIC\n8002F006 00DC\n# MAGIC-MAX\n8002F008 00DC\n# STR\n8002F08B 00FF\n# DEF\n8002F08D 00FF\n"
+    },
+    {
+      "title": "ZAVAS",
+      "text": "; ZAVAS\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# 攻撃回避\n; 敵の攻撃の大部分を回避します\nD0008411 0930\n80008411 0918\n# LvUP\n; 戦闘毎にLvUPします\nD0008D20 20D8\n80008D20 1800\n# GOLDいっぱい\n8000D443 FFFF\n# SPEED UP\n; バトル時の速度UP\nD000781C FC20\n8000781C 0020\n"
+    },
+    {
+      "title": "EMERALD DRAGON",
+      "text": "; EMERALD DRAGON\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# 攻撃回避\n; 敵の攻撃の大部分を回避します\nD0008546 7DD2\n80008546 7DC3\n# LvUP\n; 戦闘毎にLvUPします\nD0009F02 20D8\n80009F02 1800\n# GOLDいっぱい\nD0004FF0 E9E9\n80005000 FFFF\n# SPEED UP\n; バトル&メッセージ速度UP\nD0000B2B FA20\n80000B2B 0020\n"
+    },
+    {
+      "title": "WOODY POCO",
+      "text": "; WOODY POCO\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# 1匹倒すとPOWER MAX\nD00007E1 64FE\n800007E1 0F18\nD0002F83 EDB7\n80002F83 0418\n# FOOD MAX\nD0002F9B EDB7\n80002F9B 0418\n# GOLD MAX\nD0002FB0 EDB7\n80002FB0 0418\n"
+    },
+    {
+      "title": "TIR-NA-NOG",
+      "text": "; TIR-NA-NOG\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# 戦闘毎LvUP\nD00088D9 3A47\n800088D9 323C\nD00088DD CA90\n800088DD 013E\nD00088DF 89BD\n800088DF 0000\n# GOLDいっぱい\n; (シナリオ作成時はOFFにしてください)\n8000DC3A 3000\n8000DCBA 3000\n8000DD3A 3000\n8000DDBA 3000\n8000DE3A 3000\n"
+    },
+    {
+      "title": "WIBARM",
+      "text": "; WIBARM\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# ENERGY 9999\n8000FF5D 270F\n# MENTAL 9999\n8000FF5F 270F\n# ABILITY 9999\n8000FF61 270F\n# DAMAGE 0固定\n3000FF63 0000\n"
+    },
+    {
+      "title": "THE SCREAMER",
+      "text": "; THE SCREAMER\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# BP MAX\n8002FE12 D9F8\n# GOLD MAX\n8002FE21 FFFF\n"
+    },
+    {
+      "title": "MAKAKARA",
+      "text": "; MAKAKARA\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# ランダムエンカウント無し\nD000194D C8B7\n8000194D C9AF\nD0001A82 C8B7\n80001A82 C9AF\n# 戦闘毎LvUP\nD0002950 B1DA\n80002950 B121\n# GOLD MAX\nD000BA00 10BE\n8000BC19 FFFF\n# FOOD MAX\nD000BA00 10BE\n8000BC52 FFFF\n# GOU 0\nD000BA00 10BE\n3000BC17 0000\n"
+    },
+    {
+      "title": "CHAOS ANGELS",
+      "text": "; CHAOS ANGELS\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# LV MAX\nD000BFA7 0005\n8000BF9B 0019\nD000BFA7 0005\n8000BF9F 0003\n"
+    },
+    {
+      "title": "KING BREEDER",
+      "text": "; KING BREEDER\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# GOLD 65535\nD0000500 1C32\n80000409 FFFF\n# EXP 65535\n; (戦闘毎LvUP)\nD0000500 1C32\n80000131 FFFF\nD0000500 1C32\n8000016F FFFF\nD0000500 1C32\n800001AD FFFF\nD0000500 1C32\n800001EB FFFF\n"
+    },
+    {
+      "title": "JOTUNN",
+      "text": "; JOTUNN\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# GOLD 600000\nD000B800 4144\n8000B81C EA60\nD000B800 4144\n8000B8A9 EA60\nD000B800 4144\n8000B936 EA60\n# EXP 50000\n; (教会?でLvUP)\nD000B800 4144\n8000B818 C350\nD000B800 4144\n8000B8A5 C350\nD000B800 4144\n8000B932 C350\n"
+    },
+    {
+      "title": "ゼリアード",
+      "text": "; ゼリアード\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# GOLD MAX\nD000CE00 6CC3\n3000CD85 000F\nD000CE00 6CC3\n8000CD86 423F\n# ALMAS MAX\nD000CE00 6CC3\n8000CD8B FFFF\n# EXP MAX\nD000CE00 6CC3\n8000CD8E FFFF\n# LIFE減らない\nD0009FEC 42ED\n80009FEC 0000\n# SHIELD減らない\nD0006DF0 42ED\n80006DF0 3CAF\n# MAGIC減らない\nD000614F 35C8\n8000614F 00C8\n"
+    },
+    {
+      "title": "夢幻の心臓",
+      "text": "; 夢幻の心臓\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# パラメータ全部3万\n; (新キャラ作成時)\nD00011CE A7FF\n800011CE 3022\nD00011D0 4A28\n800011D0 2275\nE00011D2 0029\n300011D2 0020\n"
+    },
+    {
+      "title": "夢幻の心臓2",
+      "text": "; 夢幻の心臓2\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# 1回の戦闘毎にLvUP\nD0003E20 28B7\n30003E22 0000\n# GOLD MAX\nD0003E20 28B7\n8000B0F0 FFFF\n# FOOD MAX\nD0003E20 28B7\n8000B0F2 FFFF\n"
+    },
+    {
+      "title": "夢幻の心臓3",
+      "text": "; 夢幻の心臓3\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# 1回の戦闘毎にLvUP\nD0006515 21FD\n8000652C FF11\nD0006515 21FD\n800065D3 3C78\n# GOLD MAX\nD0006515 21FD\n80007521 FFFF\n# UNIT MAX\nD0006515 21FD\n80007523 FFFF\n"
+    },
+    {
+      "title": "CRIMSON",
+      "text": "; CRIMSON\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n; いくつかのVersionが確認されています。\n; 適宜アドレスを変更してください。\n# SPEED UP（版1）\nD000B5F8 F920\n8000B5F8 0000\n# SPEED UP（版2）\nD000B5F9 F920\n8000B5F9 0000\n# EXPいっぱい（版1）\n; 戦闘勝利時に増えます\n; 以降１戦闘毎にLvUP\nD0009C98 97FE\n80009C98 963E\nE0009C9A 00D0\n30009C9A 0000\n# EXPいっぱい（版2）\n; 戦闘勝利時に増えます\n; 以降１戦闘毎にLvUP\nD0009C12 97FE\n80009C12 963E\nE0009C14 00D0\n30009C14 0000\n# EXPいっぱい（版3）\n; 戦闘勝利時に増えます\n; 以降１戦闘毎にLvUP\nD0009C78 97FE\n80009C78 963E\nE0009C7A 00D0\n30009C7A 0000\n# GOLD MAX\n; お金入手時MAXになります\nD0007C6F 0330\n80007C6F 0000\n"
+    },
+    {
+      "title": "CRIMSON 2",
+      "text": "; CRIMSON 2\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# SPEED UP\nD000B0DB F638\n8000B0DB 0000\n# EXPいっぱい\n; 戦闘勝利時に増えます\n; 以降１戦闘毎にLvUP\nD00097EB 97FE\n800097EB 963E\nE00097ED 00D0\n300097ED 0000\n# GOLD MAX\n; お金入手時MAXになります\nD0007246 0330\n80007246 0000\n"
+    },
+    {
+      "title": "CRIMSON 3",
+      "text": "; CRIMSON 3\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# SPEED UP\nD000A38B F638\n8000A38B 0000\n# SPEED UP 2\n; 曲のFADEOUT待ちカット\n3000CAF3 00FF\n# EXPいっぱい\n; 戦闘勝利時に増えます\n; 以降１戦闘毎にLvUP\nD000856C 97FE\n8000856C 963E\nE000856E 00D0\n3000856E 0000\n# GOLD MAX\n; お金入手時MAXになります\nD0005A35 0330\n80005A35 0000\n"
+    },
+    {
+      "title": "MILLION CHECKER",
+      "text": "; MILLION CHECKER\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# CROQUIS,EROTIQ MEMORYなど\nD003606A E118\n80036000 6618\n# HILLS FAR,紫禁城など\nD0036066 E118\n80036000 6218\n; プロテクトを外します。他にもミリオン系なら効くかと思います。\n"
+    },
+    {
+      "title": "SILPHEED",
+      "text": "; SILPHEED\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# 無敵(シールド減らない)\n; (by anonB)\n; (3000B46A 0006)\n; 正確にはこっちなんですが、画面が変になるんで下ので代用\nE000319F 0021\n3000319F 00C9\n"
+    },
+    {
+      "title": "ぎゅわんぶらぁ自己中心派",
+      "text": "; ぎゅわんぶらぁ自己中心派\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# ツモ全部發\n; (by anonB)\nE100E256 00FF\n3000E256 001C\n# 最強の配牌\n; (by anonB)\n8000E249 1E1E\n8000E24B 1F1E\n8000E24D 1F1F\n8000E24F 2020\n8000E251 2120\n8000E253 2121\n3000E255 001B\nE100E256 00FF\n3000E256 001B\n"
+    },
+    {
+      "title": "PIAS",
+      "text": "; PIAS\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# モザイク除去(笑)\n; (by anonB)\n30009FE7 00C9\n"
+    },
+    {
+      "title": "FINAL CRISIS",
+      "text": "; FINAL CRISIS\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# 無敵(ゲージ減らない)\n; (by anonB)\n3002F3B9 0006\n"
+    },
+    {
+      "title": "スペースハリアー",
+      "text": "; スペースハリアー\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# 無敵\n; (by anonB)\n300008E2 0000\n"
+    },
+    {
+      "title": "ドラゴンスレイヤー",
+      "text": "; ドラゴンスレイヤー\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n; 左はFalcom正規版、右はログイン版。\n# HP MAX（Falcom版）\n; HPを最大値で固定。\nD0004F48 3195\n80004F4A FFFF\n# HP MAX（ログイン版）\n; HPを最大値で固定。\nD0002808 C195\n8000280A FFFF\n# STR MAX（Falcom版）\n; STRを最大値で固定。\nD0004F48 3195\n80004F4C FFFF\n# STR MAX（ログイン版）\n; STRを最大値で固定。\nD0002808 C195\n8000280C FFFF\n# EXP MAX（Falcom版）\n; EXPを最大値で固定。\nD0004F48 3195\n80004F4E FFFF\n# EXP MAX（ログイン版）\n; EXPを最大値で固定。\nD0002808 C195\n8000280E FFFF\n# GOLD MAX（Falcom版）\n; GOLDを最大値-1で固定。\nD0004F48 3195\n80004F50 FFFE\n# GOLD MAX（ログイン版）\n; GOLDを最大値-1で固定。\nD0002808 C195\n80002810 FFFE\n# MAG MAX（Falcom版）\n; MAGICを最大値-1で固定。\nD0004F48 3195\n80004F52 FFFE\n# MAG MAX（ログイン版）\n; MAGICを最大値-1で固定。\nD0002808 C195\n80002812 FFFE\n# CROWN MAX（Falcom版）\n; CROWNを最大値-1で固定。\nD0004F48 3195\n80004F54 FFFE\n# CROWN MAX（ログイン版）\n; CROWNを最大値-1で固定。\nD0002808 C195\n80002814 FFFE\n"
+    },
+    {
+      "title": "ドラゴンスレイヤー 英雄伝説",
+      "text": "; ドラゴンスレイヤー 英雄伝説\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# OPENING SPEED UP\n; オープニングを爆速にします。新規開始時タルい時^^;に有効。\nD000797B FA20\n30007047 0000\nD000797B FA20\n8000704B 0000\n# SPEED UP\n; フィールドの歩行速度および、戦闘中の高速化。\nD00083A6 FA20\n800083A6 0000\nD000653A FA20\n30006402 0000\n# GOLD MAX\n; お金を最大で固定。\nD0007330 5A83\n8000708C FFFF\nD0007330 5A83\n8000708E 0FFF\n# セリオス EP MAX\n; セリオスの経験値をMAXにします。\n; パッチ後に戦闘し勝利すれば、一気にLv99まで上がります。\nD0007330 5A83\n8000730C FFFF\nD0007330 5A83\n8000730E 0FFF\n# セリオス HP MAX\n; セリオスのHPを9999で固定。\nD0007330 5A83\n80007304 270F\nD0007330 5A83\n80007306 270F\n# セリオス MP MAX\n; セリオスのMPを9999で固定。\nD0007330 5A83\n80007308 270F\nD0007330 5A83\n8000730A 270F\n; パラメータ系(EP,HP,MP)はロードしてからPatchをEnableにして下さい。\n; (ロード時にCHECKSUMを確認しているため)\n; 他の３人のパラメータは、\n; 800073xy の x を 4,8,C にすると２人目、３人目、４人目に該当します。\n"
+    },
+    {
+      "title": "ドラゴンスレイヤー 英雄伝説2",
+      "text": "; ドラゴンスレイヤー 英雄伝説2\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# OPENING SPEED UP\n; １と同様、爆速オープニング。\nD00083FC FA20\n30008048 0000\nD00084CD F838\n800084CD 0000\nD0009EC1 73FE\n30009ECA 00C9\nD00092E4 FA28\n800092E4 0000\n# SPEED UP\n; これも１と同様、フィールドと戦闘中の速度を上げます。\nD00087A8 FA20\n800087A8 0000\nD0006A22 FA20\n30006802 0000\n# GOLD MAX\n; お金を最大で固定。\nD0007B30 4183\n8000788C FFFF\nD0007B30 4183\n8000788E 0FFF\n# アトラス EP MAX\n; アトラスの経験値を最大に固定します。\n; LvUPは次回戦闘時。\nD0007B30 4183\n80007B0C FFFF\nD0007B30 4183\n80007B0E 0FFF\n# アトラス HP MAX\n; アトラスのHPを9999で固定。\nD0007B30 5A83\n80007B04 270F\nD0007B30 5A83\n80007B06 270F\n; これも１と同様、パラメータ系はロードしてからPatchをEnableにして下さい。\n; 80007Bxy の x を 4,8,C にすると２人目、３人目、４人目に該当します。\n"
+    },
+    {
+      "title": "ファンタジアン",
+      "text": "; ファンタジアン\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n; １人目(パーティの並びではなく、登録されている順で)\n# HP MAX\nD000D500 C23A\n3000D014 00FF\n# GOLD MAX\nD000D500 C23A\n8000D018 7FFF\n# EXP MAX\nD000D500 C23A\n8000D01C 7FFF\n# MP MAX\nD000D500 C23A\n3000D020 00FF\n# MAXHP MAX\nD000D500 C23A\n3000D03F 00FF\n; 2人目以降は、D0xyに+40H×n。\n"
+    },
+    {
+      "title": "HYDLIDE",
+      "text": "; HYDLIDE\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP MAX\n; HPを最大値で固定。\n8002FAE7 6464\n# EXP MAX\n; 経験値をLvUP直前で固定。\n; １戦闘毎にレベルアップします。\nE202FAE5 0063\n3002FAE5 0063\n# STR MAX\n; STRを最大値で固定。\n3002FAE6 0064\n"
+    },
+    {
+      "title": "HYDLIDE 2",
+      "text": "; HYDLIDE 2\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP MAX\n; HPを最大値で固定。\n8002FE19 03E7\n8002FE1B 03E7\n# MAG MAX\n; MAG値を最大値で固定。\n3002FE21 00FF\n3002FE23 00FF\n# EXP MAX\n; 経験値を最大値で固定。\n8002FE26 270F\n# FORTH MAX\n; FORTHを最大値(善)で固定。\n; 悪でないとクリアできない個所もあったかもしれない・・ので注意。\n3002FE28 0064\n# STR MAX\n; STRを最大値で固定。\n3002FE1E 00FF\n# GOLD MAX\n; GOLDを最大値で固定。\n8002FE88 C350\n# OIL MAX\n; OILを最大値で固定。\n3002FE4B 00C8\n"
+    },
+    {
+      "title": "HYDLIDE 3",
+      "text": "; HYDLIDE 3\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP 65535\n; HPを65535で固定。\nD000D8FE 8A13\n8000D918 FFFF\nD000D8FE 8A13\n8000D91A FFFF\n# EXP 65535\n; EXPを65535で固定。\n; 教会に入るごとにLvUPします。\nD000D8FE 8A13\n8000D939 FFFF\n"
+    },
+    {
+      "title": "THE SCHEME",
+      "text": "; THE SCHEME\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# LV MAX,ITEM ALL\n; LV最大、アイテム全部所持状態にします\nD000BBC0 5BED\n8000BF65 0F1F\n# HP MAX\n; HPを最大に。\nD000BBC0 5BED\n8000BF67 270F\nD000BBC0 5BED\n8000BF70 270F\n# FORCE MAX\n; FORCEを最大に。\nD000BBC0 5BED\n8000BF69 270F\n; ※起動時の速度チェックはGRPHキーで飛ばせます。\n"
+    },
+    {
+      "title": "SORCERIAN",
+      "text": "; SORCERIAN\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# SPEED UP\n; 速度を上げます。おすすめ。\nD00011B7 FA20\n300011B8 0000\n# MP MAX\n; MPを255で固定します。\nE0005010 0080\n30005005 00FF\n# HP MAX\n; HPを32767で固定します。\nE0005010 0080\n8000500A 7FFF\nE0005010 0080\n8000502C 7FFF\n# GOLD MAX\n; お金を最大で固定します。\nE0005010 0080\n8000500C FFFF\n# EXP MAX\n; 経験値を65535で固定します。\nE0005010 0080\n8000500E FFFF\n# FORCE AGE 16\n; 年齢を16で固定します。\n; 年齢値は２つ目のコードで調整してください。\nE0005010 0080\n30005014 0010\n# PARAMETER MAX\n; STR等の各パラメータを９９で固定します。\n; ついでに各知識も全部つけます。\nE0005010 0080\n30005006 0063\nE0005010 0080\n80005018 6363\nE0005010 0080\n8000501A 6363\nE0005010 0080\n8000501C 6363\nE0005010 0080\n8000501E 0F63\n# HARB MAX\n; ハーブを全部９９個で固定します。\nE0005010 0080\n80005033 6363\nE0005010 0080\n80005035 6363\nE0005010 0080\n30005037 0063\n; ２、３、４人目は各コードのXXXX50XXの、50を51/52/53に。\n; ※EDのスタッフロールなどで一部文字化けする事があります。\n; 特に必要のないところではなるべくパッチをOFFにしてください。\n; もっと良い条件コードがあるといいんですが・・・。\n"
+    },
+    {
+      "title": "Xak",
+      "text": "; Xak\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# SPEED UP\n; ウエイト解除、高速化します。\nD0009951 FA38\n80009951 0000\n# GOLD MAX\n; GOLDを最大値で固定。\nD0009400 5919\n80009471 FFFF\n# HP MAX\n; HPを最大値で固定。\nD0009400 5919\n80009461 03E7\nD0009400 5919\n80009467 03E7\n# EP MAX\n; EPを最大値で固定。\n; 開始直後にLvMAXまで上がります。\nD0009400 5919\n8000946F FFFF\n"
+    },
+    {
+      "title": "Xak2",
+      "text": "; Xak2\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# EXP MAX\n; EXPを最大値で固定。\n; 開始直後にLvMAXまで上がります。\nD000B656 C9B6\n8000BC6F FFFF\n# GOLD MAX\n; GOLDを最大値で固定。\nD000B656 C9B6\n8000BC73 FFFF\n# HP/MP MAX\n; HPおよびMPを最大値で固定。\nD000B656 C9B6\n8000BC5B 270F\nD000B656 C9B6\n8000BC5D 270F\nD000B656 C9B6\n8000BC5F 270F\nD000B656 C9B6\n8000BC61 270F\n# SPEED UP (STATUS)\n; ステータス表示が遅いので高速化。\nD000A2CB FA38\n8000A2CB 0000\n"
+    },
+    {
+      "title": "Xak ガゼルの塔",
+      "text": "; Xak ガゼルの塔\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP/MP MAX\n; HPとMPをMAXで固定します。\nD000B671 C9B6\n8000BCBD 270F\nD000B671 C9B6\n8000BCBF 270F\nD000B671 C9B6\n8000BCC1 270F\nD000B671 C9B6\n8000BCC3 270F\n# SPEED UP\n; ２と同様、ステータス表示がちょっとトロいので、高速化。\nD000A2C7 FA38\n8000A2C7 0000\n"
+    },
+    {
+      "title": "XANADU",
+      "text": "; XANADU\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP 65535xx\n; HPを65535xxで固定。\nD0000100 0918\n80006097 FFFF\nD0000100 0918\n8000609A FFFF\n# FOOD 65535xx\n; FOODを65535xxで固定。\nD0000100 0918\n800060A5 FFFF\n# GOLD 65535xx\n; GOLDを65535xxで固定。\nD0000100 0918\n800060A8 FFFF\n# FEX 32767xx\n; FEX(FighterExp)を32767xxで固定。\nD0000100 0918\n80006090 7FFF\n# MEX 32767xx\n; MEX(MagicianExp)を32767xxで固定。\nD0000100 0918\n80006094 7FFF\n# SPEED UP 1\n; 高速化（１）。\nD0000A68 FD20\n80000A68 0000\n# SPEED UP 2\n; 高速化（２）。但し効果音が正常に聞こえなくなります。\nD00042D2 F520\n800042D2 0000\n"
+    },
+    {
+      "title": "XANADU シナリオ2",
+      "text": "; XANADU シナリオ2\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP 65535xx\nD0000100 0918\n80006097 FFFF\nD0000100 0918\n8000609A FFFF\n# FOOD 65535xx\nD0000100 0918\n800060A5 FFFF\n# GOLD 65535xx\nD0000100 0918\n800060A8 FFFF\n# FEX 32767xx\nD0000100 0918\n80006090 7FFF\n# MEX 32767xx\n; ＸＡＮＡＤＵと同様。ただし開始時にSUMを調べるので、\nD0000100 0918\n80006094 7FFF\n# SUM CHECK PASS\n; これを同時に入力する必要があります。\nD0000D12 0D20\n80000D12 0618\nD0000D7C 0C20\n80000D7C 0618\n# SPEED UP 1\n; 高速化（１）。\nD0000F40 F920\n80000F40 0000\n# SPEED UP 2\n; 高速化（２）。同じく効果音が犠牲になります。\nD000429D F520\n8000429D 0000\n"
+    },
+    {
+      "title": "Ys",
+      "text": "; Ys\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP MAX\n; HPを最大値で固定。\nD00037DC 4B2D\n80004B00 FFFF\n# GOLD MAX\n; GOLDを最大値で固定。\nD00037DC 4B2D\n80004B04 FFFF\n# EXP MAX\n; EXPを最大値で固定。\nD00037DC 4B2D\n80004B06 FFFF\n"
+    },
+    {
+      "title": "Ys2",
+      "text": "; Ys2\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP MAX\n; HPを最大値で固定。\nD0004B56 414D\n80004B8C FFFF\n# MP MAX\n; MPを最大値で固定。\nD0004B56 414D\n80004B04 FFFF\n# GOLD MAX\n; GOLDを最大値で固定。\nD0004B56 414D\n80004B96 FFFF\n# EXP MAX\n; EXPを最大値で固定。\nD0004B56 414D\n80004B02 FFFF\n"
+    },
+    {
+      "title": "Ys3",
+      "text": "; Ys3\n; 出典: KAJA「PC88-PAR改造部屋」(2001)\n# HP MAX\n; HPを最大値で固定。\nD00053A4 4752\n800053B7 FFFF\n# RING MAX\n; RINGを最大値で固定。\nD00053A4 4752\n300052CD FFFF\n# GOLD MAX\n; GOLDを最大値で固定。\nD00053A4 4752\n800053BE FFFF\n# EXP MAX\n; EXPを最大値で固定。\nD00053A4 4752\n800053C0 FFFF\n"
+    }
+  ]
+}

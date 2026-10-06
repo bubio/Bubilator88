@@ -349,6 +349,17 @@
         }
       }
     },
+    "Cheats set for the mounted disks: %@" : {
+      "comment" : "Toast after picking a bundled cheat preset. %@ is the game title",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マウント中のディスクにチートを設定しました: %@"
+          }
+        }
+      }
+    },
     "Choose a cheat file (.pat) for the mounted disks" : {
       "comment" : "Prompt in the open panel for importing an 88PAR .pat file",
       "localizations" : {
@@ -838,6 +849,17 @@
       }
     },
     "Preset" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プリセット"
+          }
+        }
+      }
+    },
+    "Presets" : {
+      "comment" : "Cheats submenu listing the cheat codes bundled with the app, by game",
       "localizations" : {
         "ja" : {
           "stringUnit" : {

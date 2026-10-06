@@ -57,4 +57,23 @@ struct CheatStoreTests {
     store.importSet(name: "NEWER.PAT", text: pat, for: ["B.D88"])
     #expect(store.sets.map(\.name) == ["NEW.PAT", "NEWER.PAT"])
   }
+
+  @Test("同梱プリセットはすべて読み込めて、どのグループにもコードがある")
+  func bundledPresetsParse() {
+    let presets = CheatStore.bundledPresets()
+    #expect(presets.count == 69)
+    for preset in presets {
+      let groups = PATFile.parse(preset.text)
+      #expect(!groups.isEmpty && groups.count <= PATFile.maxGroups, "\(preset.title)")
+      #expect(groups.allSatisfy { !$0.codes.isEmpty }, "\(preset.title)")
+    }
+  }
+
+  @Test("プリセットを選ぶとマウント中のディスクのセットになる")
+  func presetBecomesASet() {
+    let preset = CheatPreset(title: "Ys2", text: pat)
+    let store = CheatStore(fileURL: tempURL(), presets: [preset])
+    store.importSet(name: preset.title, text: preset.text, for: ["ys2_a.d88"])
+    #expect(store.set(for: ["YS2_A.D88"])?.name == "Ys2")
+  }
 }

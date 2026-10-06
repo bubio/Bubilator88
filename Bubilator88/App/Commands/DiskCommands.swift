@@ -96,10 +96,19 @@ struct DiskCommands: Commands {
         }
         Divider()
       }
+      let noDisk = viewModel.drive0Info == nil && viewModel.drive1Info == nil
+      Menu("Presets") {
+        ForEach(CheatStore.shared.presets, id: \.title) { preset in
+          Button(preset.title) {
+            viewModel.useCheatPreset(preset)
+          }
+        }
+      }
+      .disabled(noDisk)
       Button("Import Cheat File...") {
         viewModel.openCheatFile()
       }
-      .disabled(viewModel.drive0Info == nil && viewModel.drive1Info == nil)
+      .disabled(noDisk)
     } label: {
       Label("Cheats", systemImage: "wand.and.stars")
     }
