@@ -36,14 +36,17 @@ CATALOG = REPO_ROOT / "Bubilator88/Resources/Localizable.xcstrings"
 def derived_data_dir() -> Path | None:
     """Locate the app target's build intermediates.
 
-    There is one directory per configuration and architecture. Pick whichever
-    holds the most recently written .stringsdata — sorting by name would prefer
-    Release over Debug and happily read a stale build.
+    There is one directory per configuration and architecture, and one
+    DerivedData folder each for the bare project (`Bubilator88-*`) and the
+    development workspace (`Bubilator88Dev-*`). Pick whichever holds the most
+    recently written .stringsdata — sorting by name would prefer Release over
+    Debug and happily read a stale build.
     """
     candidates = [
         d
+        for pattern in ("Bubilator88-*", "Bubilator88Dev-*")
         for d in Path.home().glob(
-            "Library/Developer/Xcode/DerivedData/Bubilator88-*/Build/Intermediates.noindex"
+            f"Library/Developer/Xcode/DerivedData/{pattern}/Build/Intermediates.noindex"
             "/Bubilator88.build/*/Bubilator88.build/Objects-normal/*"
         )
         if any(d.glob("*.stringsdata"))

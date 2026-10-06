@@ -101,6 +101,7 @@ extension EmulatorViewModel {
       tickPasteQueue()
       tickClickZonePlayer()
       tickScriptPlayer()
+      applyCheats()
       // Finishes a frame the sliced path left part-way (switching to fast
       // forward mid-frame): runFrame() stops at the same boundary.
       pc88.runFrame()
@@ -130,6 +131,7 @@ extension EmulatorViewModel {
       tickPasteQueue()
       tickClickZonePlayer()
       tickScriptPlayer()
+      applyCheats()
     }
     let ended = pc88.runFrameSlice(frameSliceIndex, of: Self.audioSlicesPerFrame)
     audio.drainSamples()
