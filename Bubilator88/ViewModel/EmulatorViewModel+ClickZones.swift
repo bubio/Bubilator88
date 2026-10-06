@@ -31,6 +31,13 @@ extension EmulatorViewModel {
     clickZoneEditingLayout != nil
   }
 
+  /// The fullscreen status overlay stays hidden while the pointer is captured
+  /// or control zones are live: it would cover zones and swallow their clicks,
+  /// and it is only a convenience.
+  var suppressesFullScreenOverlay: Bool {
+    mouseCapturing || (clickZonesAvailable && activeClickZoneLayout != nil)
+  }
+
   // MARK: - Playback
 
   /// Play the zone's key sequence. A click while a sequence is still playing
