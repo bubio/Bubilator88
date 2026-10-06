@@ -396,6 +396,16 @@
         }
       }
     },
+    "Correct Aspect Ratio (4:3)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "縦横比を補正（4:3）"
+          }
+        }
+      }
+    },
     "Cursor Keys + RETURN" : {
       "comment" : "Control-zone preset name, from ClickZonePresets.json",
       "localizations" : {
@@ -899,6 +909,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "記録を停止"
+          }
+        }
+      }
+    },
+    "Stretch vertically by 1.2 to match the pixel shape of 4:3 monitors. Edges stay sharp." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当時の4:3モニタのドット形状に合わせて縦に1.2倍します。輪郭はシャープなままです。"
           }
         }
       }

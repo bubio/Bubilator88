@@ -436,6 +436,19 @@ struct ScreenFitTests {
     #expect(fit.scale == 2)
     #expect(fit.origin == CGPoint(x: 320, y: 100))
   }
+
+  @Test("全画面 4:3: 縦だけ 1.2 倍、座標変換が往復できる")
+  func aspect43() {
+    // 1920x1080: 480 * scale <= 1080 and 640 * scale <= 1920 -> scale 2.25
+    let fit = ScreenFit(container: CGSize(width: 1920, height: 1080), mode: .aspect43)
+    #expect(fit.scale == 2.25)
+    #expect(abs(fit.yScale - 2.7) < 1e-9)
+    #expect(abs(fit.imageSize.height - 1080) < 1e-9)
+    #expect(fit.imageSize.width == 1440)
+    #expect(abs(fit.origin.x - 240) < 1e-9 && abs(fit.origin.y) < 1e-9)
+    let p = fit.toScreen(CGPoint(x: 240 + 225, y: 270))
+    #expect(abs(p.x - 100) < 1e-9 && abs(p.y - 100) < 1e-9)
+  }
 }
 
 @MainActor
