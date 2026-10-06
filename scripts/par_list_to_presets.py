@@ -6,8 +6,10 @@ Usage:
 
 The input is the Wayback Machine page (web.archive.org/web/20010421074614/
 http://www5.airnet.ne.jp/kajapon/pc88par.html) printed to PDF, or the text
-already extracted from it. A PDF is read through PDFKit with `swift`, so this
-runs on macOS only. The output defaults to
+already extracted from it. That text is kept in the private dev-docs as
+docs/develop/PAR/KAJA_PC88PAR.txt and regenerates the shipped JSON byte for
+byte. A PDF is read through PDFKit with `swift`, so that path runs on macOS
+only. The output defaults to
 Bubilator88/Resources/CheatPresets.json.
 
 The page is a run of game titles, each followed by `- heading -` lines and the
