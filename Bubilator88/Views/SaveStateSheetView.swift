@@ -4,29 +4,75 @@ struct SaveStateSheetView: View {
   let viewModel: EmulatorViewModel
   @Environment(\.dismiss) private var dismiss
 
+  @State private var entries: [SaveSlotEntry] = []
+  @State private var query = ""
+  @State private var sort: SaveSlotSort = .number
+
   private let columns = [
     GridItem(.adaptive(minimum: 200, maximum: 260), spacing: 12)
   ]
 
+  private var isSave: Bool { viewModel.saveStateSheetMode == .save }
+
+  private var sections: [SaveSlotSection] {
+    SaveSlotList.sections(
+      entries: entries, query: query, sort: sort,
+      hidesEmpty: !isSave, currentGame: viewModel.currentGameName)
+  }
+
   var body: some View {
     VStack(spacing: 0) {
-      Text(viewModel.saveStateSheetMode == .save ? "Save State" : "Load State")
+      Text(isSave ? "Save State" : "Load State")
         .font(.headline)
         .padding(.top, 16)
         .padding(.bottom, 12)
 
+      HStack(spacing: 8) {
+        Picker("Sort", selection: $sort) {
+          Text("Slot Number").tag(SaveSlotSort.number)
+          Text("Newest First").tag(SaveSlotSort.recent)
+          Text("Oldest First").tag(SaveSlotSort.oldest)
+          Text("By Game").tag(SaveSlotSort.game)
+          if isSave {
+            Text("Empty Slots First").tag(SaveSlotSort.emptyFirst)
+          }
+        }
+        .labelsHidden()
+        .fixedSize()
+        TextField("Search", text: $query)
+          .textFieldStyle(.roundedBorder)
+      }
+      .padding(.horizontal, 16)
+      .padding(.bottom, 12)
+
       Divider()
 
       ScrollView {
-        LazyVGrid(columns: columns, spacing: 12) {
-          ForEach(1...10, id: \.self) { slot in
-            SlotCell(viewModel: viewModel, slot: slot) {
-              if viewModel.saveStateSheetMode == .save {
-                viewModel.saveState(slot: slot)
-              } else {
-                viewModel.loadState(slot: slot)
+        if sections.isEmpty {
+          Text("No Matching States")
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 60)
+        }
+        LazyVStack(alignment: .leading, spacing: 12) {
+          ForEach(sections, id: \.title) { section in
+            if sort == .game {
+              Text(section.title ?? String(localized: "Other"))
+                .font(.subheadline.bold())
+                .lineLimit(1)
+                .truncationMode(.middle)
+            }
+            LazyVGrid(columns: columns, spacing: 12) {
+              ForEach(section.slots, id: \.slot) { entry in
+                SlotCell(viewModel: viewModel, entry: entry) {
+                  if isSave {
+                    viewModel.saveState(slot: entry.slot)
+                  } else {
+                    viewModel.loadState(slot: entry.slot)
+                  }
+                  dismiss()
+                }
               }
-              dismiss()
             }
           }
         }
@@ -45,6 +91,8 @@ struct SaveStateSheetView: View {
       .padding(12)
     }
     .frame(width: 580, height: 520)
+    .onAppear { entries = viewModel.saveSlotEntries() }
+    .onChange(of: viewModel.saveStateRevision) { entries = viewModel.saveSlotEntries() }
   }
 }
 
@@ -52,10 +100,11 @@ struct SaveStateSheetView: View {
 
 private struct SlotCell: View {
   let viewModel: EmulatorViewModel
-  let slot: Int
+  let entry: SaveSlotEntry
   let action: () -> Void
 
-  private var hasData: Bool { viewModel.hasState(slot: slot) }
+  private var slot: Int { entry.slot }
+  private var hasData: Bool { !entry.isEmpty }
   private var isLoad: Bool { viewModel.saveStateSheetMode == .load }
 
   private let cellAspect: CGFloat = 160.0 / 100.0  // 8:5 like PC-8801 screen
@@ -123,21 +172,11 @@ private struct SlotCell: View {
   }
 
   private var slotDateString: String {
-    let path = viewModel.saveStatePath(forSlot: slot)
-    guard let attrs = try? FileManager.default.attributesOfItem(atPath: path.path),
-          let date = attrs[.modificationDate] as? Date else { return "" }
-    let fmt = DateFormatter()
-    fmt.dateFormat = "MM/dd HH:mm"
-    return fmt.string(from: date)
+    guard let date = entry.modified else { return "" }
+    return DateFormatter.stable(pattern: "MM/dd HH:mm").string(from: date)
   }
 
   private var slotDiskNames: String? {
-    guard let meta = viewModel.loadSlotMeta(slot) else { return nil }
-    let name0: String? = meta.drive0FileName ?? meta.drive0Name
-    let name1: String? = meta.drive1FileName ?? meta.drive1Name
-    var names: [String] = []
-    if let n = name0, !n.isEmpty { names.append(n) }
-    if let n = name1, !n.isEmpty, n != name0 { names.append(n) }
-    return names.isEmpty ? nil : names.joined(separator: ", ")
+    entry.diskNames.isEmpty ? nil : entry.diskNames.joined(separator: ", ")
   }
 }

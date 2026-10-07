@@ -46,15 +46,15 @@ final class TouchBarInstallerView: NSView {
 }
 
 /// A main bar (a way into the state bar and the PC-8801 keys a Mac keyboard
-/// cannot type directly), a slot bar with ten save-state slots, and
-/// a detail bar for the chosen slot.
+/// cannot type directly), a slot bar with a horizontally scrolling strip of
+/// the save-state slots, and a detail bar for the chosen slot.
 ///
 /// Choosing a slot swaps the bar for Load and Save plus that slot's thumbnail,
 /// date and drive 1 file name, so what a Save would overwrite is on screen when
 /// it is tapped. Loading returns to the main bar; saving stays on the detail
 /// bar, which then shows the fresh thumbnail as confirmation.
 @MainActor
-final class EmulatorTouchBarController: NSObject, NSTouchBarDelegate {
+final class EmulatorTouchBarController: NSObject, NSTouchBarDelegate, NSScrubberDataSource, NSScrubberDelegate {
 
   private enum Page: Equatable {
     case main
@@ -74,11 +74,19 @@ final class EmulatorTouchBarController: NSObject, NSTouchBarDelegate {
   private var loadButton: NSButton?
   private var saveButton: NSButton?
 
-  private static let slots = 1...10
+  private static let slots = SaveSlotList.slots
+  /// Width of the scrolling slot strip. The app region is only about 650pt
+  /// wide (the system Control Strip takes the right side), less the close
+  /// button and its gap; the Touch Bar drops an item that does not fit rather
+  /// than clipping it, so this must stay well inside that.
+  private static let slotStripWidth: CGFloat = 540
+  /// A Touch Bar item is 30pt tall.
+  private static let slotItemIdentifier = NSUserInterfaceItemIdentifier("slot")
+  private static let slotStripHeight: CGFloat = 30
   /// Detail-bar thumbnail.
   private static let thumbSize = NSSize(width: 44, height: 28)
-  /// Thumbnail drawn inside each slot button, centred in a button of
-  /// `slotButtonWidth`; as large as the button's own bezel allows.
+  /// Thumbnail drawn inside each slot item, centred in an item of
+  /// `slotButtonWidth`.
   private static let slotThumbSize = NSSize(width: 42, height: 26)
   private static let slotButtonWidth: CGFloat = 52
   private static let slotSpacing: CGFloat = 4
@@ -213,20 +221,31 @@ final class EmulatorTouchBarController: NSObject, NSTouchBarDelegate {
       stateButton = button
       return button
     case .slots:
-      // One item holding every slot, so the gaps between them can be tighter
-      // than the Touch Bar's own spacing between items.
-      let buttons = Self.slots.map { slot -> NSButton in
-        let image = Self.thumbnailImage(viewModel.slotThumbnail(slot), number: slot, size: Self.slotThumbSize, borderWidth: 0)
-        let button = ActionButton(image: image) { [weak self] in self?.show(.detail(slot)) }
-        button.imagePosition = .imageOnly
-        button.imageScaling = .scaleNone
-        button.widthAnchor.constraint(equalToConstant: Self.slotButtonWidth).isActive = true
-        return button
+      // A scrubber scrolls, which thirty slots need; its flow layout keeps the
+      // gaps tighter than the Touch Bar's own spacing between items. The Touch
+      // Bar sizes an item by its intrinsic size, which a scrubber lacks, so it
+      // sits in a view that supplies one.
+      let layout = NSScrubberFlowLayout()
+      layout.itemSize = NSSize(width: Self.slotButtonWidth, height: Self.slotStripHeight)
+      layout.itemSpacing = Self.slotSpacing
+      let size = NSSize(width: Self.slotStripWidth, height: Self.slotStripHeight)
+      let scrubber = NSScrubber(frame: NSRect(origin: .zero, size: size))
+      scrubber.autoresizingMask = [.width, .height]
+      scrubber.scrubberLayout = layout
+      scrubber.mode = .free
+      scrubber.showsAdditionalContentIndicators = true
+      scrubber.register(NSScrubberImageItemView.self, forItemIdentifier: Self.slotItemIdentifier)
+      scrubber.dataSource = self
+      scrubber.delegate = self
+      scrubber.selectionOverlayStyle = .outlineOverlay
+      scrubber.selectionBackgroundStyle = .outlineOverlay
+      // Open on the slot last used.
+      if let last = viewModel.lastUsedSlot, Self.slots.contains(last) {
+        scrubber.scrollItem(at: last - Self.slots.lowerBound, to: .center)
       }
-      let stack = NSStackView(views: buttons)
-      stack.orientation = .horizontal
-      stack.spacing = Self.slotSpacing
-      return stack
+      let container = FixedSizeView(size: size)
+      container.addSubview(scrubber)
+      return container
     case .close:
       // A round close button, like the one the system draws for its own bars.
       let configuration = NSImage.SymbolConfiguration(pointSize: 22, weight: .regular)
@@ -276,6 +295,25 @@ final class EmulatorTouchBarController: NSObject, NSTouchBarDelegate {
     case nil:
       return nil
     }
+  }
+
+  // MARK: - Slot scrubber
+
+  func numberOfItems(for scrubber: NSScrubber) -> Int { Self.slots.count }
+
+  func scrubber(_ scrubber: NSScrubber, viewForItemAt index: Int) -> NSScrubberItemView {
+    let slot = Self.slots.lowerBound + index
+    let view = scrubber.makeItem(withIdentifier: Self.slotItemIdentifier, owner: nil) as? NSScrubberImageItemView
+      ?? NSScrubberImageItemView()
+    view.image = Self.thumbnailImage(viewModel.slotThumbnail(slot), number: slot, size: Self.slotThumbSize, borderWidth: 0)
+    view.imageView.imageScaling = .scaleNone
+    return view
+  }
+
+  func scrubber(_ scrubber: NSScrubber, didSelectItemAt selectedIndex: Int) {
+    let slot = Self.slots.lowerBound + selectedIndex
+    viewModel.lastUsedSlot = slot
+    show(.detail(slot))
   }
 
   // MARK: - Actions
@@ -401,6 +439,24 @@ private enum Item {
     default: return nil
     }
   }
+}
+
+// MARK: - Fixed-size container
+
+/// Reports a fixed intrinsic size, for views the Touch Bar cannot size itself.
+private final class FixedSizeView: NSView {
+
+  private let size: NSSize
+
+  init(size: NSSize) {
+    self.size = size
+    super.init(frame: NSRect(origin: .zero, size: size))
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+  override var intrinsicContentSize: NSSize { size }
 }
 
 // MARK: - Button
