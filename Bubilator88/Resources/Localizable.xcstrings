@@ -996,6 +996,16 @@
         }
       }
     },
+    "By Game" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ゲーム別"
+          }
+        }
+      }
+    },
     "Byte value on the data bus, in hex" : {
       "localizations" : {
         "ja" : {
@@ -2226,6 +2236,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "空"
+          }
+        }
+      }
+    },
+    "Empty Slots First" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空きスロット優先"
           }
         }
       }
@@ -3744,6 +3764,16 @@
         }
       }
     },
+    "Newest First" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しい順"
+          }
+        }
+      }
+    },
     "No controller connected." : {
       "localizations" : {
         "ja" : {
@@ -3792,6 +3822,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "キーが未登録です。「記録」を押してからキーを入力してください。"
+          }
+        }
+      }
+    },
+    "No Matching States" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "該当するステートがありません"
           }
         }
       }
@@ -3987,6 +4027,16 @@
     "OK" : {
 
     },
+    "Oldest First" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "古い順"
+          }
+        }
+      }
+    },
     "One key typed by a mouse input anywhere on the screen. The middle button stays turbo." : {
       "localizations" : {
         "ja" : {
@@ -4076,6 +4126,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "オプション:"
+          }
+        }
+      }
+    },
+    "Other" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その他"
           }
         }
       }
@@ -5272,6 +5332,16 @@
         }
       }
     },
+    "Search" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "検索"
+          }
+        }
+      }
+    },
     "Sec" : {
       "localizations" : {
         "ja" : {
@@ -5517,6 +5587,16 @@
         }
       }
     },
+    "Slot Number" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スロット番号順"
+          }
+        }
+      }
+    },
     "Snapshot Error" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -5534,6 +5614,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ソフトウェアキーボード"
+          }
+        }
+      }
+    },
+    "Sort" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "並べ替え"
           }
         }
       }

@@ -1805,8 +1805,15 @@ final class EmulatorViewModel {
 
   func quickSave() { performSave(to: quickSavePath) }
   func quickLoad() { performLoad(from: quickSavePath) }
-  func saveState(slot: Int) { performSave(to: saveStatePath(slot: slot)) }
-  func loadState(slot: Int) { performLoad(from: saveStatePath(slot: slot)) }
+  func saveState(slot: Int) {
+    lastUsedSlot = slot
+    performSave(to: saveStatePath(slot: slot))
+  }
+
+  func loadState(slot: Int) {
+    lastUsedSlot = slot
+    performLoad(from: saveStatePath(slot: slot))
+  }
 
   func hasState(slot: Int) -> Bool {
     FileManager.default.fileExists(atPath: saveStatePath(slot: slot).path)
@@ -1869,6 +1876,30 @@ final class EmulatorViewModel {
     guard let data = loadThumbnailData(for: saveStatePath(slot: slot)) else { return nil }
     return NSImage(data: data)
   }
+
+  /// Every slot with its date and disk names, read from the state files once
+  /// so the picker can filter and sort without touching the disk again.
+  func saveSlotEntries() -> [SaveSlotEntry] {
+    SaveSlotList.slots.map { slot in
+      let path = saveStatePath(slot: slot)
+      let modified = (try? FileManager.default.attributesOfItem(atPath: path.path))?[.modificationDate] as? Date
+      guard modified != nil else { return SaveSlotEntry(slot: slot, modified: nil, diskNames: []) }
+      let meta = loadSlotMeta(slot)
+      var names: [String] = []
+      for name in [meta?.drive0FileName ?? meta?.drive0Name, meta?.drive1FileName ?? meta?.drive1Name] {
+        if let name, !name.isEmpty, !names.contains(name) { names.append(name) }
+      }
+      return SaveSlotEntry(slot: slot, modified: modified, diskNames: names)
+    }
+  }
+
+  /// Drive 0's file name, which groups the picker's "by game" order.
+  var currentGameName: String? {
+    drive0FileName ?? (drive0Name == "Empty" ? nil : drive0Name)
+  }
+
+  /// Slot last saved to or loaded from, so the Touch Bar can open on it.
+  var lastUsedSlot: Int?
 
   func slotLabel(_ slot: Int) -> String {
     let path = saveStatePath(slot: slot)
