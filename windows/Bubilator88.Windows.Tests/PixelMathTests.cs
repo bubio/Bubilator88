@@ -26,4 +26,24 @@ public class PixelMathTests
     [InlineData(100f)]
     public void ClampToByte_AboveOne_ClampsTo255(float input)
         => Assert.Equal(255, PixelMath.ClampToByte(input));
+
+    [Fact]
+    public void ContentRect_Aspect43_StretchesHeightBy1Point2()
+    {
+        // 1920x1080: 480 * scale <= 1080 and 640 * scale <= 1920 -> scale 2.25
+        var (x, y, w, h) = PixelMath.ContentRect(1920, 1080, 640, 400, FullscreenScaling.Aspect43);
+        Assert.Equal(1440f, w, 0.01f);
+        Assert.Equal(1080f, h, 0.01f);
+        Assert.Equal(240f, x, 0.01f);
+        Assert.Equal(0f, y, 0.01f);
+    }
+
+    [Fact]
+    public void ContentRect_BoolOverload_MatchesFitAndInteger()
+    {
+        Assert.Equal(PixelMath.ContentRect(1920, 1080, 640, 400, FullscreenScaling.Fit),
+                     PixelMath.ContentRect(1920, 1080, 640, 400, false));
+        Assert.Equal(PixelMath.ContentRect(1920, 1080, 640, 400, FullscreenScaling.Integer),
+                     PixelMath.ContentRect(1920, 1080, 640, 400, true));
+    }
 }

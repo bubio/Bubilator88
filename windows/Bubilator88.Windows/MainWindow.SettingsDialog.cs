@@ -43,11 +43,11 @@ public sealed partial class MainWindow
         KeyMapping.WasdAsNumpad = _wasdAsNumpad;
     }
 
-    /// <summary>Pixel-perfect letterboxing applies only in fullscreen (the windowed
+    /// <summary>Integer and 4:3 layouts apply only in fullscreen (the windowed
     /// view scales are already exact integer multiples of 640×400).</summary>
     private void ApplyIntegerScaling()
     {
-        _screen?.SetIntegerScaling(_fullscreen && _fullscreenIntegerScaling);
+        _screen?.SetScaling(_fullscreen ? _fullscreenScaling : FullscreenScaling.Fit);
         _needsRepresent = true;
         RelayoutOcrOverlay(); // letterbox rect changed — reposition existing OCR boxes
     }
@@ -185,12 +185,17 @@ public sealed partial class MainWindow
         var panel = NewTabPanel();
 
         var caption = Caption(FullscreenScalingCaption());
-        var fit = new RadioButton { Content = "Fit to Screen", GroupName = "Scaling", IsChecked = !_fullscreenIntegerScaling };
-        var integer = new RadioButton { Content = "Integer Scaling", GroupName = "Scaling", IsChecked = _fullscreenIntegerScaling };
-        fit.Checked += (_, _) => { _fullscreenIntegerScaling = false; ApplyIntegerScaling(); SaveSettings(); caption.Text = FullscreenScalingCaption(); };
-        integer.Checked += (_, _) => { _fullscreenIntegerScaling = true; ApplyIntegerScaling(); SaveSettings(); caption.Text = FullscreenScalingCaption(); };
+        RadioButton ScalingRadio(string label, FullscreenScaling mode)
+        {
+            var r = new RadioButton { Content = label, GroupName = "Scaling", IsChecked = _fullscreenScaling == mode };
+            r.Checked += (_, _) => { _fullscreenScaling = mode; ApplyIntegerScaling(); SaveSettings(); caption.Text = FullscreenScalingCaption(); };
+            return r;
+        }
+        var fit = ScalingRadio("Fit to Screen", FullscreenScaling.Fit);
+        var integer = ScalingRadio("Integer Scaling", FullscreenScaling.Integer);
+        var aspect43 = ScalingRadio("Correct Aspect Ratio (4:3)", FullscreenScaling.Aspect43);
 
-        panel.Children.Add(Section("Fullscreen", new[] { (FrameworkElement)fit, integer, caption }));
+        panel.Children.Add(Section("Fullscreen", new[] { (FrameworkElement)fit, integer, aspect43, caption }));
 
         var model = AIModelStore.Quality;
         var modelStatus = Caption(AIModelStore.Shared.IsInstalled(model)
@@ -473,9 +478,12 @@ public sealed partial class MainWindow
     // MARK: - Dynamic caption text
 
     private string FullscreenScalingCaption()
-        => _fullscreenIntegerScaling
-            ? "Pixel-perfect display with black borders. No scaling artifacts."
-            : "Fill the screen as much as possible while maintaining aspect ratio.";
+        => _fullscreenScaling switch
+        {
+            FullscreenScaling.Integer => "Pixel-perfect display with black borders. No scaling artifacts.",
+            FullscreenScaling.Aspect43 => "Stretch vertically by 1.2 to match the pixel shape of 4:3 monitors. Edges stay sharp.",
+            _ => "Fill the screen as much as possible while maintaining aspect ratio.",
+        };
 
     private static string DetectedLayoutCaption()
         => $"Detected: {(KeyMapping.EffectiveLayout() == KeyMapping.KbLayout.Jis ? "JIS" : "US (ANSI)")}";

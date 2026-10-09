@@ -2,6 +2,19 @@ using System;
 
 namespace Bubilator88.Windows;
 
+/// <summary>How the 640×400 image is laid out in the fullscreen panel (mirrors the
+/// macOS FullscreenScaling).</summary>
+internal enum FullscreenScaling
+{
+    /// <summary>Aspect-fit the 16:10 image.</summary>
+    Fit,
+    /// <summary>Whole-number scaling, centred.</summary>
+    Integer,
+    /// <summary>Stretch vertically by 1.2 so pixels match the 4:3 monitors of the
+    /// era (640×400 shown as 640×480), then aspect-fit.</summary>
+    Aspect43,
+}
+
 /// <summary>
 /// Small, dependency-free pixel arithmetic helpers, factored out so they can be
 /// unit-tested in isolation (the call sites live in classes that pull in heavy
@@ -32,8 +45,17 @@ internal static class PixelMath
     /// </summary>
     public static (float x, float y, float w, float h) ContentRect(
         float panelWidth, float panelHeight, float srcWidth, float srcHeight, bool integerScaling)
+        => ContentRect(panelWidth, panelHeight, srcWidth, srcHeight,
+                       integerScaling ? FullscreenScaling.Integer : FullscreenScaling.Fit);
+
+    /// <summary>Vertical stretch applied on top of the aspect-fit (1.2 for 4:3).</summary>
+    public static float VerticalStretch(FullscreenScaling mode)
+        => mode == FullscreenScaling.Aspect43 ? 1.2f : 1f;
+
+    public static (float x, float y, float w, float h) ContentRect(
+        float panelWidth, float panelHeight, float srcWidth, float srcHeight, FullscreenScaling mode)
     {
-        if (integerScaling)
+        if (mode == FullscreenScaling.Integer)
         {
             int scale = (int)Math.Min(panelWidth / srcWidth, panelHeight / srcHeight);
             if (scale >= 1)
@@ -44,7 +66,7 @@ internal static class PixelMath
             }
         }
 
-        float targetAspect = srcWidth / srcHeight;
+        float targetAspect = srcWidth / (srcHeight * VerticalStretch(mode));
         float panelAspect = panelWidth / panelHeight;
         if (panelAspect > targetAspect)
         {
