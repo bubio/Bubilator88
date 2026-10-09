@@ -4,7 +4,7 @@ macOS 版と**同一の Swift エミュレーションコア**を Windows ネイ
 C# + WinUI 3 のシェルから P/Invoke で駆動する移植版。描画は D3D11、音声は XAudio2、
 AI アップスケールは ONNX Runtime + DirectML。
 
-> 全体方針・移植性監査・実装進捗は `../docs/WINDOWS_PORT.md` を参照。
+> 全体方針・移植性監査・実装進捗は `docs/develop/WINDOWS_PORT.md` を参照。
 > このファイルは**ビルドと実行の手順書**。
 
 ## 構成
