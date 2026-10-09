@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/bubio/Bubilator88Core.git",
       "state" : {
-        "revision" : "a860c8de3250b1a7a21aa3e32375345951ce2aa1",
-        "version" : "1.3.0"
+        "revision" : "0f4c18459c609f7044ce597160049a4f88ba08ae",
+        "version" : "1.4.0"
       }
     },
     {
