@@ -130,6 +130,12 @@ internal static unsafe partial class NativeApi
     [LibraryImport(Dll)]
     public static partial int b88_run_frame(IntPtr handle);
 
+    // Apply one group of 88PAR cheat codes once: `count` codes of 6 bytes each
+    // (opcode, area, address LE16, value LE16). Call between frames, from the
+    // thread that runs them. Needs a core with b88_pat_run (1.4.0+).
+    [LibraryImport(Dll)]
+    public static partial void b88_pat_run(IntPtr handle, byte* codes, int count);
+
     // Run slice `index` of `count` slices of the current frame. Returns 1 once
     // the frame has ended (render then, and start the next frame at slice 0),
     // 0 if it hasn't, -1 for a bad handle or an index outside 0..<count. Pace
