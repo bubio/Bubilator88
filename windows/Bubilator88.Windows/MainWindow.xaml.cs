@@ -81,7 +81,7 @@ public sealed partial class MainWindow : Window
     private string _screenshotFormat = "png";        // png/jpeg/heic
     private bool _screenshotAutoSave = true;          // matches macOS Settings.screenshotAutoSave default
     private string? _screenshotDirectory;             // null = default (~/Pictures)
-    private bool _fullscreenIntegerScaling;           // pixel-perfect fullscreen letterbox
+    private FullscreenScaling _fullscreenScaling;     // fullscreen layout: fit / integer / 4:3 pixel aspect
     private int _audioBufferMs = 100;                 // adaptive-rate target latency (20–500)
     private string _keyboardLayout = "auto";          // auto/jis/us
     private bool _arrowKeysAsNumpad;
@@ -1118,7 +1118,8 @@ public sealed partial class MainWindow : Window
         public string ScreenshotFormat { get; set; } = "png";   // png/jpeg/heic
         public bool ScreenshotAutoSave { get; set; } = true;    // matches macOS default (on)
         public string? ScreenshotDirectory { get; set; }        // null = default (~/Pictures)
-        public bool FullscreenIntegerScaling { get; set; }       // matches macOS default (off)
+        public bool FullscreenIntegerScaling { get; set; }       // legacy; read once for migration
+        public string? FullscreenScalingMode { get; set; }       // fit/integer/aspect43; null = legacy file
         public int AudioBufferMs { get; set; } = 100;            // matches macOS default
         public string KeyboardLayout { get; set; } = "auto";     // auto/jis/us
         public bool ArrowKeysAsNumpad { get; set; }
@@ -1160,7 +1161,14 @@ public sealed partial class MainWindow : Window
             _screenshotFormat = NormalizeScreenshotFormat(s.ScreenshotFormat);
             _screenshotAutoSave = s.ScreenshotAutoSave;
             _screenshotDirectory = s.ScreenshotDirectory;
-            _fullscreenIntegerScaling = s.FullscreenIntegerScaling;
+            _fullscreenScaling = s.FullscreenScalingMode switch
+            {
+                "fit" => FullscreenScaling.Fit,
+                "integer" => FullscreenScaling.Integer,
+                "aspect43" => FullscreenScaling.Aspect43,
+                // Before the 4:3 option existed this was a bool.
+                _ => s.FullscreenIntegerScaling ? FullscreenScaling.Integer : FullscreenScaling.Fit,
+            };
             _audioBufferMs = Math.Clamp(s.AudioBufferMs, 20, 500);
             _keyboardLayout = NormalizeKeyboardLayout(s.KeyboardLayout);
             _arrowKeysAsNumpad = s.ArrowKeysAsNumpad;
@@ -1197,7 +1205,12 @@ public sealed partial class MainWindow : Window
                 ScreenshotFormat = _screenshotFormat,
                 ScreenshotAutoSave = _screenshotAutoSave,
                 ScreenshotDirectory = _screenshotDirectory,
-                FullscreenIntegerScaling = _fullscreenIntegerScaling,
+                FullscreenScalingMode = _fullscreenScaling switch
+                {
+                    FullscreenScaling.Integer => "integer",
+                    FullscreenScaling.Aspect43 => "aspect43",
+                    _ => "fit",
+                },
                 AudioBufferMs = _audioBufferMs,
                 KeyboardLayout = _keyboardLayout,
                 ArrowKeysAsNumpad = _arrowKeysAsNumpad,
@@ -1374,12 +1387,12 @@ public sealed partial class MainWindow : Window
         OcrOverlayCanvas.Children.Clear();
         if (_ocrDetections.Count == 0) return;
 
-        // Must match D3DScreen.ApplyIntegerScaling's condition exactly
-        // (pixel-perfect snapping only applies in fullscreen) or the overlay
+        // Must match D3DScreen.SetScaling's condition exactly
+        // (non-fit layouts only apply in fullscreen) or the overlay
         // boxes and the actual rendered content diverge in windowed mode.
         var (x, y, w, h) = PixelMath.ContentRect(
             (float)ScreenPanel.ActualWidth, (float)ScreenPanel.ActualHeight,
-            EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight, _fullscreen && _fullscreenIntegerScaling);
+            EmulatorHost.ScreenWidth, EmulatorHost.ScreenHeight, _fullscreen ? _fullscreenScaling : FullscreenScaling.Fit);
         if (w <= 0 || h <= 0) return;
 
         foreach (OcrDetection d in _ocrDetections)

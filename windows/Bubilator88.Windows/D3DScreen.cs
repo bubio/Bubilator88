@@ -89,6 +89,23 @@ internal sealed unsafe class D3DScreen : IDisposable
             return float4(c.rgb * sl, 1.0);
         }
 
+        // --- Sharp bilinear (fullscreen 4:3) ---
+        // Nearest-neighbour inside each texel, bilinear only across the thin seam
+        // between texels. The 1.2 vertical stretch is not a whole number: plain
+        // nearest repeats every fifth row and plain bilinear blurs every edge.
+        // Always samples with the linear sampler (macOS fragmentSharpBilinear).
+        float4 PSSharpBilinear(VSOut i) : SV_Target {
+            float2 texel = i.uv * textureDimensions;
+            float2 scale = max(outputDimensions / textureDimensions, float2(1.0, 1.0));
+            float2 region = 0.5 - 0.5 / scale;
+            float2 fromCenter = frac(texel) - 0.5;
+            float2 offset = (fromCenter - clamp(fromCenter, -region, region)) * scale + 0.5;
+            float2 uv = (floor(texel) + offset) / textureDimensions;
+            float4 c = Tex.Sample(Smp, uv);
+            float sl = scanlineMultiplier(i.uv);
+            return float4(c.rgb * sl, 1.0);
+        }
+
         // --- Bicubic (Catmull-Rom) ---
         float catmullRomWeight(float x) {
             float ax = abs(x);
@@ -460,6 +477,7 @@ internal sealed unsafe class D3DScreen : IDisposable
 
     private ID3D11VertexShader _vs = null!;
     private ID3D11PixelShader _psNearest = null!;
+    private ID3D11PixelShader _psSharpBilinear = null!;
     private ID3D11PixelShader _psBicubic = null!;
     private ID3D11PixelShader _psCrtAccumulate = null!;
     private ID3D11PixelShader _psCrtComposite = null!;
@@ -480,7 +498,7 @@ internal sealed unsafe class D3DScreen : IDisposable
 
     private ScreenFilter _filter = ScreenFilter.None;
     private bool _scanlineEnabled;
-    private bool _integerScaling;   // pixel-perfect fullscreen viewport (host-controlled)
+    private FullscreenScaling _scaling = FullscreenScaling.Fit;   // fullscreen viewport mode (host-controlled; Fit when windowed)
 
     private int _width;
     private int _height;
@@ -600,7 +618,7 @@ internal sealed unsafe class D3DScreen : IDisposable
     /// of filling to the aspect-fit size. The host enables this only in
     /// fullscreen (the windowed scales are already exact integers).
     /// </summary>
-    public void SetIntegerScaling(bool on) => _integerScaling = on;
+    public void SetScaling(FullscreenScaling mode) => _scaling = mode;
 
     private void CreateRenderTarget()
     {
@@ -669,6 +687,7 @@ internal sealed unsafe class D3DScreen : IDisposable
 
         _vs = _device.CreateVertexShader(Compile("VSMain", "vs_5_0").Span);
         _psNearest = _device.CreatePixelShader(Compile("PSNearest", "ps_5_0").Span);
+        _psSharpBilinear = _device.CreatePixelShader(Compile("PSSharpBilinear", "ps_5_0").Span);
         _psBicubic = _device.CreatePixelShader(Compile("PSBicubic", "ps_5_0").Span);
         _psCrtAccumulate = _device.CreatePixelShader(Compile("PSCRTAccumulate", "ps_5_0").Span);
         _psCrtComposite = _device.CreatePixelShader(Compile("PSCRTComposite", "ps_5_0").Span);
@@ -824,7 +843,7 @@ internal sealed unsafe class D3DScreen : IDisposable
             ScreenFilter.Bicubic => _psBicubic,
             ScreenFilter.Xbrz => _psXbrz,
             ScreenFilter.Enhanced => _psXbrz,   // 400-line Enhanced = xBRZ (no HQ pass)
-            _ => _psNearest,                    // None, Linear
+            _ => UseSharpBilinear ? _psSharpBilinear : _psNearest,   // None, Linear
         };
         bool scanline = _scanlineEnabled && FilterSupportsScanlines(_filter);
         WriteParams(_srcWidth, texH, vw, vh, scanline, texH > 300, false);
@@ -834,7 +853,7 @@ internal sealed unsafe class D3DScreen : IDisposable
         _ctx.RSSetViewport(new Viewport(vx, vy, vw, vh, 0f, 1f));
         _ctx.PSSetShader(ps);
         _ctx.PSSetShaderResource(0, srv);
-        _ctx.PSSetSampler(0, _filter == ScreenFilter.Linear ? _linearSampler : _pointSampler);
+        _ctx.PSSetSampler(0, _filter == ScreenFilter.Linear || UseSharpBilinear ? _linearSampler : _pointSampler);
         SetCb();
         _ctx.Draw(3, 0);
     }
@@ -1087,14 +1106,14 @@ internal sealed unsafe class D3DScreen : IDisposable
                     ScreenFilter.Bicubic => _psBicubic,
                     ScreenFilter.Xbrz or ScreenFilter.Enhanced => _psXbrz,
                     ScreenFilter.Crt => _psNearest,   // no persistence yet → plain
-                    _ => _psNearest,
+                    _ => UseSharpBilinear ? _psSharpBilinear : _psNearest,
                 };
                 bool scanline = _scanlineEnabled && FilterSupportsScanlines(_filter);
                 WriteParams(_srcWidth, texH, width, height, scanline, texH > 300, false);
                 _ctx.OMSetRenderTargets(captureRtv);
                 _ctx.PSSetShader(ps);
                 _ctx.PSSetShaderResource(0, srcSrv);
-                _ctx.PSSetSampler(0, _filter == ScreenFilter.Linear ? _linearSampler : _pointSampler);
+                _ctx.PSSetSampler(0, _filter == ScreenFilter.Linear || UseSharpBilinear ? _linearSampler : _pointSampler);
                 SetCb();
                 _ctx.Draw(3, 0);
             }
@@ -1134,6 +1153,11 @@ internal sealed unsafe class D3DScreen : IDisposable
         }
     }
 
+    // Fullscreen 4:3 stretches 400 rows to 480, which only stays crisp with sharp
+    // bilinear. Filters with their own upscaling are left as they are.
+    private bool UseSharpBilinear
+        => _scaling == FullscreenScaling.Aspect43 && _filter is ScreenFilter.None or ScreenFilter.Linear;
+
     public static bool FilterSupportsScanlines(ScreenFilter f)
         => f is ScreenFilter.None or ScreenFilter.Linear or ScreenFilter.Bicubic;
 
@@ -1144,7 +1168,7 @@ internal sealed unsafe class D3DScreen : IDisposable
     // 16:10). The shared PixelMath.ContentRect formula also backs the OCR
     // overlay's box positioning, so the two stay in sync.
     private (float x, float y, float w, float h) LetterboxViewport()
-        => PixelMath.ContentRect(_width, _height, _srcWidth, _srcHeight, _integerScaling);
+        => PixelMath.ContentRect(_width, _height, _srcWidth, _srcHeight, _scaling);
 
     public void Dispose()
     {
@@ -1160,6 +1184,7 @@ internal sealed unsafe class D3DScreen : IDisposable
         _psCrtAccumulate?.Dispose();
         _psBicubic?.Dispose();
         _psNearest?.Dispose();
+        _psSharpBilinear?.Dispose();
         _vs?.Dispose();
         _persistASrv?.Dispose(); _persistBSrv?.Dispose();
         _persistARtv?.Dispose(); _persistBRtv?.Dispose();
