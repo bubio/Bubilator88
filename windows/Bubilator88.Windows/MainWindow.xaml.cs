@@ -50,6 +50,11 @@ public sealed partial class MainWindow : Window
     private readonly FramePublisher _frames =
         new(EmulatorHost.ScreenWidth * EmulatorHost.ScreenHeight * 4);
     private FrameSlot? _lastFrame;   // newest frame the UI took; valid until the next acquire
+    // Set when the last frame must be presented again without a new one from the
+    // machine (resize, full screen, filter or scaling change). The emulation
+    // thread publishes nothing while paused, and a resized swap chain comes back
+    // blank, so OnRendering would otherwise leave the screen empty (macOS: needsRepresent).
+    private bool _needsRepresent;
     private long _fpsLastPublished;
 
     // FDD LED / sound events, sampled per frame on the emulation thread and
@@ -477,10 +482,16 @@ public sealed partial class MainWindow : Window
         if (_frames.AcquireLatest() is { } frame)
         {
             _lastFrame = frame;
+            _needsRepresent = false;
             _screen.Present(frame.Pixels, frame.Is400Line);
             SampleAndDecayLeds();
             SampleFddSound();
             _ocr.Tick(dt, frame.Pixels);
+        }
+        else if (_needsRepresent && _lastFrame is not null)
+        {
+            _needsRepresent = false;
+            _screen.Present(_lastFrame.Pixels, _lastFrame.Is400Line);
         }
         UpdateFps(dt);
     }
@@ -1395,6 +1406,7 @@ public sealed partial class MainWindow : Window
     {
         var filter = ParseFilter(_videoFilter);
         _screen?.SetFilter(filter, _scanlineEnabled);
+        _needsRepresent = true;
         ScanlineItem.IsEnabled = D3DScreen.FilterSupportsScanlines(filter);
     }
 
@@ -1828,6 +1840,7 @@ public sealed partial class MainWindow : Window
         int w = (int)(ScreenPanel.ActualWidth * ScreenPanel.CompositionScaleX);
         int h = (int)(ScreenPanel.ActualHeight * ScreenPanel.CompositionScaleY);
         _screen.Resize(w, h);
+        _needsRepresent = true;
     }
 
     private bool _fitting;
