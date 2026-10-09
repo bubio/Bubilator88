@@ -154,6 +154,7 @@ public sealed partial class MainWindow : Window
         LoadSettings();
         ApplyKeyboardConfig();   // push layout + numpad-emulation prefs to KeyMapping
         ConfigureFixedSize();
+        AllowOversizeWindow();
         uint dpi = GetDpiForWindow(WindowNative.GetWindowHandle(this));
         ResizeWindow(_windowScale, dpi > 0 ? dpi / 96.0 : 1.0);
 
