@@ -11,7 +11,7 @@ namespace Bubilator88.Windows;
 ///
 /// All buffer-passing entry points take raw pointers so the hot path (render /
 /// audio drain) is zero-copy and allocation-free — see the GC notes in
-/// docs/WINDOWS_PORT.md. We use <see cref="LibraryImportAttribute"/> (source
+/// docs/develop/WINDOWS_PORT.md. We use <see cref="LibraryImportAttribute"/> (source
 /// generated, blittable-only) to avoid the classic Marshal copy.
 /// </summary>
 internal static unsafe partial class NativeApi
