@@ -177,6 +177,14 @@ public sealed partial class MainWindow
             Caption("Applied on next reset."),
         }));
 
+        var updateToggle = Toggle("Check for updates at launch", _automaticUpdateCheck, on =>
+        {
+            _automaticUpdateCheck = on;
+            SaveSettings();
+        });
+        panel.Children.Add(Section("Updates", new FrameworkElement[] { updateToggle },
+            "Looks for a newer release on GitHub at most once a day."));
+
         return panel;
     }
 

@@ -115,6 +115,7 @@
 
             <muxc:MenuBarItem Title="Help">
                 <MenuFlyoutItem Text="About Bubilator88" Click="OnAbout" />
+                <MenuFlyoutItem Text="Check for Updates…" Click="OnCheckForUpdates" />
             </muxc:MenuBarItem>
         </muxc:MenuBar>
 

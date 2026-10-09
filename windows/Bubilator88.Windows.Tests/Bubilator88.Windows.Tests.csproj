@@ -26,6 +26,7 @@
        InternalsVisibleTo. Add more linked files here as testable logic grows. -->
   <ItemGroup>
     <Compile Include="..\Bubilator88.Windows\KeyMapping.cs" Link="Linked\KeyMapping.cs" />
+    <Compile Include="..\Bubilator88.Windows\UpdateFeed.cs" Link="Linked\UpdateFeed.cs" />
     <Compile Include="..\Bubilator88.Windows\PixelMath.cs" Link="Linked\PixelMath.cs" />
     <Compile Include="..\Bubilator88.Windows\AIModelStore.cs" Link="Linked\AIModelStore.cs" />
     <Compile Include="..\Bubilator88.Windows\FramePublisher.cs" Link="Linked\FramePublisher.cs" />

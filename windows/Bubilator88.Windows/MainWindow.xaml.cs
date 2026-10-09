@@ -244,6 +244,7 @@ public sealed partial class MainWindow : Window
             _lastTick = _clock.Elapsed.TotalSeconds;
             CompositionTarget.Rendering += OnRendering;
             Root.Focus(FocusState.Programmatic);
+            CheckForUpdateOnLaunch();
 
             // The window was already sized + locked in the constructor (before it
             // was shown). Here just reflect the saved scale in the View menu and
@@ -1133,6 +1134,10 @@ public sealed partial class MainWindow : Window
         public bool CdMix { get; set; }          // matches macOS Settings.cdMix default (off)
         public bool GameControllerEnabled { get; set; } = true;   // matches macOS Settings.gameControllerEnabled default
         public ControllerButtonMapping? ControllerMapping { get; set; }   // null = use defaults
+        public bool AutomaticUpdateCheck { get; set; } = true;   // matches macOS Settings.automaticUpdateCheck
+        public DateTime? LastUpdateCheck { get; set; }           // UTC
+        public DateTime? UpdateRemindAfter { get; set; }         // UTC
+        public string? SkippedUpdateVersion { get; set; }        // release tag, e.g. win-v1.2.0
     }
 
     private double _volume = 0.5;
@@ -1157,6 +1162,10 @@ public sealed partial class MainWindow : Window
             _monitorType = s.MonitorType == NativeApi.Monitor15kHz ? NativeApi.Monitor15kHz : NativeApi.Monitor24kHz;
             _memoryWaitDip = s.MemoryWaitDip;
             _volume = Math.Clamp(s.Volume, 0.0, 1.0);
+            _automaticUpdateCheck = s.AutomaticUpdateCheck;
+            _lastUpdateCheck = s.LastUpdateCheck;
+            _updateRemindAfter = s.UpdateRemindAfter;
+            _skippedUpdateVersion = s.SkippedUpdateVersion;
             _videoFilter = NormalizeFilter(s.VideoFilter);
             _scanlineEnabled = s.ScanlineEnabled;
             _screenshotFormat = NormalizeScreenshotFormat(s.ScreenshotFormat);
@@ -1195,6 +1204,10 @@ public sealed partial class MainWindow : Window
             File.WriteAllText(SettingsPath, System.Text.Json.JsonSerializer.Serialize(new AppSettings
             {
                 WindowScale = _windowScale,
+                AutomaticUpdateCheck = _automaticUpdateCheck,
+                LastUpdateCheck = _lastUpdateCheck,
+                UpdateRemindAfter = _updateRemindAfter,
+                SkippedUpdateVersion = _skippedUpdateVersion,
                 BootModeIndex = _bootModeIndex,
                 Clock8MHz = _clock8MHz,
                 ExtRamCards = _extRamCards,
