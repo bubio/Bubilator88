@@ -60,6 +60,10 @@
                 <MenuFlyoutSubItem x:Name="RecentSub" Text="Recent Files" />
             </muxc:MenuBarItem>
 
+            <muxc:MenuBarItem x:Name="CheatsMenu" Title="Cheats">
+                <!-- Groups, presets and import are built in code (RebuildCheatMenu). -->
+            </muxc:MenuBarItem>
+
             <muxc:MenuBarItem Title="View">
                 <muxc:RadioMenuFlyoutItem x:Name="Scale1" Text="Actual Size (×1)" GroupName="Scale" Click="OnWindowScale" Tag="1" />
                 <muxc:RadioMenuFlyoutItem x:Name="Scale2" Text="Double Size (×2)" GroupName="Scale"

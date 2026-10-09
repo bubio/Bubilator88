@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Windows.System;
 
 namespace Bubilator88.Windows;
@@ -297,8 +299,33 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// </summary>
     public bool Is400Line { get { lock (SyncRoot) return NativeApi.b88_is_400line(_handle) != 0; } }
 
+    private byte[][] _cheatCodes = Array.Empty<byte[]>();
+
+    /// <summary>The enabled 88PAR groups (packed, see <see cref="PatFile.Pack"/>),
+    /// run once before every frame.</summary>
+    public void SetCheatCodes(IReadOnlyList<byte[]> groups)
+    {
+        lock (SyncRoot) _cheatCodes = groups.ToArray();
+    }
+
+    /// <summary>Run the enabled cheat groups once. Caller holds <see cref="SyncRoot"/>,
+    /// between frames.</summary>
+    private void ApplyCheats()
+    {
+        foreach (byte[] group in _cheatCodes)
+            fixed (byte* p = group)
+                NativeApi.b88_pat_run(_handle, p, group.Length / PatFile.PackedCodeSize);
+    }
+
     /// <summary>Advance the machine by one 1/60s frame (no rendering).</summary>
-    public void RunFrame() { lock (SyncRoot) NativeApi.b88_run_frame(_handle); }
+    public void RunFrame()
+    {
+        lock (SyncRoot)
+        {
+            ApplyCheats();
+            NativeApi.b88_run_frame(_handle);
+        }
+    }
 
     /// <summary>
     /// Run slice <paramref name="index"/> of <paramref name="count"/> roughly
@@ -309,7 +336,11 @@ internal sealed unsafe class EmulatorHost : IDisposable
     /// </summary>
     public bool RunFrameSlice(int index, int count)
     {
-        lock (SyncRoot) return NativeApi.b88_run_frame_slice(_handle, index, count) != 0;
+        lock (SyncRoot)
+        {
+            if (index == 0) ApplyCheats();   // once per frame, before it starts
+            return NativeApi.b88_run_frame_slice(_handle, index, count) != 0;
+        }
     }
 
     /// <summary>

@@ -925,6 +925,7 @@ public sealed partial class MainWindow : Window
         RebuildDriveMenu(1);
         RebuildBothMenu();
         RebuildRecentMenu();
+        RebuildCheatMenu();   // the active set follows the mounted disks
     }
 
     /// Build one drive's submenu: Mount… / Eject / Write Protect, then (when a
