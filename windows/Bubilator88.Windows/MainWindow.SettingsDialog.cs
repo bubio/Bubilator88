@@ -48,6 +48,7 @@ public sealed partial class MainWindow
     private void ApplyIntegerScaling()
     {
         _screen?.SetIntegerScaling(_fullscreen && _fullscreenIntegerScaling);
+        _needsRepresent = true;
         RelayoutOcrOverlay(); // letterbox rect changed — reposition existing OCR boxes
     }
 
