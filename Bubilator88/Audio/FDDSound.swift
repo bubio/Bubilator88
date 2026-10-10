@@ -19,17 +19,17 @@ final class FDDSound {
   private var engine: AVAudioEngine?
   private let configurationRecovery = AudioConfigurationRecovery()
   /// Per-drive player nodes (drive 0, drive 1)
-  private var playerNodes: [AVAudioPlayerNode] = []
+  nonisolated(unsafe) private var playerNodes: [AVAudioPlayerNode] = []
 
   /// Pre-generated stereo PCM buffers per drive [drive][soundType]
   private var seekStepBuffers: [AVAudioPCMBuffer] = []
   private var readAccessBuffers: [AVAudioPCMBuffer] = []
   /// Cassette deck: one second of seamless motor hum, and the relay click
   /// that marks the motor starting and stopping.
-  private var tapeMotorLoopBuffer: AVAudioPCMBuffer?
-  private var tapeClickBuffer: AVAudioPCMBuffer?
+  nonisolated(unsafe) private var tapeMotorLoopBuffer: AVAudioPCMBuffer?
+  nonisolated(unsafe) private var tapeClickBuffer: AVAudioPCMBuffer?
   /// Index of the data recorder's player node (after the two drives).
-  private static let tapeNodeIndex = 2
+  nonisolated private static let tapeNodeIndex = 2
 
   private let sampleRate: Double = 44100
   /// Accessed from both the main and the emulation thread. `Atomic` makes that
@@ -381,7 +381,7 @@ final class FDDSound {
   /// Follow the cassette motor (called from the emulation thread once per
   /// step). A relay click and the looping hum start with the motor; a click
   /// ends it.
-  func updateTapeMotor(running: Bool) {
+  nonisolated func updateTapeMotor(running: Bool) {
     guard isEnabled, Self.tapeNodeIndex < playerNodes.count,
           let click = tapeClickBuffer, let loop = tapeMotorLoopBuffer else { return }
     guard running != tapeMotorSounding else { return }
