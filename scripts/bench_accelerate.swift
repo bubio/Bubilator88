@@ -1,6 +1,6 @@
 // Microbenchmark: AIUpscaler の変換ループ (スカラー現行版 vs Accelerate 版)
 //
-// 調査の背景と結論は docs/ACCELERATE_EVALUATION.md を参照。
+// 調査の背景と結論は docs/develop/ACCELERATE_EVALUATION.md を参照。
 //
 // 対象:
 //   A) processMultiArrayOutput: CHW planar float(16/32) [0,1] -> BGRA8888
