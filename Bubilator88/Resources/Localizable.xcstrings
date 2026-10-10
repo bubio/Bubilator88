@@ -72,6 +72,17 @@
         }
       }
     },
+    "Tape Auto Boot stopped" : {
+      "comment" : "Toast",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テープの自動起動を中止しました"
+          }
+        }
+      }
+    },
     "“%@” is not a control-zone layout file." : {
       "localizations" : {
         "ja" : {

@@ -100,14 +100,28 @@ extension EmulatorViewModel {
   /// directly rather than through `emuQueue`.
   nonisolated func tickTapeAutoBoot() {
     pasteQueueLock.lock()
-    defer { pasteQueueLock.unlock() }
-    guard tapeAutoBoot.isActive else { return }
+    guard tapeAutoBoot.isActive else {
+      pasteQueueLock.unlock()
+      return
+    }
     if let text = tapeAutoBoot.tick(
       motorRunning: pc88.isTapeMotorRunning,
+      tapeProgress: pc88.tapeProgress,
       typingIdle: pasteQueue.isEmpty,
       screen: { pc88.copyTextAsUnicode() }
     ) {
       pasteQueue.enqueue(text)
+    }
+    var stopped = false
+    if case .failed = tapeAutoBoot.phase { stopped = true }
+    pasteQueueLock.unlock()
+
+    // It stopped without sending RUN. BASIC may well be stuck mid-load, so say
+    // so rather than leave the user watching a screen that never changes.
+    if stopped {
+      DispatchQueue.main.async { [weak self] in
+        self?.showToast(String(localized: "Tape Auto Boot stopped", comment: "Toast"))
+      }
     }
   }
 
