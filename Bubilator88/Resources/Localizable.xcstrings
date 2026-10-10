@@ -2300,12 +2300,12 @@
         }
       }
     },
-    "Enable FDD Sound" : {
+    "Enable FDD/CMT Sound" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "FDDサウンドを有効にする"
+            "value" : "FDD/CMTサウンドを有効にする"
           }
         }
       }
@@ -2617,12 +2617,12 @@
         }
       }
     },
-    "FDD Sound" : {
+    "FDD/CMT Sound" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "FDDサウンド"
+            "value" : "FDD/CMTサウンド"
           }
         }
       }
@@ -6086,12 +6086,12 @@
         }
       }
     },
-    "Synthesized floppy disk seek and read sounds with stereo drive separation." : {
+    "Plays floppy drive and data recorder operation sounds." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "合成によるフロッピーディスクのシーク/リード音をステレオで再生します。"
+            "value" : "フロッピードライブとデータレコーダーの動作音を再生します。"
           }
         }
       }

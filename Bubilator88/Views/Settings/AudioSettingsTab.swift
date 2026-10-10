@@ -23,8 +23,8 @@ struct AudioSettingsTab: View {
           .settingsDescriptionStyle()
       }
 
-      Section("FDD Sound") {
-        Toggle("Enable FDD Sound", isOn: fddSoundBinding)
+      Section("FDD/CMT Sound") {
+        Toggle("Enable FDD/CMT Sound", isOn: fddSoundBinding)
         Picker("Volume", selection: fddVolumeLevelBinding) {
           Image(systemName: "speaker.wave.1").tag(0)
           Image(systemName: "speaker.wave.2").tag(1)
@@ -37,7 +37,7 @@ struct AudioSettingsTab: View {
           }
         }
         .pickerStyle(.menu)
-        Text("Synthesized floppy disk seek and read sounds with stereo drive separation.")
+        Text("Plays floppy drive and data recorder operation sounds.")
           .settingsDescriptionStyle()
       }
       .task {

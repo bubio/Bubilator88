@@ -3,13 +3,13 @@ import CoreAudio
 import Logging
 import Synchronization
 
-/// Synthesized floppy disk drive and cassette deck sounds.
+/// Synthesized floppy disk drive and data recorder sounds.
 ///
 /// Generates seek step (head movement) and read/write (head activity) sounds,
 /// plus the data recorder's motor hum and relay click, programmatically — no
 /// external audio files needed.
 /// Uses a dedicated AVAudioEngine with per-drive AVAudioPlayerNodes and one
-/// more for the cassette deck.
+/// more for the data recorder.
 /// Drive identification is baked into stereo buffers (drive 0 = left-leaning,
 /// drive 1 = right-leaning).
 final class FDDSound {
@@ -28,7 +28,7 @@ final class FDDSound {
   /// that marks the motor starting and stopping.
   private var tapeMotorLoopBuffer: AVAudioPCMBuffer?
   private var tapeClickBuffer: AVAudioPCMBuffer?
-  /// Index of the cassette deck's player node (after the two drives).
+  /// Index of the data recorder's player node (after the two drives).
   private static let tapeNodeIndex = 2
 
   private let sampleRate: Double = 44100
