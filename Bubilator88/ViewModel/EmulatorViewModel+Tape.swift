@@ -62,8 +62,9 @@ extension EmulatorViewModel {
     mountTape(url: url)
   }
 
-  /// Boot the mounted tape (Tape > Auto Boot does this on every open): eject the disks, reset into N88-BASIC V1S, then
-  /// type `LOAD "CAS:"` and, once it has loaded, `RUN`.
+  /// Boot the mounted tape (Tape > Auto Boot does this on every open): eject
+  /// the disks, reset into N88-BASIC V1S, then type `LOAD "CAS:"` and, once it
+  /// has loaded, `RUN`.
   ///
   /// V1S rather than the current mode because the tape routine is the same in
   /// every N88-BASIC mode and V1S is the one that gets to the prompt without
@@ -79,6 +80,17 @@ extension EmulatorViewModel {
     pasteQueueLock.lock()
     tapeAutoBoot.start()
     pasteQueueLock.unlock()
+    // The sequencer is ticked by the frame loop, so a machine that is paused,
+    // or has not been started yet, has to run for it to get anywhere.
+    resume()
+  }
+
+  /// The Tape > Auto Boot check, shared by the menu bar and the status bar.
+  var tapeAutoBootBinding: Binding<Bool> {
+    Binding(
+      get: { Settings.shared.tapeAutoBoot },
+      set: { Settings.shared.tapeAutoBoot = $0 }
+    )
   }
 
   /// Whether Auto Boot is still running.
