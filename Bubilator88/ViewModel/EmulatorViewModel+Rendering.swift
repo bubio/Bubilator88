@@ -58,6 +58,7 @@ extension EmulatorViewModel {
       // changes when software reprograms the CRTC (a 20-row screen on a 24kHz
       // monitor is 56.4Hz, a 25-row one 55.4Hz) — reading it here keeps the
       // pacer correct without the host having to be told.
+      fddSound.updateTapeMotor(running: pc88.isTapeMotorRunning)
       let rate = pc88.frameRate
       if rate > 0 {
         let ticksPerFrame = sliced ? Double(Self.audioSlicesPerFrame) : 1
