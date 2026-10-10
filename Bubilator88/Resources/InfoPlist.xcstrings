@@ -1,13 +1,13 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Bubilator88 Control Zone Layout" : {
+
+    },
     "Bubilator88 Save State" : {
 
     },
     "Bubilator88 Timeline Script" : {
-
-    },
-    "D88 Disk Image" : {
 
     },
     "CFBundleName" : {
@@ -21,6 +21,9 @@
           }
         }
       }
+    },
+    "D88 Disk Image" : {
+
     },
     "NSHumanReadableCopyright" : {
       "comment" : "Copyright (human-readable)",
