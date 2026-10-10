@@ -58,6 +58,7 @@ extension EmulatorViewModel {
       // changes when software reprograms the CRTC (a 20-row screen on a 24kHz
       // monitor is 56.4Hz, a 25-row one 55.4Hz) — reading it here keeps the
       // pacer correct without the host having to be told.
+      fddSound.updateTapeMotor(running: pc88.isTapeMotorRunning)
       let rate = pc88.frameRate
       if rate > 0 {
         let ticksPerFrame = sliced ? Double(Self.audioSlicesPerFrame) : 1
@@ -99,6 +100,7 @@ extension EmulatorViewModel {
     }
     for _ in 0..<frameCount {
       tickPasteQueue()
+      tickTapeAutoBoot()
       tickClickZonePlayer()
       tickScriptPlayer()
       applyCheats()
@@ -129,6 +131,7 @@ extension EmulatorViewModel {
     if frameSliceIndex == 0 {
       applyPendingInput()
       tickPasteQueue()
+      tickTapeAutoBoot()
       tickClickZonePlayer()
       tickScriptPlayer()
       applyCheats()
@@ -234,8 +237,10 @@ extension EmulatorViewModel {
         guard let self else { return }
         self.drive0Access = d0
         self.drive1Access = d1
-        self.tapeProgress = tapeProgressSample
-        self.isTapeMounted = tapeMountedSample
+        // Written only on change: an Observable property notifies on every
+        // set, and a stopped tape would otherwise invalidate views at 4Hz.
+        if self.tapeProgress != tapeProgressSample { self.tapeProgress = tapeProgressSample }
+        if self.isTapeMounted != tapeMountedSample { self.isTapeMounted = tapeMountedSample }
 
         // Refresh the loop's snapshot of main-actor UI settings. The display
         // ones also have immediate hooks; this covers the rest (haptics) and

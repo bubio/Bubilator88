@@ -3,11 +3,13 @@ import CoreAudio
 import Logging
 import Synchronization
 
-/// Synthesized floppy disk drive access sounds.
+/// Synthesized floppy disk drive and data recorder sounds.
 ///
-/// Generates seek step (head movement) and read/write (head activity) sounds
-/// programmatically — no external audio files needed.
-/// Uses a dedicated AVAudioEngine with per-drive AVAudioPlayerNodes.
+/// Generates seek step (head movement) and read/write (head activity) sounds,
+/// plus the data recorder's motor hum and relay click, programmatically — no
+/// external audio files needed.
+/// Uses a dedicated AVAudioEngine with per-drive AVAudioPlayerNodes and one
+/// more for the data recorder.
 /// Drive identification is baked into stereo buffers (drive 0 = left-leaning,
 /// drive 1 = right-leaning).
 final class FDDSound {
@@ -22,6 +24,12 @@ final class FDDSound {
   /// Pre-generated stereo PCM buffers per drive [drive][soundType]
   private var seekStepBuffers: [AVAudioPCMBuffer] = []
   private var readAccessBuffers: [AVAudioPCMBuffer] = []
+  /// Cassette deck: one second of seamless motor hum, and the relay click
+  /// that marks the motor starting and stopping.
+  private var tapeMotorLoopBuffer: AVAudioPCMBuffer?
+  private var tapeClickBuffer: AVAudioPCMBuffer?
+  /// Index of the data recorder's player node (after the two drives).
+  private static let tapeNodeIndex = 2
 
   private let sampleRate: Double = 44100
   /// Accessed from both the main and the emulation thread. `Atomic` makes that
@@ -88,6 +96,67 @@ final class FDDSound {
       seekStepBuffers.append(applyStereoPan(mono: monoSeek, gain: driveGain[i], format: format))
       readAccessBuffers.append(applyStereoPan(mono: monoRead, gain: driveGain[i], format: format))
     }
+    // The hum sits well under the click: it runs for the whole load.
+    tapeMotorLoopBuffer = applyStereoPan(
+      mono: generateTapeMotorLoopMono(), gain: (l: 0.22, r: 0.22), format: format)
+    tapeClickBuffer = applyStereoPan(
+      mono: generateTapeClickMono(), gain: (l: 0.9, r: 0.9), format: format)
+  }
+
+  /// Generate one second of mechanical motor whine.
+  ///
+  /// A small DC motor reads as a stack of harmonics rather than hiss, so the
+  /// sound is a few sines with a slow amplitude wobble from the capstan
+  /// rotation, and only a trace of low-passed noise. Every sine and the wobble
+  /// complete a whole number of cycles in the second, so they repeat exactly.
+  /// The noise is made periodic by running its low-pass over the white noise
+  /// twice and keeping the second pass: that pass starts from the state the
+  /// first one ended in, so the wrap from the last frame to the first is a
+  /// step the filter itself would take.
+  private func generateTapeMotorLoopMono() -> [Float] {
+    let frameCount = Int(sampleRate)
+    var rng: UInt32 = 424242
+    var white = [Float](repeating: 0, count: frameCount)
+    for i in 0..<frameCount {
+      rng = rng &* 1103515245 &+ 12345
+      white[i] = Float(rng >> 16) / 32768.0 - 1.0
+    }
+    var noise = [Float](repeating: 0, count: frameCount)
+    var lp: Float = 0
+    for pass in 0..<2 {
+      for i in 0..<frameCount {
+        lp += 0.05 * (white[i] - lp)
+        if pass == 1 { noise[i] = lp }
+      }
+    }
+    var samples = [Float](repeating: 0, count: frameCount)
+    for i in 0..<frameCount {
+      let t = Double(i) / sampleRate
+      let wobble = 1.0 + 0.25 * sin(2.0 * .pi * 6.0 * t) + 0.1 * sin(2.0 * .pi * 17.0 * t)
+      let tone = sin(2.0 * .pi * 90.0 * t) * 0.5
+        + sin(2.0 * .pi * 180.0 * t) * 0.3
+        + sin(2.0 * .pi * 540.0 * t) * 0.12
+        + sin(2.0 * .pi * 1260.0 * t) * 0.05
+      samples[i] = Float(tone * wobble) + noise[i] * 0.1
+    }
+    return samples
+  }
+
+  /// Generate the mono relay click (~25ms: sharp tick, then a short thunk).
+  private func generateTapeClickMono() -> [Float] {
+    let duration = 0.025
+    let frameCount = Int(sampleRate * duration)
+    var samples = [Float](repeating: 0, count: frameCount)
+    var rng: UInt32 = 98765
+    for i in 0..<frameCount {
+      let t = Double(i) / sampleRate
+      rng = rng &* 1103515245 &+ 12345
+      let noise = Float(rng >> 16) / 32768.0 - 1.0
+      let tick = exp(-t / 0.0015) * Double(noise) * 0.5
+      let thunk = exp(-t / 0.008) * sin(2.0 * .pi * 90.0 * t) * 0.6
+      samples[i] = Float(tick + thunk)
+    }
+    return samples
   }
 
   /// Apply stereo panning to a mono sample array, producing a stereo AVAudioPCMBuffer.
@@ -156,7 +225,7 @@ final class FDDSound {
     setOutputDevice(uid: outputDeviceUID, on: engine)
 
     var nodes: [AVAudioPlayerNode] = []
-    for _ in 0..<2 {
+    for _ in 0..<3 {
       let player = AVAudioPlayerNode()
       player.volume = volume
       engine.attach(player)
@@ -277,6 +346,7 @@ final class FDDSound {
     playerNodes = []
     engine = nil
     isEnabled = false
+    tapeMotorSounding = false
   }
 
   // MARK: - Playback Triggers
@@ -301,5 +371,28 @@ final class FDDSound {
     guard now - lastReadAccessTime[drive] >= readAccessMinInterval else { return }
     lastReadAccessTime[drive] = now
     playerNodes[drive].scheduleBuffer(readAccessBuffers[drive], completionHandler: nil)
+  }
+
+  /// Whether the motor loop is currently scheduled. Emulation-thread
+  /// confined like `lastReadAccessTime`; `stop()` resets it so a restarted
+  /// engine picks the loop up again.
+  nonisolated(unsafe) private var tapeMotorSounding = false
+
+  /// Follow the cassette motor (called from the emulation thread once per
+  /// step). A relay click and the looping hum start with the motor; a click
+  /// ends it.
+  func updateTapeMotor(running: Bool) {
+    guard isEnabled, Self.tapeNodeIndex < playerNodes.count,
+          let click = tapeClickBuffer, let loop = tapeMotorLoopBuffer else { return }
+    guard running != tapeMotorSounding else { return }
+    tapeMotorSounding = running
+    let node = playerNodes[Self.tapeNodeIndex]
+    // Stopping the node drops whatever is still queued, loop included.
+    node.stop()
+    node.play()
+    node.scheduleBuffer(click, completionHandler: nil)
+    if running {
+      node.scheduleBuffer(loop, at: nil, options: .loops, completionHandler: nil)
+    }
   }
 }

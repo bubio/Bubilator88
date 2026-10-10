@@ -143,7 +143,7 @@ struct DiskCommands: Commands {
 
     CommandMenu("Tape") {
       Group {
-        Text(viewModel.tapeDisplayLabel).disabled(true)
+        Text(viewModel.tapeName).disabled(true)
 
         Divider()
 
@@ -157,6 +157,8 @@ struct DiskCommands: Commands {
           }
         }
         .keyboardShortcut("t", modifiers: [.command, .shift])
+
+        Toggle("Auto Boot", isOn: viewModel.tapeAutoBootBinding)
 
         Button {
           viewModel.rewindTape()

@@ -546,11 +546,18 @@ struct ContentView: View {
     .help("Drive \(drive + 1)")
   }
 
+  /// Tooltip detail: the tape name, with its position once one is mounted.
+  /// Kept a single string so the tooltip stays the one `Tape: %@` catalog key.
+  private var tapeTooltipDetail: String {
+    viewModel.isTapeMounted
+      ? "\(viewModel.tapeName) : \(viewModel.tapePositionLabel)" : viewModel.tapeName
+  }
+
   @ViewBuilder
   private var tapeMenu: some View {
     let loaded = viewModel.isTapeMounted
     Menu {
-      Text(viewModel.tapeDisplayLabel).disabled(true)
+      Text(viewModel.tapeName).disabled(true)
 
       Divider()
 
@@ -559,6 +566,8 @@ struct ContentView: View {
       } label: {
         Label("Open...", systemImage: "doc")
       }
+
+      Toggle("Auto Boot", isOn: viewModel.tapeAutoBootBinding)
 
       Button {
         viewModel.rewindTape()
@@ -574,13 +583,23 @@ struct ContentView: View {
       }
       .disabled(!loaded)
     } label: {
-      Image("Cassete")
-        .renderingMode(.template)
-        .resizable()
-        .frame(width: 12, height: 12)
+      HStack(spacing: 3) {
+        Image("Cassete")
+          .renderingMode(.template)
+          .resizable()
+          .frame(width: 12, height: 12)
+        if loaded {
+          // Lowest priority: the tooltip carries the same figure, so this is
+          // the first thing to give way when the bar runs short of room.
+          Text(viewModel.tapePositionLabel)
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+            .layoutPriority(-1)
+        }
+      }
     }
     .menuStyle(.borderlessButton)
-    .help("Tape: \(viewModel.tapeDisplayLabel)")
+    .help("Tape: \(tapeTooltipDetail)")
   }
 
   private func driveLED(access: Bool) -> some View {

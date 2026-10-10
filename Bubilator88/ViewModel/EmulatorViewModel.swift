@@ -514,10 +514,11 @@ final class EmulatorViewModel {
   /// rewind restoring a state with a different tape — still show up.
   var isTapeMounted: Bool = false
 
-  /// Menu-friendly label: "name : NN%" when mounted, otherwise "Empty".
-  var tapeDisplayLabel: String {
-    guard isTapeMounted else { return tapeName }
-    return "\(tapeName) : \(Int((tapeProgress * 100).rounded()))%"
+  /// Tape position as "NN%", for the status bar only. Menus show just the
+  /// tape name: reading `tapeProgress` there re-evaluated them at the 4Hz
+  /// sampler rate, which got in the way of using an open menu.
+  var tapePositionLabel: String {
+    "\(Int((tapeProgress * 100).rounded()))%"
   }
 
   /// Disk access LED indicators (true = active this frame)
@@ -804,6 +805,10 @@ final class EmulatorViewModel {
   /// Paste queue that replays clipboard text as simulated keystrokes.
   @ObservationIgnored nonisolated(unsafe) let pasteQueue = TextPasteQueue()
   @ObservationIgnored nonisolated let pasteQueueLock = NSLock()
+
+  /// Types `LOAD "CAS:"` and `RUN` for Tape > Auto Boot. It types through
+  /// `pasteQueue` and is ticked next to it; both share `pasteQueueLock`.
+  @ObservationIgnored nonisolated(unsafe) let tapeAutoBoot = TapeAutoBoot()
 
   /// Plays the key sequence of a clicked control zone; ticked next to the paste
   /// queue. Carries its own lock.
@@ -1926,7 +1931,8 @@ final class EmulatorViewModel {
     // ESC during an in-flight clipboard paste cancels the paste and is
     // swallowed, matching X88000M. Otherwise ESC reaches the emulator
     // normally (PC88Key.esc at row 9 / bit 7).
-    if keyCode == 0x35 && !pasteQueue.isEmpty {
+    // Tape Auto Boot counts too: between typing LOAD and RUN the queue is empty.
+    if keyCode == 0x35 && (!pasteQueue.isEmpty || isTapeAutoBootActive) {
       cancelPasteQueue()
       return
     }

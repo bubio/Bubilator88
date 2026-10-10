@@ -32,6 +32,8 @@ extension EmulatorViewModel {
     var events: [TextPasteQueue.KeyEvent] = []
     pasteQueueLock.lock()
     pasteQueue.cancel { events.append($0) }
+    // Whatever cancels typing cancels Auto Boot with it: ESC, a reset.
+    tapeAutoBoot.cancel()
     pasteQueueLock.unlock()
 
     for event in events {

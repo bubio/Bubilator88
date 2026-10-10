@@ -10,7 +10,8 @@ extension EmulatorViewModel {
   /// containing one). Multi-entry archives mount the first hit — PC-88
   /// tape ZIPs in the wild are almost always single-file so a picker
   /// isn't justified here.
-  func mountTape(url: URL) {
+  @discardableResult
+  func mountTape(url: URL) -> Bool {
     let accessing = url.startAccessingSecurityScopedResource()
     defer { if accessing { url.stopAccessingSecurityScopedResource() } }
     guard let data = try? Data(contentsOf: url) else {
@@ -18,7 +19,7 @@ extension EmulatorViewModel {
         title: String(localized: "Tape Load Error", comment: ""),
         message: "Could not read \(url.lastPathComponent)"
       )
-      return
+      return false
     }
     // Unwrap archive if present.
     var tapeData = data
@@ -28,7 +29,7 @@ extension EmulatorViewModel {
           title: String(localized: "Tape Load Error", comment: ""),
           message: "No .cmt or .t88 found in \(url.lastPathComponent)"
         )
-        return
+        return false
       }
       tapeData = first.data
     }
@@ -43,6 +44,9 @@ extension EmulatorViewModel {
     // Set here rather than waiting for the 4Hz sampler, so the menus and the
     // status bar update on the same run loop turn as the mount.
     isTapeMounted = true
+    // Every way of opening a tape ends here, the picker and Recent Files alike.
+    if Settings.shared.tapeAutoBoot { startTapeAutoBoot() }
+    return true
   }
 
   /// Mount a previously-remembered tape via its security-scoped bookmark.
@@ -58,6 +62,81 @@ extension EmulatorViewModel {
     mountTape(url: url)
   }
 
+  /// Boot the mounted tape (Tape > Auto Boot does this on every open): eject
+  /// the disks, reset into N88-BASIC V1S, then type `LOAD "CAS:"` and, once it
+  /// has loaded, `RUN`.
+  ///
+  /// V1S rather than the current mode because the tape routine is the same in
+  /// every N88-BASIC mode and V1S is the one that gets to the prompt without
+  /// a disk. The mode stays V1S afterwards.
+  func startTapeAutoBoot() {
+    guard isTapeMounted else { return }
+    ejectDisk(drive: 0)
+    ejectDisk(drive: 1)
+    rewindTape()
+    // Resets the machine, and the reset cancels anything in flight, so the
+    // sequencer is started only afterwards.
+    bootMode = .n88v1s
+    pasteQueueLock.lock()
+    tapeAutoBoot.start()
+    pasteQueueLock.unlock()
+    // The sequencer is ticked by the frame loop, so a machine that is paused,
+    // or has not been started yet, has to run for it to get anywhere.
+    resume()
+  }
+
+  /// The Tape > Auto Boot check, shared by the menu bar and the status bar.
+  var tapeAutoBootBinding: Binding<Bool> {
+    Binding(
+      get: { Settings.shared.tapeAutoBoot },
+      set: { Settings.shared.tapeAutoBoot = $0 }
+    )
+  }
+
+  /// Whether Auto Boot is still running.
+  var isTapeAutoBootActive: Bool {
+    pasteQueueLock.lock()
+    defer { pasteQueueLock.unlock() }
+    return tapeAutoBoot.isActive
+  }
+
+  /// Stop an Auto Boot in progress. Nothing already typed is taken back.
+  func cancelTapeAutoBoot() {
+    pasteQueueLock.lock()
+    tapeAutoBoot.cancel()
+    pasteQueueLock.unlock()
+  }
+
+  /// Advance Auto Boot by one frame. Called from the frame loop right after
+  /// `tickPasteQueue()`, on the emulation thread, so the machine is read
+  /// directly rather than through `emuQueue`.
+  nonisolated func tickTapeAutoBoot() {
+    pasteQueueLock.lock()
+    guard tapeAutoBoot.isActive else {
+      pasteQueueLock.unlock()
+      return
+    }
+    if let text = tapeAutoBoot.tick(
+      motorRunning: pc88.isTapeMotorRunning,
+      tapeProgress: pc88.tapeProgress,
+      typingIdle: pasteQueue.isEmpty,
+      screen: { pc88.copyTextAsUnicode() }
+    ) {
+      pasteQueue.enqueue(text)
+    }
+    var stopped = false
+    if case .failed = tapeAutoBoot.phase { stopped = true }
+    pasteQueueLock.unlock()
+
+    // It stopped without sending RUN. BASIC may well be stuck mid-load, so say
+    // so rather than leave the user watching a screen that never changes.
+    if stopped {
+      DispatchQueue.main.async { [weak self] in
+        self?.showToast(String(localized: "Tape Auto Boot stopped", comment: "Toast"))
+      }
+    }
+  }
+
   /// Rewind tape to the beginning (keep it loaded).
   func rewindTape() {
     emuQueue.sync {
@@ -68,6 +147,7 @@ extension EmulatorViewModel {
 
   /// Eject the currently-loaded tape.
   func ejectTape() {
+    cancelTapeAutoBoot()
     emuQueue.sync {
       pc88.ejectTape()
     }
