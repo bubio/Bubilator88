@@ -143,7 +143,7 @@ struct DiskCommands: Commands {
 
     CommandMenu("Tape") {
       Group {
-        Text(viewModel.tapeDisplayLabel).disabled(true)
+        Text(viewModel.tapeName).disabled(true)
 
         Divider()
 
