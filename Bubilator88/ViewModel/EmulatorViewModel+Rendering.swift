@@ -100,6 +100,7 @@ extension EmulatorViewModel {
     }
     for _ in 0..<frameCount {
       tickPasteQueue()
+      tickTapeAutoBoot()
       tickClickZonePlayer()
       tickScriptPlayer()
       applyCheats()
@@ -130,6 +131,7 @@ extension EmulatorViewModel {
     if frameSliceIndex == 0 {
       applyPendingInput()
       tickPasteQueue()
+      tickTapeAutoBoot()
       tickClickZonePlayer()
       tickScriptPlayer()
       applyCheats()

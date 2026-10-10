@@ -62,6 +62,16 @@
         }
       }
     },
+    "Auto Boot" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動起動"
+          }
+        }
+      }
+    },
     "“%@” is not a control-zone layout file." : {
       "localizations" : {
         "ja" : {

@@ -158,6 +158,11 @@ struct DiskCommands: Commands {
         }
         .keyboardShortcut("t", modifiers: [.command, .shift])
 
+        Toggle("Auto Boot", isOn: Binding(
+          get: { Settings.shared.tapeAutoBoot },
+          set: { Settings.shared.tapeAutoBoot = $0 }
+        ))
+
         Button {
           viewModel.rewindTape()
         } label: {

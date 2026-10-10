@@ -806,6 +806,10 @@ final class EmulatorViewModel {
   @ObservationIgnored nonisolated(unsafe) let pasteQueue = TextPasteQueue()
   @ObservationIgnored nonisolated let pasteQueueLock = NSLock()
 
+  /// Types `LOAD "CAS:"` and `RUN` for Tape > Auto Boot. It types through
+  /// `pasteQueue` and is ticked next to it; both share `pasteQueueLock`.
+  @ObservationIgnored nonisolated(unsafe) let tapeAutoBoot = TapeAutoBoot()
+
   /// Plays the key sequence of a clicked control zone; ticked next to the paste
   /// queue. Carries its own lock.
   @ObservationIgnored nonisolated let clickZonePlayer = ClickZonePlayer()
@@ -1927,7 +1931,8 @@ final class EmulatorViewModel {
     // ESC during an in-flight clipboard paste cancels the paste and is
     // swallowed, matching X88000M. Otherwise ESC reaches the emulator
     // normally (PC88Key.esc at row 9 / bit 7).
-    if keyCode == 0x35 && !pasteQueue.isEmpty {
+    // Tape Auto Boot counts too: between typing LOAD and RUN the queue is empty.
+    if keyCode == 0x35 && (!pasteQueue.isEmpty || isTapeAutoBootActive) {
       cancelPasteQueue()
       return
     }

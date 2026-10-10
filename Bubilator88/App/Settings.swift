@@ -40,6 +40,7 @@ final class Settings {
 
     // UI
     static let showDebugMenu             = "showDebugMenu"
+    static let tapeAutoBoot              = "tapeAutoBoot"
     static let resetAnimationEnabled     = "resetAnimationEnabled"
     static let showTapeInStatusBar       = "showTapeInStatusBar"
 
@@ -170,6 +171,12 @@ final class Settings {
   /// Show the Develop menu in the menu bar.
   var showDebugMenu: Bool = false {
     didSet { UserDefaults.standard.set(showDebugMenu, forKey: Keys.showDebugMenu) }
+  }
+
+  /// Boot a cassette as soon as it is opened: eject the disks, reset into
+  /// V1S, `LOAD "CAS:"` and `RUN` (Tape > Auto Boot).
+  var tapeAutoBoot: Bool = false {
+    didSet { UserDefaults.standard.set(tapeAutoBoot, forKey: Keys.tapeAutoBoot) }
   }
 
   /// Play a Thanos-style dissolve animation when the user resets the machine.
@@ -653,6 +660,9 @@ final class Settings {
     if let v = UserDefaults.standard.object(forKey: Keys.extramCards) as? Int,
        [0, 1, 8].contains(v) {
       extramCards = v
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.tapeAutoBoot) as? Bool {
+      tapeAutoBoot = v
     }
     if let v = UserDefaults.standard.object(forKey: Keys.showDebugMenu) as? Bool {
       showDebugMenu = v

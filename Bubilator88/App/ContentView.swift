@@ -546,6 +546,13 @@ struct ContentView: View {
     .help("Drive \(drive + 1)")
   }
 
+  private var autoBootBinding: Binding<Bool> {
+    Binding(
+      get: { Settings.shared.tapeAutoBoot },
+      set: { Settings.shared.tapeAutoBoot = $0 }
+    )
+  }
+
   /// Tooltip detail: the tape name, with its position once one is mounted.
   /// Kept a single string so the tooltip stays the one `Tape: %@` catalog key.
   private var tapeTooltipDetail: String {
@@ -566,6 +573,8 @@ struct ContentView: View {
       } label: {
         Label("Open...", systemImage: "doc")
       }
+
+      Toggle("Auto Boot", isOn: autoBootBinding)
 
       Button {
         viewModel.rewindTape()
