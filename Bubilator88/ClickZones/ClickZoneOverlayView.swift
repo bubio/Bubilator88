@@ -29,17 +29,19 @@ private struct ClickZonePlayLayer: View {
   @State private var hovered: UUID?
 
   var body: some View {
+    let focusedID = viewModel.focusedClickZoneID
+    let alwaysVisible = Settings.shared.clickZonesAlwaysVisible
+    let navigating = viewModel.controlZonesUseController
     ZStack(alignment: .topLeading) {
       ForEach(zones) { zone in
         let frame = fit.toView(zone.rect.cgRect)
-        // While a controller steers the zones they all show faintly, and the
-        // focused one stands out.
-        let navigating = viewModel.controlZonesUseController
-        let focused = navigating && viewModel.focusedClickZoneID == zone.id
+        // Zones show faintly when always visible or while a controller steers
+        // them; the focused one stands out.
+        let focused = navigating && focusedID == zone.id
         let lit = hovered == zone.id || focused
         Rectangle()
           .fill(Color.accentColor.opacity(focused ? 0.3 : lit ? 0.15 : 0))
-          .strokeBorder(Color.accentColor.opacity(focused ? 1 : lit ? 0.8 : navigating ? 0.4 : 0),
+          .strokeBorder(Color.accentColor.opacity(focused ? 1 : lit ? 0.8 : alwaysVisible || navigating ? 0.4 : 0),
                         lineWidth: focused ? 2 : 1)
           .contentShape(Rectangle())
           .frame(width: frame.width, height: frame.height)

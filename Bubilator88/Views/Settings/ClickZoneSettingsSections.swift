@@ -57,6 +57,10 @@ struct ClickZoneSettingsSections: View {
           }
         }
         .settingsDescriptionStyle()
+        Toggle("Always Show Control Zones", isOn: $settings.clickZonesAlwaysVisible)
+          .disabled(settings.mouseEnabled || !settings.clickZonesEnabled)
+        Text("Turn off Always Show to outline only the zone under the pointer or focused by the controller.")
+          .settingsDescriptionStyle()
       }
 
       Section("Control Zone Layouts") {

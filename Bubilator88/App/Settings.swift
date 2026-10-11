@@ -83,6 +83,7 @@ final class Settings {
     static let mouseSensitivity          = "mouseSensitivity"
     static let clickZonesEnabled         = "clickZonesEnabled"
     static let clickZoneUsesController   = "clickZoneUsesController"
+    static let clickZonesAlwaysVisible   = "clickZonesAlwaysVisible"
     static let clickZoneConfirmButton    = "clickZoneConfirmButton"
 
     // Keyboard
@@ -461,6 +462,12 @@ final class Settings {
     didSet { UserDefaults.standard.set(clickZonesEnabled, forKey: Keys.clickZonesEnabled) }
   }
 
+  /// Keep every control zone faintly outlined. Off, only the zone under the
+  /// pointer, or the one the controller has focused, is shown.
+  var clickZonesAlwaysVisible: Bool = false {
+    didSet { UserDefaults.standard.set(clickZonesAlwaysVisible, forKey: Keys.clickZonesAlwaysVisible) }
+  }
+
   /// Dedicate the controller's D-pad, left stick and confirm button to control
   /// zones: they move a focus between the zones and play the focused one, and
   /// cannot be mapped to keys. Only in effect while the game controller is
@@ -725,6 +732,9 @@ final class Settings {
     }
     if let v = UserDefaults.standard.object(forKey: Keys.clickZonesEnabled) as? Bool {
       clickZonesEnabled = v
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.clickZonesAlwaysVisible) as? Bool {
+      clickZonesAlwaysVisible = v
     }
     if let v = UserDefaults.standard.object(forKey: Keys.clickZoneUsesController) as? Bool {
       clickZoneUsesController = v

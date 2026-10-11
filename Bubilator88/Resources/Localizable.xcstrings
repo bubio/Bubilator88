@@ -678,6 +678,16 @@
         }
       }
     },
+    "Always Show Control Zones" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作領域を常に表示する"
+          }
+        }
+      }
+    },
     "All Off" : {
       "localizations" : {
         "ja" : {
@@ -6422,6 +6432,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "逆アセンブルの有効/無効。オフにするとメモリ読み出しと命令デコードを省略し負荷が下がる。"
+          }
+        }
+      }
+    },
+    "Turn off Always Show to outline only the zone under the pointer or focused by the controller." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「常に表示」をオフにすると、ポインターの下かコントローラーで選択中の領域だけ枠を表示します。"
           }
         }
       }

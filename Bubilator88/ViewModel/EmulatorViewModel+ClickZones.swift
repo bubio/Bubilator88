@@ -44,7 +44,8 @@ extension EmulatorViewModel {
   /// is ignored, so rapid clicks cannot interleave two sequences.
   func playClickZone(_ zone: ClickZone) {
     guard !isEditingClickZones else { return }
-    clickZonePlayer.start(zone.steps)
+    // Whatever plays a zone, the controller continues from it.
+    if clickZonePlayer.start(zone.steps) { focusedClickZoneID = zone.id }
   }
 
   /// Play the keys the active layout binds to a mouse input. Returns whether
