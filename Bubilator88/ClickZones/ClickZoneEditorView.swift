@@ -376,20 +376,16 @@ struct ClickZoneEditorView: View {
   /// size.
   private func numberField(_ title: LocalizedStringKey, zone: ClickZone,
                            _ field: WritableKeyPath<ClickZoneRect, Int>) -> some View {
-    TextField(title, value: Binding(
-      get: { zone.rect[keyPath: field] },
-      set: { newValue in
-        viewModel.editClickZone(id: zone.id) { z in
-          var rect = z.rect
-          rect[keyPath: field] = newValue
-          z.rect = rect.clamped()
-        }
-      }
-    ), format: .number.grouping(.never))
-      .labelsHidden()
-      .multilineTextAlignment(.trailing)
-      .frame(width: 64)
-      .help(Text(title))
+    ClickZoneNumberField(
+      title: title,
+      value: zone.rect[keyPath: field],
+      commit: { newValue in
+        var rect = zone.rect
+        rect[keyPath: field] = newValue
+        let clamped = rect.clamped()
+        viewModel.editClickZone(id: zone.id) { $0.rect = clamped }
+        return clamped[keyPath: field]
+      })
   }
 
   // MARK: - Keys
@@ -599,6 +595,40 @@ private struct DiskNode: Identifiable {
                  DiskNode(id: "disk:\(file.fileName)/\(disk.imageName)", file: file,
                           disk: disk, children: nil)
                })
+    }
+  }
+}
+
+/// An integer field that keeps what is being typed as text and commits on
+/// Return or when focus leaves. Committing per keystroke would clamp "3" up
+/// to the minimum before the second digit of "30" could be typed.
+private struct ClickZoneNumberField: View {
+  let title: LocalizedStringKey
+  let value: Int
+  /// Applies the typed number and returns the value the model kept.
+  let commit: (Int) -> Int
+
+  @State private var text = ""
+  @FocusState private var focused: Bool
+
+  var body: some View {
+    TextField(title, text: $text)
+      .focused($focused)
+      .labelsHidden()
+      .multilineTextAlignment(.trailing)
+      .frame(width: 64)
+      .help(Text(title))
+      .onAppear { text = String(value) }
+      .onChange(of: value) { text = String(value) }
+      .onSubmit(finish)
+      .onChange(of: focused) { if !focused { finish() } }
+  }
+
+  private func finish() {
+    if let number = Int(text.trimmingCharacters(in: .whitespaces)) {
+      text = String(commit(number))
+    } else {
+      text = String(value)
     }
   }
 }
