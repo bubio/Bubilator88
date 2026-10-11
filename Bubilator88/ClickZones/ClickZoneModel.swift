@@ -93,9 +93,12 @@ nonisolated struct ClickZoneStep: Codable, Equatable, Hashable, Sendable {
     keys.compactMap { ScriptParser.key(named: $0) }
   }
 
-  /// "SHIFT+1", for display.
+  /// "shift+1", for display, spelled as in the controller key picker.
   var displayName: String {
-    keys.map { $0.uppercased() }.joined(separator: "+")
+    keys.map { name in
+      ScriptParser.key(named: name)
+        .flatMap { PC88KeyChoice.nameByKey[MappedKey($0)] } ?? name.uppercased()
+    }.joined(separator: "+")
   }
 }
 

@@ -5,7 +5,7 @@ import AppKit
 // MARK: - Button Mapping
 
 /// Codable wrapper for PC88Key (row, bit).
-struct MappedKey: Codable, Equatable, Hashable {
+nonisolated struct MappedKey: Codable, Equatable, Hashable {
   let row: Int
   let bit: Int
   init(_ key: PC88Key) { self.row = key.row; self.bit = key.bit }
@@ -26,7 +26,9 @@ struct HostShortcut: Codable, Equatable, Hashable {
   let keyCode: UInt16
   /// `NSEvent.ModifierFlags` raw value (device-independent bits).
   let modifierFlagsRaw: UInt
-  /// Display string for the main key (e.g. "S", "Z", "Tab", "↑").
+  /// Fallback label for a key `macKeyName` does not know (e.g. "S", "Z").
+  /// Known keys are named from `keyCode`, so saved mappings follow the
+  /// current spelling.
   let displayKey: String
 
   var modifierFlags: NSEvent.ModifierFlags {
@@ -41,7 +43,7 @@ struct HostShortcut: Codable, Equatable, Hashable {
     if f.contains(.option)  { s += "⌥" }
     if f.contains(.shift)   { s += "⇧" }
     if f.contains(.command) { s += "⌘" }
-    s += displayKey
+    s += macKeyLegend(for: keyCode) ?? displayKey
     return s
   }
 }
@@ -280,23 +282,23 @@ struct ControllerButtonMapping: Codable, Equatable {
 // MARK: - PC-8801 Key List (for mapping UI picker)
 
 /// Named PC-8801 key for use in mapping picker.
-struct PC88KeyChoice: Identifiable, Hashable {
+nonisolated struct PC88KeyChoice: Identifiable, Hashable {
   let name: String
   let key: MappedKey
   var id: MappedKey { key }
 
   static let allChoices: [PC88KeyChoice] = [
     // Most useful for games first
-    PC88KeyChoice(name: "Space", key: MappedKey(PC88Key.space)),
-    PC88KeyChoice(name: "Return", key: MappedKey(PC88Key(1, 7))),
-    PC88KeyChoice(name: "ESC", key: MappedKey(PC88Key.esc)),
+    PC88KeyChoice(name: "space", key: MappedKey(PC88Key.space)),
+    PC88KeyChoice(name: "return", key: MappedKey(PC88Key(1, 7))),
+    PC88KeyChoice(name: "esc", key: MappedKey(PC88Key.esc)),
     PC88KeyChoice(name: "STOP", key: MappedKey(PC88Key.stop)),
     PC88KeyChoice(name: "COPY", key: MappedKey(PC88Key.copy)),
     // Arrows
-    PC88KeyChoice(name: "Up", key: MappedKey(PC88Key.up)),
-    PC88KeyChoice(name: "Down", key: MappedKey(PC88Key.down)),
-    PC88KeyChoice(name: "Left", key: MappedKey(PC88Key.left)),
-    PC88KeyChoice(name: "Right", key: MappedKey(PC88Key.right)),
+    PC88KeyChoice(name: "↑", key: MappedKey(PC88Key.up)),
+    PC88KeyChoice(name: "↓", key: MappedKey(PC88Key.down)),
+    PC88KeyChoice(name: "←", key: MappedKey(PC88Key.left)),
+    PC88KeyChoice(name: "→", key: MappedKey(PC88Key.right)),
     // Function keys
     PC88KeyChoice(name: "F1", key: MappedKey(PC88Key.f1)),
     PC88KeyChoice(name: "F2", key: MappedKey(PC88Key.f2)),
@@ -309,11 +311,11 @@ struct PC88KeyChoice: Identifiable, Hashable {
     PC88KeyChoice(name: "F9", key: MappedKey(PC88Key.f9)),
     PC88KeyChoice(name: "F10", key: MappedKey(PC88Key.f10)),
     // Modifiers
-    PC88KeyChoice(name: "Shift", key: MappedKey(PC88Key.shift)),
-    PC88KeyChoice(name: "Ctrl", key: MappedKey(PC88Key.ctrl)),
+    PC88KeyChoice(name: "shift", key: MappedKey(PC88Key.shift)),
+    PC88KeyChoice(name: "control", key: MappedKey(PC88Key.ctrl)),
     PC88KeyChoice(name: "GRPH", key: MappedKey(PC88Key.grph)),
     PC88KeyChoice(name: "KANA", key: MappedKey(PC88Key.kana)),
-    PC88KeyChoice(name: "CAPS", key: MappedKey(PC88Key.capsLock)),
+    PC88KeyChoice(name: "caps lock", key: MappedKey(PC88Key.capsLock)),
     // Numpad
     PC88KeyChoice(name: "KP 0", key: MappedKey(PC88Key.kp0)),
     PC88KeyChoice(name: "KP 1", key: MappedKey(PC88Key.kp1)),
@@ -331,7 +333,7 @@ struct PC88KeyChoice: Identifiable, Hashable {
     PC88KeyChoice(name: "KP /", key: MappedKey(PC88Key.kpDivide)),
     PC88KeyChoice(name: "KP .", key: MappedKey(PC88Key.kpPeriod)),
     PC88KeyChoice(name: "KP =", key: MappedKey(PC88Key.kpEqual)),
-    PC88KeyChoice(name: "KP Return", key: MappedKey(PC88Key.kpReturn)),
+    PC88KeyChoice(name: "KP enter", key: MappedKey(PC88Key.kpReturn)),
     // Letters
     PC88KeyChoice(name: "A", key: MappedKey(PC88Key.a)),
     PC88KeyChoice(name: "B", key: MappedKey(PC88Key.b)),
@@ -384,7 +386,7 @@ struct PC88KeyChoice: Identifiable, Hashable {
     PC88KeyChoice(name: "_", key: MappedKey(PC88Key.underscore)),
     PC88KeyChoice(name: "\\", key: MappedKey(PC88Key.yen)),
     // Editing
-    PC88KeyChoice(name: "TAB", key: MappedKey(PC88Key.tab)),
+    PC88KeyChoice(name: "tab", key: MappedKey(PC88Key.tab)),
     PC88KeyChoice(name: "BS", key: MappedKey(PC88Key.bs)),
     PC88KeyChoice(name: "DEL", key: MappedKey(PC88Key.del)),
     PC88KeyChoice(name: "INS", key: MappedKey(PC88Key.ins)),
