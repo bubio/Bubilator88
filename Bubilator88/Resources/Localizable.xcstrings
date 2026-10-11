@@ -7,6 +7,16 @@
     "  %@ ✓" : {
 
     },
+    "Pressed in order when the zone is clicked or the controller's confirm button is pressed." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "領域をクリック、またはコントローラーで決定ボタンを押すと、上から順に押されます。"
+          }
+        }
+      }
+    },
     "\"%@\" contains no disk image entries." : {
       "comment" : "Error: an m3u/m3u8 playlist has only blank or comment lines. %@ is the playlist path",
       "localizations" : {
@@ -674,6 +684,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "AI 超解像モデル"
+          }
+        }
+      }
+    },
+    "Always Show Control Zones" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作領域を常に表示する"
           }
         }
       }
@@ -1368,7 +1388,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "キーを消去"
+            "value" : "全削除"
           }
         }
       }
@@ -1738,18 +1758,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "現在のテキスト解像度 (桁 × 行)"
-          }
-        }
-      }
-    },
-    "Cursor Keys + RETURN" : {
-      "comment" : "Control-zone preset name, from ClickZonePresets.json",
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "カーソルキー + RETURN"
           }
         }
       }
@@ -2843,18 +2851,6 @@
         }
       }
     },
-    "Function Keys f1–f5" : {
-      "comment" : "Control-zone preset name, from ClickZonePresets.json",
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ファンクションキー f1〜f5"
-          }
-        }
-      }
-    },
     "Game Controller" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2992,16 +2988,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "命令実行前の HL"
-          }
-        }
-      }
-    },
-    "Hold %lldf" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "押下 %lldf"
           }
         }
       }
@@ -3991,18 +3977,6 @@
         }
       }
     },
-    "Number Keys 1–9" : {
-      "comment" : "Control-zone preset name, from ClickZonePresets.json",
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "数字キー 1〜9"
-          }
-        }
-      }
-    },
     "Number of 16-byte rows to show" : {
       "localizations" : {
         "ja" : {
@@ -4019,18 +3993,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "数字キーをテンキーとして使用"
-          }
-        }
-      }
-    },
-    "Numeric Keypad 8 Directions" : {
-      "comment" : "Control-zone preset name, from ClickZonePresets.json",
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "テンキー 8 方向"
           }
         }
       }
@@ -4746,7 +4708,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ステップを削除"
+            "value" : "削除"
           }
         }
       }
@@ -4885,18 +4847,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "再試行"
-          }
-        }
-      }
-    },
-    "RETURN (Whole Screen)" : {
-      "comment" : "Control-zone preset name, from ClickZonePresets.json",
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "RETURN（画面全体）"
           }
         }
       }
@@ -5662,18 +5612,6 @@
         }
       }
     },
-    "SPACE (Whole Screen)" : {
-      "comment" : "Control-zone preset name, from ClickZonePresets.json",
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SPACE（画面全体）"
-          }
-        }
-      }
-    },
     "Special Key Mapping" : {
       "localizations" : {
         "ja" : {
@@ -6426,6 +6364,16 @@
         }
       }
     },
+    "Turn off Always Show to outline only the zone under the pointer or focused by the controller." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「常に表示」をオフにすると、ポインターの下かコントローラーで選択中の領域だけ枠を表示します。"
+          }
+        }
+      }
+    },
     "Turn off mouse input to use control zones." : {
       "localizations" : {
         "ja" : {
@@ -6732,16 +6680,6 @@
     },
     "W" : {
       "shouldTranslate" : false
-    },
-    "Wait %lldf" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "待機 %lldf"
-          }
-        }
-      }
     },
     "wait takes exactly one argument (e.g. wait 90, wait 1.5s)." : {
       "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",

@@ -29,17 +29,19 @@ private struct ClickZonePlayLayer: View {
   @State private var hovered: UUID?
 
   var body: some View {
+    let focusedID = viewModel.focusedClickZoneID
+    let alwaysVisible = Settings.shared.clickZonesAlwaysVisible
+    let navigating = viewModel.controlZonesUseController
     ZStack(alignment: .topLeading) {
       ForEach(zones) { zone in
         let frame = fit.toView(zone.rect.cgRect)
-        // While a controller steers the zones they all show faintly, and the
-        // focused one stands out.
-        let navigating = viewModel.controlZonesUseController
-        let focused = navigating && viewModel.focusedClickZoneID == zone.id
+        // Zones show faintly when always visible or while a controller steers
+        // them; the focused one stands out.
+        let focused = navigating && focusedID == zone.id
         let lit = hovered == zone.id || focused
         Rectangle()
           .fill(Color.accentColor.opacity(focused ? 0.3 : lit ? 0.15 : 0))
-          .strokeBorder(Color.accentColor.opacity(focused ? 1 : lit ? 0.8 : navigating ? 0.4 : 0),
+          .strokeBorder(Color.accentColor.opacity(focused ? 1 : lit ? 0.8 : alwaysVisible || navigating ? 0.4 : 0),
                         lineWidth: focused ? 2 : 1)
           .contentShape(Rectangle())
           .frame(width: frame.width, height: frame.height)
@@ -76,6 +78,8 @@ private struct ClickZoneEditLayer: View {
   @State private var dragMode: DragMode?
   /// The rectangle being drawn, moved or resized, until the drag ends.
   @State private var preview: (id: UUID?, rect: ClickZoneRect)?
+  /// The pointer shape for where the mouse hovers, when no drag is running.
+  @State private var hoverStyle: PointerStyle = .rectSelection
 
   /// Side of a resize handle, in view points.
   private static let handleSize: CGFloat = 8
@@ -109,7 +113,55 @@ private struct ClickZoneEditLayer: View {
         .onChanged(dragChanged)
         .onEnded(dragEnded)
     )
-    .pointerStyle(.rectSelection)
+    .onContinuousHover { phase in
+      switch phase {
+      case .active(let location): hoverStyle = style(forHoverAt: location)
+      case .ended: hoverStyle = .rectSelection
+      }
+    }
+    .pointerStyle(dragMode.map(Self.style(during:)) ?? hoverStyle)
+  }
+
+  /// The pointer shape that says what a drag from `location` would do.
+  private func style(forHoverAt location: CGPoint) -> PointerStyle {
+    if let (_, handle) = selectedHandle(at: location) { return Self.style(for: handle) }
+    if zones.contains(where: { $0.rect.contains(fit.toScreen(location)) }) { return .grabIdle }
+    return .rectSelection
+  }
+
+  private static func style(during mode: DragMode) -> PointerStyle {
+    switch mode {
+    case .create: .rectSelection
+    case .move: .grabActive
+    case .resize(_, _, let handle): style(for: handle)
+    }
+  }
+
+  private static func style(for handle: ClickZoneRect.Handle) -> PointerStyle {
+    switch handle {
+    case .topLeft: .frameResize(position: .topLeading)
+    case .top: .frameResize(position: .top)
+    case .topRight: .frameResize(position: .topTrailing)
+    case .right: .frameResize(position: .trailing)
+    case .bottomRight: .frameResize(position: .bottomTrailing)
+    case .bottom: .frameResize(position: .bottom)
+    case .bottomLeft: .frameResize(position: .bottomLeading)
+    case .left: .frameResize(position: .leading)
+    }
+  }
+
+  /// The handle of the selected zone under `location` (view points), if any.
+  private func selectedHandle(at location: CGPoint) -> (ClickZone, ClickZoneRect.Handle)? {
+    guard let id = viewModel.selectedClickZoneID,
+          let zone = zones.first(where: { $0.id == id }) else { return nil }
+    let frame = fit.toView(zone.rect.cgRect)
+    for handle in ClickZoneRect.Handle.allCases {
+      let c = Self.handleCenter(handle, in: frame)
+      if abs(c.x - location.x) <= Self.handleSize, abs(c.y - location.y) <= Self.handleSize {
+        return (zone, handle)
+      }
+    }
+    return nil
   }
 
   @ViewBuilder
@@ -199,16 +251,8 @@ private struct ClickZoneEditLayer: View {
   /// the zone it grabs.
   private func mode(forDragAt location: CGPoint) -> DragMode {
     let point = fit.toScreen(location)
-    if let id = viewModel.selectedClickZoneID,
-       let zone = zones.first(where: { $0.id == id }) {
-      let frame = fit.toView(zone.rect.cgRect)
-      let hit = Self.handleSize
-      for handle in ClickZoneRect.Handle.allCases {
-        let c = Self.handleCenter(handle, in: frame)
-        if abs(c.x - location.x) <= hit, abs(c.y - location.y) <= hit {
-          return .resize(id: id, original: zone.rect, handle: handle)
-        }
-      }
+    if let (zone, handle) = selectedHandle(at: location) {
+      return .resize(id: zone.id, original: zone.rect, handle: handle)
     }
     if let zone = zones.last(where: { $0.rect.contains(point) }) {
       viewModel.selectedClickZoneID = zone.id

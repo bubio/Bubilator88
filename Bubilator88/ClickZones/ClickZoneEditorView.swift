@@ -376,26 +376,24 @@ struct ClickZoneEditorView: View {
   /// size.
   private func numberField(_ title: LocalizedStringKey, zone: ClickZone,
                            _ field: WritableKeyPath<ClickZoneRect, Int>) -> some View {
-    TextField(title, value: Binding(
-      get: { zone.rect[keyPath: field] },
-      set: { newValue in
-        viewModel.editClickZone(id: zone.id) { z in
-          var rect = z.rect
-          rect[keyPath: field] = newValue
-          z.rect = rect.clamped()
-        }
-      }
-    ), format: .number.grouping(.never))
-      .labelsHidden()
-      .multilineTextAlignment(.trailing)
-      .frame(width: 64)
-      .help(Text(title))
+    ClickZoneNumberField(
+      title: title,
+      value: zone.rect[keyPath: field],
+      commit: { newValue in
+        var rect = zone.rect
+        rect[keyPath: field] = newValue
+        let clamped = rect.clamped()
+        viewModel.editClickZone(id: zone.id) { $0.rect = clamped }
+        return clamped[keyPath: field]
+      })
   }
 
   // MARK: - Keys
 
   private func keysSection(_ zone: ClickZone) -> some View {
     Section("Keys") {
+      Text("Pressed in order when the zone is clicked or the controller's confirm button is pressed.")
+        .settingsDescriptionStyle()
       if zone.steps.isEmpty {
         Text("No keys yet. Press Record, then type the keys.")
           .settingsDescriptionStyle()
@@ -404,7 +402,7 @@ struct ClickZoneEditorView: View {
         // reordering and row selection for Delete.
         List(selection: $selectedSteps) {
           ForEach(Array(zone.steps.enumerated()), id: \.offset) { index, step in
-            stepRow(zone: zone, index: index, step: step)
+            stepRow(step: step)
               .tag(index)
           }
           .onMove { from, to in
@@ -417,15 +415,6 @@ struct ClickZoneEditorView: View {
         .sizedToContentList()
         .focusListOnChange(of: selectedSteps)
         .onDeleteCommand { removeSelectedSteps(from: zone) }
-        HStack {
-          Button {
-            removeSelectedSteps(from: zone)
-          } label: {
-            Image(systemName: "minus")
-          }
-          .disabled(selectedSteps.isEmpty)
-          .help("Remove Step")
-        }
       }
       if viewModel.isRecordingClickZoneKeys {
         Text("Recording: keys pressed together become one step.")
@@ -439,6 +428,10 @@ struct ClickZoneEditorView: View {
                 systemImage: viewModel.isRecordingClickZoneKeys ? "stop.circle" : "record.circle")
         }
         Spacer()
+        Button("Remove Step") {
+          removeSelectedSteps(from: zone)
+        }
+        .disabled(selectedSteps.isEmpty)
         Button("Clear Keys") {
           viewModel.editClickZone(id: zone.id) { $0.steps.removeAll() }
           selectedSteps.removeAll()
@@ -448,20 +441,11 @@ struct ClickZoneEditorView: View {
     }
   }
 
-  private func stepRow(zone: ClickZone, index: Int, step: ClickZoneStep) -> some View {
-    HStack {
-      Text(step.displayName)
-        .font(.body.monospaced())
-      Spacer()
-      Stepper(value: stepBinding(zone: zone, index: index, \.holdFrames), in: 1...120) {
-        Text("Hold \(step.holdFrames)f")
-          .monospacedDigit()
-      }
-      Stepper(value: stepBinding(zone: zone, index: index, \.gapFrames), in: 0...600) {
-        Text("Wait \(step.gapFrames)f")
-          .monospacedDigit()
-      }
-    }
+  private func stepRow(step: ClickZoneStep) -> some View {
+    Text(step.displayName)
+      .font(.body.monospaced())
+      .lineLimit(1)
+      .truncationMode(.middle)
   }
 
   private func removeSelectedSteps(from zone: ClickZone) {
@@ -469,19 +453,6 @@ struct ClickZoneEditorView: View {
     guard !offsets.isEmpty else { return }
     viewModel.editClickZone(id: zone.id) { $0.steps.remove(atOffsets: offsets) }
     selectedSteps.removeAll()
-  }
-
-  private func stepBinding(zone: ClickZone, index: Int,
-                           _ field: WritableKeyPath<ClickZoneStep, Int>) -> Binding<Int> {
-    Binding(
-      get: { zone.steps.indices.contains(index) ? zone.steps[index][keyPath: field] : 0 },
-      set: { newValue in
-        viewModel.editClickZone(id: zone.id) { z in
-          guard z.steps.indices.contains(index) else { return }
-          z.steps[index][keyPath: field] = newValue
-        }
-      }
-    )
   }
 
   // MARK: - Recording
@@ -599,6 +570,40 @@ private struct DiskNode: Identifiable {
                  DiskNode(id: "disk:\(file.fileName)/\(disk.imageName)", file: file,
                           disk: disk, children: nil)
                })
+    }
+  }
+}
+
+/// An integer field that keeps what is being typed as text and commits on
+/// Return or when focus leaves. Committing per keystroke would clamp "3" up
+/// to the minimum before the second digit of "30" could be typed.
+private struct ClickZoneNumberField: View {
+  let title: LocalizedStringKey
+  let value: Int
+  /// Applies the typed number and returns the value the model kept.
+  let commit: (Int) -> Int
+
+  @State private var text = ""
+  @FocusState private var focused: Bool
+
+  var body: some View {
+    TextField(title, text: $text)
+      .focused($focused)
+      .labelsHidden()
+      .multilineTextAlignment(.trailing)
+      .frame(width: 64)
+      .help(Text(title))
+      .onAppear { text = String(value) }
+      .onChange(of: value) { text = String(value) }
+      .onSubmit(finish)
+      .onChange(of: focused) { if !focused { finish() } }
+  }
+
+  private func finish() {
+    if let number = Int(text.trimmingCharacters(in: .whitespaces)) {
+      text = String(commit(number))
+    } else {
+      text = String(value)
     }
   }
 }

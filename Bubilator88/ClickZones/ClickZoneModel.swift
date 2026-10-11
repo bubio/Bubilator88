@@ -258,9 +258,9 @@ nonisolated struct ClickZoneLayout: Codable, Equatable, Identifiable, Sendable {
 
   /// The bindings a layout starts with, and gets when its file has none.
   static let defaultMouseBindings: [String: [ClickZoneStep]] = [
-    ClickZoneMouseButton.right.rawValue: [ClickZoneStep(keys: ["shift"])],
-    ClickZoneMouseButton.button4.rawValue: [ClickZoneStep(keys: ["return"])],
-    ClickZoneMouseButton.button5.rawValue: [ClickZoneStep(keys: ["esc"])],
+    ClickZoneMouseButton.right.rawValue: [ClickZoneStep(keys: ["space"])],
+    ClickZoneMouseButton.button4.rawValue: [ClickZoneStep(keys: ["esc"])],
+    ClickZoneMouseButton.button5.rawValue: [ClickZoneStep(keys: ["return"])],
     ClickZoneMouseButton.wheelUp.rawValue: [ClickZoneStep(keys: ["kp8"])],
     ClickZoneMouseButton.wheelDown.rawValue: [ClickZoneStep(keys: ["kp2"])],
   ]
