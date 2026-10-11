@@ -1762,18 +1762,6 @@
         }
       }
     },
-    "Cursor Keys + RETURN" : {
-      "comment" : "Control-zone preset name, from ClickZonePresets.json",
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "カーソルキー + RETURN"
-          }
-        }
-      }
-    },
     "DE" : {
 
     },
@@ -2859,18 +2847,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "フルスクリーン"
-          }
-        }
-      }
-    },
-    "Function Keys f1–f5" : {
-      "comment" : "Control-zone preset name, from ClickZonePresets.json",
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ファンクションキー f1〜f5"
           }
         }
       }
@@ -4001,18 +3977,6 @@
         }
       }
     },
-    "Number Keys 1–9" : {
-      "comment" : "Control-zone preset name, from ClickZonePresets.json",
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "数字キー 1〜9"
-          }
-        }
-      }
-    },
     "Number of 16-byte rows to show" : {
       "localizations" : {
         "ja" : {
@@ -4029,18 +3993,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "数字キーをテンキーとして使用"
-          }
-        }
-      }
-    },
-    "Numeric Keypad 8 Directions" : {
-      "comment" : "Control-zone preset name, from ClickZonePresets.json",
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "テンキー 8 方向"
           }
         }
       }
@@ -4899,18 +4851,6 @@
         }
       }
     },
-    "RETURN (Whole Screen)" : {
-      "comment" : "Control-zone preset name, from ClickZonePresets.json",
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "RETURN（画面全体）"
-          }
-        }
-      }
-    },
     "Rev" : {
       "localizations" : {
         "ja" : {
@@ -5668,18 +5608,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "命令実行前の SP"
-          }
-        }
-      }
-    },
-    "SPACE (Whole Screen)" : {
-      "comment" : "Control-zone preset name, from ClickZonePresets.json",
-      "extractionState" : "stale",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SPACE（画面全体）"
           }
         }
       }

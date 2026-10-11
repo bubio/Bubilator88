@@ -1,295 +1,159 @@
 [
   {
-    "id": "C11C0000-0000-4000-8000-000000000001",
-    "name": "RETURN (Whole Screen)",
+    "id": "C11C0000-0000-4000-8000-000000000007",
+    "name": "殺人倶楽部",
     "zones": [
       {
-        "label": "RETURN",
+        "label": "A",
         "rect": {
-          "x": 0,
-          "y": 0,
-          "width": 640,
-          "height": 400
+          "height": 22,
+          "width": 175,
+          "x": 52,
+          "y": 22
         },
         "steps": [
           {
             "keys": [
-              "return"
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "C11C0000-0000-4000-8000-000000000002",
-    "name": "SPACE (Whole Screen)",
-    "zones": [
-      {
-        "label": "SPACE",
-        "rect": {
-          "x": 0,
-          "y": 0,
-          "width": 640,
-          "height": 400
-        },
-        "steps": [
-          {
-            "keys": [
-              "space"
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "C11C0000-0000-4000-8000-000000000003",
-    "name": "Cursor Keys + RETURN",
-    "zones": [
-      {
-        "label": "↑",
-        "rect": {
-          "x": 0,
-          "y": 0,
-          "width": 640,
-          "height": 100
-        },
-        "steps": [
-          {
-            "keys": [
-              "up"
+              "a"
             ]
           }
         ]
       },
       {
-        "label": "↓",
+        "label": "B",
         "rect": {
-          "x": 0,
-          "y": 300,
-          "width": 640,
-          "height": 100
+          "height": 22,
+          "width": 170,
+          "x": 232,
+          "y": 22
         },
         "steps": [
           {
             "keys": [
-              "down"
+              "b"
             ]
           }
         ]
       },
       {
-        "label": "←",
+        "label": "C",
         "rect": {
-          "x": 0,
-          "y": 100,
-          "width": 160,
-          "height": 200
+          "height": 22,
+          "width": 175,
+          "x": 52,
+          "y": 45
         },
         "steps": [
           {
             "keys": [
-              "left"
+              "c"
             ]
           }
         ]
       },
       {
-        "label": "→",
+        "label": "D",
         "rect": {
-          "x": 480,
-          "y": 100,
-          "width": 160,
-          "height": 200
+          "height": 22,
+          "width": 170,
+          "x": 232,
+          "y": 45
         },
         "steps": [
           {
             "keys": [
-              "right"
+              "d"
             ]
           }
         ]
       },
       {
-        "label": "RETURN",
+        "label": "E",
         "rect": {
-          "x": 160,
-          "y": 100,
-          "width": 320,
-          "height": 200
+          "height": 22,
+          "width": 175,
+          "x": 52,
+          "y": 67
         },
         "steps": [
           {
             "keys": [
-              "return"
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "C11C0000-0000-4000-8000-000000000004",
-    "name": "Numeric Keypad 8 Directions",
-    "zones": [
-      {
-        "label": "↖",
-        "rect": {
-          "x": 0,
-          "y": 0,
-          "width": 213,
-          "height": 133
-        },
-        "steps": [
-          {
-            "keys": [
-              "kp7"
+              "e"
             ]
           }
         ]
       },
       {
-        "label": "↑",
+        "label": "F",
         "rect": {
-          "x": 213,
-          "y": 0,
-          "width": 214,
-          "height": 133
+          "height": 22,
+          "width": 170,
+          "x": 232,
+          "y": 67
         },
         "steps": [
           {
             "keys": [
-              "kp8"
+              "f"
             ]
           }
         ]
       },
       {
-        "label": "↗",
+        "label": "G",
         "rect": {
-          "x": 427,
-          "y": 0,
-          "width": 213,
-          "height": 133
+          "height": 22,
+          "width": 175,
+          "x": 52,
+          "y": 90
         },
         "steps": [
           {
             "keys": [
-              "kp9"
+              "g"
             ]
           }
         ]
       },
       {
-        "label": "←",
+        "label": "H",
         "rect": {
-          "x": 0,
-          "y": 133,
-          "width": 213,
-          "height": 134
+          "height": 22,
+          "width": 170,
+          "x": 232,
+          "y": 90
         },
         "steps": [
           {
             "keys": [
-              "kp4"
+              "h"
             ]
           }
         ]
       },
       {
-        "label": "5",
+        "label": "I",
         "rect": {
-          "x": 213,
-          "y": 133,
-          "width": 214,
-          "height": 134
+          "height": 22,
+          "width": 175,
+          "x": 52,
+          "y": 113
         },
         "steps": [
           {
             "keys": [
-              "kp5"
+              "i"
             ]
           }
         ]
       },
-      {
-        "label": "→",
-        "rect": {
-          "x": 427,
-          "y": 133,
-          "width": 213,
-          "height": 134
-        },
-        "steps": [
-          {
-            "keys": [
-              "kp6"
-            ]
-          }
-        ]
-      },
-      {
-        "label": "↙",
-        "rect": {
-          "x": 0,
-          "y": 267,
-          "width": 213,
-          "height": 133
-        },
-        "steps": [
-          {
-            "keys": [
-              "kp1"
-            ]
-          }
-        ]
-      },
-      {
-        "label": "↓",
-        "rect": {
-          "x": 213,
-          "y": 267,
-          "width": 214,
-          "height": 133
-        },
-        "steps": [
-          {
-            "keys": [
-              "kp2"
-            ]
-          }
-        ]
-      },
-      {
-        "label": "↘",
-        "rect": {
-          "x": 427,
-          "y": 267,
-          "width": 213,
-          "height": 133
-        },
-        "steps": [
-          {
-            "keys": [
-              "kp3"
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "C11C0000-0000-4000-8000-000000000005",
-    "name": "Number Keys 1–9",
-    "zones": [
       {
         "label": "1",
         "rect": {
-          "x": 0,
-          "y": 360,
-          "width": 71,
-          "height": 40
+          "height": 22,
+          "width": 178,
+          "x": 458,
+          "y": 99
         },
         "steps": [
           {
@@ -302,10 +166,10 @@
       {
         "label": "2",
         "rect": {
-          "x": 71,
-          "y": 360,
-          "width": 71,
-          "height": 40
+          "height": 22,
+          "width": 178,
+          "x": 458,
+          "y": 121
         },
         "steps": [
           {
@@ -318,10 +182,10 @@
       {
         "label": "3",
         "rect": {
-          "x": 142,
-          "y": 360,
-          "width": 71,
-          "height": 40
+          "height": 22,
+          "width": 178,
+          "x": 458,
+          "y": 143
         },
         "steps": [
           {
@@ -334,10 +198,10 @@
       {
         "label": "4",
         "rect": {
-          "x": 213,
-          "y": 360,
-          "width": 71,
-          "height": 40
+          "height": 22,
+          "width": 178,
+          "x": 458,
+          "y": 166
         },
         "steps": [
           {
@@ -350,10 +214,10 @@
       {
         "label": "5",
         "rect": {
-          "x": 284,
-          "y": 360,
-          "width": 72,
-          "height": 40
+          "height": 22,
+          "width": 178,
+          "x": 458,
+          "y": 188
         },
         "steps": [
           {
@@ -366,10 +230,10 @@
       {
         "label": "6",
         "rect": {
-          "x": 356,
-          "y": 360,
-          "width": 71,
-          "height": 40
+          "height": 22,
+          "width": 178,
+          "x": 458,
+          "y": 210
         },
         "steps": [
           {
@@ -382,10 +246,326 @@
       {
         "label": "7",
         "rect": {
-          "x": 427,
-          "y": 360,
-          "width": 71,
-          "height": 40
+          "height": 22,
+          "width": 178,
+          "x": 458,
+          "y": 232
+        },
+        "steps": [
+          {
+            "keys": [
+              "7"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "C11C0000-0000-4000-8000-000000000008",
+    "name": "アグニの石",
+    "zones": [
+      {
+        "label": "見る",
+        "rect": {
+          "height": 23,
+          "width": 156,
+          "x": 468,
+          "y": 28
+        },
+        "steps": [
+          {
+            "keys": [
+              "left"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "調べる",
+        "rect": {
+          "height": 23,
+          "width": 156,
+          "x": 468,
+          "y": 52
+        },
+        "steps": [
+          {
+            "keys": [
+              "left"
+            ]
+          },
+          {
+            "keys": [
+              "down"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "たずねる",
+        "rect": {
+          "height": 23,
+          "width": 156,
+          "x": 468,
+          "y": 75
+        },
+        "steps": [
+          {
+            "keys": [
+              "left"
+            ]
+          },
+          {
+            "keys": [
+              "down"
+            ]
+          },
+          {
+            "keys": [
+              "down"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "アイテム",
+        "rect": {
+          "height": 23,
+          "width": 156,
+          "x": 468,
+          "y": 99
+        },
+        "steps": [
+          {
+            "keys": [
+              "right"
+            ]
+          },
+          {
+            "keys": [
+              "up"
+            ]
+          },
+          {
+            "keys": [
+              "up"
+            ]
+          },
+          {
+            "keys": [
+              "up"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "移動",
+        "rect": {
+          "height": 23,
+          "width": 156,
+          "x": 468,
+          "y": 122
+        },
+        "steps": [
+          {
+            "keys": [
+              "right"
+            ]
+          },
+          {
+            "keys": [
+              "up"
+            ]
+          },
+          {
+            "keys": [
+              "up"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "寝る",
+        "rect": {
+          "height": 23,
+          "width": 156,
+          "x": 468,
+          "y": 147
+        },
+        "steps": [
+          {
+            "keys": [
+              "right"
+            ]
+          },
+          {
+            "keys": [
+              "up"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "システム",
+        "rect": {
+          "height": 23,
+          "width": 156,
+          "x": 468,
+          "y": 171
+        },
+        "steps": [
+          {
+            "keys": [
+              "right"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "C11C0000-0000-4000-8000-000000000009",
+    "name": "オホーツクに消ゆ",
+    "zones": [
+      {
+        "label": "1",
+        "rect": {
+          "height": 20,
+          "width": 180,
+          "x": 398,
+          "y": 0
+        },
+        "steps": [
+          {
+            "keys": [
+              "1"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "2",
+        "rect": {
+          "height": 22,
+          "width": 180,
+          "x": 398,
+          "y": 20
+        },
+        "steps": [
+          {
+            "keys": [
+              "2"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "3",
+        "rect": {
+          "height": 22,
+          "width": 180,
+          "x": 398,
+          "y": 42
+        },
+        "steps": [
+          {
+            "keys": [
+              "3"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "4",
+        "rect": {
+          "height": 22,
+          "width": 180,
+          "x": 398,
+          "y": 64
+        },
+        "steps": [
+          {
+            "keys": [
+              "4"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "5",
+        "rect": {
+          "height": 22,
+          "width": 180,
+          "x": 398,
+          "y": 86
+        },
+        "steps": [
+          {
+            "keys": [
+              "5"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "6",
+        "rect": {
+          "height": 22,
+          "width": 180,
+          "x": 398,
+          "y": 108
+        },
+        "steps": [
+          {
+            "keys": [
+              "6"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "7",
+        "rect": {
+          "height": 22,
+          "width": 180,
+          "x": 398,
+          "y": 130
         },
         "steps": [
           {
@@ -398,10 +578,10 @@
       {
         "label": "8",
         "rect": {
-          "x": 498,
-          "y": 360,
-          "width": 71,
-          "height": 40
+          "height": 22,
+          "width": 180,
+          "x": 398,
+          "y": 152
         },
         "steps": [
           {
@@ -414,10 +594,10 @@
       {
         "label": "9",
         "rect": {
-          "x": 569,
-          "y": 360,
-          "width": 71,
-          "height": 40
+          "height": 22,
+          "width": 180,
+          "x": 398,
+          "y": 174
         },
         "steps": [
           {
@@ -426,20 +606,52 @@
             ]
           }
         ]
+      },
+      {
+        "label": "0",
+        "rect": {
+          "height": 22,
+          "width": 180,
+          "x": 398,
+          "y": 196
+        },
+        "steps": [
+          {
+            "keys": [
+              "0"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "S",
+        "rect": {
+          "height": 22,
+          "width": 180,
+          "x": 398,
+          "y": 218
+        },
+        "steps": [
+          {
+            "keys": [
+              "s"
+            ]
+          }
+        ]
       }
     ]
   },
   {
-    "id": "C11C0000-0000-4000-8000-000000000006",
-    "name": "Function Keys f1–f5",
+    "id": "C11C0000-0000-4000-8000-00000000000A",
+    "name": "アンジェラス",
     "zones": [
       {
-        "label": "f1",
+        "label": "移動",
         "rect": {
-          "x": 0,
-          "y": 384,
-          "width": 128,
-          "height": 16
+          "height": 21,
+          "width": 102,
+          "x": 52,
+          "y": 377
         },
         "steps": [
           {
@@ -450,12 +662,12 @@
         ]
       },
       {
-        "label": "f2",
+        "label": "見る/調べる",
         "rect": {
-          "x": 128,
-          "y": 384,
-          "width": 128,
-          "height": 16
+          "height": 21,
+          "width": 100,
+          "x": 158,
+          "y": 377
         },
         "steps": [
           {
@@ -466,12 +678,12 @@
         ]
       },
       {
-        "label": "f3",
+        "label": "話す/聞く",
         "rect": {
-          "x": 256,
-          "y": 384,
-          "width": 128,
-          "height": 16
+          "height": 21,
+          "width": 100,
+          "x": 262,
+          "y": 377
         },
         "steps": [
           {
@@ -482,12 +694,12 @@
         ]
       },
       {
-        "label": "f4",
+        "label": "考える",
         "rect": {
-          "x": 384,
-          "y": 384,
-          "width": 128,
-          "height": 16
+          "height": 21,
+          "width": 98,
+          "x": 366,
+          "y": 377
         },
         "steps": [
           {
@@ -498,17 +710,404 @@
         ]
       },
       {
-        "label": "f5",
+        "label": "見せる",
         "rect": {
-          "x": 512,
-          "y": 384,
-          "width": 128,
-          "height": 16
+          "height": 21,
+          "width": 98,
+          "x": 470,
+          "y": 377
         },
         "steps": [
           {
             "keys": [
               "f5"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "C11C0000-0000-4000-8000-00000000000B",
+    "name": "セイレーン",
+    "zones": [
+      {
+        "label": "話す",
+        "rect": {
+          "height": 20,
+          "width": 104,
+          "x": 516,
+          "y": 38
+        },
+        "steps": [
+          {
+            "keys": [
+              "right"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "聞く",
+        "rect": {
+          "height": 20,
+          "width": 104,
+          "x": 516,
+          "y": 58
+        },
+        "steps": [
+          {
+            "keys": [
+              "right"
+            ]
+          },
+          {
+            "keys": [
+              "down"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "見る",
+        "rect": {
+          "height": 20,
+          "width": 104,
+          "x": 516,
+          "y": 78
+        },
+        "steps": [
+          {
+            "keys": [
+              "right"
+            ]
+          },
+          {
+            "keys": [
+              "down"
+            ]
+          },
+          {
+            "keys": [
+              "down"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "取る",
+        "rect": {
+          "height": 20,
+          "width": 104,
+          "x": 516,
+          "y": 98
+        },
+        "steps": [
+          {
+            "keys": [
+              "right"
+            ]
+          },
+          {
+            "keys": [
+              "down"
+            ]
+          },
+          {
+            "keys": [
+              "down"
+            ]
+          },
+          {
+            "keys": [
+              "down"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "使う",
+        "rect": {
+          "height": 20,
+          "width": 104,
+          "x": 516,
+          "y": 118
+        },
+        "steps": [
+          {
+            "keys": [
+              "left"
+            ]
+          },
+          {
+            "keys": [
+              "up"
+            ]
+          },
+          {
+            "keys": [
+              "up"
+            ]
+          },
+          {
+            "keys": [
+              "up"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "呼ぶ",
+        "rect": {
+          "height": 20,
+          "width": 104,
+          "x": 516,
+          "y": 138
+        },
+        "steps": [
+          {
+            "keys": [
+              "left"
+            ]
+          },
+          {
+            "keys": [
+              "up"
+            ]
+          },
+          {
+            "keys": [
+              "up"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "調べる",
+        "rect": {
+          "height": 20,
+          "width": 104,
+          "x": 516,
+          "y": 158
+        },
+        "steps": [
+          {
+            "keys": [
+              "left"
+            ]
+          },
+          {
+            "keys": [
+              "up"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "その他",
+        "rect": {
+          "height": 20,
+          "width": 104,
+          "x": 516,
+          "y": 178
+        },
+        "steps": [
+          {
+            "keys": [
+              "left"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "C11C0000-0000-4000-8000-00000000000C",
+    "name": "魔界復活",
+    "zones": [
+      {
+        "label": "1",
+        "rect": {
+          "height": 34,
+          "width": 128,
+          "x": 414,
+          "y": 32
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp1"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "2",
+        "rect": {
+          "height": 34,
+          "width": 128,
+          "x": 414,
+          "y": 66
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp2"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "3",
+        "rect": {
+          "height": 34,
+          "width": 128,
+          "x": 414,
+          "y": 100
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp3"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "4",
+        "rect": {
+          "height": 34,
+          "width": 128,
+          "x": 414,
+          "y": 134
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp4"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "5",
+        "rect": {
+          "height": 34,
+          "width": 128,
+          "x": 414,
+          "y": 168
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp5"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "6",
+        "rect": {
+          "height": 34,
+          "width": 128,
+          "x": 414,
+          "y": 202
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp6"
+            ]
+          },
+          {
+            "keys": [
+              "return"
+            ]
+          }
+        ]
+      },
+      {
+        "label": "7",
+        "rect": {
+          "height": 34,
+          "width": 128,
+          "x": 414,
+          "y": 236
+        },
+        "steps": [
+          {
+            "keys": [
+              "kp7"
+            ]
+          },
+          {
+            "keys": [
+              "return"
             ]
           }
         ]
