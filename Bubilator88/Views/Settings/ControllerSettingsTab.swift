@@ -122,51 +122,9 @@ struct ControllerSettingsTab: View {
     }
   }
 
-  /// Pick a short human-readable label for a key event (e.g. "S", "Tab", "↑", "Num 8").
+  /// Pick a short human-readable label for a key event (e.g. "S", "tab", "↑", "KP 8").
   private func displayKeyName(for event: NSEvent) -> String {
-    // Named keys by virtual keyCode (kVK_*).
-    switch Int(event.keyCode) {
-    case 0x24: return "↩"        // Return
-    case 0x30: return "Tab"
-    case 0x31: return "Space"
-    case 0x33: return "⌫"        // Delete
-    case 0x35: return "⎋"        // Escape
-    case 0x7B: return "←"
-    case 0x7C: return "→"
-    case 0x7D: return "↓"
-    case 0x7E: return "↑"
-    case 0x7A: return "F1"
-    case 0x78: return "F2"
-    case 0x63: return "F3"
-    case 0x76: return "F4"
-    case 0x60: return "F5"
-    case 0x61: return "F6"
-    case 0x62: return "F7"
-    case 0x64: return "F8"
-    case 0x65: return "F9"
-    case 0x6D: return "F10"
-    case 0x67: return "F11"
-    case 0x6F: return "F12"
-    // Numpad (distinguish from main row)
-    case 0x52: return "Num 0"
-    case 0x53: return "Num 1"
-    case 0x54: return "Num 2"
-    case 0x55: return "Num 3"
-    case 0x56: return "Num 4"
-    case 0x57: return "Num 5"
-    case 0x58: return "Num 6"
-    case 0x59: return "Num 7"
-    case 0x5B: return "Num 8"
-    case 0x5C: return "Num 9"
-    case 0x41: return "Num ."
-    case 0x43: return "Num *"
-    case 0x45: return "Num +"
-    case 0x4B: return "Num /"
-    case 0x4C: return "Num ↩"
-    case 0x4E: return "Num -"
-    case 0x51: return "Num ="
-    default: break
-    }
+    if let name = macKeyLegend(for: event.keyCode) { return name }
     if let raw = event.charactersIgnoringModifiers, !raw.isEmpty {
       return raw.uppercased()
     }

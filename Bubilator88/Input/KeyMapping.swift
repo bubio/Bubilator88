@@ -310,8 +310,15 @@ nonisolated enum PC88SpecialKey: String, CaseIterable, Identifiable {
 
 // MARK: - Mac Key Name Lookup
 
-/// Display name for a macOS virtual key code.
+/// Display name for a macOS virtual key code, as printed on the keycap
+/// (`esc`, `return`, `delete`, …). Every screen that names a key uses this
+/// spelling, so the same key reads the same everywhere.
 nonisolated func macKeyName(for keyCode: UInt16) -> String {
+  macKeyLegend(for: keyCode) ?? String(format: "0x%02X", keyCode)
+}
+
+/// ``macKeyName(for:)`` without the hex fallback; `nil` for an unknown key code.
+nonisolated func macKeyLegend(for keyCode: UInt16) -> String? {
   switch keyCode {
   // Function keys
   case 0x7A: return "F1"
@@ -330,24 +337,24 @@ nonisolated func macKeyName(for keyCode: UInt16) -> String {
   case 0x6B: return "F14"
   case 0x71: return "F15"
   // Navigation
-  case 0x73: return "Home"
-  case 0x77: return "End"
-  case 0x74: return "Page Up"
-  case 0x79: return "Page Down"
-  case 0x72: return "Help"
-  case 0x75: return "Fwd Del"
+  case 0x73: return "home"
+  case 0x77: return "end"
+  case 0x74: return "page up"
+  case 0x79: return "page down"
+  case 0x72: return "insert"  // kVK_Help: what a PC keyboard's Insert key sends
+  case 0x75: return "del"
   // Arrows
   case 0x7E: return "↑"
   case 0x7D: return "↓"
   case 0x7B: return "←"
   case 0x7C: return "→"
   // Modifiers / control
-  case 0x24: return "Return"
-  case 0x30: return "Tab"
-  case 0x31: return "Space"
-  case 0x33: return "Delete"
-  case 0x35: return "Escape"
-  case 0x39: return "Caps Lock"
+  case 0x24: return "return"
+  case 0x30: return "tab"
+  case 0x31: return "space"
+  case 0x33: return "delete"
+  case 0x35: return "esc"
+  case 0x39: return "caps lock"
   // Letters
   case 0x00: return "A"
   case 0x0B: return "B"
@@ -417,8 +424,8 @@ nonisolated func macKeyName(for keyCode: UInt16) -> String {
   case 0x4E: return "KP -"
   case 0x41: return "KP ."
   case 0x4B: return "KP /"
-  case 0x4C: return "KP Enter"
+  case 0x4C: return "KP enter"
   case 0x51: return "KP ="
-  default:   return String(format: "0x%02X", keyCode)
+  default:   return nil
   }
 }
