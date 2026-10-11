@@ -293,9 +293,9 @@ struct ClickZoneStoreTests {
   @Test("新規レイアウトは既定の割り当てで始まり、キー名はすべて解決できる")
   func defaultMouseBindings() throws {
     let layout = makeStore().create(name: "New")
-    #expect(layout.steps(for: .right).map(\.keys) == [["shift"]])
-    #expect(layout.steps(for: .button4).map(\.keys) == [["return"]])
-    #expect(layout.steps(for: .button5).map(\.keys) == [["esc"]])
+    #expect(layout.steps(for: .right).map(\.keys) == [["space"]])
+    #expect(layout.steps(for: .button4).map(\.keys) == [["esc"]])
+    #expect(layout.steps(for: .button5).map(\.keys) == [["return"]])
     #expect(layout.steps(for: .wheelUp).map(\.keys) == [["kp8"]])
     #expect(layout.steps(for: .wheelDown).map(\.keys) == [["kp2"]])
     for button in ClickZoneMouseButton.allCases {
