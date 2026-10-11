@@ -392,6 +392,8 @@ struct ClickZoneEditorView: View {
 
   private func keysSection(_ zone: ClickZone) -> some View {
     Section("Keys") {
+      Text("Pressed in order when the zone is clicked or the controller's confirm button is pressed.")
+        .settingsDescriptionStyle()
       if zone.steps.isEmpty {
         Text("No keys yet. Press Record, then type the keys.")
           .settingsDescriptionStyle()
@@ -400,7 +402,7 @@ struct ClickZoneEditorView: View {
         // reordering and row selection for Delete.
         List(selection: $selectedSteps) {
           ForEach(Array(zone.steps.enumerated()), id: \.offset) { index, step in
-            stepRow(zone: zone, index: index, step: step)
+            stepRow(step: step)
               .tag(index)
           }
           .onMove { from, to in
@@ -413,15 +415,6 @@ struct ClickZoneEditorView: View {
         .sizedToContentList()
         .focusListOnChange(of: selectedSteps)
         .onDeleteCommand { removeSelectedSteps(from: zone) }
-        HStack {
-          Button {
-            removeSelectedSteps(from: zone)
-          } label: {
-            Image(systemName: "minus")
-          }
-          .disabled(selectedSteps.isEmpty)
-          .help("Remove Step")
-        }
       }
       if viewModel.isRecordingClickZoneKeys {
         Text("Recording: keys pressed together become one step.")
@@ -435,6 +428,10 @@ struct ClickZoneEditorView: View {
                 systemImage: viewModel.isRecordingClickZoneKeys ? "stop.circle" : "record.circle")
         }
         Spacer()
+        Button("Remove Step") {
+          removeSelectedSteps(from: zone)
+        }
+        .disabled(selectedSteps.isEmpty)
         Button("Clear Keys") {
           viewModel.editClickZone(id: zone.id) { $0.steps.removeAll() }
           selectedSteps.removeAll()
@@ -444,20 +441,11 @@ struct ClickZoneEditorView: View {
     }
   }
 
-  private func stepRow(zone: ClickZone, index: Int, step: ClickZoneStep) -> some View {
-    HStack {
-      Text(step.displayName)
-        .font(.body.monospaced())
-      Spacer()
-      Stepper(value: stepBinding(zone: zone, index: index, \.holdFrames), in: 1...120) {
-        Text("Hold \(step.holdFrames)f")
-          .monospacedDigit()
-      }
-      Stepper(value: stepBinding(zone: zone, index: index, \.gapFrames), in: 0...600) {
-        Text("Wait \(step.gapFrames)f")
-          .monospacedDigit()
-      }
-    }
+  private func stepRow(step: ClickZoneStep) -> some View {
+    Text(step.displayName)
+      .font(.body.monospaced())
+      .lineLimit(1)
+      .truncationMode(.middle)
   }
 
   private func removeSelectedSteps(from zone: ClickZone) {
@@ -465,19 +453,6 @@ struct ClickZoneEditorView: View {
     guard !offsets.isEmpty else { return }
     viewModel.editClickZone(id: zone.id) { $0.steps.remove(atOffsets: offsets) }
     selectedSteps.removeAll()
-  }
-
-  private func stepBinding(zone: ClickZone, index: Int,
-                           _ field: WritableKeyPath<ClickZoneStep, Int>) -> Binding<Int> {
-    Binding(
-      get: { zone.steps.indices.contains(index) ? zone.steps[index][keyPath: field] : 0 },
-      set: { newValue in
-        viewModel.editClickZone(id: zone.id) { z in
-          guard z.steps.indices.contains(index) else { return }
-          z.steps[index][keyPath: field] = newValue
-        }
-      }
-    )
   }
 
   // MARK: - Recording

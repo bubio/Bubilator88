@@ -7,6 +7,16 @@
     "  %@ ✓" : {
 
     },
+    "Pressed in order when the zone is clicked or the controller's confirm button is pressed." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "領域をクリック、またはコントローラーで決定ボタンを押すと、上から順に押されます。"
+          }
+        }
+      }
+    },
     "\"%@\" contains no disk image entries." : {
       "comment" : "Error: an m3u/m3u8 playlist has only blank or comment lines. %@ is the playlist path",
       "localizations" : {
@@ -1378,7 +1388,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "キーを消去"
+            "value" : "全削除"
           }
         }
       }
@@ -3002,16 +3012,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "命令実行前の HL"
-          }
-        }
-      }
-    },
-    "Hold %lldf" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "押下 %lldf"
           }
         }
       }
@@ -4756,7 +4756,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ステップを削除"
+            "value" : "削除"
           }
         }
       }
@@ -6752,16 +6752,6 @@
     },
     "W" : {
       "shouldTranslate" : false
-    },
-    "Wait %lldf" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "待機 %lldf"
-          }
-        }
-      }
     },
     "wait takes exactly one argument (e.g. wait 90, wait 1.5s)." : {
       "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
