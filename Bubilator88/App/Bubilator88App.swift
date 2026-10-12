@@ -22,6 +22,8 @@ struct Bubilator88App: App {
             viewModel.requestLaunch(url: url)
           } else if url.pathExtension.lowercased() == "b88script" {
             viewModel.requestScriptPlayback(url: url)
+          } else if url.isFileURL, ["cue", "ccd"].contains(url.pathExtension.lowercased()) {
+            viewModel.mountCD(url: url)
           } else if url.isFileURL, url.pathExtension.lowercased() == "d88" {
             // Same path as `bubilator88://boot?arg=<file>`: validate, mount
             // (a multi-image file puts its second image in drive 1), boot.

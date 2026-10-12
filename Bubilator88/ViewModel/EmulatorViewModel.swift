@@ -514,6 +514,16 @@ final class EmulatorViewModel {
   /// rewind restoring a state with a different tape — still show up.
   var isTapeMounted: Bool = false
 
+  /// The CD in the drive: display name ("Empty" when none) and source, which
+  /// a save state records so the disc can be put back when it is loaded.
+  var cdName: String = "Empty"
+  var cdSourceURL: URL?
+  var isCDMounted: Bool = false
+  /// CDBIOS.ROM was found when the ROMs were loaded.
+  var cdBiosAvailable: Bool = false
+  /// CD access lamp, sampled at 4Hz like the drive lamps.
+  var cdAccess: Bool = false
+
   /// Tape position as "NN%", for the status bar only. Menus show just the
   /// tape name: reading `tapeProgress` there re-evaluated them at the 4Hz
   /// sampler rate, which got in the way of using an open menu.
@@ -534,6 +544,7 @@ final class EmulatorViewModel {
 
   /// Cassette-tape file picker state.
   var showingTapePicker: Bool = false
+  var showingCDPicker: Bool = false
   var showingMemoryImagePicker: Bool = false
 
   /// Context for the selection sheet presented after a mount. nil hides the
@@ -978,6 +989,7 @@ final class EmulatorViewModel {
     // Set before the reset: the monitor decides the CRTC's reset geometry.
     pc88.monitorType = Settings.shared.monitorType
     pc88.memoryWaitDip = Settings.shared.memoryWaitDip
+    pc88.cdDriveInstalled = Settings.shared.cdDriveInstalled
     pc88.reset()
     pc88.clock8MHz = clock8MHz
     pc88.immersiveOutputEnabled = Settings.shared.immersiveAudio
@@ -1331,6 +1343,7 @@ final class EmulatorViewModel {
     let use8MHz = clock8MHz
     let monitorType = Settings.shared.monitorType
     let memoryWaitDip = Settings.shared.memoryWaitDip
+    let cdDriveInstalled = Settings.shared.cdDriveInstalled
     emuQueue.sync {
       // Auto-select ROM/DISK boot: if drive 0 is empty, set DIP SW2
       // bit 3 to skip the ~30s disk-boot timeout and go straight to
@@ -1338,6 +1351,9 @@ final class EmulatorViewModel {
       // (Machine.applyBootStrap is the single source of truth shared with
       // ScriptPlayer / BootTester.)
       pc88.dipSw1 = sw1
+      // Fitted or not, the drive takes effect at the reset below; the boot
+      // strap depends on it.
+      pc88.cdDriveInstalled = cdDriveInstalled
       pc88.applyBootStrap(base: sw2Base)
       // Like the DIP switches, the monitor type only takes effect on reset.
       pc88.monitorType = monitorType
@@ -1410,6 +1426,10 @@ final class EmulatorViewModel {
     var tapeName: String?
     var tapeSourceURL: String?
     var tapeFormatT88: Bool?
+    /// The CD in the drive. Unlike a tape, the disc is not inside the state
+    /// file — only the drive's position is — so it is mounted again from here.
+    var cdName: String?
+    var cdSourceURL: String?
   }
 
   /// Sidecar paths, read-only: saves stopped writing these once `AMTA` / `THMB`
@@ -1512,7 +1532,9 @@ final class EmulatorViewModel {
         drive1ArchiveEntry: self.drive1Info?.archiveEntryName,
         tapeName: pc88.isTapeLoaded ? self.tapeName : nil,
         tapeSourceURL: pc88.isTapeLoaded ? self.tapeSourceURL?.absoluteString : nil,
-        tapeFormatT88: pc88.isTapeLoaded ? (self.tapeFormat == .t88) : nil
+        tapeFormatT88: pc88.isTapeLoaded ? (self.tapeFormat == .t88) : nil,
+        cdName: pc88.isCDMounted ? self.cdName : nil,
+        cdSourceURL: pc88.isCDMounted ? self.cdSourceURL?.path(percentEncoded: false) : nil
       )
       let metaJSON = try? JSONEncoder().encode(meta)
       // Thumbnail and app metadata go inside the .b88s so the file stands on
@@ -1645,6 +1667,7 @@ final class EmulatorViewModel {
       tapeFormat = nil
     }
     tapeProgress = pc88.tapeProgress
+    restoreCD(from: meta)
     activeClock8MHz = pc88.clock8MHz
     renderScreen()
     clearRewindBuffer()

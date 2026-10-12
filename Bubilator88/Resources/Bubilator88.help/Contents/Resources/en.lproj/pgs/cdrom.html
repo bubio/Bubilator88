@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="CD-ROM">
+    <meta name="description" content="The PC-8801MC CD-ROM drive and CD images (cue / ccd)">
+    <meta name="keywords" content="CD, CD-ROM, PC-8801MC, CDBIOS, cue, ccd, img, bin">
+    <meta name="robots" content="index">
+    <title>CD-ROM</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>Contents</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 Help</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li><a href="disks.html">Using Disks</a></li>
+            <li><a href="cassette.html">Cassette Tape</a></li>
+            <li><a href="cdrom.html">CD-ROM</a></li>
+            <li><a href="keyboard.html">Keyboard</a></li>
+            <li><a href="display.html">Display</a></li>
+            <li><a href="audio.html">Audio</a></li>
+            <li><a href="savestates.html">Save States</a></li>
+            <li><a href="controller.html">Game Controller</a></li>
+            <li><a href="mouse.html">Mouse</a></li>
+            <li><a href="shortcuts.html">Shortcuts</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="cdrom"></a>
+    <h1>CD-ROM</h1>
+    <p>With the PC-8801MC's CD-ROM drive you can boot CD releases.</p>
+
+    <h2>Setup</h2>
+    <ol>
+        <li>Put the PC-8801MC CD BIOS in <code>~/Library/Application Support/Bubilator88/</code> as <code>CDBIOS.ROM</code> (64KB).</li>
+        <li>Turn on <strong>Settings &gt; General &gt; CD-ROM drive</strong>. It takes effect at the next reset. Opening a CD turns it on for you.</li>
+    </ol>
+    <p>With the drive fitted, every boot goes through the CD BIOS. With no CD in the drive it carries on to BASIC or the disk.</p>
+
+    <h2>Supported Formats</h2>
+    <ul>
+        <li><strong>.cue</strong> — cue sheet, for a single image or one file per track.</li>
+        <li><strong>.ccd</strong> — CloneCD, with the <code>.img</code> of the same name.</li>
+    </ul>
+    <p>Both must hold raw 2352-byte sectors; <code>.iso</code> and <code>MODE1/2048</code> tracks are not supported. The image is read while the CD is in, so do not move or delete it.</p>
+
+    <h2>Opening a CD</h2>
+    <table>
+        <tr><th>Action</th><th>What it does</th></tr>
+        <tr><td><strong>CD &gt; Open...</strong></td><td>Inserts the CD, resets and boots from it</td></tr>
+        <tr><td><strong>CD &gt; Eject</strong></td><td>Takes the CD out</td></tr>
+        <tr><td><strong>CD &gt; Recent Files</strong></td><td>Up to 10 recently opened CDs</td></tr>
+    </table>
+    <p>You can also drop a <code>.cue</code> or <code>.ccd</code> on the screen. With the drive fitted, the status bar shows the CD name and an access lamp.</p>
+    <p>Many CD titles use floppy disks as well. When one asks for blank disks, make them with <strong>Disk &gt; Create Blank Disk...</strong>.</p>
+
+    <h2>Music</h2>
+    <p>CD audio (CD-DA) is mixed into the same output as the FM sound, following the fades the software asks for.</p>
+
+    <h2>Save States</h2>
+    <p>A save state holds the drive's state, such as the play position, but not the CD itself. Loading one puts back the CD it was saved with, from the same place; if it is gone, the drive is left empty.</p>
+
+    <h2>Known Limitations</h2>
+    <ul>
+        <li>CD audio is not played in Immersive Audio.</li>
+        <li>The CD audio level and the length of a fade have not been measured on real hardware.</li>
+        <li>Seek times are not reproduced; data is read at normal speed (75 sectors a second).</li>
+    </ul>
+
+    <p><a href="../index.html">Back to Bubilator88 Help</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>

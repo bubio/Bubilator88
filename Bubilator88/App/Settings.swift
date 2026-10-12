@@ -22,6 +22,7 @@ final class Settings {
     static let monitorType               = "monitorType"
     static let memoryWaitDip             = "memoryWaitDip"
     static let extramCards               = "extramCards"
+    static let cdDriveInstalled          = "cdDriveInstalled"
 
     // Audio
     static let volume                    = "volume"
@@ -99,6 +100,7 @@ final class Settings {
     // Recent files
     static let recentDiskFiles           = "recentDiskFiles"
     static let recentTapeFiles           = "recentTapeFiles"
+    static let recentCDFiles             = "recentCDFiles"
   }
 
   /// CPU clock mode (true = 8 MHz, false = 4 MHz).
@@ -165,6 +167,13 @@ final class Settings {
   /// 0 = none, 1 = 128KB, 8 = 1MB. Encoding follows QUASI88 `use_extram`.
   var extramCards: Int = 1 {
     didSet { UserDefaults.standard.set(extramCards, forKey: Keys.extramCards) }
+  }
+
+  /// A CD-ROM drive fitted, as on a PC-8801MC. Takes effect only with
+  /// CDBIOS.ROM present, and is applied on reset. Off by default: with it on
+  /// every boot goes through the CD BIOS first.
+  var cdDriveInstalled: Bool = false {
+    didSet { UserDefaults.standard.set(cdDriveInstalled, forKey: Keys.cdDriveInstalled) }
   }
 
   // MARK: - UI
@@ -530,6 +539,10 @@ final class Settings {
   /// independently without mode cross-contamination.
   var recentTapeFiles: [RecentDiskEntry] = []
 
+  /// Recently used CD images (max 10, newest first), a list of their own
+  /// like the tapes.
+  var recentCDFiles: [RecentDiskEntry] = []
+
   /// Paths already in the recent list (for O(1) dedup).
   private var recentPaths: Set<String> = []
   private var recentTapePaths: Set<String> = []
@@ -592,6 +605,10 @@ final class Settings {
       recentTapeFiles = entries
       recentTapePaths = Set(entries.map(\.filePath))
     }
+    if let data = UserDefaults.standard.data(forKey: Keys.recentCDFiles),
+       let entries = try? JSONDecoder().decode([RecentDiskEntry].self, from: data) {
+      recentCDFiles = entries
+    }
   }
 
   // MARK: - Recent tape files
@@ -632,6 +649,38 @@ final class Settings {
     UserDefaults.standard.removeObject(forKey: Keys.recentTapeFiles)
   }
 
+  // MARK: - Recent CD files
+
+  func addRecentCDFile(url: URL) {
+    guard let bookmark = try? url.bookmarkData(options: .withSecurityScope,
+                                               includingResourceValuesForKeys: nil,
+                                               relativeTo: nil) else { return }
+    let filePath = url.standardizedFileURL.path
+    let entry = RecentDiskEntry(filePath: filePath, bookmark: bookmark,
+                                displayName: url.lastPathComponent,
+                                displayDir: abbreviatedDir(url.deletingLastPathComponent().path))
+    recentCDFiles.removeAll { $0.filePath == filePath }
+    recentCDFiles.insert(entry, at: 0)
+    recentCDFiles = Array(recentCDFiles.prefix(10))
+    persistRecentCDFiles()
+  }
+
+  func removeRecentCDFile(_ entry: RecentDiskEntry) {
+    recentCDFiles.removeAll { $0.filePath == entry.filePath }
+    persistRecentCDFiles()
+  }
+
+  func clearRecentCDFiles() {
+    recentCDFiles = []
+    UserDefaults.standard.removeObject(forKey: Keys.recentCDFiles)
+  }
+
+  private func persistRecentCDFiles() {
+    if let data = try? JSONEncoder().encode(recentCDFiles) {
+      UserDefaults.standard.set(data, forKey: Keys.recentCDFiles)
+    }
+  }
+
   /// Abbreviate home directory in path display.
   private func abbreviatedDir(_ path: String) -> String {
     let home = FileManager.default.homeDirectoryForCurrentUser.path
@@ -667,6 +716,9 @@ final class Settings {
     if let v = UserDefaults.standard.object(forKey: Keys.extramCards) as? Int,
        [0, 1, 8].contains(v) {
       extramCards = v
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.cdDriveInstalled) as? Bool {
+      cdDriveInstalled = v
     }
     if let v = UserDefaults.standard.object(forKey: Keys.tapeAutoBoot) as? Bool {
       tapeAutoBoot = v

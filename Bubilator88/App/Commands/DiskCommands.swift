@@ -196,5 +196,47 @@ struct DiskCommands: Commands {
       }
       .disabled(!viewModel.allows(.media))
     }
+
+    CommandMenu("CD") {
+      Group {
+        Text(viewModel.cdName).disabled(true)
+
+        Divider()
+
+        Button {
+          viewModel.showingCDPicker = true
+        } label: {
+          Label("Open...", systemImage: "opticaldisc")
+        }
+
+        Button {
+          viewModel.ejectCD()
+        } label: {
+          Label("Eject", systemImage: "eject")
+        }
+        .disabled(!viewModel.isCDMounted)
+
+        Divider()
+
+        Menu("Recent Files") {
+          if Settings.shared.recentCDFiles.isEmpty {
+            Text("No Recent Files")
+          } else {
+            ForEach(Settings.shared.recentCDFiles) { entry in
+              Button("\(entry.displayName) — \(entry.displayDir)") {
+                viewModel.mountRecentCD(entry)
+              }
+            }
+            Divider()
+            Button {
+              Settings.shared.clearRecentCDFiles()
+            } label: {
+              Label("Clear Recent Files", systemImage: "trash")
+            }
+          }
+        }
+      }
+      .disabled(!viewModel.allows(.media))
+    }
   }
 }

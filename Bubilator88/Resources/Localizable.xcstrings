@@ -17,12 +17,102 @@
         }
       }
     },
+    "%@ lists no tracks" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ にトラックがありません"
+          }
+        }
+      }
+    },
+    "%@ not found next to %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$@ と同じフォルダに %1$@ が見つかりません"
+          }
+        }
+      }
+    },
+    "CD" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CD"
+          }
+        }
+      }
+    },
+    "CD Load Error" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CD 読み込みエラー"
+          }
+        }
+      }
+    },
+    "CD not found: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CD が見つかりません: %@"
+          }
+        }
+      }
+    },
+    "CD-ROM" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CD-ROM"
+          }
+        }
+      }
+    },
+    "CD-ROM drive" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CD-ROM ドライブ"
+          }
+        }
+      }
+    },
+    "CDBIOS.ROM not found in %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ に CDBIOS.ROM が見つかりません"
+          }
+        }
+      }
+    },
     "Could not read \"%@\"." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "\"%@\" を読み込めませんでした。"
+          }
+        }
+      }
+    },
+    "Fits the PC-8801MC's CD-ROM drive. Applied on next reset." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PC-8801MC の CD-ROM ドライブを付けます。次のリセットで反映されます。"
           }
         }
       }
@@ -43,6 +133,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "メモリイメージの読み込みを中止しました"
+          }
+        }
+      }
+    },
+    "Needs CDBIOS.ROM." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CDBIOS.ROM が必要です。"
           }
         }
       }
@@ -139,6 +239,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "テープの自動起動を中止しました"
+          }
+        }
+      }
+    },
+    "Tracks stored as %@ are not supported. Use an image with raw 2352-byte sectors." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 形式のトラックには対応していません。2352 バイトのセクターをそのまま収めたイメージを使ってください。"
           }
         }
       }

@@ -11,6 +11,8 @@ extension UTType {
   static let cmt  = UTType(filenameExtension: "cmt")!
   static let t88  = UTType(filenameExtension: "t88")!
   static let n80  = UTType(filenameExtension: "n80")!
+  static let cue  = UTType(filenameExtension: "cue")!
+  static let ccd  = UTType(filenameExtension: "ccd")!
   static let lzh  = UTType(filenameExtension: "lzh")!
   static let lha  = UTType(filenameExtension: "lha")!
   static let cab  = UTType(filenameExtension: "cab")!
@@ -26,6 +28,8 @@ private let diskFileTypes: [UTType] = [
 ]
 
 private let memoryImageFileTypes: [UTType] = [.n80]
+
+private let cdFileTypes: [UTType] = [.cue, .ccd]
 
 private let tapeFileTypes: [UTType] = [
   .cmt, .t88,                      // tape images
@@ -191,6 +195,17 @@ struct ContentView: View {
     )
     .background(
       Color.clear.fileImporter(
+        isPresented: $viewModel.showingCDPicker,
+        allowedContentTypes: cdFileTypes,
+        allowsMultipleSelection: false
+      ) { result in
+        if case .success(let urls) = result, let url = urls.first {
+          viewModel.mountCD(url: url)
+        }
+      }
+    )
+    .background(
+      Color.clear.fileImporter(
         isPresented: $viewModel.showingMemoryImagePicker,
         allowedContentTypes: memoryImageFileTypes,
         allowsMultipleSelection: false
@@ -254,7 +269,7 @@ struct ContentView: View {
           providers.count == 1, let provider = providers.first else { return false }
     let acceptedExts: Set<String> = [
       "d88", "d77", "2d", "2hd",
-      "m3u", "m3u8", "n80",
+      "m3u", "m3u8", "n80", "cue", "ccd",
       "zip", "lzh", "lha", "cab", "rar"
     ]
     _ = provider.loadObject(ofClass: URL.self) { url, _ in
@@ -266,6 +281,10 @@ struct ContentView: View {
       guard acceptedExts.contains(url.pathExtension.lowercased()) else { return }
       if url.pathExtension.lowercased() == "n80" {
         Task { @MainActor in viewModel.loadMemoryImage(url: url) }
+        return
+      }
+      if ["cue", "ccd"].contains(url.pathExtension.lowercased()) {
+        Task { @MainActor in viewModel.mountCD(url: url) }
         return
       }
       Task { @MainActor in
@@ -363,6 +382,14 @@ struct ContentView: View {
       // Cassette tape (shown when enabled in Display settings)
       if Settings.shared.showTapeInStatusBar {
         tapeMenu
+      }
+
+      // CD-ROM (shown while the drive is fitted)
+      if Settings.shared.cdDriveInstalled {
+        HStack(spacing: 4) {
+          driveLED(access: viewModel.cdAccess)
+          cdMenu
+        }
       }
 
       Spacer()
@@ -562,6 +589,41 @@ struct ContentView: View {
     }
     .menuStyle(.borderlessButton)
     .help("Drive \(drive + 1)")
+  }
+
+  @ViewBuilder
+  private var cdMenu: some View {
+    Menu {
+      Text(viewModel.cdName).disabled(true)
+
+      Divider()
+
+      Button {
+        viewModel.showingCDPicker = true
+      } label: {
+        Label("Open...", systemImage: "doc")
+      }
+
+      Button {
+        viewModel.ejectCD()
+      } label: {
+        Label("Eject", systemImage: "eject")
+      }
+      .disabled(!viewModel.isCDMounted)
+    } label: {
+      HStack(spacing: 3) {
+        Image(systemName: "opticaldisc")
+          .resizable()
+          .frame(width: 12, height: 12)
+          .foregroundStyle(viewModel.isCDMounted ? .secondary : .tertiary)
+        Text(viewModel.cdName)
+          .lineLimit(1)
+          .truncationMode(.tail)
+          .foregroundStyle(viewModel.isCDMounted ? .secondary : .tertiary)
+      }
+    }
+    .menuStyle(.borderlessButton)
+    .help("CD-ROM")
   }
 
   /// Tooltip detail: the tape name, with its position once one is mounted.

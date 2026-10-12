@@ -32,6 +32,17 @@ struct GeneralSettingsTab: View {
         .pickerStyle(.menu)
         Text("Applied on next reset.")
           .settingsDescriptionStyle()
+
+        Toggle("CD-ROM drive", isOn: $settings.cdDriveInstalled)
+          .disabled(!viewModel.cdBiosAvailable)
+        Group {
+          if viewModel.cdBiosAvailable {
+            Text("Fits the PC-8801MC's CD-ROM drive. Applied on next reset.")
+          } else {
+            Text("Needs CDBIOS.ROM.")
+          }
+        }
+        .settingsDescriptionStyle()
       }
 
       Section("AI Upscale Models") {

@@ -19,6 +19,14 @@ enum BIOSFiles {
                  directoryHint: .isDirectory)
   }
 
+  /// The PC-8801MC CD BIOS, CDBIOS.ROM (64KB), when present. Not a
+  /// `PC88.ROM`: it is loaded with `PC88.loadCDBios`.
+  static func loadCDBios(from directory: URL) -> [UInt8]? {
+    guard let data = try? Data(contentsOf: directory.appending(component: "CDBIOS.ROM")),
+          data.count == 0x10000 else { return nil }
+    return Array(data)
+  }
+
   /// Every ROM image present in `directory`, N88-BASIC first. Only
   /// N88-BASIC is required; the rest are loaded when found.
   static func load(from directory: URL) -> [(PC88.ROM, [UInt8])] {
