@@ -101,6 +101,7 @@ extension EmulatorViewModel {
     for _ in 0..<frameCount {
       tickPasteQueue()
       tickTapeAutoBoot()
+      tickMemoryImageBoot()
       tickClickZonePlayer()
       tickScriptPlayer()
       applyCheats()
@@ -132,6 +133,7 @@ extension EmulatorViewModel {
       applyPendingInput()
       tickPasteQueue()
       tickTapeAutoBoot()
+      tickMemoryImageBoot()
       tickClickZonePlayer()
       tickScriptPlayer()
       applyCheats()
