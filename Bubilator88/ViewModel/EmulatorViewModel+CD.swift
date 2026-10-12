@@ -10,6 +10,10 @@ extension EmulatorViewModel {
   /// fits the CD-ROM drive if the setting had it off.
   @discardableResult
   func mountCD(url: URL) -> Bool {
+    guard checkAllowed(.media) else { return false }
+    // Only the flag: the machine's copy is replaced at the reset below, not
+    // under a running program.
+    cdBiosAvailable = BIOSFiles.loadCDBios(from: BIOSFiles.directory) != nil
     guard cdBiosAvailable else {
       showAlert(
         title: String(localized: "CD Load Error", comment: "Alert title"),
@@ -38,6 +42,37 @@ extension EmulatorViewModel {
     return true
   }
 
+  /// Entry point for a `.cue` / `.ccd` opened from Finder. A cold launch
+  /// can deliver it before `ContentView.onAppear` has loaded the ROMs and
+  /// started the loop, so it waits for `consumePendingCD()` then.
+  func requestCDMount(url: URL) {
+    guard checkAllowed(.media) else { return }
+    if isRunning && metalView != nil {
+      mountCD(url: url)
+    } else {
+      pendingCDURL = url
+    }
+  }
+
+  /// Called by `ContentView.onAppear` once the loop is running.
+  func consumePendingCD() {
+    guard let url = pendingCDURL else { return }
+    pendingCDURL = nil
+    mountCD(url: url)
+  }
+
+  /// Load CDBIOS.ROM into the machine, or drop it when the file has gone,
+  /// ahead of a reset. Call with the emulation loop stopped.
+  func refreshCDBios() {
+    if let data = BIOSFiles.loadCDBios(from: BIOSFiles.directory) {
+      pc88.loadCDBios(data)
+      cdBiosAvailable = true
+    } else {
+      pc88.unloadCDBios()
+      cdBiosAvailable = false
+    }
+  }
+
   /// Mount a previously-remembered CD via its bookmark.
   func mountRecentCD(_ entry: RecentDiskEntry) {
     guard let url = entry.resolveBookmark() else {
@@ -54,19 +89,26 @@ extension EmulatorViewModel {
   /// Take the CD out.
   func ejectCD() {
     emuQueue.sync { pc88.ejectCD() }
+    clearCDDisplay()
+    // A snapshot from before the eject would put the drive back mid-read
+    // with no disc to read from.
+    clearRewindBuffer()
+  }
+
+  /// Show the drive as empty, after the disc came out in the machine.
+  func clearCDDisplay() {
     cdName = "Empty"
     cdSourceURL = nil
     isCDMounted = false
   }
 
   /// After a save state is loaded: the state carries the drive's position
-  /// but not the disc, so put back the one it was saved with. Called with
-  /// the emulation loop stopped.
+  /// but not the disc, so put back the one it was saved with, or none if it
+  /// was saved empty. Called with the emulation loop stopped.
   func restoreCD(from meta: SaveMeta?) {
     guard pc88.isCDDriveActive, let path = meta?.cdSourceURL else {
-      if !pc88.isCDDriveActive { pc88.ejectCD() }
-      isCDMounted = pc88.isCDMounted
-      if !isCDMounted { cdName = "Empty"; cdSourceURL = nil }
+      pc88.ejectCD()
+      clearCDDisplay()
       return
     }
     let url = URL(fileURLWithPath: path)
@@ -77,9 +119,7 @@ extension EmulatorViewModel {
       isCDMounted = true
     } catch {
       pc88.ejectCD()
-      cdName = "Empty"
-      cdSourceURL = nil
-      isCDMounted = false
+      clearCDDisplay()
       showToast(String(localized: "CD not found: \(url.lastPathComponent)",
                        comment: "Toast after loading a save state whose CD image is missing"))
     }

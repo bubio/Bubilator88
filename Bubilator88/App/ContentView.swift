@@ -11,8 +11,9 @@ extension UTType {
   static let cmt  = UTType(filenameExtension: "cmt")!
   static let t88  = UTType(filenameExtension: "t88")!
   static let n80  = UTType(filenameExtension: "n80")!
-  static let cue  = UTType(filenameExtension: "cue")!
-  static let ccd  = UTType(filenameExtension: "ccd")!
+  // Declared in Info.plist, so Finder offers the app for them too.
+  static let cue  = UTType(importedAs: "com.goldenhawk.cdrwin-cuesheet")
+  static let ccd  = UTType(importedAs: "com.elby.clonecd-control")
   static let lzh  = UTType(filenameExtension: "lzh")!
   static let lha  = UTType(filenameExtension: "lha")!
   static let cab  = UTType(filenameExtension: "cab")!
@@ -142,6 +143,8 @@ struct ContentView: View {
       // A `.b88script` double-clicked to launch the app is held until
       // here, so it plays only after ROMs + run loop are live.
       viewModel.consumePendingScript()
+      // And a `.cue` / `.ccd` opened the same way.
+      viewModel.consumePendingCD()
       // QUASI88-compatible command-line arguments, e.g.
       // `Bubilator88 -v2 game.d88 2`. Evaluated once at launch, and before any
       // `bubilator88://` URL — so if both are given, the URL wins.

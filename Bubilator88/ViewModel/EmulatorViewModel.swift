@@ -881,6 +881,10 @@ final class EmulatorViewModel {
   /// command-line entry point shares the same deferral and apply path.
   @ObservationIgnored var pendingLaunchRequest: LaunchRequest?
 
+  /// A CD opened from Finder before the ROMs were loaded. Consumed by
+  /// `consumePendingCD()` from `ContentView.onAppear`.
+  @ObservationIgnored var pendingCDURL: URL?
+
   /// Command-line arguments are honored exactly once, at startup
   /// (`ContentView.onAppear`), so a window re-creation never re-boots the
   /// game the user launched with.
@@ -990,6 +994,9 @@ final class EmulatorViewModel {
     pc88.monitorType = Settings.shared.monitorType
     pc88.memoryWaitDip = Settings.shared.memoryWaitDip
     pc88.cdDriveInstalled = Settings.shared.cdDriveInstalled
+    // The CD BIOS, unlike the other ROMs (loaded in `ContentView.onAppear`),
+    // has to be in place at this reset for the machine to start in it.
+    refreshCDBios()
     pc88.reset()
     pc88.clock8MHz = clock8MHz
     pc88.immersiveOutputEnabled = Settings.shared.immersiveAudio
@@ -1344,6 +1351,7 @@ final class EmulatorViewModel {
     let monitorType = Settings.shared.monitorType
     let memoryWaitDip = Settings.shared.memoryWaitDip
     let cdDriveInstalled = Settings.shared.cdDriveInstalled
+    refreshCDBios()
     emuQueue.sync {
       // Auto-select ROM/DISK boot: if drive 0 is empty, set DIP SW2
       // bit 3 to skip the ~30s disk-boot timeout and go straight to
@@ -1668,6 +1676,13 @@ final class EmulatorViewModel {
     }
     tapeProgress = pc88.tapeProgress
     restoreCD(from: meta)
+    // Mirrored like the monitor type: the next Reset must not fit or remove
+    // the drive behind the state's back.
+    let cdDriveActive = pc88.isCDDriveActive
+    pc88.cdDriveInstalled = cdDriveActive
+    if Settings.shared.cdDriveInstalled != cdDriveActive {
+      Settings.shared.cdDriveInstalled = cdDriveActive
+    }
     activeClock8MHz = pc88.clock8MHz
     renderScreen()
     clearRewindBuffer()
@@ -1810,7 +1825,7 @@ final class EmulatorViewModel {
   ///   `start()`'s own.
   func restoreResumeStateIfNeeded() -> String? {
     guard Settings.shared.resumeOnLaunch, romLoaded,
-          pendingScriptURL == nil, pendingLaunchRequest == nil,
+          pendingScriptURL == nil, pendingLaunchRequest == nil, pendingCDURL == nil,
           !hasCommandLineLaunch,
           let fileData = try? Data(contentsOf: resumeStatePath) else { return nil }
     do {

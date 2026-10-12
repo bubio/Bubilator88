@@ -21,13 +21,6 @@ extension EmulatorViewModel {
     for (rom, data) in roms {
       pc88.loadROM(rom, data: data)
     }
-    let firstLoad = !romLoaded
-    if let cdBios = BIOSFiles.loadCDBios(from: appSupport) {
-      pc88.loadCDBios(cdBios)
-      cdBiosAvailable = true
-    } else {
-      cdBiosAvailable = false
-    }
     if roms.contains(where: { $0.0 == .n88Basic }) {
       romLoaded = true
     } else {
@@ -54,15 +47,6 @@ extension EmulatorViewModel {
           break
         }
       }
-    }
-
-    // `init` reset the machine before any ROM was loaded. With the CD drive
-    // fitted the machine has to start in the CD BIOS, which only a reset
-    // after loading it does. Later loads follow a reset of their own.
-    if firstLoad && romLoaded && pc88.cdDriveInstalled && !pc88.isCDDriveActive {
-      pc88.applyBootStrap(base: _bootModeStorage.dipSw2)
-      pc88.reset()
-      pc88.clock8MHz = clock8MHz
     }
   }
 
