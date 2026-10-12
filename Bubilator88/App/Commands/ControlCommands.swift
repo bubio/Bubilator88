@@ -165,6 +165,14 @@ struct ControlCommands: Commands {
         } label: {
           Label("Load State...", systemImage: "tray.and.arrow.up")
         }
+
+        Divider()
+
+        Button {
+          viewModel.showingMemoryImagePicker = true
+        } label: {
+          Label("Open Memory Image...", systemImage: "memorychip")
+        }
       }
       .disabled(!viewModel.allows(.state))
     }

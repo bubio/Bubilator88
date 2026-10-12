@@ -10,6 +10,7 @@ extension UTType {
   static let disk2hd = UTType(filenameExtension: "2hd")!
   static let cmt  = UTType(filenameExtension: "cmt")!
   static let t88  = UTType(filenameExtension: "t88")!
+  static let n80  = UTType(filenameExtension: "n80")!
   static let lzh  = UTType(filenameExtension: "lzh")!
   static let lha  = UTType(filenameExtension: "lha")!
   static let cab  = UTType(filenameExtension: "cab")!
@@ -23,6 +24,8 @@ private let diskFileTypes: [UTType] = [
   .m3u, .m3u8,                     // multi-disk playlist
   .zip, .lzh, .lha, .cab, .rar     // archives
 ]
+
+private let memoryImageFileTypes: [UTType] = [.n80]
 
 private let tapeFileTypes: [UTType] = [
   .cmt, .t88,                      // tape images
@@ -186,6 +189,17 @@ struct ContentView: View {
         }
       }
     )
+    .background(
+      Color.clear.fileImporter(
+        isPresented: $viewModel.showingMemoryImagePicker,
+        allowedContentTypes: memoryImageFileTypes,
+        allowsMultipleSelection: false
+      ) { result in
+        if case .success(let urls) = result, let url = urls.first {
+          viewModel.loadMemoryImage(url: url)
+        }
+      }
+    )
     // Binding the pickerContext sum type directly keeps which picker is showing
     // and what it contains permanently consistent. `.sheet(item:)` rebuilds the
     // sheet whenever the item's id changes.
@@ -240,7 +254,7 @@ struct ContentView: View {
           providers.count == 1, let provider = providers.first else { return false }
     let acceptedExts: Set<String> = [
       "d88", "d77", "2d", "2hd",
-      "m3u", "m3u8",
+      "m3u", "m3u8", "n80",
       "zip", "lzh", "lha", "cab", "rar"
     ]
     _ = provider.loadObject(ofClass: URL.self) { url, _ in
@@ -250,6 +264,10 @@ struct ContentView: View {
         return
       }
       guard acceptedExts.contains(url.pathExtension.lowercased()) else { return }
+      if url.pathExtension.lowercased() == "n80" {
+        Task { @MainActor in viewModel.loadMemoryImage(url: url) }
+        return
+      }
       Task { @MainActor in
         viewModel.mountDisk(url: url, drive: -1)
       }

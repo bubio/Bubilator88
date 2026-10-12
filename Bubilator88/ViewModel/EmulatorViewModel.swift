@@ -534,6 +534,7 @@ final class EmulatorViewModel {
 
   /// Cassette-tape file picker state.
   var showingTapePicker: Bool = false
+  var showingMemoryImagePicker: Bool = false
 
   /// Context for the selection sheet presented after a mount. nil hides the
   /// sheet. `Identifiable`, so it binds directly to `.sheet(item:)`.
@@ -809,6 +810,12 @@ final class EmulatorViewModel {
   /// Types `LOAD "CAS:"` and `RUN` for Tape > Auto Boot. It types through
   /// `pasteQueue` and is ticked next to it; both share `pasteQueueLock`.
   @ObservationIgnored nonisolated(unsafe) let tapeAutoBoot = TapeAutoBoot()
+
+  /// Restores a `.n80` memory image once N-BASIC is up, and types `RUN` if it
+  /// needs it. Types through `pasteQueue`, is ticked next to it, and shares
+  /// `pasteQueueLock`, so whatever cancels typing (ESC, a reset, a state
+  /// load) cancels it.
+  @ObservationIgnored nonisolated(unsafe) let memoryImageBoot = MemoryImageBoot()
 
   /// Plays the key sequence of a clicked control zone; ticked next to the paste
   /// queue. Carries its own lock.
@@ -1547,6 +1554,9 @@ final class EmulatorViewModel {
     // down first — symmetric with performReset.
     cancelScriptPlayback()
     cancelScriptRecording()
+    // Typing still queued, and a memory image waiting to be restored, would
+    // land on the loaded machine.
+    cancelPasteQueue()
     // Loading a save state discards the current disk state, so flush any
     // unsaved disk writes first.
     diskWriteBackScheduler.flushAll()
@@ -1931,8 +1941,10 @@ final class EmulatorViewModel {
     // ESC during an in-flight clipboard paste cancels the paste and is
     // swallowed, matching X88000M. Otherwise ESC reaches the emulator
     // normally (PC88Key.esc at row 9 / bit 7).
-    // Tape Auto Boot counts too: between typing LOAD and RUN the queue is empty.
-    if keyCode == 0x35 && (!pasteQueue.isEmpty || isTapeAutoBootActive) {
+    // Tape Auto Boot and a memory-image load count too: they wait with the
+    // queue empty.
+    if keyCode == 0x35
+      && (!pasteQueue.isEmpty || isTapeAutoBootActive || isMemoryImageBootActive) {
       cancelPasteQueue()
       return
     }

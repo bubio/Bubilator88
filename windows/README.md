@@ -41,7 +41,7 @@ source-of-truth と再生成は `../../models/PROVENANCE.md`。
 
 コアは別リポジトリ [bubio/Bubilator88Core](https://github.com/bubio/Bubilator88Core)。
 このリポジトリと同じ階層に clone しておく (後述)。C ABI シムはその
-`Sources/CApi/CApi.swift`。
+`Sources/CApi/` 以下のファイル。
 
 ## 前提ツール
 
@@ -92,7 +92,7 @@ swift run BootTester "C:\path\game.d88"     # テキストVRAMダンプ等
 ```
 
 > **エクスポートに関する注意**: Swift は DLL の `public` な記号を自分で書き出す。
-> `Sources/CApi/CApi.swift` の `@_cdecl` 関数は必ず `public` にすること
+> `Sources/CApi/` の `@_cdecl` 関数は必ず `public` にすること
 > (付け忘れてもビルドは通り、P/Invoke が実行時に失敗する)。コアの CI が DLL の
 > 書き出し表と `@_cdecl` の一覧を突き合わせている。
 
@@ -392,3 +392,4 @@ Quality のダウンロード先は `models-v1/RealESRGAN_x2.onnx`。2026-09-24 
   テキスト画素を alpha 0xFE でタグ付けし、ディスプレイシェーダがそこだけスキャンライン
   の減光を免除する。D3D11 シェーダ側が未対応のため `CApi` からは `false` を渡している)
 - 空間オーディオ / ヘッドトラッキング、操作スクリプト記録
+- PC-8001 メモリイメージ(`.n80`)の読み込み(C ABI は公開済み、C# 側は未実装)

@@ -7,6 +7,56 @@
     "  %@ ✓" : {
 
     },
+    "\"%@\" is not a PC-8001 memory image." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "\"%@\" は PC-8001 のメモリイメージではありません。"
+          }
+        }
+      }
+    },
+    "Could not read \"%@\"." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "\"%@\" を読み込めませんでした。"
+          }
+        }
+      }
+    },
+    "Memory Image Load Error" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリイメージ読み込みエラー"
+          }
+        }
+      }
+    },
+    "Memory image load stopped" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリイメージの読み込みを中止しました"
+          }
+        }
+      }
+    },
+    "Open Memory Image..." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリイメージを開く..."
+          }
+        }
+      }
+    },
     "Pressed in order when the zone is clicked or the controller's confirm button is pressed." : {
       "localizations" : {
         "ja" : {
