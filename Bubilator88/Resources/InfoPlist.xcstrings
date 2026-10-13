@@ -10,6 +10,9 @@
     "Bubilator88 Timeline Script" : {
 
     },
+    "CD Cue Sheet" : {
+
+    },
     "CFBundleName" : {
       "comment" : "Bundle name",
       "extractionState" : "extracted_with_value",
@@ -21,6 +24,9 @@
           }
         }
       }
+    },
+    "CloneCD Control File" : {
+
     },
     "D88 Disk Image" : {
 
