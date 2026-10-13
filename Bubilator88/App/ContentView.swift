@@ -387,8 +387,8 @@ struct ContentView: View {
         tapeMenu
       }
 
-      // CD-ROM (shown while the drive is fitted)
-      if Settings.shared.cdDriveInstalled {
+      // CD-ROM (shown when enabled in Display settings)
+      if Settings.shared.showCDInStatusBar {
         HStack(spacing: 4) {
           driveLED(access: viewModel.cdAccess)
           cdMenu

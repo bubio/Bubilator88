@@ -22,7 +22,6 @@ final class Settings {
     static let monitorType               = "monitorType"
     static let memoryWaitDip             = "memoryWaitDip"
     static let extramCards               = "extramCards"
-    static let cdDriveInstalled          = "cdDriveInstalled"
 
     // Audio
     static let volume                    = "volume"
@@ -44,6 +43,7 @@ final class Settings {
     static let tapeAutoBoot              = "tapeAutoBoot"
     static let resetAnimationEnabled     = "resetAnimationEnabled"
     static let showTapeInStatusBar       = "showTapeInStatusBar"
+    static let showCDInStatusBar         = "showCDInStatusBar"
 
     // Update check
     static let automaticUpdateCheck      = "automaticUpdateCheck"
@@ -169,13 +169,6 @@ final class Settings {
     didSet { UserDefaults.standard.set(extramCards, forKey: Keys.extramCards) }
   }
 
-  /// A CD-ROM drive fitted, as on a PC-8801MC. Takes effect only with
-  /// CDBIOS.ROM present, and is applied on reset. Off by default: with it on
-  /// every boot goes through the CD BIOS first.
-  var cdDriveInstalled: Bool = false {
-    didSet { UserDefaults.standard.set(cdDriveInstalled, forKey: Keys.cdDriveInstalled) }
-  }
-
   // MARK: - UI
 
   /// Show the Develop menu in the menu bar.
@@ -247,6 +240,11 @@ final class Settings {
   /// Show cassette tape icon in the status bar.
   var showTapeInStatusBar: Bool = false {
     didSet { UserDefaults.standard.set(showTapeInStatusBar, forKey: Keys.showTapeInStatusBar) }
+  }
+
+  /// Show the CD icon in the status bar.
+  var showCDInStatusBar: Bool = false {
+    didSet { UserDefaults.standard.set(showCDInStatusBar, forKey: Keys.showCDInStatusBar) }
   }
 
   /// Screenshot image format.
@@ -717,9 +715,6 @@ final class Settings {
        [0, 1, 8].contains(v) {
       extramCards = v
     }
-    if let v = UserDefaults.standard.object(forKey: Keys.cdDriveInstalled) as? Bool {
-      cdDriveInstalled = v
-    }
     if let v = UserDefaults.standard.object(forKey: Keys.tapeAutoBoot) as? Bool {
       tapeAutoBoot = v
     }
@@ -861,6 +856,9 @@ final class Settings {
     }
     if let v = UserDefaults.standard.object(forKey: Keys.showTapeInStatusBar) as? Bool {
       showTapeInStatusBar = v
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.showCDInStatusBar) as? Bool {
+      showCDInStatusBar = v
     }
     if let v = UserDefaults.standard.string(forKey: Keys.translationTargetLanguage) {
       translationTargetLanguage = v

@@ -77,16 +77,6 @@
         }
       }
     },
-    "CD-ROM drive" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CD-ROM ドライブ"
-          }
-        }
-      }
-    },
     "CDBIOS.ROM not found in %@" : {
       "localizations" : {
         "ja" : {
@@ -107,16 +97,6 @@
         }
       }
     },
-    "Fits the PC-8801MC's CD-ROM drive. Applied on next reset." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PC-8801MC の CD-ROM ドライブを付けます。次のリセットで反映されます。"
-          }
-        }
-      }
-    },
     "Memory Image Load Error" : {
       "localizations" : {
         "ja" : {
@@ -133,16 +113,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "メモリイメージの読み込みを中止しました"
-          }
-        }
-      }
-    },
-    "Needs CDBIOS.ROM." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CDBIOS.ROM が必要です。"
           }
         }
       }
@@ -5641,6 +5611,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "アトリビュート解析パネルの表示/非表示"
+          }
+        }
+      }
+    },
+    "Show CD Icon" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ステータスバーに CD アイコンを表示"
           }
         }
       }

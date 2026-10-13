@@ -6,8 +6,8 @@ import Bubilator88Core
 extension EmulatorViewModel {
 
   /// Open a CD image (`.cue` / `.ccd`, or the `.img` / `.bin` next to one)
-  /// and boot it: the CD BIOS only looks for a disc at reset. Opening a CD
-  /// fits the CD-ROM drive if the setting had it off.
+  /// and boot it. The reset brings in the CD-ROM drive, which is there
+  /// whenever a CD is in at reset, and the CD BIOS boots the disc.
   @discardableResult
   func mountCD(url: URL) -> Bool {
     guard checkAllowed(.media) else { return false }
@@ -35,9 +35,6 @@ extension EmulatorViewModel {
     cdName = url.deletingPathExtension().lastPathComponent
     cdSourceURL = url
     isCDMounted = true
-    if !Settings.shared.cdDriveInstalled {
-      Settings.shared.cdDriveInstalled = true
-    }
     reset()
     return true
   }

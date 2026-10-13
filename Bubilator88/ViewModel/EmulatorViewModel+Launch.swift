@@ -146,7 +146,7 @@ extension EmulatorViewModel {
       // (same constraint as EmulatorViewModel.init()).
       pc88.monitorType = Settings.shared.monitorType
       pc88.memoryWaitDip = Settings.shared.memoryWaitDip
-      pc88.cdDriveInstalled = Settings.shared.cdDriveInstalled
+      pc88.cdDriveInstalled = pc88.isCDMounted  // as in performReset
       pc88.reset(preserveRAM: true)
       switch forcedBootStrap {
       case .rom:

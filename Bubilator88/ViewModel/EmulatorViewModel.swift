@@ -993,9 +993,7 @@ final class EmulatorViewModel {
     // Set before the reset: the monitor decides the CRTC's reset geometry.
     pc88.monitorType = Settings.shared.monitorType
     pc88.memoryWaitDip = Settings.shared.memoryWaitDip
-    pc88.cdDriveInstalled = Settings.shared.cdDriveInstalled
-    // The CD BIOS, unlike the other ROMs (loaded in `ContentView.onAppear`),
-    // has to be in place at this reset for the machine to start in it.
+    // No CD is in yet, so no drive (see `performReset`).
     refreshCDBios()
     pc88.reset()
     pc88.clock8MHz = clock8MHz
@@ -1350,7 +1348,6 @@ final class EmulatorViewModel {
     let use8MHz = clock8MHz
     let monitorType = Settings.shared.monitorType
     let memoryWaitDip = Settings.shared.memoryWaitDip
-    let cdDriveInstalled = Settings.shared.cdDriveInstalled
     refreshCDBios()
     emuQueue.sync {
       // Auto-select ROM/DISK boot: if drive 0 is empty, set DIP SW2
@@ -1359,9 +1356,10 @@ final class EmulatorViewModel {
       // (Machine.applyBootStrap is the single source of truth shared with
       // ScriptPlayer / BootTester.)
       pc88.dipSw1 = sw1
-      // Fitted or not, the drive takes effect at the reset below; the boot
-      // strap depends on it.
-      pc88.cdDriveInstalled = cdDriveInstalled
+      // The CD-ROM drive is there when a CD is in, like a drive the user
+      // has connected to use it. It takes effect at the reset below, and the
+      // boot strap depends on it.
+      pc88.cdDriveInstalled = pc88.isCDMounted
       pc88.applyBootStrap(base: sw2Base)
       // Like the DIP switches, the monitor type only takes effect on reset.
       pc88.monitorType = monitorType
@@ -1676,13 +1674,6 @@ final class EmulatorViewModel {
     }
     tapeProgress = pc88.tapeProgress
     restoreCD(from: meta)
-    // Mirrored like the monitor type: the next Reset must not fit or remove
-    // the drive behind the state's back.
-    let cdDriveActive = pc88.isCDDriveActive
-    pc88.cdDriveInstalled = cdDriveActive
-    if Settings.shared.cdDriveInstalled != cdDriveActive {
-      Settings.shared.cdDriveInstalled = cdDriveActive
-    }
     activeClock8MHz = pc88.clock8MHz
     renderScreen()
     clearRewindBuffer()
