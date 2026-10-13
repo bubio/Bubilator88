@@ -20,6 +20,7 @@
 | `regression_compare.py` | 15 シナリオを再実行し参照スクリーンショットとピクセル比較 (`/regression`) |
 | `capture_reference_screenshots.py` | 回帰テストの参照スクリーンショットを撮り直す |
 | `rom_sweep.py` | D88 を一括起動し、起動失敗 (黒画面・BASIC プロンプト等) を分類 |
+| `d88_inspect.py` | D88 のヘッダ・トラック・セクタ構成を表示し、形式の破綻を列挙 (イメージ破損とエミュレータのバグの切り分け) |
 | `pbios_check.py` | 回帰シナリオを代替 BIOS (pbios) で走らせ、到達画面を比較 |
 | `capi_trace_compare.py` | 2 つの C ABI DLL に同じ入力を与え、出力 (映像・音・FDD・保存) を比較 |
 | `tstate_diff.py` | BubiC と命令単位の T-state を比較 (入力は `patches/bubic-cpu-trace.patch` で作る) |
