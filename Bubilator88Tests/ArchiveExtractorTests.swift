@@ -25,6 +25,12 @@ struct ArchiveExtractorTests {
     #expect(ArchiveExtractor.detectType(data) == .rar)
   }
 
+  @Test("detects 7z from 7z signature")
+  func detectType7z() {
+    let data = Data([0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, 0x00, 0x04])
+    #expect(ArchiveExtractor.detectType(data) == .sevenZip)
+  }
+
   @Test("detects LZH from -lh5- pattern")
   func detectTypeLZH() {
     // LZH header: bytes[2]='-', bytes[3]='l', bytes[4]='h', bytes[5]=method, bytes[6]='-'
@@ -56,6 +62,32 @@ struct ArchiveExtractorTests {
   }
 
   // MARK: - extractDiskImages
+
+  @Test("extractDiskImages extracts a disk image from a 7z archive")
+  func extractDiskImagesFrom7z() throws {
+    let tempDir = FileManager.default.temporaryDirectory
+      .appending(component: "ArchiveExtractorTests_\(UUID().uuidString)")
+    let sourceDir = tempDir.appending(component: "src")
+    try FileManager.default.createDirectory(at: sourceDir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tempDir) }
+
+    let disk = Data((0..<256).map { UInt8($0) })
+    try disk.write(to: sourceDir.appending(component: "game.d88"))
+    try Data("readme".utf8).write(to: sourceDir.appending(component: "readme.txt"))
+
+    let archive = tempDir.appending(component: "game.7z")
+    let process = Process()
+    process.executableURL = URL(filePath: "/usr/bin/bsdtar")
+    process.arguments = ["--format", "7zip", "-cf", archive.path, "-C", sourceDir.path,
+                         "game.d88", "readme.txt"]
+    try process.run()
+    process.waitUntilExit()
+    #expect(process.terminationStatus == 0)
+
+    let entries = try #require(ArchiveExtractor.extractDiskImages(Data(contentsOf: archive)))
+    #expect(entries.map(\.filename) == ["game.d88"])
+    #expect(entries.first?.data == disk)
+  }
 
   @Test("returns nil for non-archive data")
   func extractDiskImagesReturnsNilForNonArchive() {

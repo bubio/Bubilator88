@@ -2,7 +2,7 @@ import Foundation
 import CryptoKit
 import Logging
 
-/// Keeps D88 files extracted from an archive (ZIP/LZH/CAB/RAR) in a disk cache,
+/// Keeps D88 files extracted from an archive (ZIP/LZH/CAB/RAR/7z) in a disk cache,
 /// so they can be reused as the destination for write-through write-back.
 ///
 /// Cache layout:
