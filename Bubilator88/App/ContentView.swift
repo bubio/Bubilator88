@@ -272,7 +272,7 @@ struct ContentView: View {
           providers.count == 1, let provider = providers.first else { return false }
     let acceptedExts: Set<String> = [
       "d88", "d77", "2d", "2hd",
-      "m3u", "m3u8", "n80", "cue", "ccd",
+      "m3u", "m3u8", "n80", "cue", "ccd", "cmt", "t88",
       "zip", "lzh", "lha", "cab", "rar"
     ]
     _ = provider.loadObject(ofClass: URL.self) { url, _ in
@@ -288,6 +288,11 @@ struct ContentView: View {
       }
       if ["cue", "ccd"].contains(url.pathExtension.lowercased()) {
         Task { @MainActor in viewModel.mountCD(url: url) }
+        return
+      }
+      // An archive still goes to the disk drive: it could hold either.
+      if ["cmt", "t88"].contains(url.pathExtension.lowercased()) {
+        Task { @MainActor in viewModel.mountTape(url: url) }
         return
       }
       Task { @MainActor in

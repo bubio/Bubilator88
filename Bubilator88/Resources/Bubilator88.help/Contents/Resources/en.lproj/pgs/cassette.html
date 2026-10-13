@@ -46,6 +46,7 @@
         <tr><td><strong>Tape &gt; Eject</strong></td><td>—</td></tr>
     </table>
     <p>When a tape is mounted, the status bar shows a tape icon together with the current tape name (requires <strong>Settings &gt; Display &gt; Status Bar &gt; Show Tape Icon</strong>).</p>
+    <p>You can also drop a <code>.cmt</code> or <code>.t88</code> on the screen. A dropped archive such as a ZIP opens as a disk, so use <strong>Tape &gt; Open...</strong> for those.</p>
 
     <h2>Loading a Program</h2>
     <ol>
@@ -56,8 +57,8 @@
     </ol>
 
     <h2>Auto Boot</h2>
-    <p>Turn on <strong>Tape &gt; Auto Boot</strong> and every tape you open (<strong>Recent Files</strong> included) will eject the disks and the CD, reset into V1S mode, type <code>LOAD "CAS:"</code>, wait for the load to finish and type <code>RUN</code>, all by itself. The setting is remembered between launches.</p>
-    <p>Press <kbd>esc</kbd> to stop it midway. It stops without typing <code>RUN</code> if BASIC reports an error or the load never starts. The boot mode stays at V1S afterwards.</p>
+    <p>Turn on <strong>Tape &gt; Auto Boot</strong> and every tape you open (<strong>Recent Files</strong> included) will eject the disks and the CD, reset into V1S mode at 4MHz, type <code>LOAD "CAS:"</code>, wait for the load to finish and type <code>RUN</code>, all by itself. The setting is remembered between launches.</p>
+    <p>Press <kbd>esc</kbd> to stop it midway. It stops without typing <code>RUN</code> if BASIC reports an error or the load never starts. The boot mode and the clock stay at V1S and 4MHz afterwards.</p>
 
     <h2>Operation Sound</h2>
     <p>The motor whir and relay click follow <strong>Settings &gt; Audio &gt; Enable FDD/CMT Sound</strong>.</p>
