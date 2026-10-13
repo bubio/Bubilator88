@@ -207,8 +207,12 @@ final class AudioOutput {
   private var environmentNode: AVAudioEnvironmentNode?
   private var spatialSourceNodes: [AVAudioSourceNode] = []
 
-  /// 8 mono ring buffers: FM-L, FM-R, SSG-L, SSG-R, ADPCM-L, ADPCM-R, Rhythm-L, Rhythm-R
-  private static let spatialNodeCount = 8
+  /// 10 mono ring buffers: FM-L, FM-R, SSG-L, SSG-R, ADPCM-L, ADPCM-R,
+  /// Rhythm-L, Rhythm-R, CD-L, CD-R.
+  private static let spatialNodeCount = 10
+  /// The nodes placed in 3D space, the chip's four groups. The CD pair after
+  /// them bypasses the environment and plays as plain stereo from the centre.
+  private static let positionedNodeCount = 8
   private nonisolated(unsafe) var spatialRingBuffers: [[Float]] = []
   private nonisolated(unsafe) var spatialReadIndices: [Int] = []
   private nonisolated(unsafe) var spatialWriteIndices: [Int] = []
@@ -367,6 +371,8 @@ final class AudioOutput {
   /// Each YM2608 channel group (FM, SSG, ADPCM, Rhythm) is split into separate
   /// L and R mono sources positioned in 3D space. Pan-following is automatic:
   /// L-panned signals only feed the L node → sound from left in 3D.
+  /// CD audio is not part of the chip: its L and R nodes go straight to
+  /// mainMixer, panned hard left and right.
   private func startSpatial(engine: AVAudioEngine) {
     let ms = Settings.shared.audioBufferMs
     bufferLock.lock()
@@ -417,24 +423,30 @@ final class AudioOutput {
           }
         }
         self.bufferLock.unlock()
-        // All 8 spatial nodes drain in lockstep, so only node 0 reports —
-        // otherwise one dropout would count as 8 events.
+        // All spatial nodes drain in lockstep, so only node 0 reports —
+        // otherwise one dropout would count as many events.
         if idx == 0 { self.recordUnderrun(frames: underrunFrames) }
 
         return noErr
       }
 
       engine.attach(sourceNode)
-      engine.connect(sourceNode, to: envNode, format: monoFormat)
       sourceNodes.append(sourceNode)
     }
 
     // Connect environment to main mixer
+    for idx in 0..<Self.positionedNodeCount {
+      engine.connect(sourceNodes[idx], to: envNode, format: monoFormat)
+    }
     engine.connect(envNode, to: engine.mainMixerNode, format: nil)
+    for idx in Self.positionedNodeCount..<Self.spatialNodeCount {
+      engine.connect(sourceNodes[idx], to: engine.mainMixerNode, format: monoFormat)
+      sourceNodes[idx].pan = idx % 2 == 0 ? -1 : 1
+    }
 
     // Set 3D positions and rendering algorithm
     let positions = Self.currentSpatialPositions()
-    for idx in 0..<Self.spatialNodeCount {
+    for idx in 0..<Self.positionedNodeCount {
       if let dest = sourceNodes[idx].destination(forMixer: envNode, bus: idx) {
         dest.position = positions[idx]
         dest.renderingAlgorithm = .HRTFHQ
@@ -451,7 +463,7 @@ final class AudioOutput {
   func updateSpatialPositions() {
     guard spatialEnabled, let envNode = environmentNode else { return }
     let positions = Self.currentSpatialPositions()
-    for idx in 0..<min(spatialSourceNodes.count, positions.count) {
+    for idx in 0..<min(Self.positionedNodeCount, spatialSourceNodes.count, positions.count) {
       if let dest = spatialSourceNodes[idx].destination(forMixer: envNode, bus: idx) {
         dest.position = positions[idx]
       }
@@ -629,10 +641,11 @@ final class AudioOutput {
 
   /// Split per-channel stereo buffers into L/R mono ring buffers for spatial nodes.
   ///
-  /// Buffer layout: [FM-L, FM-R, SSG-L, SSG-R, ADPCM-L, ADPCM-R, Rhythm-L, Rhythm-R]
+  /// Buffer layout: [FM-L, FM-R, SSG-L, SSG-R, ADPCM-L, ADPCM-R, Rhythm-L, Rhythm-R,
+  /// CD-L, CD-R]
   /// Each stereo spatial buffer [L,R,L,R,...] is deinterleaved into two mono streams.
   private nonisolated func drainSpatialSamples(_ samples: PC88.AudioSamples, from pc88: PC88) {
-    let stereoBuffers = [samples.fm, samples.ssg, samples.adpcm, samples.rhythm]
+    let stereoBuffers = [samples.fm, samples.ssg, samples.adpcm, samples.rhythm, samples.cd]
 
     guard !stereoBuffers[0].isEmpty else { return }
 
@@ -654,7 +667,7 @@ final class AudioOutput {
           spatialRingBuffers[lIdx][spatialWriteIndices[lIdx]] = stereo[i]
           spatialWriteIndices[lIdx] = nextL
         } else if lIdx == 0 {
-          dropped += 1  // count FM-L only; all 8 rings fill in lockstep
+          dropped += 1  // count FM-L only; all rings fill in lockstep
         }
         // Write R sample
         let nextR = (spatialWriteIndices[rIdx] + 1) % ringSize
