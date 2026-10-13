@@ -5620,7 +5620,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ステータスバーに CD アイコンを表示"
+            "value" : "CD アイコンを表示"
           }
         }
       }
@@ -5630,7 +5630,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ステータスバーにテープアイコンを表示"
+            "value" : "テープアイコンを表示"
           }
         }
       }
@@ -5897,7 +5897,6 @@
       }
     },
     "Status Bar" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
