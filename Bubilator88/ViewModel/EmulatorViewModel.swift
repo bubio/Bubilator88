@@ -552,7 +552,7 @@ final class EmulatorViewModel {
   ///
   /// This one property replaces the former seven `pending*` properties and two
   /// `showing*Picker` flags.
-  var pickerContext: DiskPickerContext? = nil
+  var pickerContext: DiskPickerContext?
 
   // MARK: - Compatibility shims for the former pending*/showing* properties
   //

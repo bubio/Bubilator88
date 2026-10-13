@@ -28,7 +28,7 @@ struct GVRAMPane: View {
   @State private var liveTask: Task<Void, Never>?
   /// In-flight image-build task. Cancelled whenever new data or a
   /// mode change arrives so we never display stale results.
-  @State private var imageTask: Task<Void, Never>? = nil
+  @State private var imageTask: Task<Void, Never>?
 
   // MARK: - Body
 

@@ -365,7 +365,7 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
     }
     // Fullscreen 4:3 stretches 400 rows to 480, which only stays crisp with
     // sharp bilinear. Filters with their own upscaling are left as they are.
-    if (currentFilter == .none || currentFilter == .linear),
+    if currentFilter == .none || currentFilter == .linear,
        Settings.shared.fullscreenScaling == .aspect43,
        window?.styleMask.contains(.fullScreen) == true,
        let sharp = sharpBilinearPipeline {

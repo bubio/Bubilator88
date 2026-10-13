@@ -71,7 +71,7 @@ struct BreakpointPane: View {
   private var list: some View {
     // Read bpVersion so SwiftUI re-renders when breakpoints change.
     // Debugger is not @Observable; this indirection is the observer hook.
-    let _ = session.bpVersion
+    _ = session.bpVersion
     return List {
       ForEach(session.debugger.breakpoints) { bp in
         row(bp)
@@ -85,7 +85,7 @@ struct BreakpointPane: View {
   /// OFF (clear background) = at least one BP disabled → click re-enables all.
   /// Reading `bpVersion` keeps the visual state in sync after per-row toggles.
   private var bulkEnableButton: some View {
-    let _ = session.bpVersion
+    _ = session.bpVersion
     let armed = session.allBreakpointsEnabled
     return Button {
       session.setAllBreakpointsEnabled(!armed)

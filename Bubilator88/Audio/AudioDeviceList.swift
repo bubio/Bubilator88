@@ -97,7 +97,7 @@ enum AudioDeviceList {
       mScope: kAudioObjectPropertyScopeGlobal,
       mElement: kAudioObjectPropertyElementMain
     )
-    var cfRef: Unmanaged<CFString>? = nil
+    var cfRef: Unmanaged<CFString>?
     var size = UInt32(MemoryLayout<Unmanaged<CFString>>.size)
     guard AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &cfRef) == noErr else { return nil }
     return cfRef?.takeRetainedValue() as String?
@@ -109,7 +109,7 @@ enum AudioDeviceList {
       mScope: kAudioObjectPropertyScopeGlobal,
       mElement: kAudioObjectPropertyElementMain
     )
-    var cfRef: Unmanaged<CFString>? = nil
+    var cfRef: Unmanaged<CFString>?
     var size = UInt32(MemoryLayout<Unmanaged<CFString>>.size)
     guard AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &cfRef) == noErr else { return nil }
     return cfRef?.takeRetainedValue() as String?

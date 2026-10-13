@@ -75,8 +75,7 @@ struct AudioPane: View {
                   let muted = (muteMask.fm >> ch) & 1 == 0
                   channelBar(label: "\(ch+1)", isOn: isOn,
                              fraction: isOn ? 1.0 : 0.0, muted: muted) {
-                    if muted { muteMask.fm |=  UInt8(1 << ch) }
-                    else     { muteMask.fm &= ~UInt8(1 << ch) }
+                    if muted { muteMask.fm |= UInt8(1 << ch) } else { muteMask.fm &= ~UInt8(1 << ch) }
                     viewModel.applyDebugChannelMask(muteMask)
                   }
                   .help(muted ? "FM \(ch+1): muted" : "FM \(ch+1): not muted")
@@ -97,8 +96,7 @@ struct AudioPane: View {
                   channelBar(label: lbl, isOn: active,
                              fraction: active ? Double(vol & 0x0F) / 15.0 : 0,
                              muted: muted) {
-                    if muted { muteMask.ssg |=  UInt8(1 << ch) }
-                    else     { muteMask.ssg &= ~UInt8(1 << ch) }
+                    if muted { muteMask.ssg |= UInt8(1 << ch) } else { muteMask.ssg &= ~UInt8(1 << ch) }
                     viewModel.applyDebugChannelMask(muteMask)
                   }
                   .help(muted ? "SSG \(lbl): muted" : "SSG \(lbl): not muted")
@@ -118,8 +116,7 @@ struct AudioPane: View {
                   let muted = (muteMask.rhythm >> i) & 1 == 0
                   channelBar(label: names[i], isOn: isOn,
                              fraction: isOn ? 1.0 : 0.0, muted: muted) {
-                    if muted { muteMask.rhythm |=  UInt8(1 << i) }
-                    else     { muteMask.rhythm &= ~UInt8(1 << i) }
+                    if muted { muteMask.rhythm |= UInt8(1 << i) } else { muteMask.rhythm &= ~UInt8(1 << i) }
                     viewModel.applyDebugChannelMask(muteMask)
                   }
                   .help(muted ? "\(names[i]): muted" : "\(names[i]): not muted")

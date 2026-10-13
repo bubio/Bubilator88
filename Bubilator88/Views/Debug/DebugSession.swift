@@ -435,7 +435,7 @@ final class DebugSession {
   /// Rendered RGBA8 frame — text layer only (dark-gray background).
   /// 640×200 in normal mode, 640×400 in 400-line mode.
   /// Produced on the emu queue by ``captureTextVRAM()``.
-  var textVRAMImageData: Data? = nil
+  var textVRAMImageData: Data?
 
   /// True when the last capture was in 400-line mode → image is 640×400.
   var textVRAMHireso: Bool = false
