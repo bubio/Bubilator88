@@ -541,115 +541,34 @@ final class Settings {
   /// like the tapes.
   var recentCDFiles: [RecentDiskEntry] = []
 
-  /// Paths already in the recent list (for O(1) dedup).
-  private var recentPaths: Set<String> = []
-  private var recentTapePaths: Set<String> = []
+  /// The media whose files each have their own Recent Files list.
+  enum RecentFileKind {
+    case disk, tape, cd
 
-  /// Add a file to the recent list (deduplicated, capped at 10).
-  func addRecentFile(url: URL) {
-    guard let bookmark = try? url.bookmarkData(options: .withSecurityScope,
-                                               includingResourceValuesForKeys: nil,
-                                               relativeTo: nil) else { return }
-    let filePath = url.standardizedFileURL.path
-    let displayName = url.lastPathComponent
-    let displayDir = abbreviatedDir(url.deletingLastPathComponent().path)
-    let entry = RecentDiskEntry(filePath: filePath, bookmark: bookmark,
-                                displayName: displayName, displayDir: displayDir)
-    // Remove existing entry for same file
-    if recentPaths.contains(filePath) {
-      recentDiskFiles.removeAll { $0.filePath == filePath }
+    fileprivate var list: ReferenceWritableKeyPath<Settings, [RecentDiskEntry]> {
+      switch self {
+      case .disk: \.recentDiskFiles
+      case .tape: \.recentTapeFiles
+      case .cd:   \.recentCDFiles
+      }
     }
-    recentDiskFiles.insert(entry, at: 0)
-    rebuildRecentPaths()
-    if recentDiskFiles.count > 10 {
-      recentDiskFiles = Array(recentDiskFiles.prefix(10))
-      rebuildRecentPaths()
-    }
-    persistRecentFiles()
-  }
 
-  /// Remove a specific recent file entry.
-  func removeRecentFile(_ entry: RecentDiskEntry) {
-    recentDiskFiles.removeAll { $0.filePath == entry.filePath }
-    rebuildRecentPaths()
-    persistRecentFiles()
-  }
-
-  /// Clear all recent files.
-  func clearRecentFiles() {
-    recentDiskFiles = []
-    recentPaths = []
-    persistRecentFiles()
-  }
-
-  private func rebuildRecentPaths() {
-    recentPaths = Set(recentDiskFiles.map(\.filePath))
-  }
-
-  private func persistRecentFiles() {
-    if let data = try? JSONEncoder().encode(recentDiskFiles) {
-      UserDefaults.standard.set(data, forKey: Keys.recentDiskFiles)
+    fileprivate var defaultsKey: String {
+      switch self {
+      case .disk: Keys.recentDiskFiles
+      case .tape: Keys.recentTapeFiles
+      case .cd:   Keys.recentCDFiles
+      }
     }
   }
 
-  private func loadRecentFiles() {
-    if let data = UserDefaults.standard.data(forKey: Keys.recentDiskFiles),
-       let entries = try? JSONDecoder().decode([RecentDiskEntry].self, from: data) {
-      recentDiskFiles = entries
-      rebuildRecentPaths()
-    }
-    if let data = UserDefaults.standard.data(forKey: Keys.recentTapeFiles),
-       let entries = try? JSONDecoder().decode([RecentDiskEntry].self, from: data) {
-      recentTapeFiles = entries
-      recentTapePaths = Set(entries.map(\.filePath))
-    }
-    if let data = UserDefaults.standard.data(forKey: Keys.recentCDFiles),
-       let entries = try? JSONDecoder().decode([RecentDiskEntry].self, from: data) {
-      recentCDFiles = entries
-    }
+  /// The recent list for `kind`.
+  func recentFiles(_ kind: RecentFileKind) -> [RecentDiskEntry] {
+    self[keyPath: kind.list]
   }
 
-  // MARK: - Recent tape files
-
-  func addRecentTapeFile(url: URL) {
-    guard let bookmark = try? url.bookmarkData(options: .withSecurityScope,
-                                               includingResourceValuesForKeys: nil,
-                                               relativeTo: nil) else { return }
-    let filePath = url.standardizedFileURL.path
-    let displayName = url.lastPathComponent
-    let displayDir = abbreviatedDir(url.deletingLastPathComponent().path)
-    let entry = RecentDiskEntry(filePath: filePath, bookmark: bookmark,
-                                displayName: displayName, displayDir: displayDir)
-    if recentTapePaths.contains(filePath) {
-      recentTapeFiles.removeAll { $0.filePath == filePath }
-    }
-    recentTapeFiles.insert(entry, at: 0)
-    if recentTapeFiles.count > 10 {
-      recentTapeFiles = Array(recentTapeFiles.prefix(10))
-    }
-    recentTapePaths = Set(recentTapeFiles.map(\.filePath))
-    if let data = try? JSONEncoder().encode(recentTapeFiles) {
-      UserDefaults.standard.set(data, forKey: Keys.recentTapeFiles)
-    }
-  }
-
-  func removeRecentTapeFile(_ entry: RecentDiskEntry) {
-    recentTapeFiles.removeAll { $0.filePath == entry.filePath }
-    recentTapePaths = Set(recentTapeFiles.map(\.filePath))
-    if let data = try? JSONEncoder().encode(recentTapeFiles) {
-      UserDefaults.standard.set(data, forKey: Keys.recentTapeFiles)
-    }
-  }
-
-  func clearRecentTapeFiles() {
-    recentTapeFiles = []
-    recentTapePaths = []
-    UserDefaults.standard.removeObject(forKey: Keys.recentTapeFiles)
-  }
-
-  // MARK: - Recent CD files
-
-  func addRecentCDFile(url: URL) {
+  /// Put a file at the top of its recent list (deduplicated, capped at 10).
+  func addRecentFile(url: URL, kind: RecentFileKind) {
     guard let bookmark = try? url.bookmarkData(options: .withSecurityScope,
                                                includingResourceValuesForKeys: nil,
                                                relativeTo: nil) else { return }
@@ -657,25 +576,37 @@ final class Settings {
     let entry = RecentDiskEntry(filePath: filePath, bookmark: bookmark,
                                 displayName: url.lastPathComponent,
                                 displayDir: abbreviatedDir(url.deletingLastPathComponent().path))
-    recentCDFiles.removeAll { $0.filePath == filePath }
-    recentCDFiles.insert(entry, at: 0)
-    recentCDFiles = Array(recentCDFiles.prefix(10))
-    persistRecentCDFiles()
+    var entries = self[keyPath: kind.list]
+    entries.removeAll { $0.filePath == filePath }
+    entries.insert(entry, at: 0)
+    self[keyPath: kind.list] = Array(entries.prefix(10))
+    persistRecentFiles(kind)
   }
 
-  func removeRecentCDFile(_ entry: RecentDiskEntry) {
-    recentCDFiles.removeAll { $0.filePath == entry.filePath }
-    persistRecentCDFiles()
+  /// Remove a specific recent file entry.
+  func removeRecentFile(_ entry: RecentDiskEntry, kind: RecentFileKind) {
+    self[keyPath: kind.list].removeAll { $0.filePath == entry.filePath }
+    persistRecentFiles(kind)
   }
 
-  func clearRecentCDFiles() {
-    recentCDFiles = []
-    UserDefaults.standard.removeObject(forKey: Keys.recentCDFiles)
+  /// Clear one recent list.
+  func clearRecentFiles(kind: RecentFileKind) {
+    self[keyPath: kind.list] = []
+    persistRecentFiles(kind)
   }
 
-  private func persistRecentCDFiles() {
-    if let data = try? JSONEncoder().encode(recentCDFiles) {
-      UserDefaults.standard.set(data, forKey: Keys.recentCDFiles)
+  private func persistRecentFiles(_ kind: RecentFileKind) {
+    if let data = try? JSONEncoder().encode(self[keyPath: kind.list]) {
+      UserDefaults.standard.set(data, forKey: kind.defaultsKey)
+    }
+  }
+
+  private func loadRecentFiles() {
+    for kind in [RecentFileKind.disk, .tape, .cd] {
+      if let data = UserDefaults.standard.data(forKey: kind.defaultsKey),
+         let entries = try? JSONDecoder().decode([RecentDiskEntry].self, from: data) {
+        self[keyPath: kind.list] = entries
+      }
     }
   }
 

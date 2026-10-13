@@ -4,6 +4,28 @@ import SwiftUI
 struct DiskCommands: Commands {
   let viewModel: EmulatorViewModel
 
+  /// A Recent Files submenu: each entry opens with `open`, and the last item
+  /// clears the list.
+  private func recentFilesMenu(_ kind: Settings.RecentFileKind,
+                               open: @escaping (RecentDiskEntry) -> Void) -> some View {
+    let entries = Settings.shared.recentFiles(kind)
+    return Menu("Recent Files") {
+      if entries.isEmpty {
+        Text("No Recent Files")
+      } else {
+        ForEach(entries) { entry in
+          Button("\(entry.displayName) — \(entry.displayDir)") { open(entry) }
+        }
+        Divider()
+        Button {
+          Settings.shared.clearRecentFiles(kind: kind)
+        } label: {
+          Label("Clear Recent Files", systemImage: "trash")
+        }
+      }
+    }
+  }
+
   @ViewBuilder
   private func driveSubmenu(drive: Int) -> some View {
     let label = drive + 1
@@ -119,24 +141,7 @@ struct DiskCommands: Commands {
 
         Divider()
 
-        // Recent Files submenu
-        Menu("Recent Files") {
-          if Settings.shared.recentDiskFiles.isEmpty {
-            Text("No Recent Files")
-          } else {
-            ForEach(Settings.shared.recentDiskFiles) { entry in
-              Button("\(entry.displayName) — \(entry.displayDir)") {
-                viewModel.mountRecentFile(entry)
-              }
-            }
-            Divider()
-            Button {
-              Settings.shared.clearRecentFiles()
-            } label: {
-              Label("Clear Recent Files", systemImage: "trash")
-            }
-          }
-        }
+        recentFilesMenu(.disk) { viewModel.mountRecentFile($0) }
       }
       .disabled(!viewModel.allows(.media))
     }
@@ -176,23 +181,7 @@ struct DiskCommands: Commands {
 
         Divider()
 
-        Menu("Recent Files") {
-          if Settings.shared.recentTapeFiles.isEmpty {
-            Text("No Recent Files")
-          } else {
-            ForEach(Settings.shared.recentTapeFiles) { entry in
-              Button("\(entry.displayName) — \(entry.displayDir)") {
-                viewModel.mountRecentTape(entry)
-              }
-            }
-            Divider()
-            Button {
-              Settings.shared.clearRecentTapeFiles()
-            } label: {
-              Label("Clear Recent Files", systemImage: "trash")
-            }
-          }
-        }
+        recentFilesMenu(.tape) { viewModel.mountRecentTape($0) }
       }
       .disabled(!viewModel.allows(.media))
     }
@@ -218,23 +207,7 @@ struct DiskCommands: Commands {
 
         Divider()
 
-        Menu("Recent Files") {
-          if Settings.shared.recentCDFiles.isEmpty {
-            Text("No Recent Files")
-          } else {
-            ForEach(Settings.shared.recentCDFiles) { entry in
-              Button("\(entry.displayName) — \(entry.displayDir)") {
-                viewModel.mountRecentCD(entry)
-              }
-            }
-            Divider()
-            Button {
-              Settings.shared.clearRecentCDFiles()
-            } label: {
-              Label("Clear Recent Files", systemImage: "trash")
-            }
-          }
-        }
+        recentFilesMenu(.cd) { viewModel.mountRecentCD($0) }
       }
       .disabled(!viewModel.allows(.media))
     }
