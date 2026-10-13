@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="CD-ROM">
+    <meta name="description" content="PC-8801MC の CD-ROM ドライブと CD イメージ (cue / ccd)">
+    <meta name="keywords" content="CD, CD-ROM, PC-8801MC, CDBIOS, cue, ccd, img, bin">
+    <meta name="robots" content="index">
+    <title>CD-ROM</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>目次</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 ヘルプ</a></li>
+            <li><a href="getting-started.html">はじめに</a></li>
+            <li><a href="disks.html">ディスク操作</a></li>
+            <li><a href="cassette.html">カセットテープ</a></li>
+            <li><a href="cdrom.html">CD-ROM</a></li>
+            <li><a href="keyboard.html">キーボード</a></li>
+            <li><a href="display.html">表示設定</a></li>
+            <li><a href="audio.html">サウンド</a></li>
+            <li><a href="savestates.html">ステートセーブ</a></li>
+            <li><a href="controller.html">ゲームコントローラ</a></li>
+            <li><a href="mouse.html">マウス</a></li>
+            <li><a href="shortcuts.html">ショートカット一覧</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="cdrom"></a>
+    <h1>CD-ROM</h1>
+    <p>PC-8801MC の CD-ROM ドライブを使い、CD 版のソフトを起動できます。</p>
+
+    <h2>準備</h2>
+    <p>PC-8801MC の CD BIOS を <code>CDBIOS.ROM</code>（64KB）として <code>~/Library/Application Support/Bubilator88/</code> に置きます。</p>
+    <p>CD-ROM ドライブは、CD が入った状態でリセットしたときにつながっているものとして動きます。CD が入っていなければドライブはなく、これまでどおり BASIC かディスクから起動します。</p>
+
+    <h2>対応フォーマット</h2>
+    <ul>
+        <li><strong>.cue</strong> — キューシート。1 ファイルにまとめたイメージも、トラックごとのファイルも開けます。</li>
+        <li><strong>.ccd</strong> — CloneCD 形式。同じ名前の <code>.img</code> と組で使います。</li>
+    </ul>
+    <p>どちらも、セクターを 2352 バイトのまま収めたイメージに限ります。<code>.iso</code> や <code>MODE1/2048</code> のトラックには対応していません。イメージのファイルは CD を入れている間に読み出すので、移動や削除をしないでください。</p>
+
+    <h2>CD を開く</h2>
+    <table>
+        <tr><th>操作</th><th>内容</th></tr>
+        <tr><td><strong>CD &gt; 開く...</strong></td><td>CD を入れ、V2 モード・8MHz に切り替えてリセットし、CD から起動します</td></tr>
+        <tr><td><strong>CD &gt; 取り出し</strong></td><td>CD を取り出します</td></tr>
+        <tr><td><strong>CD &gt; 最近使ったファイル</strong></td><td>最近開いた CD を最大 10 件までたどれます</td></tr>
+    </table>
+    <p>画面に <code>.cue</code> / <code>.ccd</code> をドラッグ＆ドロップしても開けます。<strong>設定 &gt; 表示 &gt; ステータスバー &gt; CD アイコンを表示</strong> をオンにすると、ステータスバーに CD 名とアクセスランプが出ます。</p>
+    <p>CD 版のソフトの多くはフロッピーディスクも使います。ソフトがブランクディスクを求めたら、<strong>ディスク &gt; 空ディスク作成...</strong> で作って入れてください。</p>
+
+    <h2>音楽</h2>
+    <p>CD の音楽（CD-DA）は FM 音源と同じ出力に混ぜて鳴らします。ソフトが指示するフェードイン・フェードアウトにも従います。イマーシブオーディオでは、CD の音楽は立体配置せず、中央からステレオで鳴ります。</p>
+
+    <h2>ステートセーブ</h2>
+    <p>ステートには再生位置などドライブの状態が入りますが、CD の中身は入りません。ステートを読み込むと、保存したときの CD を同じ場所から入れ直します。見つからないときは CD を取り出した状態になります。</p>
+
+    <h2>既知の制限</h2>
+    <ul>
+        <li>分離 (8ch) の録音には、CD の音楽は入りません。</li>
+        <li>CD の音楽の音量バランスとフェードの長さは、実機では測っていません。</li>
+        <li>シーク時間は再現していません。データは等速（毎秒 75 セクター）で読み込みます。</li>
+    </ul>
+
+    <p><a href="../index.html">Bubilator88 ヘルプに戻る</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>

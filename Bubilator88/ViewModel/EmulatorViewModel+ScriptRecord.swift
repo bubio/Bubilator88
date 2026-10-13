@@ -54,10 +54,14 @@ extension EmulatorViewModel {
     stop()
     let use8 = clock8MHz
     emuQueue.sync {
+      pc88.cdDriveInstalled = false  // as in playScript
+      pc88.ejectCD()
       pc88.reset(preserveRAM: false)
       pc88.applyBootStrap()  // re-derive bit 3 from the current drive state (disk boot)
       pc88.clock8MHz = use8
     }
+
+    clearCDDisplay()
 
     let recorder = ScriptRecorder(setup: setup)
     recorder.frameIndex = 0

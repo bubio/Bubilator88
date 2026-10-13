@@ -7,66 +7,6 @@
     "  %@ ✓" : {
 
     },
-    "\"%@\" is not a PC-8001 memory image." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "\"%@\" は PC-8001 のメモリイメージではありません。"
-          }
-        }
-      }
-    },
-    "Could not read \"%@\"." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "\"%@\" を読み込めませんでした。"
-          }
-        }
-      }
-    },
-    "Memory Image Load Error" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メモリイメージ読み込みエラー"
-          }
-        }
-      }
-    },
-    "Memory image load stopped" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メモリイメージの読み込みを中止しました"
-          }
-        }
-      }
-    },
-    "Open Memory Image..." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メモリイメージを開く..."
-          }
-        }
-      }
-    },
-    "Pressed in order when the zone is clicked or the controller's confirm button is pressed." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "領域をクリック、またはコントローラーで決定ボタンを押すと、上から順に押されます。"
-          }
-        }
-      }
-    },
     "\"%@\" contains no disk image entries." : {
       "comment" : "Error: an m3u/m3u8 playlist has only blank or comment lines. %@ is the playlist path",
       "localizations" : {
@@ -122,33 +62,22 @@
         }
       }
     },
-    "Auto Boot" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自動起動"
-          }
-        }
-      }
-    },
-    "Tape Auto Boot stopped" : {
-      "comment" : "Toast",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "テープの自動起動を中止しました"
-          }
-        }
-      }
-    },
     "“%@” is not a control-zone layout file." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "“%@”は操作領域のレイアウトファイルではありません。"
+          }
+        }
+      }
+    },
+    "\"%@\" is not a PC-8001 memory image." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "\"%@\" は PC-8001 のメモリイメージではありません。"
           }
         }
       }
@@ -255,6 +184,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ のコピー"
+          }
+        }
+      }
+    },
+    "%@ lists no tracks" : {
+      "comment" : "Alert message: a CD sheet without tracks",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ にトラックがありません"
+          }
+        }
+      }
+    },
+    "%@ not found next to %@" : {
+      "comment" : "Alert message: a file named by a CD sheet is missing",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$@ と同じフォルダに %1$@ が見つかりません"
           }
         }
       }
@@ -738,16 +689,6 @@
         }
       }
     },
-    "Always Show Control Zones" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "操作領域を常に表示する"
-          }
-        }
-      }
-    },
     "All Off" : {
       "localizations" : {
         "ja" : {
@@ -764,6 +705,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "すべてオン"
+          }
+        }
+      }
+    },
+    "Always Show Control Zones" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作領域を常に表示する"
           }
         }
       }
@@ -908,6 +859,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自動"
+          }
+        }
+      }
+    },
+    "Auto Boot" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動起動"
           }
         }
       }
@@ -1255,6 +1216,27 @@
         }
       }
     },
+    "CD" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CD"
+          }
+        }
+      }
+    },
+    "CD Load Error" : {
+      "comment" : "Alert title",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CD 読み込みエラー"
+          }
+        }
+      }
+    },
     "CD Mix" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1262,6 +1244,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "CD ミックス"
+          }
+        }
+      }
+    },
+    "CD not found: %@" : {
+      "comment" : "Toast after loading a save state whose CD image is missing",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CD が見つかりません: %@"
+          }
+        }
+      }
+    },
+    "CD-ROM" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CD-ROM"
+          }
+        }
+      }
+    },
+    "CDBIOS.ROM not found in %@" : {
+      "comment" : "Alert message: the CD BIOS is missing",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ に CDBIOS.ROM が見つかりません"
           }
         }
       }
@@ -1704,6 +1718,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "モデルを削除できませんでした"
+          }
+        }
+      }
+    },
+    "Could not read \"%@\"." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "\"%@\" を読み込めませんでした。"
           }
         }
       }
@@ -3626,6 +3650,27 @@
         }
       }
     },
+    "Memory Image Load Error" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリイメージ読み込みエラー"
+          }
+        }
+      }
+    },
+    "Memory image load stopped" : {
+      "comment" : "Toast",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリイメージの読み込みを中止しました"
+          }
+        }
+      }
+    },
     "Memory refresh counter, incremented on every instruction fetch. Some games use it as a pseudo-random source (LD A,R)." : {
       "localizations" : {
         "ja" : {
@@ -4120,6 +4165,16 @@
         }
       }
     },
+    "Open Memory Image..." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリイメージを開く..."
+          }
+        }
+      }
+    },
     "Open..." : {
       "localizations" : {
         "ja" : {
@@ -4302,6 +4357,16 @@
         }
       }
     },
+    "Plays floppy drive and data recorder operation sounds." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フロッピードライブとデータレコーダーの動作音を再生します。"
+          }
+        }
+      }
+    },
     "PNG" : {
 
     },
@@ -4403,6 +4468,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "「更新」を押すか、エミュレータを停止するとテキスト層を取得します。"
+          }
+        }
+      }
+    },
+    "Pressed in order when the zone is clicked or the controller's confirm button is pressed." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "領域をクリック、またはコントローラーで決定ボタンを押すと、上から順に押されます。"
           }
         }
       }
@@ -5515,6 +5590,16 @@
         }
       }
     },
+    "Show CD Icon" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CD アイコンを表示"
+          }
+        }
+      }
+    },
     "Show Develop Menu" : {
       "localizations" : {
         "ja" : {
@@ -5540,7 +5625,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ステータスバーにテープアイコンを表示"
+            "value" : "テープアイコンを表示"
           }
         }
       }
@@ -5807,7 +5892,6 @@
       }
     },
     "Status Bar" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -6095,16 +6179,6 @@
         }
       }
     },
-    "Plays floppy drive and data recorder operation sounds." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "フロッピードライブとデータレコーダーの動作音を再生します。"
-          }
-        }
-      }
-    },
     "System Default" : {
       "comment" : "FDD output device picker — follow system audio output",
       "localizations" : {
@@ -6137,6 +6211,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "テープ"
+          }
+        }
+      }
+    },
+    "Tape Auto Boot stopped" : {
+      "comment" : "Toast",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テープの自動起動を中止しました"
           }
         }
       }
@@ -6370,6 +6455,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "トレース"
+          }
+        }
+      }
+    },
+    "Tracks stored as %@ are not supported. Use an image with raw 2352-byte sectors." : {
+      "comment" : "Alert message: a CD track in an unsupported format",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 形式のトラックには対応していません。2352 バイトのセクターをそのまま収めたイメージを使ってください。"
           }
         }
       }

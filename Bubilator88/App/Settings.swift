@@ -43,6 +43,7 @@ final class Settings {
     static let tapeAutoBoot              = "tapeAutoBoot"
     static let resetAnimationEnabled     = "resetAnimationEnabled"
     static let showTapeInStatusBar       = "showTapeInStatusBar"
+    static let showCDInStatusBar         = "showCDInStatusBar"
 
     // Update check
     static let automaticUpdateCheck      = "automaticUpdateCheck"
@@ -99,6 +100,7 @@ final class Settings {
     // Recent files
     static let recentDiskFiles           = "recentDiskFiles"
     static let recentTapeFiles           = "recentTapeFiles"
+    static let recentCDFiles             = "recentCDFiles"
   }
 
   /// CPU clock mode (true = 8 MHz, false = 4 MHz).
@@ -238,6 +240,11 @@ final class Settings {
   /// Show cassette tape icon in the status bar.
   var showTapeInStatusBar: Bool = false {
     didSet { UserDefaults.standard.set(showTapeInStatusBar, forKey: Keys.showTapeInStatusBar) }
+  }
+
+  /// Show the CD icon in the status bar.
+  var showCDInStatusBar: Bool = false {
+    didSet { UserDefaults.standard.set(showCDInStatusBar, forKey: Keys.showCDInStatusBar) }
   }
 
   /// Screenshot image format.
@@ -530,6 +537,10 @@ final class Settings {
   /// independently without mode cross-contamination.
   var recentTapeFiles: [RecentDiskEntry] = []
 
+  /// Recently used CD images (max 10, newest first), a list of their own
+  /// like the tapes.
+  var recentCDFiles: [RecentDiskEntry] = []
+
   /// Paths already in the recent list (for O(1) dedup).
   private var recentPaths: Set<String> = []
   private var recentTapePaths: Set<String> = []
@@ -592,6 +603,10 @@ final class Settings {
       recentTapeFiles = entries
       recentTapePaths = Set(entries.map(\.filePath))
     }
+    if let data = UserDefaults.standard.data(forKey: Keys.recentCDFiles),
+       let entries = try? JSONDecoder().decode([RecentDiskEntry].self, from: data) {
+      recentCDFiles = entries
+    }
   }
 
   // MARK: - Recent tape files
@@ -630,6 +645,38 @@ final class Settings {
     recentTapeFiles = []
     recentTapePaths = []
     UserDefaults.standard.removeObject(forKey: Keys.recentTapeFiles)
+  }
+
+  // MARK: - Recent CD files
+
+  func addRecentCDFile(url: URL) {
+    guard let bookmark = try? url.bookmarkData(options: .withSecurityScope,
+                                               includingResourceValuesForKeys: nil,
+                                               relativeTo: nil) else { return }
+    let filePath = url.standardizedFileURL.path
+    let entry = RecentDiskEntry(filePath: filePath, bookmark: bookmark,
+                                displayName: url.lastPathComponent,
+                                displayDir: abbreviatedDir(url.deletingLastPathComponent().path))
+    recentCDFiles.removeAll { $0.filePath == filePath }
+    recentCDFiles.insert(entry, at: 0)
+    recentCDFiles = Array(recentCDFiles.prefix(10))
+    persistRecentCDFiles()
+  }
+
+  func removeRecentCDFile(_ entry: RecentDiskEntry) {
+    recentCDFiles.removeAll { $0.filePath == entry.filePath }
+    persistRecentCDFiles()
+  }
+
+  func clearRecentCDFiles() {
+    recentCDFiles = []
+    UserDefaults.standard.removeObject(forKey: Keys.recentCDFiles)
+  }
+
+  private func persistRecentCDFiles() {
+    if let data = try? JSONEncoder().encode(recentCDFiles) {
+      UserDefaults.standard.set(data, forKey: Keys.recentCDFiles)
+    }
   }
 
   /// Abbreviate home directory in path display.
@@ -809,6 +856,9 @@ final class Settings {
     }
     if let v = UserDefaults.standard.object(forKey: Keys.showTapeInStatusBar) as? Bool {
       showTapeInStatusBar = v
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.showCDInStatusBar) as? Bool {
+      showCDInStatusBar = v
     }
     if let v = UserDefaults.standard.string(forKey: Keys.translationTargetLanguage) {
       translationTargetLanguage = v

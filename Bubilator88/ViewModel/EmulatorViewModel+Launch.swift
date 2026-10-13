@@ -139,12 +139,14 @@ extension EmulatorViewModel {
     // `-romboot` / `-diskboot` override the automatic choice. As in QUASI88,
     // omitting them falls back to deciding from whether a disk is present.
     let forcedBootStrap = req.bootStrap
+    refreshCDBios()
     emuQueue.sync {
       pc88.dipSw1 = sw1
       // Set before the reset: the monitor decides the CRTC's reset geometry
       // (same constraint as EmulatorViewModel.init()).
       pc88.monitorType = Settings.shared.monitorType
       pc88.memoryWaitDip = Settings.shared.memoryWaitDip
+      pc88.cdDriveInstalled = pc88.isCDMounted  // as in performReset
       pc88.reset(preserveRAM: true)
       switch forcedBootStrap {
       case .rom:

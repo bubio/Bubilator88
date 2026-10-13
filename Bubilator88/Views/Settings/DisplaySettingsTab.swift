@@ -50,8 +50,9 @@ struct DisplaySettingsTab: View {
           .settingsDescriptionStyle()
       }
 
-      Section {
+      Section("Status Bar") {
         Toggle("Show Tape Icon", isOn: $settings.showTapeInStatusBar)
+        Toggle("Show CD Icon", isOn: $settings.showCDInStatusBar)
       }
 
       Section {

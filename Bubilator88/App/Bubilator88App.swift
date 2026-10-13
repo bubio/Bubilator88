@@ -15,6 +15,7 @@ struct Bubilator88App: App {
         // both cold-launch and warm (already-running) opens. Both requests
         // run immediately if the run loop is up, otherwise defer to
         // ContentView.onAppear's consumePendingScript() / consumePendingLaunch()
+        // / consumePendingCD()
         // (cold launch may fire onOpenURL before ROMs load). See AppDelegate
         // for why this lives in SwiftUI rather than application(_:open:).
         .onOpenURL { url in
@@ -22,6 +23,8 @@ struct Bubilator88App: App {
             viewModel.requestLaunch(url: url)
           } else if url.pathExtension.lowercased() == "b88script" {
             viewModel.requestScriptPlayback(url: url)
+          } else if url.isFileURL, ["cue", "ccd"].contains(url.pathExtension.lowercased()) {
+            viewModel.requestCDMount(url: url)
           } else if url.isFileURL, url.pathExtension.lowercased() == "d88" {
             // Same path as `bubilator88://boot?arg=<file>`: validate, mount
             // (a multi-image file puts its second image in drive 1), boot.

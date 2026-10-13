@@ -113,6 +113,11 @@ extension EmulatorViewModel {
     let player = ScriptPlayer(pc88: pc88, loader: loader)
     var setupError: Error?
     emuQueue.sync {
+      // Scripts do not record the CD drive; leaving it out keeps playback
+      // booting the way the recording did. The disc comes out with it, so
+      // the status bar and later save states agree with the machine.
+      pc88.cdDriveInstalled = false
+      pc88.ejectCD()
       pc88.reset(preserveRAM: false)
       do {
         try player.beginLive(steps)
@@ -120,6 +125,8 @@ extension EmulatorViewModel {
         setupError = error
       }
     }
+
+    clearCDDisplay()
 
     if let setupError {
       emuQueue.sync { player.cancelLive() }

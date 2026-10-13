@@ -217,6 +217,7 @@ extension EmulatorViewModel {
       let diskActivity = pc88.takeDiskActivity()
       let d0 = diskActivity[0]
       let d1 = diskActivity[1]
+      let cd = pc88.takeCDActivity()
       let tapeProgressSample = pc88.tapeProgress
       // Sampled here, on the thread that owns the deck, for the same reason
       // progress is: the UI must never read `machine.cassette` itself. A
@@ -239,6 +240,7 @@ extension EmulatorViewModel {
         guard let self else { return }
         self.drive0Access = d0
         self.drive1Access = d1
+        if self.cdAccess != cd { self.cdAccess = cd }
         // Written only on change: an Observable property notifies on every
         // set, and a stopped tape would otherwise invalidate views at 4Hz.
         if self.tapeProgress != tapeProgressSample { self.tapeProgress = tapeProgressSample }
