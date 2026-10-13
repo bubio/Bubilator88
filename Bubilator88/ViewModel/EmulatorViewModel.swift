@@ -1414,6 +1414,10 @@ final class EmulatorViewModel {
     /// Optional so states written before 1.5.0 still decode; see
     /// `performLoad` for why they default to 24kHz.
     var monitorType: Int?
+    /// Memory wait DIP (SW1-6) the state was captured under. It only changes
+    /// the speed, like the clock, and travels for the same reason. Optional
+    /// so older states decode; they keep the current setting.
+    var memoryWaitDip: Bool?
     var disk0: String?
     var disk1: String?
     var drive0Name: String?
@@ -1524,6 +1528,7 @@ final class EmulatorViewModel {
         bootMode: bootMode.rawValue,
         clock8MHz: clock8MHz,
         monitorType: pc88.monitorType.rawValue,
+        memoryWaitDip: pc88.memoryWaitDip,
         disk0: pc88.mountedDisk(drive: 0)?.name,
         disk1: pc88.mountedDisk(drive: 1)?.name,
         drive0Name: self.drive0Name == "Empty" ? nil : self.drive0Name,
@@ -1618,7 +1623,14 @@ final class EmulatorViewModel {
     // agrees with the machine and the next Reset does not silently change the
     // frame rate back.
     Settings.shared.monitorType = restoredMonitor
+    // The state brings its own extended RAM, or none; match the setting so the
+    // next Reset does not install a different size.
+    Settings.shared.extramCards = pc88.extRAMCards
     if let meta {
+      if let memoryWait = meta.memoryWaitDip {
+        emuQueue.sync { pc88.memoryWaitDip = memoryWait }
+        Settings.shared.memoryWaitDip = memoryWait
+      }
       if let mode = BootMode(rawValue: meta.bootMode) {
         _bootModeStorage = mode
         // Keep Settings.dipSw{1,2}Base in sync with the restored boot
