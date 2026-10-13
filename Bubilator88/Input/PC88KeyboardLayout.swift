@@ -29,8 +29,8 @@ enum PC88KeyboardLayout {
   private struct Spec {
     let key: PC88Key
     let label: String
-    var symbol: String? = nil
-    var shifted: String? = nil
+    var symbol: String?
+    var shifted: String?
     let x: CGFloat
     let y: CGFloat
     var w: CGFloat = 1

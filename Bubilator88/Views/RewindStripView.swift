@@ -87,7 +87,7 @@ struct RewindStripView: View {
       Image(decorative: image, scale: 1.0)
         .resizable()
         .interpolation(.low)
-        .aspectRatio(contentMode: .fit)
+        .scaledToFit()
         .frame(width: Self.thumbWidth, height: Self.thumbHeight)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(

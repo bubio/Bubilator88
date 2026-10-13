@@ -55,11 +55,15 @@ if [ ${#paths[@]} -gt 0 ]; then
   exit
 fi
 
-if [ "$fix" -eq 1 ]; then swiftlint --fix; else swiftlint lint --quiet; fi
+# An error-severity violation (e.g. force_try) makes SwiftLint exit non-zero.
+# Record it instead of letting `set -e` stop here, so the core is still linted,
+# and report the failure once both have run.
+status=0
+if [ "$fix" -eq 1 ]; then swiftlint --fix || status=$?; else swiftlint lint --quiet || status=$?; fi
 
 if [ ! -d "$CORE_DIR" ]; then
   echo "note: core clone not found at $CORE_DIR; skipping it" >&2
-  exit
+  exit "$status"
 fi
 
 # SwiftLint ignores paths outside the directory it runs in and lints the
@@ -78,7 +82,8 @@ awk -v core="$core_dir" '
 
 cd "$core_dir"
 if [ "$fix" -eq 1 ]; then
-  swiftlint --fix --config "$core_config"
+  swiftlint --fix --config "$core_config" || status=$?
 else
-  swiftlint lint --quiet --config "$core_config"
+  swiftlint lint --quiet --config "$core_config" || status=$?
 fi
+exit "$status"

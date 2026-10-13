@@ -565,7 +565,8 @@ final class GameControllerManager {
   func stop() {
     isStarted = false
     GCController.stopWirelessControllerDiscovery()
-    NotificationCenter.default.removeObserver(self)
+    NotificationCenter.default.removeObserver(self, name: .GCControllerDidConnect, object: nil)
+    NotificationCenter.default.removeObserver(self, name: .GCControllerDidDisconnect, object: nil)
     releaseAllKeys()
     if let prev = activeController { clearHandlers(on: prev) }
     haptics?.stop()

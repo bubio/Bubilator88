@@ -267,7 +267,7 @@ final class Settings {
 
   /// Directory for auto-saved screenshots (absolute path). Nil means
   /// no directory has been chosen yet.
-  var screenshotDirectory: String? = nil {
+  var screenshotDirectory: String? {
     didSet {
       if let dir = screenshotDirectory {
         UserDefaults.standard.set(dir, forKey: Keys.screenshotDirectory)
@@ -306,7 +306,7 @@ final class Settings {
 
   /// Directory for auto-saved recordings (absolute path). Nil means
   /// use the default ~/Music.
-  var recordingDirectory: String? = nil {
+  var recordingDirectory: String? {
     didSet {
       if let dir = recordingDirectory {
         UserDefaults.standard.set(dir, forKey: Keys.recordingDirectory)
@@ -338,7 +338,7 @@ final class Settings {
 
   /// Directory for auto-saved video recordings (absolute path). Nil means
   /// use the default ~/Movies.
-  var videoRecordingDirectory: String? = nil {
+  var videoRecordingDirectory: String? {
     didSet {
       if let dir = videoRecordingDirectory {
         UserDefaults.standard.set(dir, forKey: Keys.videoRecordingDirectory)
@@ -363,7 +363,7 @@ final class Settings {
 
   /// Directory for auto-saved operation scripts (absolute path). Nil means
   /// use the default ~/Documents.
-  var scriptRecordingDirectory: String? = nil {
+  var scriptRecordingDirectory: String? {
     didSet {
       if let dir = scriptRecordingDirectory {
         UserDefaults.standard.set(dir, forKey: Keys.scriptRecordingDirectory)

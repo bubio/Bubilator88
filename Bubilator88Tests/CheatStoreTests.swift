@@ -22,7 +22,7 @@ struct CheatStoreTests {
   }
 
   @Test("取り込んだ直後は全グループ無効で、有効にしたグループは保存・読み込みで往復する")
-  func enabledGroupsRoundTrip() {
+  func enabledGroupsRoundTrip() throws {
     let url = tempURL()
     defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
     let store = CheatStore(fileURL: url)
@@ -31,7 +31,7 @@ struct CheatStoreTests {
     store.setGroup(1, enabled: true, in: set.id)
 
     let reloaded = CheatStore(fileURL: url)
-    let found = try! #require(reloaded.set(for: ["ys1.d88"]))
+    let found = try #require(reloaded.set(for: ["ys1.d88"]))
     #expect(reloaded.groups(of: found).map(\.name) == ["無敵", "HP"])
     #expect(reloaded.enabledCodes(of: found)
       == [[PATCode(opcode: 0x30, area: 0x00, address: 0xE50C, value: 0x0004)]])
@@ -94,7 +94,7 @@ struct CheatStoreTests {
   }
 
   @Test("プリセットから作ったセットは、同梱プリセットが変わると本文が追従し、同名の項目は ON のまま残る")
-  func setsFollowTheirPreset() {
+  func setsFollowTheirPreset() throws {
     let url = tempURL()
     defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
     let old = CheatPreset(title: "ファンタジアン", text: "# HP MAX\n3000D014 00FF\n# GOLD MAX\n8000D018 7FFF\n")
@@ -106,7 +106,7 @@ struct CheatStoreTests {
     let new = CheatPreset(title: "ファンタジアン",
                           text: "# GOLD MAX\n8000D018 7FFF\n8000D058 7FFF\n# HP MAX（全員）\n3000D014 00FF\n")
     let reloaded = CheatStore(fileURL: url, presets: [new])
-    let found = try! #require(reloaded.set(for: ["F.D88"]))
+    let found = try #require(reloaded.set(for: ["F.D88"]))
     #expect(found.text == new.text)
     #expect(found.enabledGroups == [0])  // GOLD MAX moved to 0; HP MAX was renamed
   }
