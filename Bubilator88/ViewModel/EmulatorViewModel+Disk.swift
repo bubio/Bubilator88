@@ -163,7 +163,7 @@ extension EmulatorViewModel {
       presentDiskLoadErrorAlert(fileName: url.lastPathComponent, reason: .unreadable)
       return
     }
-    Settings.shared.addRecentFile(url: url)
+    Settings.shared.addRecentFile(url: url, kind: .disk)
 
     if let entries = ArchiveExtractor.extractDiskImages(data) {
       mountArchive(url: url, data: data, entries: entries, target: target)
@@ -311,7 +311,7 @@ extension EmulatorViewModel {
       presentDiskLoadErrorAlert(fileName: url.lastPathComponent, reason: .emptyArchive)
       return
     }
-    Settings.shared.addRecentFile(url: url)
+    Settings.shared.addRecentFile(url: url, kind: .disk)
 
     // Mount one playlist entry as an independent source file. Multi-image
     // entries mount their first image; the user can switch within that
@@ -490,7 +490,7 @@ extension EmulatorViewModel {
   /// its validation phase. See docs/develop/URL_SCHEME_LAUNCH_PLAN.md §3.6.
   func mountDiskExplicit(disks: [D88Disk], imageIndex: Int, url: URL, drive: Int) {
     mountDiskImage(disks[imageIndex], allImages: disks, imageIndex: imageIndex, url: url, drive: drive)
-    Settings.shared.addRecentFile(url: url)
+    Settings.shared.addRecentFile(url: url, kind: .disk)
   }
 
   private func mountDiskImage(_ disk: D88Disk, allImages: [D88Disk], imageIndex: Int,
@@ -578,7 +578,7 @@ extension EmulatorViewModel {
   /// Mount a disk from a recent file entry (resolves bookmark, mounts as 0&1).
   func mountRecentFile(_ entry: RecentDiskEntry, drive: Int = -1) {
     guard let url = entry.resolveBookmark() else {
-      Settings.shared.removeRecentFile(entry)
+      Settings.shared.removeRecentFile(entry, kind: .disk)
       showAlert(
         title: String(localized: "File Error", comment: ""),
         message: String(

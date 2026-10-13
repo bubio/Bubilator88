@@ -37,7 +37,7 @@ extension EmulatorViewModel {
     let format: TapeFormat = emuQueue.sync {
       pc88.mountTape(data: tapeData)
     }
-    Settings.shared.addRecentTapeFile(url: url)
+    Settings.shared.addRecentFile(url: url, kind: .tape)
     tapeName = url.deletingPathExtension().lastPathComponent
     tapeSourceURL = url
     tapeFormat = format
@@ -52,7 +52,7 @@ extension EmulatorViewModel {
   /// Mount a previously-remembered tape via its security-scoped bookmark.
   func mountRecentTape(_ entry: RecentDiskEntry) {
     guard let url = entry.resolveBookmark() else {
-      Settings.shared.removeRecentTapeFile(entry)
+      Settings.shared.removeRecentFile(entry, kind: .tape)
       showAlert(
         title: String(localized: "Tape Load Error", comment: ""),
         message: "Could not resolve \(entry.displayName)"

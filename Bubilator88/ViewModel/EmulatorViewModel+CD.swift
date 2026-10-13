@@ -33,7 +33,7 @@ extension EmulatorViewModel {
       )
       return false
     }
-    Settings.shared.addRecentCDFile(url: url)
+    Settings.shared.addRecentFile(url: url, kind: .cd)
     cdName = url.deletingPathExtension().lastPathComponent
     cdSourceURL = url
     isCDMounted = true
@@ -79,7 +79,7 @@ extension EmulatorViewModel {
   /// Mount a previously-remembered CD via its bookmark.
   func mountRecentCD(_ entry: RecentDiskEntry) {
     guard let url = entry.resolveBookmark() else {
-      Settings.shared.removeRecentCDFile(entry)
+      Settings.shared.removeRecentFile(entry, kind: .cd)
       showAlert(
         title: String(localized: "CD Load Error", comment: "Alert title"),
         message: "Could not resolve \(entry.displayName)"
