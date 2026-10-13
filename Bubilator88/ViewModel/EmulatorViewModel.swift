@@ -1830,7 +1830,9 @@ final class EmulatorViewModel {
         pc88.ejectDisk(drive: 0)
         pc88.ejectDisk(drive: 1)
         pc88.ejectTape()
+        pc88.ejectCD()
       }
+      clearCDDisplay()
       performReset(resetTranslation: false)
       return saveStateLoadErrorMessage(error)
     }

@@ -63,7 +63,7 @@ extension EmulatorViewModel {
   }
 
   /// Boot the mounted tape (Tape > Auto Boot does this on every open): eject
-  /// the disks, reset into N88-BASIC V1S, then type `LOAD "CAS:"` and, once it
+  /// the disks and the CD, reset into N88-BASIC V1S, then type `LOAD "CAS:"` and, once it
   /// has loaded, `RUN`.
   ///
   /// V1S rather than the current mode because the tape routine is the same in
@@ -73,6 +73,8 @@ extension EmulatorViewModel {
     guard isTapeMounted else { return }
     ejectDisk(drive: 0)
     ejectDisk(drive: 1)
+    // A CD in at the reset fits the drive and the CD BIOS boots it instead.
+    if isCDMounted { ejectCD() }
     rewindTape()
     // Resets the machine, and the reset cancels anything in flight, so the
     // sequencer is started only afterwards.

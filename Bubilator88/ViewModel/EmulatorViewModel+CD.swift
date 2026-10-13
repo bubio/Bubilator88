@@ -6,8 +6,10 @@ import Bubilator88Core
 extension EmulatorViewModel {
 
   /// Open a CD image (`.cue` / `.ccd`, or the `.img` / `.bin` next to one)
-  /// and boot it. The reset brings in the CD-ROM drive, which is there
-  /// whenever a CD is in at reset, and the CD BIOS boots the disc.
+  /// and boot it in N88-BASIC V2 at 8MHz, the mode the CD software is
+  /// written for. The reset brings in the CD-ROM drive, which is there
+  /// whenever a CD is in at reset, and the CD BIOS boots the disc. The mode
+  /// and the clock stay that way afterwards.
   @discardableResult
   func mountCD(url: URL) -> Bool {
     guard checkAllowed(.media) else { return false }
@@ -35,6 +37,10 @@ extension EmulatorViewModel {
     cdName = url.deletingPathExtension().lastPathComponent
     cdSourceURL = url
     isCDMounted = true
+    // The storage rather than `bootMode` / `clock8MHz`, whose setters each
+    // reset the machine; the reset below picks both up.
+    _bootModeStorage = .n88v2
+    Settings.shared.clock8MHz = true
     reset()
     return true
   }

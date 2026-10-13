@@ -6,7 +6,7 @@ import Bubilator88Core
 extension EmulatorViewModel {
 
   /// Open a `.n80` memory image: a PC-8001 RAM dump. Resets into N-BASIC with
-  /// the drives empty; ``MemoryImageBoot`` then restores the image once
+  /// the drives and the CD empty; ``MemoryImageBoot`` then restores the image once
   /// N-BASIC is at its prompt and types `RUN` if the image needs it. The mode
   /// stays N-BASIC afterwards.
   @discardableResult
@@ -32,6 +32,8 @@ extension EmulatorViewModel {
     }
     ejectDisk(drive: 0)
     ejectDisk(drive: 1)
+    // A CD in at the reset fits the drive and the CD BIOS boots it instead.
+    if isCDMounted { ejectCD() }
     // Resets the machine, and the reset cancels anything in flight, so the
     // sequencer is started only afterwards.
     bootMode = .n
