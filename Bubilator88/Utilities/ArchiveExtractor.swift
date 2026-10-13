@@ -8,6 +8,7 @@ nonisolated enum ArchiveType {
   case lzh
   case cab
   case rar
+  case sevenZip
   case none
 }
 
@@ -40,6 +41,11 @@ nonisolated enum ArchiveExtractor {
     if data[0] == 0x52, data[1] == 0x61, data[2] == 0x72, data[3] == 0x21 {
       return .rar
     }
+    // 7z: "7z\xBC\xAF\x27\x1C" signature
+    if data[0] == 0x37, data[1] == 0x7A, data[2] == 0xBC, data[3] == 0xAF,
+       data[4] == 0x27, data[5] == 0x1C {
+      return .sevenZip
+    }
     // LZH: check for -lh?- or -lz?- signature pattern
     if data.count >= 7, data[2] == 0x2D,
        (data[3] == 0x6C && data[4] == 0x68) || (data[3] == 0x6C && data[4] == 0x7A),
@@ -50,7 +56,7 @@ nonisolated enum ArchiveExtractor {
   }
 
   /// Archive extensions for nested archive detection.
-  private static let archiveExtensions: Set<String> = ["zip", "lzh", "cab", "rar"]
+  private static let archiveExtensions: Set<String> = ["zip", "lzh", "cab", "rar", "7z"]
 
   /// Extract disk image files from a supported archive.
   /// Returns nil if the data is not a recognized archive format.
@@ -79,7 +85,7 @@ nonisolated enum ArchiveExtractor {
         entries = extractWithBsdtar(data)
       }
     case .rar: entries = extractRAR(data)
-    case .lzh, .cab: entries = extractWithBsdtar(data)
+    case .lzh, .cab, .sevenZip: entries = extractWithBsdtar(data)
     case .none: return nil
     }
 
@@ -168,7 +174,7 @@ nonisolated enum ArchiveExtractor {
   // MARK: - External Tool Extraction
 
   /// Extract files using macOS built-in bsdtar (libarchive).
-  /// Supports LZH (all methods), CAB (MSZIP, LZX), RAR (stored only).
+  /// Supports LZH (all methods), CAB (MSZIP, LZX), 7z, RAR (stored only).
   private static func extractWithBsdtar(_ data: Data) -> [ArchiveEntry] {
     return extractToTempDir(data) { archivePath, extractDir in
       let process = Process()

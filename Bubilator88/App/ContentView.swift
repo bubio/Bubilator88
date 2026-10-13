@@ -18,6 +18,7 @@ extension UTType {
   static let lha  = UTType(filenameExtension: "lha")!
   static let cab  = UTType(filenameExtension: "cab")!
   static let rar  = UTType(filenameExtension: "rar")!
+  static let sevenZip = UTType(filenameExtension: "7z")!
   static let m3u  = UTType(filenameExtension: "m3u")!
   static let m3u8 = UTType(filenameExtension: "m3u8")!
 }
@@ -25,7 +26,7 @@ extension UTType {
 private let diskFileTypes: [UTType] = [
   .d88, .d77, .disk2d, .disk2hd,   // disk images
   .m3u, .m3u8,                     // multi-disk playlist
-  .zip, .lzh, .lha, .cab, .rar     // archives
+  .zip, .lzh, .lha, .cab, .rar, .sevenZip  // archives
 ]
 
 private let memoryImageFileTypes: [UTType] = [.n80]
@@ -34,7 +35,7 @@ private let cdFileTypes: [UTType] = [.cue, .ccd]
 
 private let tapeFileTypes: [UTType] = [
   .cmt, .t88,                      // tape images
-  .zip, .lzh, .lha, .cab, .rar     // archives
+  .zip, .lzh, .lha, .cab, .rar, .sevenZip  // archives
 ]
 
 // MARK: - ContentView
@@ -273,7 +274,7 @@ struct ContentView: View {
     let acceptedExts: Set<String> = [
       "d88", "d77", "2d", "2hd",
       "m3u", "m3u8", "n80", "cue", "ccd", "cmt", "t88",
-      "zip", "lzh", "lha", "cab", "rar"
+      "zip", "lzh", "lha", "cab", "rar", "7z"
     ]
     _ = provider.loadObject(ofClass: URL.self) { url, _ in
       guard let url else { return }
