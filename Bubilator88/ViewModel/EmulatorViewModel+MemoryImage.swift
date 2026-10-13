@@ -34,6 +34,9 @@ extension EmulatorViewModel {
     ejectDisk(drive: 1)
     // A CD in at the reset fits the drive and the CD BIOS boots it instead.
     if isCDMounted { ejectCD() }
+    // PC-8001 software is written for 4MHz. The clock goes first so the reset
+    // that `bootMode` makes picks it up; both stay that way afterwards.
+    Settings.shared.clock8MHz = false
     // Resets the machine, and the reset cancels anything in flight, so the
     // sequencer is started only afterwards.
     bootMode = .n
