@@ -52,6 +52,7 @@
       "credit.controller": "Silpheed © 1986 GAME ARTS",
       "credit.stereo": "Sorcerian © 1987 Falcom",
       "credit.rewind": "Relics © 1986 Bothtec",
+      "credit.zones": "Murder Club © 1986 Riverhill Soft",
 
       "f.upscaler.title": "AI Upscaler",
       "f.upscaler.body":
@@ -218,6 +219,7 @@
       "credit.controller": "シルフィード © 1986 GAME ARTS",
       "credit.stereo": "ソーサリアン © 1987 Falcom",
       "credit.rewind": "レリクス © 1986 ボーステック",
+      "credit.zones": "殺人倶楽部(マーダークラブ) © 1986 Riverhill Soft",
 
       "f.upscaler.title": "AI アップスケーラー",
       "f.upscaler.body":
