@@ -113,5 +113,5 @@ jobs:
             ${{ steps.package.outputs.shared_zip_path }}
           tag_name: ${{ steps.version.outputs.ref }}
           draft: false
-          prerelease: false
+          prerelease: ${{ github.event.release.prerelease }}
           generate_release_notes: false

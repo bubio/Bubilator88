@@ -10,7 +10,7 @@
     <AssemblyName>Bubilator88</AssemblyName>
     <!-- App version for local builds (shown in About). Release builds override
          it from the win-v* tag via -p:Version (release-windows.yml). -->
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Explorer/taskbar/shortcut icon (Win32 resource baked into the exe).
          The titlebar icon is set separately at runtime via AppWindow.SetIcon
