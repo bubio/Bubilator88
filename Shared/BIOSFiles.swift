@@ -34,7 +34,7 @@ enum BIOSFiles {
       (.n88Basic, ["N88.ROM"]),
       // Needed for the N88-BASIC boot sequence.
       (.nBasic, ["N80.ROM"]),
-      // A built-in ASCII font stands in when missing.
+      // A built-in font covering 0x00-0xF7 stands in when missing.
       (.font, ["FONT.ROM"]),
       (.kanji1, ["KANJI1.ROM"]),
       (.kanji2, ["KANJI2.ROM"]),
