@@ -98,6 +98,18 @@ It requires access to the private repo and `git submodule update --init` to
 populate; if it is empty, treat those docs as unavailable rather than assuming
 the content does not exist.
 
+Updating these docs:
+
+- **Commit straight to the `bubilator88` branch of `bubio/dev-docs`** — no
+  topic branch or pull request. A fresh checkout leaves the submodule on a
+  detached HEAD, so first run
+  `git -C docs/develop checkout -B bubilator88 origin/bubilator88` (after a
+  `fetch`), then commit there.
+- **Push the dev-docs commit before pushing this repository**, so the pointer
+  never names a commit the remote does not have.
+- **Bump the `docs/develop` pointer in the same commit or PR as the change it
+  documents** (`git add docs/develop`), as `c24c408` did.
+
 | Document | Contents |
 | --- | --- |
 | `ARCHITECTURE.md` | Full design document |
