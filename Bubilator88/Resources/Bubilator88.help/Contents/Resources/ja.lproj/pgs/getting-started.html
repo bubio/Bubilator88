@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Getting Started">
     <meta name="description" content="ROM ファイルの準備、起動、ブートモードと CPUクロックの使い方">
-    <meta name="keywords" content="ROM, セットアップ, 起動, ブートモード, CPUクロック, N88-BASIC, N80.ROM, DISK.ROM, 拡張RAM, モニタタイプ, 24kHz, 15kHz, メモリウェイト, 起動引数, コマンドライン, URL スキーム">
+    <meta name="keywords" content="ROM, pbios, セットアップ, 起動, ブートモード, CPUクロック, N88-BASIC, N80.ROM, DISK.ROM, 拡張RAM, モニタタイプ, 24kHz, 15kHz, メモリウェイト, 起動引数, コマンドライン, URL スキーム">
     <meta name="robots" content="index">
     <title>はじめに</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -58,6 +58,9 @@
         <tr><td><code>KANJI1.ROM</code></td><td>漢字 ROM 第一水準</td><td>漢字表示に使用します。</td></tr>
         <tr><td><code>KANJI2.ROM</code></td><td>漢字 ROM 第二水準</td><td>漢字表示に使用します。</td></tr>
     </table>
+
+    <h3>実機の ROM がない場合: pbios（代替 BIOS）</h3>
+    <p>cisc 氏が公開している起動専用の代替 BIOS <a href="http://retropc.net/cisc/m88/download.html">pbios</a> の <code>n88.rom</code> と <code>disk.rom</code> を、<code>N88.ROM</code> と <code>DISK.ROM</code> として置くと、BASIC を使わないソフトの一部が起動します。</p>
 
     <h3>リズム音源 WAV ファイル</h3>
     <p>YM2608 (OPNA) のリズム音を鳴らすには、同じフォルダに以下の WAV ファイルを置いてください。16-bit PCM 形式が必要です。なくてもアプリは動作しますが、リズム音は鳴りません。</p>
