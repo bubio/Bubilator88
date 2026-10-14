@@ -90,7 +90,7 @@
         "FM 6ch + SSG 3ch + Rhythm + ADPCM. Low-latency output via AVAudioEngine.",
       "features.save.title": "Save States",
       "features.save.body":
-        "10 slots plus Quick Save (Cmd+S / Cmd+L). Thumbnails and metadata per slot.",
+        "30 slots plus Quick Save (Cmd+S / Cmd+L). Thumbnails and metadata per slot.",
       "features.disk.title": "Disk & Tape",
       "features.disk.body":
         "D88 / D77 / 2D / 2HD floppies, T88 / CMT tapes. Open <strong>ZIP / LZH / CAB / RAR / 7z</strong> archives directly — just pick the image you want inside.",
@@ -240,7 +240,7 @@
         "FM 6ch + SSG 3ch + リズム + ADPCM。AVAudioEngine で低遅延出力。",
       "features.save.title": "セーブステート",
       "features.save.body":
-        "スロット 10 個 + クイックセーブ (Cmd+S / Cmd+L)。サムネとメタ情報もちゃんと残ります。",
+        "スロット 30 個 + クイックセーブ (Cmd+S / Cmd+L)。サムネとメタ情報もちゃんと残ります。",
       "features.disk.title": "ディスク & テープ",
       "features.disk.body":
         "D88 / D77 / 2D / 2HD のディスク、T88 / CMT のテープに対応。<strong>ZIP / LZH / CAB / RAR / 7z</strong> の圧縮ファイルは、展開せずそのまま開いて中のイメージを選べます。",
