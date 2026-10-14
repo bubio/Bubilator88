@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Using Disks">
     <meta name="description" content="Mount disk images, use playlists, write protection, write-back, and create blank disks">
-    <meta name="keywords" content="disk, D88, mount, eject, drive, floppy, blank, archive, ZIP, LZH, CAB, RAR, m3u, playlist, write protect, write-back, save data, cache">
+    <meta name="keywords" content="disk, D88, mount, eject, drive, floppy, blank, archive, ZIP, LZH, CAB, RAR, 7z, m3u, playlist, write protect, write-back, save data, cache">
     <meta name="robots" content="index">
     <title>Using Disks</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -16,7 +16,7 @@
             <li><a href="../index.html">Bubilator88 Help</a></li>
             <li><a href="getting-started.html">Getting Started</a></li>
             <li><a href="disks.html">Using Disks</a></li>
-            <li><a href="cassette.html">Cassette Tape</a></li>
+            <li><a href="cassette.html">Cassette Tape and Memory Images</a></li>
             <li><a href="cdrom.html">CD-ROM</a></li>
             <li><a href="keyboard.html">Keyboard</a></li>
             <li><a href="display.html">Display</a></li>
@@ -24,6 +24,8 @@
             <li><a href="savestates.html">Save States</a></li>
             <li><a href="controller.html">Game Controller</a></li>
             <li><a href="mouse.html">Mouse</a></li>
+            <li><a href="controlzones.html">Control Zones</a></li>
+            <li><a href="cheats.html">Cheats</a></li>
             <li><a href="shortcuts.html">Shortcuts</a></li>
         </ul>
     </nav>
@@ -37,11 +39,11 @@
     <ul>
         <li><strong>D88</strong> disk images (<code>.d88</code>, <code>.d77</code>, <code>.2d</code>, <code>.2hd</code>)</li>
         <li><strong>M3U</strong> playlists (<code>.m3u</code>, <code>.m3u8</code>)</li>
-        <li><strong>ZIP</strong>, <strong>LZH</strong>, <strong>CAB</strong>, and <strong>RAR</strong> archives
+        <li><strong>ZIP</strong>, <strong>LZH</strong>, <strong>CAB</strong>, <strong>RAR</strong>, and <strong>7z</strong> archives
             (when they contain D88 disk images)</li>
     </ul>
     <p>It also supports D88 files that contain multiple disk images.</p>
-    <div class="note">Some RAR variants need <code>unar</code>, <code>unrar</code>, or <code>7z</code> installed on your Mac. Direct 7z archive loading is not implemented.</div>
+    <div class="note">Some RAR variants need <code>unar</code>, <code>unrar</code>, or <code>7z</code> installed on your Mac.</div>
 
     <h2>Mounting Disks</h2>
     <table>
@@ -75,7 +77,7 @@
     <h2>Writing Back to Disk</h2>
     <p>When software writes to a disk (saving a game, for example), the change is written back to the original D88 file automatically, about 0.1 seconds after the writes stop. There is no setting for this; it is always on. Ejecting a disk, quitting the app, and loading a save state write back immediately.</p>
     <div class="note">Turn on <strong>Write Protect</strong> for disks whose original file you do not want modified.</div>
-    <p>Disks inside an archive (ZIP / LZH / CAB / RAR) are written back to the cache extracted on first mount. The original archive is never modified.</p>
+    <p>Disks inside an archive (ZIP / LZH / CAB / RAR / 7z) are written back to the cache extracted on first mount. The original archive is never modified.</p>
     <p>If no write-back destination can be determined, or the write fails, the disk is saved as a recovery D88 in <code>~/Library/Application Support/Bubilator88/ModifiedDisks/</code>.</p>
 
     <h2>Exporting Cached Disks</h2>

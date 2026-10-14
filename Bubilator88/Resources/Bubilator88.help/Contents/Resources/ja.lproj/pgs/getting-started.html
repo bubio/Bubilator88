@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Getting Started">
     <meta name="description" content="ROM ファイルの準備、起動、ブートモードと CPUクロックの使い方">
-    <meta name="keywords" content="ROM, セットアップ, 起動, ブートモード, CPUクロック, N88-BASIC, N80.ROM, DISK.ROM, 拡張RAM, モニタタイプ, 24kHz, 15kHz, メモリウェイト, 起動引数, コマンドライン, URL スキーム">
+    <meta name="keywords" content="ROM, pbios, セットアップ, 起動, ブートモード, CPUクロック, N88-BASIC, N80.ROM, DISK.ROM, 拡張RAM, モニタタイプ, 24kHz, 15kHz, メモリウェイト, 起動引数, コマンドライン, URL スキーム">
     <meta name="robots" content="index">
     <title>はじめに</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -16,7 +16,7 @@
             <li><a href="../index.html">Bubilator88 ヘルプ</a></li>
             <li><a href="getting-started.html">はじめに</a></li>
             <li><a href="disks.html">ディスク操作</a></li>
-            <li><a href="cassette.html">カセットテープ</a></li>
+            <li><a href="cassette.html">カセットテープ・メモリイメージ</a></li>
             <li><a href="cdrom.html">CD-ROM</a></li>
             <li><a href="keyboard.html">キーボード</a></li>
             <li><a href="display.html">表示設定</a></li>
@@ -24,6 +24,8 @@
             <li><a href="savestates.html">ステートセーブ</a></li>
             <li><a href="controller.html">ゲームコントローラ</a></li>
             <li><a href="mouse.html">マウス</a></li>
+            <li><a href="controlzones.html">操作領域</a></li>
+            <li><a href="cheats.html">チート</a></li>
             <li><a href="shortcuts.html">ショートカット一覧</a></li>
         </ul>
     </nav>
@@ -57,8 +59,11 @@
         <tr><td><code>KANJI2.ROM</code></td><td>漢字 ROM 第二水準</td><td>漢字表示に使用します。</td></tr>
     </table>
 
+    <h3>実機の ROM がない場合: pbios（代替 BIOS）</h3>
+    <p>cisc 氏が公開している起動専用の代替 BIOS <a href="http://retropc.net/cisc/m88/download.html">pbios</a> の <code>n88.rom</code> と <code>disk.rom</code> を、<code>N88.ROM</code> と <code>DISK.ROM</code> として置くと、BASIC を使わないソフトの一部が起動します。</p>
+
     <h3>リズム音源 WAV ファイル</h3>
-    <p>YM2608 (OPNA) のリズム音を鳴らすには、同じフォルダに以下の WAV ファイルを置いてください。16-bit PCM 形式が必要です。なくてもアプリは動作しますが、リズム音は鳴りません。</p>
+    <p>YM2608 (OPNA) のリズム音には、同じフォルダに置いた以下の WAV ファイルを使います。16-bit PCM 形式が必要です。置いていない音色は、アプリに同梱の代替音で鳴ります。</p>
     <table>
         <tr><th>ファイル名</th><th>音色</th></tr>
         <tr><td><code>2608_BD.WAV</code></td><td>バスドラム</td></tr>
@@ -69,11 +74,17 @@
         <tr><td><code>2608_RIM.WAV</code></td><td>リムショット</td></tr>
     </table>
 
-    <div class="note">ROM ファイルおよび WAV ファイルには著作権があるため、Bubilator88 には同梱されていません。</div>
+    <div class="note">ROM ファイルとリズム音源の WAV ファイルには著作権があるため、Bubilator88 には同梱されていません。</div>
 
     <h2>初回起動</h2>
     <p>ROM を配置したら Bubilator88 を起動してください。ROM を追加・差し替えたときは、<strong>エミュレータ &gt; リセット</strong> で読み直せます。</p>
     <p>ディスクソフトを起動するときは、まず <strong>ディスク &gt; ドライブ 1 &gt; マウント...</strong> または <strong>ディスク &gt; ドライブ 1&amp;2 &gt; マウント...</strong> でディスクを挿入し、その後 <strong>エミュレータ &gt; リセット</strong>（<kbd>&#8984;R</kbd>）を実行してください。</p>
+
+    <h2>前回の続きから再開</h2>
+    <p><strong>設定 &gt; 一般 &gt; 前回の続きから再開</strong> をオンにすると、次回の起動時に、終了したときの状態から続けて始めます。起動時にディスクや CD などを開いたときは、そちらを優先します。オンの間は、<kbd>&#8984;Q</kbd> や <kbd>&#8984;W</kbd> で終了するときの確認を出しません。</p>
+
+    <h2>アップデートの確認</h2>
+    <p><strong>設定 &gt; 一般 &gt; 起動時にアップデートを確認</strong> がオンのとき（初期値はオン）、起動時に新しいバージョンがあるかを 1 日 1 回確認し、あればお知らせします。<strong>Bubilator88 &gt; アップデートを確認…</strong> でいつでも確認できます。</p>
 
     <h2>ブートモード</h2>
     <p><strong>エミュレータ &gt; ブートモード</strong> から選択します。変更するとその場でリセットがかかります。</p>
