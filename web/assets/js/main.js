@@ -93,16 +93,16 @@
         "10 slots plus Quick Save (Cmd+S / Cmd+L). Thumbnails and metadata per slot.",
       "features.disk.title": "Disk & Tape",
       "features.disk.body":
-        "D88 / D77 / 2D / 2HD floppies, T88 / CMT tapes. Open <strong>ZIP / LZH / CAB / RAR</strong> archives directly — just pick the image you want inside.",
+        "D88 / D77 / 2D / 2HD floppies, T88 / CMT tapes. Open <strong>ZIP / LZH / CAB / RAR / 7z</strong> archives directly — just pick the image you want inside.",
       "features.native.title": "Apple Silicon Native",
       "features.native.body":
         "Built with SwiftUI, Metal, AVAudioEngine, and CoreML. Optimized for M-series Macs.",
-      "features.fdd.title": "FDD Sound FX",
+      "features.fdd.title": "FDD & Tape Sound FX",
       "features.fdd.body":
-        "Authentic floppy drive seek and access sounds. Togglable in settings.",
+        "Authentic floppy drive seek and access sounds, plus cassette motor and relay clicks. Togglable in settings.",
       "features.audiorec.title": "Audio Recording",
       "features.audiorec.body":
-        "Capture emulator audio straight to AAC or WAV. Pick the output device, choose a per-channel mix, and save in one click.",
+        "Capture emulator audio to WAV, Apple Lossless or AAC — as a stereo mix, or with FM, SSG, ADPCM and Rhythm on separate channels for your DAW.",
       "features.videorec.title": "Video Recording",
       "features.videorec.body":
         "Record gameplay to ProRes 4444 or H.264 with synced audio.",
@@ -116,7 +116,7 @@
 
       "dl.title": "Download & Get Started",
       "dl.s1.title": "Download",
-      "dl.s1.body": "Grab the latest <code>.app</code> from GitHub Releases.",
+      "dl.s1.body": "Grab the latest <code>.dmg</code> from GitHub Releases, or install with Homebrew: <code>brew install --cask bubio/bubilator88/bubilator88</code>.",
       "dl.s2.title": "Bypass Gatekeeper",
       "dl.s2.body":
         "The app is not notarized. Run <code>xattr -cr /Applications/Bubilator88.app</code> or allow it from System Settings &gt; Privacy &amp; Security.",
@@ -243,16 +243,16 @@
         "スロット 10 個 + クイックセーブ (Cmd+S / Cmd+L)。サムネとメタ情報もちゃんと残ります。",
       "features.disk.title": "ディスク & テープ",
       "features.disk.body":
-        "D88 / D77 / 2D / 2HD のディスク、T88 / CMT のテープに対応。<strong>ZIP / LZH / CAB / RAR</strong> の圧縮ファイルは、展開せずそのまま開いて中のイメージを選べます。",
+        "D88 / D77 / 2D / 2HD のディスク、T88 / CMT のテープに対応。<strong>ZIP / LZH / CAB / RAR / 7z</strong> の圧縮ファイルは、展開せずそのまま開いて中のイメージを選べます。",
       "features.native.title": "Apple Silicon ネイティブ",
       "features.native.body":
         "SwiftUI、Metal、AVAudioEngine、CoreML でガッツリ構築。M シリーズに最適化済み。",
-      "features.fdd.title": "FDD アクセス音",
+      "features.fdd.title": "FDD・テープの動作音",
       "features.fdd.body":
-        "フロッピーのシーク音・アクセス音までちゃんと再現。設定でオフにもできます。",
+        "フロッピーのシーク音・アクセス音に、カセットのモーター音・リレー音までちゃんと再現。設定でオフにもできます。",
       "features.audiorec.title": "録音",
       "features.audiorec.body":
-        "エミュレータの音声をそのまま AAC / WAV に保存。出力デバイスやチャンネル別ミックスを選んでワンクリックで録音できます。",
+        "エミュレータの音声を WAV / Apple Lossless / AAC で保存。ステレオのミックスのほか、FM・SSG・ADPCM・リズムを別チャンネルに分けて録って DAW で編集することもできます。",
       "features.videorec.title": "録画",
       "features.videorec.body":
         "プレイ画面を ProRes 4444 / H.264 で音声同期付きで録画。",
@@ -267,7 +267,7 @@
       "dl.title": "ダウンロード & はじめかた",
       "dl.s1.title": "ダウンロード",
       "dl.s1.body":
-        "GitHub Releases から最新の <code>.app</code> を取ってきます。",
+        "GitHub Releases から最新の <code>.dmg</code> を取ってきます。Homebrew なら <code>brew install --cask bubio/bubilator88/bubilator88</code> でも入ります。",
       "dl.s2.title": "Gatekeeper を通す",
       "dl.s2.body":
         "公証を取ってないので、<code>xattr -cr /Applications/Bubilator88.app</code> を実行するか、「システム設定 &gt; プライバシーとセキュリティ」から「このまま開く」でどうぞ。",
