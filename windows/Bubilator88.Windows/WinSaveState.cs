@@ -23,6 +23,11 @@ internal sealed class WinSaveMeta
     // added — those were all 24kHz (mirrors the macOS SaveMeta.monitorType).
     public int? MonitorType { get; set; }
 
+    // Memory wait DIP (SW1-6) the state was captured under. Like the clock it
+    // only changes the speed, so it travels with the state. Null in older
+    // states, which keep the current setting (mirrors macOS SaveMeta.memoryWaitDip).
+    public bool? MemoryWaitDip { get; set; }
+
     public DriveMeta? Drive0 { get; set; }
     public DriveMeta? Drive1 { get; set; }
 

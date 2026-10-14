@@ -5,7 +5,7 @@ namespace Bubilator88.Windows;
 
 /// <summary>
 /// P/Invoke bindings for the Swift emulation core (Bubilator88C.dll, built from
-/// Sources/CApi/CApi.swift in bubio/Bubilator88Core). This is the ONLY boundary
+/// Sources/CApi/ in bubio/Bubilator88Core, split across several files). This is the ONLY boundary
 /// between the managed shell and the native core — every signature here must
 /// match a <c>@_cdecl</c> export exactly.
 ///
@@ -85,6 +85,11 @@ internal static unsafe partial class NativeApi
     [LibraryImport(Dll)]
     public static partial void b88_install_ext_ram(IntPtr handle, int cards);
 
+    // Extended RAM cards installed right now (0/1/8). A save state carries its
+    // own extended RAM, so this is read back after a load.
+    [LibraryImport(Dll)]
+    public static partial int b88_get_ext_ram_cards(IntPtr handle);
+
     [LibraryImport(Dll)]
     public static partial void b88_set_clock_8mhz(IntPtr handle, int on);
 
@@ -106,6 +111,9 @@ internal static unsafe partial class NativeApi
     // Memory wait DIP (SW1-6). Set before b88_reset, alongside the monitor.
     [LibraryImport(Dll)]
     public static partial void b88_set_memory_wait_dip(IntPtr handle, int on);
+
+    [LibraryImport(Dll)]
+    public static partial int b88_get_memory_wait_dip(IntPtr handle);
 
     // CPU-only overclock (1 = real speed); CRTC/sound/RTC keep real time.
     [LibraryImport(Dll)]
