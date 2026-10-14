@@ -1,5 +1,7 @@
 # Bubilator88
 
+日本語 | [English](README.en.md)
+
 <p align="center">
   <img src="docs/AppIcon.png" alt="Bubilator88" width="128" height="128">
 </p>
