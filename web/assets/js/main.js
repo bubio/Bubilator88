@@ -40,6 +40,7 @@
       "media.clip": "Copy & Paste",
       "media.debugger": "Debug Window",
       "media.rewind": "Rewind",
+      "media.zones": "Control Zones",
 
       "audio.mono": "Mono",
       "audio.pseudo": "Pseudo Stereo",
@@ -51,6 +52,7 @@
       "credit.controller": "Silpheed © 1986 GAME ARTS",
       "credit.stereo": "Sorcerian © 1987 Falcom",
       "credit.rewind": "Relics © 1986 Bothtec",
+      "credit.zones": "Murder Club © 1986 Riverhill Soft",
 
       "f.upscaler.title": "AI Upscaler",
       "f.upscaler.body":
@@ -79,6 +81,9 @@
       "f.rewind.title": "Rewind",
       "f.rewind.body":
         "Made a mistake? Hold ⌘Z and the game runs backwards. Bubilator88 keeps a rolling 30-second history of the whole machine in memory — release the key to resume from any moment, with a live thumbnail strip showing exactly where you'll land.",
+      "f.zones.title": "Control Zones",
+      "f.zones.body":
+        "Play keyboard-only games with a mouse or a controller. Click a zone on the screen to type its keys. Draw zones yourself or detect them from the on-screen text, and move between them with a controller's D-pad.",
 
       "features.title": "Other Features",
       "features.lead": "The essentials that make the emulator tick.",
@@ -90,22 +95,34 @@
         "FM 6ch + SSG 3ch + Rhythm + ADPCM. Low-latency output via AVAudioEngine.",
       "features.save.title": "Save States",
       "features.save.body":
-        "10 slots plus Quick Save (Cmd+S / Cmd+L). Thumbnails and metadata per slot.",
+        "30 slots plus Quick Save (Cmd+S / Cmd+L). Thumbnails and metadata per slot.",
       "features.disk.title": "Disk & Tape",
       "features.disk.body":
-        "D88 / D77 / 2D / 2HD floppies, T88 / CMT tapes. Open <strong>ZIP / LZH / CAB / RAR</strong> archives directly — just pick the image you want inside.",
+        "D88 / D77 / 2D / 2HD floppies, T88 / CMT tapes. Open <strong>ZIP / LZH / CAB / RAR / 7z</strong> archives directly — just pick the image you want inside.",
       "features.native.title": "Apple Silicon Native",
       "features.native.body":
         "Built with SwiftUI, Metal, AVAudioEngine, and CoreML. Optimized for M-series Macs.",
-      "features.fdd.title": "FDD Sound FX",
+      "features.fdd.title": "FDD & Tape Sound FX",
       "features.fdd.body":
-        "Authentic floppy drive seek and access sounds. Togglable in settings.",
+        "Authentic floppy drive seek and access sounds, plus cassette motor and relay clicks. Togglable in settings.",
       "features.audiorec.title": "Audio Recording",
       "features.audiorec.body":
-        "Capture emulator audio straight to AAC or WAV. Pick the output device, choose a per-channel mix, and save in one click.",
+        "Capture emulator audio to WAV, Apple Lossless or AAC — as a stereo mix, or with FM, SSG, ADPCM and Rhythm on separate channels for your DAW.",
       "features.videorec.title": "Video Recording",
       "features.videorec.body":
         "Record gameplay to ProRes 4444 or H.264 with synced audio.",
+      "features.touchbar.title": "Touch Bar",
+      "features.touchbar.body":
+        "PC-8801 keys your Mac keyboard lacks, plus save-state slots with thumbnails — save and load in one tap.",
+      "features.cheats.title": "Cheats",
+      "features.cheats.body":
+        "88PAR cheat codes (.pat). Pick from 69 bundled games or import your own, then switch groups on from the Cheats menu.",
+      "features.quicklook.title": "Quick Look",
+      "features.quicklook.body":
+        "Finder shows D88 disks with their title screen and save states with the screen they were saved on. Press Space to preview a save state.",
+      "features.cd.title": "CD-ROM",
+      "features.cd.body":
+        "PC-8801MC CD-ROM drive. Boot CD titles from .cue / .ccd images, with CD-DA music. Requires the CD BIOS.",
 
       "req.title": "Requirements",
       "req.os": "macOS 26.0 (Tahoe) or later",
@@ -116,7 +133,7 @@
 
       "dl.title": "Download & Get Started",
       "dl.s1.title": "Download",
-      "dl.s1.body": "Grab the latest <code>.app</code> from GitHub Releases.",
+      "dl.s1.body": "Grab the latest <code>.dmg</code> from GitHub Releases, or install with Homebrew: <code>brew install --cask bubio/bubilator88/bubilator88</code>.",
       "dl.s2.title": "Bypass Gatekeeper",
       "dl.s2.body":
         "The app is not notarized. Run <code>xattr -cr /Applications/Bubilator88.app</code> or allow it from System Settings &gt; Privacy &amp; Security.",
@@ -190,6 +207,7 @@
       "media.clip": "コピー & ペースト",
       "media.debugger": "デバッグウィンドウ",
       "media.rewind": "巻き戻し",
+      "media.zones": "操作領域",
 
       "audio.mono": "モノラル",
       "audio.pseudo": "擬似ステレオ",
@@ -201,6 +219,7 @@
       "credit.controller": "シルフィード © 1986 GAME ARTS",
       "credit.stereo": "ソーサリアン © 1987 Falcom",
       "credit.rewind": "レリクス © 1986 ボーステック",
+      "credit.zones": "殺人倶楽部(マーダークラブ) © 1986 Riverhill Soft",
 
       "f.upscaler.title": "AI アップスケーラー",
       "f.upscaler.body":
@@ -229,6 +248,9 @@
       "f.rewind.title": "巻き戻し",
       "f.rewind.body":
         "ミスっても大丈夫。⌘Z を押しっぱなしにすると、ゲームがどんどん巻き戻っていきます。直近 30 秒ぶんのマシン状態をまるごとメモリに記録しているので、キーを離せばその瞬間からプレイ再開。巻き戻し中はサムネイルのストリップで、どこまで戻ったかがひと目で分かります。",
+      "f.zones.title": "操作領域",
+      "f.zones.body":
+        "キーボードでしか遊べないゲームを、マウスやコントローラーで。画面の領域をクリックすると、登録したキーを入力します。領域は自分で描くほか、画面の文字から自動で検出することも。コントローラーなら方向パッドで領域を移動できます。",
 
       "features.title": "その他の機能",
       "features.lead": "エミュレータの土台になっている基本機能たち。",
@@ -240,22 +262,34 @@
         "FM 6ch + SSG 3ch + リズム + ADPCM。AVAudioEngine で低遅延出力。",
       "features.save.title": "セーブステート",
       "features.save.body":
-        "スロット 10 個 + クイックセーブ (Cmd+S / Cmd+L)。サムネとメタ情報もちゃんと残ります。",
+        "スロット 30 個 + クイックセーブ (Cmd+S / Cmd+L)。サムネとメタ情報もちゃんと残ります。",
       "features.disk.title": "ディスク & テープ",
       "features.disk.body":
-        "D88 / D77 / 2D / 2HD のディスク、T88 / CMT のテープに対応。<strong>ZIP / LZH / CAB / RAR</strong> の圧縮ファイルは、展開せずそのまま開いて中のイメージを選べます。",
+        "D88 / D77 / 2D / 2HD のディスク、T88 / CMT のテープに対応。<strong>ZIP / LZH / CAB / RAR / 7z</strong> の圧縮ファイルは、展開せずそのまま開いて中のイメージを選べます。",
       "features.native.title": "Apple Silicon ネイティブ",
       "features.native.body":
         "SwiftUI、Metal、AVAudioEngine、CoreML でガッツリ構築。M シリーズに最適化済み。",
-      "features.fdd.title": "FDD アクセス音",
+      "features.fdd.title": "FDD・テープの動作音",
       "features.fdd.body":
-        "フロッピーのシーク音・アクセス音までちゃんと再現。設定でオフにもできます。",
+        "フロッピーのシーク音・アクセス音に、カセットのモーター音・リレー音までちゃんと再現。設定でオフにもできます。",
       "features.audiorec.title": "録音",
       "features.audiorec.body":
-        "エミュレータの音声をそのまま AAC / WAV に保存。出力デバイスやチャンネル別ミックスを選んでワンクリックで録音できます。",
+        "エミュレータの音声を WAV / Apple Lossless / AAC で保存。ステレオのミックスのほか、FM・SSG・ADPCM・リズムを別チャンネルに分けて録って DAW で編集することもできます。",
       "features.videorec.title": "録画",
       "features.videorec.body":
         "プレイ画面を ProRes 4444 / H.264 で音声同期付きで録画。",
+      "features.touchbar.title": "タッチバー",
+      "features.touchbar.body":
+        "Mac のキーボードにない PC-8801 のキーと、サムネイル付きのセーブスロットをタッチバーに。ワンタップでセーブ・ロード。",
+      "features.cheats.title": "チート",
+      "features.cheats.body":
+        "88PAR 形式のチートコード (.pat) に対応。同梱の 69 本から選ぶか手持ちのファイルを読み込んで、チートメニューからオン・オフ。",
+      "features.quicklook.title": "Quick Look",
+      "features.quicklook.body":
+        "Finder で D88 ディスクはタイトル画面、セーブステートは保存したときの画面をサムネイル表示。セーブステートはスペースキーでプレビューもできます。",
+      "features.cd.title": "CD-ROM",
+      "features.cd.body":
+        "PC-8801MC の CD-ROM ドライブに対応。.cue / .ccd イメージから CD 版のソフトを起動し、CD の音楽も鳴ります。CD BIOS が必要です。",
 
       "req.title": "動作環境",
       "req.os": "macOS 26.0 (Tahoe) 以降",
@@ -267,7 +301,7 @@
       "dl.title": "ダウンロード & はじめかた",
       "dl.s1.title": "ダウンロード",
       "dl.s1.body":
-        "GitHub Releases から最新の <code>.app</code> を取ってきます。",
+        "GitHub Releases から最新の <code>.dmg</code> を取ってきます。Homebrew なら <code>brew install --cask bubio/bubilator88/bubilator88</code> でも入ります。",
       "dl.s2.title": "Gatekeeper を通す",
       "dl.s2.body":
         "公証を取ってないので、<code>xattr -cr /Applications/Bubilator88.app</code> を実行するか、「システム設定 &gt; プライバシーとセキュリティ」から「このまま開く」でどうぞ。",
