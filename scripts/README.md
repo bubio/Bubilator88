@@ -64,6 +64,13 @@
 | `verify_onnx_coreml.py` | ONNX と CoreML の出力一致を検証 |
 | `package_ai_model.sh` | CoreML モデルを配布用 zip にし、`AIModelStore` 用の SHA-256 を出力 |
 
+## 音声
+
+| スクリプト | 用途 |
+| --- | --- |
+| `cd_track_to_wav.py` | CUE/BIN の CD イメージから 1 トラックを WAV に抽出 (CD 再生の頭欠け調査に使用) |
+| `split_wav_hits.py` | 無音で区切った打撃音の録音を 1 音ずつの WAV に分割 (リズム音源 `2608_*.WAV` 作成用) |
+
 ## Windows・その他
 
 | スクリプト | 用途 |
