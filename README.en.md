@@ -186,7 +186,6 @@ git submodule update --init docs/develop
 - **FM synthesis**: [fmgen](http://retropc.net/cisc/sound/) by cisc — ported to Swift
   (for its terms see `Sources/FMSynthesis/fmgen-readme.txt` in
   [Bubilator88Core](https://github.com/bubio/Bubilator88Core); the changes are in `fmgen-changes.md` in the same directory)
-- **Rhythm sounds**: 2608modoki2 by メモル — bundled as the substitute when the rhythm WAV files are missing ([source](http://sound.jp/jaime/), free to embed)
 - **Reference emulator**: [QUASI88](https://www.eonet.ne.jp/~showtime/quasi88/) by S.Fukunaga — consulted as the behavioural reference
 - **Reference emulator**: [common source code project](https://takeda-toshiya.my.coocan.jp/common/index.html) by Takeda Toshiya — consulted as BubiC-8801MA
 - **Reference emulator**: [X88000](https://quagma.sakura.ne.jp/manuke/x88000.html) by Manuke — reference for undocumented Z80 instructions and implementation details
