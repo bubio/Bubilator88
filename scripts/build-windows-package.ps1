@@ -483,8 +483,8 @@ if ($Variant -eq 'SingleFile') {
     @"
 Bubilator88 for Windows $Version — Shared Windows App SDK runtime edition
 
-Start Bubilator88.lnk after extracting this ZIP. Keep the app folder and
-shortcut together; all application files are inside app.
+Start Bubilator88.exe after extracting this ZIP. Keep it and the app folder
+together; all application files are inside app.
 
 Install Windows App SDK runtime 2.5.1 (x64) before starting Bubilator88.exe:
 https://aka.ms/windowsappsdk/2.5/2.5.1/windowsappruntimeinstall-x64.exe
@@ -662,18 +662,49 @@ if ($Variant -eq 'SharedRuntime') {
     Copy-Item -Path (Join-Path $publishDir '*') -Destination $appDir -Recurse
     Move-Item -Path (Join-Path $appDir 'INSTALL-RUNTIME.txt') -Destination $packageDir
 
-    # Windows stores a relative path alongside the resolved target in a .lnk.
-    # This lets the shortcut survive moving the extracted ZIP to another folder.
-    $shortcutPath = Join-Path $packageDir 'Bubilator88.lnk'
-    $shell = New-Object -ComObject WScript.Shell
-    $shortcut = $shell.CreateShortcut($shortcutPath)
-    $shortcut.TargetPath = Join-Path $appDir $ExeName
-    $shortcut.Save()
-    $shortcut = $null
-    $shell = $null
-    $linkFlags = [BitConverter]::ToUInt32([IO.File]::ReadAllBytes($shortcutPath), 20)
-    if (($linkFlags -band 0x8) -eq 0) {
-        throw '共有版ショートカットに相対パスが保存されていません。'
+    # 表の起動口は小さなランチャー EXE (windows\Bubilator88.Launcher)。
+    # .lnk は相対パスを併記しても絶対パス (ビルドマシンの D:\a\...) で解決され、
+    # 展開先からは起動できなかった (win-v1.2.0-beta.1)。
+    Step 'dotnet publish (共有版ランチャー)'
+    $launcherCsproj = Join-Path $RepoRoot 'windows\Bubilator88.Launcher\Bubilator88.Launcher.csproj'
+    & dotnet publish $launcherCsproj `
+        -c $Configuration -r win-x64 --self-contained false `
+        -p:Version=$Version -o $packageDir
+    if ($LASTEXITCODE -ne 0) { throw "ランチャーの publish が失敗しました (exit $LASTEXITCODE)。" }
+    $launcherRuntime = Get-Content (Join-Path $packageDir 'Bubilator88.runtimeconfig.json') -Raw | ConvertFrom-Json
+    if ($launcherRuntime.runtimeOptions.framework.name -ne 'Microsoft.NETCore.App') {
+        throw 'ランチャーが共有 .NET ランタイム前提になっていません。'
+    }
+
+    if (-not $SkipSmokeTest) {
+        # ビルド先とは別の場所へ移してから起動し、展開先のどこからでも
+        # app\ の本体が立ち上がることを確かめる。
+        Step 'スモークテスト: ランチャーから本体が起動するか確認'
+        $movedDir = Join-Path ([IO.Path]::GetTempPath()) ("b88-launcher-" + [Guid]::NewGuid().ToString('N'))
+        Copy-Item $packageDir $movedDir -Recurse
+        try {
+            $movedExe = Join-Path $movedDir "app\$ExeName"
+            $launcher = Start-Process (Join-Path $movedDir $ExeName) -PassThru
+            $launched = $null
+            $launchDeadline = (Get-Date).AddSeconds(30)
+            while ((Get-Date) -lt $launchDeadline -and -not $launched) {
+                Start-Sleep -Milliseconds 500
+                $launched = Get-Process -Name 'Bubilator88' -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Path -eq $movedExe } | Select-Object -First 1
+            }
+            if (-not $launched) {
+                $launcherExit = if ($launcher.HasExited) { "exit $($launcher.ExitCode)" } else { '実行中' }
+                throw "ランチャーのスモークテスト失敗: $movedExe が起動しませんでした (ランチャー $launcherExit)。"
+            }
+            Write-Host "    移動先の app\$ExeName が起動 (PID $($launched.Id))"
+            Stop-Process -Id $launched.Id -Force -ErrorAction SilentlyContinue
+            $launched.WaitForExit(10000) | Out-Null
+        } finally {
+            Get-Process -Name 'Bubilator88' -ErrorAction SilentlyContinue |
+                Where-Object { $_.Path -and $_.Path.StartsWith($movedDir) } |
+                Stop-Process -Force -ErrorAction SilentlyContinue
+            Remove-Item $movedDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
     $archiveDir = $packageDir
 } else {

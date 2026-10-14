@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Front door of the shared-runtime package: a tiny framework-dependent
+       Bubilator88.exe at the ZIP root that starts app\Bubilator88.exe. A .lnk
+       cannot do this job, because Windows resolves its absolute target (the
+       build machine's path) and never falls back to the relative one.
+       scripts\build-windows-package.ps1 publishes it next to the app folder. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>Bubilator88.Launcher</RootNamespace>
+    <AssemblyName>Bubilator88</AssemblyName>
+    <ApplicationIcon>..\Bubilator88.Windows\Assets\AppIcon.ico</ApplicationIcon>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <DebugType>none</DebugType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>
