@@ -1616,6 +1616,7 @@ public sealed partial class MainWindow : Window
         BootModeIndex = _bootModeIndex,
         Clock8MHz = _clock8MHz,
         MonitorType = _host?.MonitorType ?? _monitorType,
+        MemoryWaitDip = _host?.MemoryWaitDip ?? _memoryWaitDip,
         Drive0 = MetaForDrive(0),
         Drive1 = MetaForDrive(1),
     };
@@ -1655,6 +1656,18 @@ public sealed partial class MainWindow : Window
         // into the setting so the next Reset does not change the frame rate back.
         _monitorType = meta?.MonitorType == NativeApi.Monitor15kHz ? NativeApi.Monitor15kHz : NativeApi.Monitor24kHz;
         if (_host is not null) _host.MonitorType = _monitorType;
+
+        // The state brings its own extended RAM, or none; match the setting so
+        // the next Reset does not install a different size.
+        if (_host is not null) _extRamCards = NormalizeExtRamCards(_host.ExtRamCards);
+
+        // Memory wait only changes the speed; older states omit it and keep
+        // the current setting.
+        if (meta?.MemoryWaitDip is bool memoryWait)
+        {
+            _memoryWaitDip = memoryWait;
+            if (_host is not null) _host.MemoryWaitDip = memoryWait;
+        }
 
         (_bootModeIndex switch { 1 => BootN88V1H, 2 => BootN88V1S, 3 => BootNBasic, _ => BootN88V2 }).IsChecked = true;
         (_clock8MHz ? Clock8 : Clock4).IsChecked = true;

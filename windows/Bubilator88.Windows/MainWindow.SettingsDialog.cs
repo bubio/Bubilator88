@@ -68,12 +68,16 @@ public sealed partial class MainWindow
         };
 
         var bar = new SelectorBar();
-        // Fixed height (= WrapTab's MaxHeight): the dialog is centred on its
-        // content, so letting each tab size it would move the tab bar on
-        // every switch. Short tabs top-align; tall ones scroll.
+        // Fixed height: the dialog is centred on its content, so letting each
+        // tab size it would move the tab bar on every switch. Short tabs
+        // top-align; tall ones scroll. A ContentDialog never grows past the
+        // window, so in a small window the height shrinks to fit (title, tab
+        // bar and Close button take the ~230px) — otherwise the bottom of a
+        // tall tab is clipped by the dialog and the inner scroll never reaches it.
+        double windowHeight = Root.XamlRoot.Size.Height;
         var presenter = new ContentPresenter
         {
-            Height = 420,
+            Height = Math.Clamp(windowHeight - 230, 180, 420),
             Margin = new Thickness(0, 8, 0, 0),
             VerticalContentAlignment = VerticalAlignment.Top,
         };
@@ -504,7 +508,6 @@ public sealed partial class MainWindow
             Content = content,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollMode = ScrollMode.Disabled,
-            MaxHeight = 420,
             Padding = new Thickness(2, 8, 12, 8),
         };
 

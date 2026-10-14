@@ -293,6 +293,22 @@ internal sealed unsafe class EmulatorHost : IDisposable
     }
 
     /// <summary>
+    /// Memory wait DIP (SW1-6) the machine is running with. Setting it takes
+    /// effect without a reset; used to restore a save state.
+    /// </summary>
+    public bool MemoryWaitDip
+    {
+        get { lock (SyncRoot) return NativeApi.b88_get_memory_wait_dip(_handle) != 0; }
+        set { lock (SyncRoot) NativeApi.b88_set_memory_wait_dip(_handle, value ? 1 : 0); }
+    }
+
+    /// <summary>
+    /// Extended RAM cards installed now (NativeApi.ExtRam_*). A save state
+    /// brings its own extended RAM, so this can differ from the setting.
+    /// </summary>
+    public int ExtRamCards { get { lock (SyncRoot) return NativeApi.b88_get_ext_ram_cards(_handle); } }
+
+    /// <summary>
     /// True if the machine is in native 400-line mode; false for 200-line
     /// (the renderer row-doubles it to 640×400). Video filters use this to pick
     /// the content resolution they operate on.

@@ -41,7 +41,19 @@ source-of-truth と再生成は `../../models/PROVENANCE.md`。
 
 コアは別リポジトリ [bubio/Bubilator88Core](https://github.com/bubio/Bubilator88Core)。
 このリポジトリと同じ階層に clone しておく (後述)。C ABI シムはその
-`Sources/CApi/` 以下のファイル。
+`Sources/CApi/` 以下のファイル。複数ファイルに分かれており、`b88_*` 関数を
+探すときは全体を grep する。
+
+| ファイル | 内容 |
+|---|---|
+| `CApi.swift` | ハンドル管理、リセット・実行、描画、音声、基本設定、ステートの入出力 |
+| `CApiMachine.swift` | 設定の読み戻し (`b88_get_*`)、音声ステム、入力、画面テキスト |
+| `CApiMedia.swift` | テープ、ディスクの書き戻し、メモリイメージ、ステートファイル、チートファイル |
+| `CApiTyping.swift` | テキスト貼り付け、テープ自動起動、`.n80` ロード |
+| `CApiCDROM.swift` | PC-8801MC の CD-ROM ドライブ |
+
+どれも `@_cdecl` 関数は `public` にし、新しい関数は既存の関数に近いファイルへ足す
+(下記の ABI ルール)。
 
 ## 前提ツール
 
