@@ -40,6 +40,7 @@
       "media.clip": "Copy & Paste",
       "media.debugger": "Debug Window",
       "media.rewind": "Rewind",
+      "media.zones": "Control Zones",
 
       "audio.mono": "Mono",
       "audio.pseudo": "Pseudo Stereo",
@@ -79,6 +80,9 @@
       "f.rewind.title": "Rewind",
       "f.rewind.body":
         "Made a mistake? Hold ⌘Z and the game runs backwards. Bubilator88 keeps a rolling 30-second history of the whole machine in memory — release the key to resume from any moment, with a live thumbnail strip showing exactly where you'll land.",
+      "f.zones.title": "Control Zones",
+      "f.zones.body":
+        "Play keyboard-only games with a mouse or a controller. Click a zone on the screen to type its keys. Draw zones yourself or detect them from the on-screen text, and move between them with a controller's D-pad.",
 
       "features.title": "Other Features",
       "features.lead": "The essentials that make the emulator tick.",
@@ -106,6 +110,18 @@
       "features.videorec.title": "Video Recording",
       "features.videorec.body":
         "Record gameplay to ProRes 4444 or H.264 with synced audio.",
+      "features.touchbar.title": "Touch Bar",
+      "features.touchbar.body":
+        "PC-8801 keys your Mac keyboard lacks, plus save-state slots with thumbnails — save and load in one tap.",
+      "features.cheats.title": "Cheats",
+      "features.cheats.body":
+        "88PAR cheat codes (.pat). Pick from 69 bundled games or import your own, then switch groups on from the Cheats menu.",
+      "features.quicklook.title": "Quick Look",
+      "features.quicklook.body":
+        "Finder shows D88 disks with their title screen and save states with the screen they were saved on. Press Space to preview a save state.",
+      "features.cd.title": "CD-ROM",
+      "features.cd.body":
+        "PC-8801MC CD-ROM drive. Boot CD titles from .cue / .ccd images, with CD-DA music. Requires the CD BIOS.",
 
       "req.title": "Requirements",
       "req.os": "macOS 26.0 (Tahoe) or later",
@@ -190,6 +206,7 @@
       "media.clip": "コピー & ペースト",
       "media.debugger": "デバッグウィンドウ",
       "media.rewind": "巻き戻し",
+      "media.zones": "操作領域",
 
       "audio.mono": "モノラル",
       "audio.pseudo": "擬似ステレオ",
@@ -229,6 +246,9 @@
       "f.rewind.title": "巻き戻し",
       "f.rewind.body":
         "ミスっても大丈夫。⌘Z を押しっぱなしにすると、ゲームがどんどん巻き戻っていきます。直近 30 秒ぶんのマシン状態をまるごとメモリに記録しているので、キーを離せばその瞬間からプレイ再開。巻き戻し中はサムネイルのストリップで、どこまで戻ったかがひと目で分かります。",
+      "f.zones.title": "操作領域",
+      "f.zones.body":
+        "キーボードでしか遊べないゲームを、マウスやコントローラーで。画面の領域をクリックすると、登録したキーを入力します。領域は自分で描くほか、画面の文字から自動で検出することも。コントローラーなら方向パッドで領域を移動できます。",
 
       "features.title": "その他の機能",
       "features.lead": "エミュレータの土台になっている基本機能たち。",
@@ -256,6 +276,18 @@
       "features.videorec.title": "録画",
       "features.videorec.body":
         "プレイ画面を ProRes 4444 / H.264 で音声同期付きで録画。",
+      "features.touchbar.title": "タッチバー",
+      "features.touchbar.body":
+        "Mac のキーボードにない PC-8801 のキーと、サムネイル付きのセーブスロットをタッチバーに。ワンタップでセーブ・ロード。",
+      "features.cheats.title": "チート",
+      "features.cheats.body":
+        "88PAR 形式のチートコード (.pat) に対応。同梱の 69 本から選ぶか手持ちのファイルを読み込んで、チートメニューからオン・オフ。",
+      "features.quicklook.title": "Quick Look",
+      "features.quicklook.body":
+        "Finder で D88 ディスクはタイトル画面、セーブステートは保存したときの画面をサムネイル表示。セーブステートはスペースキーでプレビューもできます。",
+      "features.cd.title": "CD-ROM",
+      "features.cd.body":
+        "PC-8801MC の CD-ROM ドライブに対応。.cue / .ccd イメージから CD 版のソフトを起動し、CD の音楽も鳴ります。CD BIOS が必要です。",
 
       "req.title": "動作環境",
       "req.os": "macOS 26.0 (Tahoe) 以降",
