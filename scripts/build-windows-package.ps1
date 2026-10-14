@@ -667,14 +667,24 @@ if ($Variant -eq 'SharedRuntime') {
     # 展開先からは起動できなかった (win-v1.2.0-beta.1)。
     Step 'dotnet publish (共有版ランチャー)'
     $launcherCsproj = Join-Path $RepoRoot 'windows\Bubilator88.Launcher\Bubilator88.Launcher.csproj'
+    # framework-dependent の単一ファイルにして、表には EXE 1つだけを置く
+    # (dll / runtimeconfig.json / deps.json は EXE に束ねられる)。
+    $launcherDir = Join-Path $OutputDir 'publish-win-x64-Launcher'
+    if (Test-Path $launcherDir) { Remove-Item $launcherDir -Recurse -Force }
     & dotnet publish $launcherCsproj `
         -c $Configuration -r win-x64 --self-contained false `
-        -p:Version=$Version -o $packageDir
+        -p:PublishSingleFile=true `
+        -p:Version=$Version -o $launcherDir
     if ($LASTEXITCODE -ne 0) { throw "ランチャーの publish が失敗しました (exit $LASTEXITCODE)。" }
-    $launcherRuntime = Get-Content (Join-Path $packageDir 'Bubilator88.runtimeconfig.json') -Raw | ConvertFrom-Json
-    if ($launcherRuntime.runtimeOptions.framework.name -ne 'Microsoft.NETCore.App') {
-        throw 'ランチャーが共有 .NET ランタイム前提になっていません。'
+    $launcherFiles = @(Get-ChildItem $launcherDir -Recurse -File)
+    if ($launcherFiles.Count -ne 1 -or $launcherFiles[0].Name -ne $ExeName) {
+        throw "ランチャーが単一 EXE になっていません: $($launcherFiles.Name -join ', ')"
     }
+    # self-contained になっていれば数十 MB になる。共有 .NET 前提なら 1 MB 未満。
+    if ($launcherFiles[0].Length -gt 1MB) {
+        throw "ランチャーが共有 .NET ランタイム前提になっていません ($($launcherFiles[0].Length) bytes)。"
+    }
+    Copy-Item $launcherFiles[0].FullName $packageDir
 
     if (-not $SkipSmokeTest) {
         # ビルド先とは別の場所へ移してから起動し、展開先のどこからでも
