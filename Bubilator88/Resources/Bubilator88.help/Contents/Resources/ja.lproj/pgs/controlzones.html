@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="操作領域">
+    <meta name="description" content="画面の領域・マウスボタン・ゲームコントローラにキー入力を割り当てる操作領域">
+    <meta name="keywords" content="操作領域, クリック, マウス, ゲームコントローラ, レイアウト, プリセット, b88zones, キー入力">
+    <meta name="robots" content="index">
+    <title>操作領域</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>目次</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 ヘルプ</a></li>
+            <li><a href="getting-started.html">はじめに</a></li>
+            <li><a href="disks.html">ディスク操作</a></li>
+            <li><a href="cassette.html">カセットテープ</a></li>
+            <li><a href="cdrom.html">CD-ROM</a></li>
+            <li><a href="keyboard.html">キーボード</a></li>
+            <li><a href="display.html">表示設定</a></li>
+            <li><a href="audio.html">サウンド</a></li>
+            <li><a href="savestates.html">ステートセーブ</a></li>
+            <li><a href="controller.html">ゲームコントローラ</a></li>
+            <li><a href="mouse.html">マウス</a></li>
+            <li><a href="controlzones.html">操作領域</a></li>
+            <li><a href="shortcuts.html">ショートカット一覧</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="controlzones"></a>
+    <h1>操作領域</h1>
+    <p>キーボードでしか操作できないゲームを、マウスやゲームコントローラで遊ぶための機能です。画面上の領域をクリックすると、その領域に登録したキーが順に入力されます。</p>
+
+    <h2>有効にする</h2>
+    <p><strong>設定 &gt; マウス &gt; 操作領域を有効にする</strong> をオンにします。<strong>マウス入力を有効にする</strong> がオンの間は使えません。</p>
+    <p><strong>操作領域を常に表示する</strong> をオンにすると、すべての領域の枠を表示します。オフのときは、ポインタの下にある領域と、コントローラで選んでいる領域だけを表示します。</p>
+    <p>キーの入力中に <kbd>ESC</kbd> を押すかリセットすると、入力を止めます。</p>
+
+    <h2>レイアウト</h2>
+    <p>領域はレイアウトにまとめて保存します。どのレイアウトを使うかはディスクごとに決め、マウント中のディスクに割り当てたレイアウトが使われます。ドライブ 1 と 2 のディスクに別々のレイアウトが割り当ててあるときは、ドライブ 1 のものを使います。</p>
+    <p>レイアウトは <strong>設定 &gt; マウス &gt; 操作領域のレイアウト</strong> で管理します。</p>
+    <table>
+        <tr><th>操作</th><th>内容</th></tr>
+        <tr><td><strong>新規レイアウト</strong></td><td>空のレイアウトを作り、マウント中のディスクに割り当てて編集を始めます</td></tr>
+        <tr><td><strong>編集…</strong></td><td>選んだレイアウトを編集します。ダブルクリックでも開けます</td></tr>
+        <tr><td><strong>複製して編集…</strong></td><td>プリセットを複製し、マウント中のディスクに割り当てて編集を始めます</td></tr>
+        <tr><td><strong>インポート…</strong></td><td><code>.b88zones</code> ファイルからレイアウトを読み込みます</td></tr>
+    </table>
+    <p>複製・エクスポート・削除は、レイアウトを Control キーを押しながらクリックすると出るメニューから行えます。</p>
+    <p>いくつかのゲーム用に、プリセットのレイアウトを用意しています。プリセットは変更できないので、使うときは <strong>複製して編集…</strong> で自分のレイアウトにしてください。</p>
+
+    <h2>領域を編集する</h2>
+    <p>編集中はエミュレーションが一時停止し、メニューなどの操作はできません。終わったら <strong>完了</strong> を押します。</p>
+    <ul>
+        <li><strong>領域を追加する</strong> — エミュレーション画面をドラッグします。</li>
+        <li><strong>移動・大きさの変更</strong> — 領域をドラッグすると移動し、選択中の領域のハンドルをドラッグすると大きさが変わります。<strong>位置</strong> と <strong>サイズ</strong> に数値（640 × 400 の画面のピクセル単位）を入れることもできます。</li>
+        <li><strong>キーを登録する</strong> — <strong>記録</strong> を押してから、入力したいキーを順に押します。同時に押したキーは 1 ステップになります。ステップは上から順に入力されます。</li>
+        <li><strong>画面の文字から領域を検出</strong> — 画面に出ている文字の行ごとに領域を作ります。行の先頭が番号なら、そのキーも登録します。</li>
+        <li><strong>このレイアウトを使うディスク</strong> — ディスクのアイコンから、マウント中のディスクにこのレイアウトを割り当てます。</li>
+    </ul>
+
+    <h2>マウスボタン</h2>
+    <p>左ボタン以外のボタンとホイールには、画面のどこで操作しても入力されるキーを 1 つずつ割り当てられます。編集画面の <strong>マウスボタン</strong> で変更します。中ボタンはターボのままです。</p>
+    <table>
+        <tr><th>入力</th><th>初期値</th></tr>
+        <tr><td>右ボタン</td><td>SPACE</td></tr>
+        <tr><td>ボタン 4</td><td>ESC</td></tr>
+        <tr><td>ボタン 5</td><td>RETURN</td></tr>
+        <tr><td>ホイール上 / 下</td><td>テンキー 8 / テンキー 2</td></tr>
+    </table>
+
+    <h2>ゲームコントローラで操作する</h2>
+    <p><strong>設定 &gt; コントローラ &gt; ゲームコントローラを有効にする</strong> と <strong>操作領域に使う</strong> がオンのとき、方向パッドと左スティックで隣の領域に移動し、<strong>決定ボタン</strong>（初期値は X）でその領域のキーを入力します。マウント中のディスクに操作領域があるあいだ、これらのボタンにはキーを割り当てられません。</p>
+
+    <p><a href="../index.html">Bubilator88 ヘルプに戻る</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>

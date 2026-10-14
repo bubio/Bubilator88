@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="AppleTitle" content="Control Zones">
+    <meta name="description" content="Typing keys from screen regions, mouse buttons and a game controller with control zones">
+    <meta name="keywords" content="control zones, click, mouse, game controller, layout, preset, b88zones, keys">
+    <meta name="robots" content="index">
+    <title>Control Zones</title>
+    <link rel="stylesheet" href="../../shrd/helpstyle.css">
+</head>
+<body>
+    <nav role="navigation" aria-hidden="true">
+        <h3>Contents</h3>
+        <ul>
+            <li><a href="../index.html">Bubilator88 Help</a></li>
+            <li><a href="getting-started.html">Getting Started</a></li>
+            <li><a href="disks.html">Using Disks</a></li>
+            <li><a href="cassette.html">Cassette Tape</a></li>
+            <li><a href="cdrom.html">CD-ROM</a></li>
+            <li><a href="keyboard.html">Keyboard</a></li>
+            <li><a href="display.html">Display</a></li>
+            <li><a href="audio.html">Audio</a></li>
+            <li><a href="savestates.html">Save States</a></li>
+            <li><a href="controller.html">Game Controller</a></li>
+            <li><a href="mouse.html">Mouse</a></li>
+            <li><a href="controlzones.html">Control Zones</a></li>
+            <li><a href="shortcuts.html">Shortcuts</a></li>
+        </ul>
+    </nav>
+
+    <div class="help-content">
+    <a name="controlzones"></a>
+    <h1>Control Zones</h1>
+    <p>Control zones let you play keyboard-only games with a mouse or a game controller. Clicking a zone on the screen types the keys registered for it, in order.</p>
+
+    <h2>Turning Them On</h2>
+    <p>Turn on <strong>Settings &gt; Mouse &gt; Enable Control Zones</strong>. Control zones are unavailable while <strong>Enable Mouse Input</strong> is on.</p>
+    <p>With <strong>Always Show Control Zones</strong> on, every zone is outlined. With it off, only the zone under the pointer and the one the controller has selected are outlined.</p>
+    <p>Pressing <kbd>Esc</kbd> or resetting stops keys that are still being typed.</p>
+
+    <h2>Layouts</h2>
+    <p>Zones are saved together as a layout, and each disk is assigned a layout; the layout of the mounted disk is used. When the disks in drives 1 and 2 have different layouts, drive 1's is used.</p>
+    <p>Layouts are managed under <strong>Settings &gt; Mouse &gt; Control Zone Layouts</strong>.</p>
+    <table>
+        <tr><th>Action</th><th>Description</th></tr>
+        <tr><td><strong>New Layout</strong></td><td>Creates an empty layout, assigns it to the mounted disks and starts editing it</td></tr>
+        <tr><td><strong>Edit…</strong></td><td>Edits the selected layout. Double-clicking a layout does the same</td></tr>
+        <tr><td><strong>Duplicate and Edit…</strong></td><td>Copies a preset, assigns the copy to the mounted disks and starts editing it</td></tr>
+        <tr><td><strong>Import…</strong></td><td>Reads a layout from a <code>.b88zones</code> file</td></tr>
+    </table>
+    <p>Duplicate, Export and Delete are in the menu that appears when you Control-click a layout.</p>
+    <p>Preset layouts are included for some games. Presets cannot be changed; use <strong>Duplicate and Edit…</strong> to make one your own.</p>
+
+    <h2>Editing Zones</h2>
+    <p>Emulation pauses while you edit, and menus and other operations are unavailable. Click <strong>Done</strong> when you are finished.</p>
+    <ul>
+        <li><strong>Adding a zone</strong> — Drag on the emulator screen.</li>
+        <li><strong>Moving and resizing</strong> — Drag a zone to move it, or the handles of the selected zone to resize it. You can also type <strong>Position</strong> and <strong>Size</strong> in pixels of the 640 × 400 screen.</li>
+        <li><strong>Registering keys</strong> — Click <strong>Record</strong>, then press the keys in order. Keys pressed together become one step. Steps are typed from the top down.</li>
+        <li><strong>Detect Zones from Screen Text</strong> — Adds a zone for each line of text on the screen. A line that starts with a number also gets that key.</li>
+        <li><strong>Disks Using This Layout</strong> — Use the disk icon to assign the layout to the mounted disks.</li>
+    </ul>
+
+    <h2>Mouse Buttons</h2>
+    <p>Each mouse button other than the left one, and the wheel, can type one key wherever the pointer is on the screen. Change them under <strong>Mouse Buttons</strong> in the editor. The middle button stays turbo.</p>
+    <table>
+        <tr><th>Input</th><th>Default</th></tr>
+        <tr><td>Right button</td><td>SPACE</td></tr>
+        <tr><td>Button 4</td><td>ESC</td></tr>
+        <tr><td>Button 5</td><td>RETURN</td></tr>
+        <tr><td>Wheel up / down</td><td>Keypad 8 / Keypad 2</td></tr>
+    </table>
+
+    <h2>Using a Game Controller</h2>
+    <p>With <strong>Settings &gt; Controller &gt; Enable Game Controller</strong> and <strong>Use for Control Zones</strong> on, the D-pad and left stick move to the neighbouring zone, and the <strong>Confirm Button</strong> (X by default) types that zone's keys. While the mounted disk has control zones, these buttons cannot be mapped to keys.</p>
+
+    <p><a href="../index.html">Back to Bubilator88 Help</a></p>
+    </div>
+
+    <script src="../../shrd/helptoc.js"></script>
+</body>
+</html>
