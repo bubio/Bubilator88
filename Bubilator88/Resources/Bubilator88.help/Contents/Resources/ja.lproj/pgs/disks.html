@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="AppleTitle" content="Using Disks">
     <meta name="description" content="ディスクイメージのマウント、プレイリスト、書き込み禁止、書き戻し、空ディスク作成">
-    <meta name="keywords" content="ディスク, D88, マウント, イジェクト, ドライブ, フロッピー, アーカイブ, ZIP, LZH, CAB, RAR, m3u, プレイリスト, 書き込み禁止, ライトプロテクト, 書き戻し, セーブ, キャッシュ">
+    <meta name="keywords" content="ディスク, D88, マウント, イジェクト, ドライブ, フロッピー, アーカイブ, ZIP, LZH, CAB, RAR, 7z, m3u, プレイリスト, 書き込み禁止, ライトプロテクト, 書き戻し, セーブ, キャッシュ">
     <meta name="robots" content="index">
     <title>ディスク操作</title>
     <link rel="stylesheet" href="../../shrd/helpstyle.css">
@@ -39,11 +39,11 @@
     <ul>
         <li><strong>D88</strong> ディスクイメージ（<code>.d88</code>、<code>.d77</code>、<code>.2d</code>、<code>.2hd</code>）</li>
         <li><strong>M3U</strong> プレイリスト（<code>.m3u</code>、<code>.m3u8</code>）</li>
-        <li><strong>ZIP</strong>、<strong>LZH</strong>、<strong>CAB</strong>、<strong>RAR</strong> の各アーカイブ
+        <li><strong>ZIP</strong>、<strong>LZH</strong>、<strong>CAB</strong>、<strong>RAR</strong>、<strong>7z</strong> の各アーカイブ
             （中に D88 ディスクイメージが入っている場合）</li>
     </ul>
     <p>1 つの D88 に複数のディスクイメージが入っている場合も開けます。</p>
-    <div class="note">RAR の一部は macOS の標準機能だけでは開けないことがあります。その場合は追加の展開ツールが必要です。7z ファイルをそのまま開くことはできません。</div>
+    <div class="note">RAR の一部は macOS の標準機能だけでは開けないことがあります。その場合は追加の展開ツールが必要です。</div>
 
     <h2>ディスクのマウント</h2>
     <table>
@@ -77,7 +77,7 @@
     <h2>ディスクへの書き戻し</h2>
     <p>ソフトがディスクに書き込む（セーブなど）と、書き込みが止まってから約 0.1 秒後に、その内容が元の D88 ファイルへ自動的に書き戻されます。設定項目はなく、常に有効です。ディスクの取り出し、アプリの終了、ステートロードのときは、その時点ですぐに書き戻します。</p>
     <div class="note">オリジナルのファイルを書き換えたくない場合は、<strong>書き込み禁止</strong> を有効にしてください。</div>
-    <p>アーカイブ (ZIP / LZH / CAB / RAR) 内のディスクは、初回マウント時に展開されたキャッシュへ書き戻されます。元のアーカイブは変更されません。</p>
+    <p>アーカイブ (ZIP / LZH / CAB / RAR / 7z) 内のディスクは、初回マウント時に展開されたキャッシュへ書き戻されます。元のアーカイブは変更されません。</p>
     <p>書き戻し先が特定できないときや書き込みに失敗したときは、<code>~/Library/Application Support/Bubilator88/ModifiedDisks/</code> に退避用の D88 として保存されます。</p>
 
     <h2>キャッシュのエクスポート</h2>
