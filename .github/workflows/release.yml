@@ -126,9 +126,14 @@ jobs:
           echo "app=$APP_PATH" >> "$GITHUB_OUTPUT"
           du -sh "$APP_PATH"
 
+      # Keep each bundle's entitlements: a plain --deep re-sign drops them, and
+      # macOS will not register an app extension that is not sandboxed, so the
+      # Quick Look extensions would silently stop working.
       - name: Ad-hoc re-sign (deep)
         run: |
-          codesign --force --deep --sign - "${{ steps.locate.outputs.app }}"
+          codesign --force --deep --sign - --preserve-metadata=entitlements "${{ steps.locate.outputs.app }}"
+          codesign -d --entitlements - "${{ steps.locate.outputs.app }}/Contents/PlugIns/Bubilator88QuickLook.appex" 2>&1 \
+            | grep -q com.apple.security.app-sandbox
           codesign --verify --verbose=2 "${{ steps.locate.outputs.app }}"
 
       - name: Create DMG with /Applications symlink
