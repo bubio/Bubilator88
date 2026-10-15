@@ -1041,6 +1041,41 @@ final class EmulatorViewModel {
   /// Metal view reference for start/stop control
   weak var metalView: EmulatorMetalView?
 
+  /// Whether the emulator window is on screen, as the Metal view last saw it.
+  @ObservationIgnored private var windowVisible = true
+
+  /// Held while a hidden window keeps running, so App Nap does not throttle
+  /// the emulation thread.
+  @ObservationIgnored private var backgroundActivity: (any NSObjectProtocol)?
+
+  /// Called by `EmulatorMetalView` whenever the window's occlusion changes.
+  func windowVisibilityChanged(_ visible: Bool) {
+    windowVisible = visible
+    applyBackgroundPolicy()
+  }
+
+  /// Decide what a hidden window means. By default the emulator parks until
+  /// the window is seen again. With "Keep running in the background" it goes
+  /// on, muted unless "Play sound in the background" is also on.
+  func applyBackgroundPolicy() {
+    let settings = Settings.shared
+    let runsHidden = !windowVisible && settings.runInBackground
+    emulationLoop.setVisible(windowVisible || settings.runInBackground)
+
+    let mute = runsHidden && !settings.backgroundAudio
+    audio.setMuted(mute)
+    fddSound.muted = mute
+
+    if runsHidden, backgroundActivity == nil {
+      backgroundActivity = ProcessInfo.processInfo.beginActivity(
+        options: .userInitiatedAllowingIdleSystemSleep,
+        reason: "Emulating in the background")
+    } else if !runsHidden, let activity = backgroundActivity {
+      ProcessInfo.processInfo.endActivity(activity)
+      backgroundActivity = nil
+    }
+  }
+
   func start() {
     guard !isRunning else { return }
     isRunning = true
@@ -1061,7 +1096,7 @@ final class EmulatorViewModel {
     // finished frames. `startEmulation()` un-pauses the draw loop and, via
     // `updateDrawLoop()`, feeds the current window visibility to the loop —
     // emulation stays parked while the window is occluded, as it did when the
-    // draw loop drove it.
+    // draw loop drove it, unless the user keeps it running in the background.
     syncLoopSettings()
     emulationLoop.setFramesPerStep(emulationSpeed.framesPerDraw)
     emulationLoop.start()

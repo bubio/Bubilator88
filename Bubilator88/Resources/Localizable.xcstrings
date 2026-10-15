@@ -3375,6 +3375,16 @@
         }
       }
     },
+    "Keep running in the background" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バックグラウンドでも動作を続ける"
+          }
+        }
+      }
+    },
     "key <name> <down|up|tap [hold]>" : {
       "comment" : "Bubilator88Core script error, looked up at runtime by ScriptErrorLocalization",
       "extractionState" : "manual",
@@ -4353,6 +4363,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "スクリプトを再生…"
+          }
+        }
+      }
+    },
+    "Play sound in the background" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バックグラウンドでも音を出す"
           }
         }
       }

@@ -470,9 +470,26 @@ final class AudioOutput {
     }
   }
 
+  /// The volume last asked for, kept so that unmuting can restore it.
+  private var requestedVolume: Float = 1
+  private var muted = false
+
   /// Set master volume (0.0–1.0) via the engine's main mixer node.
   func setVolume(_ volume: Float) {
-    audioEngine?.mainMixerNode.outputVolume = volume
+    requestedVolume = volume
+    applyOutputVolume()
+  }
+
+  /// Silence the output without disturbing the volume, which rewind also
+  /// saves and restores through `setVolume`. Survives an engine restart, since
+  /// every start is followed by a `setVolume`.
+  func setMuted(_ muted: Bool) {
+    self.muted = muted
+    applyOutputVolume()
+  }
+
+  private func applyOutputVolume() {
+    audioEngine?.mainMixerNode.outputVolume = muted ? 0 : requestedVolume
   }
 
   /// Set playback rate for speed control (1.0 = normal, 2.0 = 2x, etc.).

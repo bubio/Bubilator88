@@ -70,11 +70,13 @@ nonisolated final class EmulationLoop: @unchecked Sendable {
     condition.unlock()
   }
 
-  /// Window visibility. Emulation stops while the window is occluded, which is
-  /// the behaviour the draw loop used to provide as a side effect of pausing
-  /// `MTKView`. See the `+Launch.swift` pitfall: starting while occluded
-  /// leaves the CPU parked at the reset vector, so a URL launch must bring the
-  /// window to the front first.
+  /// Whether the window lets emulation run: it is visible, or the user keeps
+  /// the emulator running in the background (see
+  /// `EmulatorViewModel.applyBackgroundPolicy`). Emulation stops while this is
+  /// false, which is the behaviour the draw loop used to provide as a side
+  /// effect of pausing `MTKView`. See the `+Launch.swift` pitfall: starting
+  /// while occluded leaves the CPU parked at the reset vector, so a URL launch
+  /// must bring the window to the front first.
   func setVisible(_ visible: Bool) {
     condition.lock()
     if self.visible != visible {
