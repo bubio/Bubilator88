@@ -14,9 +14,12 @@
 # A tag is downloaded from the GitHub release. The DMG is installed the way the
 # README tells users to: copied from the DMG with a download quarantine, then
 # cleared with `xattr -cr`, then launched once. Cirrus Labs images ship with
-# Gatekeeper disabled, which that route does not depend on anyway. Needs tart
-# and swiftc on the host; the first run pulls the image (about 24 GB). Vanilla
+# Gatekeeper disabled, which that route does not depend on anyway. Vanilla
 # images log in as admin/admin with SSH enabled.
+#
+# Needs swiftc and Tart on the host: `brew install openai/tools/tart` (the old
+# cirruslabs/cli tap stopped at 2.32.1 and fails on current Homebrew). The
+# first run pulls the image, about 24 GB.
 set -euo pipefail
 
 IMAGE="ghcr.io/cirruslabs/macos-tahoe-vanilla:26.6.2"
@@ -27,11 +30,11 @@ while [ $# -gt 0 ]; do
     --image) IMAGE="$2"; shift 2 ;;
     --bios) BIOS="$2"; shift 2 ;;
     --keep) KEEP=1; shift ;;
-    -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
     *) break ;;
   esac
 done
-[ $# -ge 1 ] || { sed -n '2,19p' "$0"; exit 2; }
+[ $# -ge 1 ] || { sed -n '2,22p' "$0"; exit 2; }
 SOURCE="$1"; shift
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
