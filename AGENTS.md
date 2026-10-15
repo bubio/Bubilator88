@@ -143,6 +143,7 @@ Updating these docs:
 | `FMGEN_FORK_COMPARISON.md` | Fixes in fmgen forks and whether Bubilator88 has them |
 | `MEMORY_WAIT_STATES.md` | Memory wait specification and status. All four classes (M1 / main RAM / TVRAM / GVRAM) are implemented; waits during HALT are the remaining gap |
 | `RELEASE_1_5_0_PLAN.md` | 1.5.0 plan: dependency order and verification for the two-thread split, SwiftUI modernization, monitor types, GVRAM waits and M1 waits |
+| `RELEASE_EXCLUSIVITY.md` | Why distribution builds use `unchecked` exclusivity, the CI gates that verify it, and how to re-verify locally |
 | `AI_WORKFLOW.md` | Guide to AI-assisted development, written for humans |
 | `PAR_CHEAT_CODES.md` | 88PAR (`.pat`) cheat code format, pat.dll behaviour from disassembly, and how it maps onto Bubilator88. The primary sources (PATCH.DOC, pat.dll, QUASI88 glue, the code lists) are preserved in `PAR/` |
 

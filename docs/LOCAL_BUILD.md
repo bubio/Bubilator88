@@ -85,7 +85,7 @@ swift test -c release -Xswiftc -enforce-exclusivity=checked
 コアSourcesの変更は従来どおりゲーム回帰検証も必要。
 ローカルでのuncheckedビルド成功は配布判定の代わりにはならない。
 配布前の両設定でのテスト、固定SHA・コンパイラ引数の検証は
-[Release exclusivity policy](RELEASE_EXCLUSIVITY.md)のCIが担当する。
+配布workflow（`.github/workflows/release.yml`）が担当する。
 
 2026-09-14、Apple Silicon / Xcode 26.6で3プリセットの実ビルドが成功。
 隣のコアが選択され、アプリ・コア・Loggingの計7モジュールに指定どおりの
