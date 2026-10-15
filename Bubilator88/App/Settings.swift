@@ -44,6 +44,7 @@ final class Settings {
     static let resetAnimationEnabled     = "resetAnimationEnabled"
     static let showTapeInStatusBar       = "showTapeInStatusBar"
     static let showCDInStatusBar         = "showCDInStatusBar"
+    static let diskThumbnails            = DiskThumbnailSetting.key
 
     // Update check
     static let automaticUpdateCheck      = "automaticUpdateCheck"
@@ -185,6 +186,12 @@ final class Settings {
   /// Play a Thanos-style dissolve animation when the user resets the machine.
   var resetAnimationEnabled: Bool = true {
     didSet { UserDefaults.standard.set(resetAnimationEnabled, forKey: Keys.resetAnimationEnabled) }
+  }
+
+  /// Let Finder boot `.d88` images to draw their thumbnails. Read by the
+  /// Quick Look extension through `DiskThumbnailSetting`.
+  var diskThumbnails: Bool = true {
+    didSet { UserDefaults.standard.set(diskThumbnails, forKey: Keys.diskThumbnails) }
   }
 
   // MARK: - Update Check
@@ -654,6 +661,9 @@ final class Settings {
     }
     if let v = UserDefaults.standard.object(forKey: Keys.resetAnimationEnabled) as? Bool {
       resetAnimationEnabled = v
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.diskThumbnails) as? Bool {
+      diskThumbnails = v
     }
     if let v = UserDefaults.standard.object(forKey: Keys.automaticUpdateCheck) as? Bool {
       automaticUpdateCheck = v

@@ -49,6 +49,12 @@ struct GeneralSettingsTab: View {
       }
 
       Section {
+        Toggle("Show disk image thumbnails in Finder", isOn: $settings.diskThumbnails)
+        Text("When on, Finder briefly boots each disk image to show its screen as the icon.")
+          .settingsDescriptionStyle()
+      }
+
+      Section {
         Toggle("Check for updates at launch", isOn: $settings.automaticUpdateCheck)
       }
 

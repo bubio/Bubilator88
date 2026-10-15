@@ -13,7 +13,8 @@ import QuickLookThumbnailing
 /// have no thumbnail.
 ///
 /// A disk image has no picture of its own, so it is booted and a frame taken
-/// once the machine settles (`BootSnapshot`). That needs the user's BIOS ROMs.
+/// once the machine settles (`BootSnapshot`). That needs the user's BIOS ROMs,
+/// and is skipped when the user has turned it off (`DiskThumbnailSetting`).
 ///
 /// Returning an error leaves Finder showing its generic document icon, which
 /// is right whenever there is no picture to show.
@@ -60,10 +61,12 @@ final class ThumbnailProvider: QLThumbnailProvider {
     return CGImageSourceCreateImageAtIndex(source, 0, nil)
   }
 
-  /// Boot the disk and take the frame `BootSnapshot` settles on. Nil without
-  /// N88.ROM, or when the disk does not boot to anything.
+  /// Boot the disk and take the frame `BootSnapshot` settles on. Nil when
+  /// disk thumbnails are off, without N88.ROM, or when the disk does not boot
+  /// to anything.
   private func diskImage(at url: URL) -> CGImage? {
-    guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+    guard DiskThumbnailSetting.isEnabledForExtension,
+          let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
           size <= Self.maxDiskFileSize else { return nil }
     // Take a slot before reading anything, so waiting requests hold no ROMs
     // or disk data.
