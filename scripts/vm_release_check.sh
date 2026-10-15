@@ -6,7 +6,8 @@
 # Usage: scripts/vm_release_check.sh [--image IMAGE] [--bios DIR] [--keep]
 #                                    <path/to.dmg | vX.Y.Z> [file.b88s|file.d88 ...]
 #
-#   --image  Tart image to clone (default: macos-tahoe-vanilla:26.6.2)
+#   --image  Tart VM or image to clone (default: macos-26.6.2-base, a local
+#            VM made once from ghcr.io/cirruslabs/macos-tahoe-vanilla:26.6.2)
 #   --bios   Directory whose *.ROM files are copied into the VM, so .d88
 #            thumbnails can boot. The VM is local and deleted afterwards.
 #   --keep   Leave the VM running instead of deleting it (prints its name)
@@ -19,10 +20,13 @@
 #
 # Needs swiftc and Tart on the host: `brew install openai/tools/tart` (the old
 # cirruslabs/cli tap stopped at 2.32.1 and fails on current Homebrew). The
-# first run pulls the image, about 24 GB.
+# first run pulls the image, about 24 GB, and keeps it as a local VM: Tart
+# auto-prunes its OCI cache when space runs low, but never local VMs.
 set -euo pipefail
 
-IMAGE="ghcr.io/cirruslabs/macos-tahoe-vanilla:26.6.2"
+BASE_IMAGE="ghcr.io/cirruslabs/macos-tahoe-vanilla:26.6.2"
+BASE_VM="macos-26.6.2-base"
+IMAGE="$BASE_VM"
 BIOS=""
 KEEP=0
 while [ $# -gt 0 ]; do
@@ -30,11 +34,11 @@ while [ $# -gt 0 ]; do
     --image) IMAGE="$2"; shift 2 ;;
     --bios) BIOS="$2"; shift 2 ;;
     --keep) KEEP=1; shift ;;
-    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
     *) break ;;
   esac
 done
-[ $# -ge 1 ] || { sed -n '2,22p' "$0"; exit 2; }
+[ $# -ge 1 ] || { sed -n '2,24p' "$0"; exit 2; }
 SOURCE="$1"; shift
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -77,6 +81,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
+if [ "$IMAGE" = "$BASE_VM" ] && ! tart get "$BASE_VM" >/dev/null 2>&1; then
+  echo "== keeping $BASE_IMAGE as local VM $BASE_VM"
+  tart clone "$BASE_IMAGE" "$BASE_VM"
+fi
 echo "== cloning $IMAGE as $VM"
 tart clone "$IMAGE" "$VM"
 tart run "$VM" --no-graphics --dir="share:$WORK:ro" >"$WORK/run.log" 2>&1 &
