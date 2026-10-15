@@ -5599,6 +5599,16 @@
         }
       }
     },
+    "Show disk image thumbnails in Finder" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finderでディスクイメージのサムネイルを表示"
+          }
+        }
+      }
+    },
     "Show or hide the attribute decode panel" : {
       "localizations" : {
         "ja" : {
@@ -6877,6 +6887,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ホイール上"
+          }
+        }
+      }
+    },
+    "When on, Finder briefly boots each disk image to show its screen as the icon." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ONにするとFinderのアイコンにディスクイメージの起動画面が表示されます。"
           }
         }
       }
