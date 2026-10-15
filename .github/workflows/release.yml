@@ -99,6 +99,7 @@ jobs:
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
             MARKETING_VERSION="${{ steps.version.outputs.version }}" \
             build 2>&1 | tee release-build.log
 
@@ -128,13 +129,22 @@ jobs:
 
       # Keep each bundle's entitlements: a plain --deep re-sign drops them, and
       # macOS will not register an app extension that is not sandboxed, so the
-      # Quick Look extensions would silently stop working.
+      # Quick Look extensions would silently stop working. The build above
+      # turns off base entitlement injection, which would otherwise add the
+      # debugger's get-task-allow to every bundle.
       - name: Ad-hoc re-sign (deep)
         run: |
-          codesign --force --deep --sign - --preserve-metadata=entitlements "${{ steps.locate.outputs.app }}"
-          codesign -d --entitlements - "${{ steps.locate.outputs.app }}/Contents/PlugIns/Bubilator88QuickLook.appex" 2>&1 \
+          APP="${{ steps.locate.outputs.app }}"
+          codesign --force --deep --sign - --preserve-metadata=entitlements "$APP"
+          codesign -d --entitlements - "$APP/Contents/PlugIns/Bubilator88QuickLook.appex" 2>&1 \
             | grep -q com.apple.security.app-sandbox
-          codesign --verify --verbose=2 "${{ steps.locate.outputs.app }}"
+          for bundle in "$APP" "$APP"/Contents/PlugIns/*.appex; do
+            if codesign -d --entitlements - "$bundle" 2>&1 | grep -q get-task-allow; then
+              echo "::error::$bundle carries get-task-allow"
+              exit 1
+            fi
+          done
+          codesign --verify --verbose=2 "$APP"
 
       - name: Create DMG with /Applications symlink
         id: dmg
