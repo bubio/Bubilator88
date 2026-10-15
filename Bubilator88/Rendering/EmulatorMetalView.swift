@@ -444,17 +444,18 @@ final class EmulatorMetalView: MTKView, MTKViewDelegate {
   /// Run the internal draw loop iff the emulator is running and the window
   /// is on-screen; pause it otherwise.
   ///
-  /// Emulation follows the same gate. It used to do so implicitly — pausing
-  /// `MTKView` stopped the callback that drove `runFrame()` — but now that
-  /// emulation has its own thread the visibility has to be handed to it
-  /// explicitly, or an occluded window would keep burning CPU. See
-  /// `EmulatorViewModel+Launch.swift` for the pitfall this preserves:
-  /// `start()` while occluded leaves the CPU parked at the reset vector, so a
-  /// URL launch brings the window to the front first.
+  /// Emulation follows the same gate unless the user keeps it running in the
+  /// background. It used to do so implicitly — pausing `MTKView` stopped the
+  /// callback that drove `runFrame()` — but now that emulation has its own
+  /// thread the visibility has to be handed to it explicitly, or an occluded
+  /// window would keep burning CPU. See `EmulatorViewModel+Launch.swift` for
+  /// the pitfall this preserves: `start()` while occluded leaves the CPU
+  /// parked at the reset vector, so a URL launch brings the window to the
+  /// front first.
   func updateDrawLoop() {
     let visible = window != nil && (window?.occlusionState.contains(.visible) ?? false)
     isPaused = !(viewModel.isRunning && visible)
-    viewModel.emulationLoop.setVisible(visible)
+    viewModel.windowVisibilityChanged(visible)
   }
 
   // MARK: - MTKViewDelegate

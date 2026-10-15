@@ -49,6 +49,8 @@ final class Settings {
     // Update check
     static let automaticUpdateCheck      = "automaticUpdateCheck"
     static let resumeOnLaunch            = "resumeOnLaunch"
+    static let runInBackground           = "runInBackground"
+    static let backgroundAudio           = "backgroundAudio"
     static let lastUpdateCheck           = "lastUpdateCheck"
     static let updateRemindAfter         = "updateRemindAfter"
     static let skippedUpdateVersion      = "skippedUpdateVersion"
@@ -205,6 +207,18 @@ final class Settings {
   /// state is saved on every quit either way; this only gates the restore.
   var resumeOnLaunch: Bool = false {
     didSet { UserDefaults.standard.set(resumeOnLaunch, forKey: Keys.resumeOnLaunch) }
+  }
+
+  /// Keep emulating while the window is hidden (occluded, minimized or on
+  /// another Space). Off, the emulator parks until the window is seen again.
+  var runInBackground: Bool = false {
+    didSet { UserDefaults.standard.set(runInBackground, forKey: Keys.runInBackground) }
+  }
+
+  /// Let the sound through while `runInBackground` keeps a hidden window
+  /// running. Off, it is muted until the window is seen again.
+  var backgroundAudio: Bool = false {
+    didSet { UserDefaults.standard.set(backgroundAudio, forKey: Keys.backgroundAudio) }
   }
 
   /// When the release feed was last fetched by the launch check.
@@ -670,6 +684,12 @@ final class Settings {
     }
     if let v = UserDefaults.standard.object(forKey: Keys.resumeOnLaunch) as? Bool {
       resumeOnLaunch = v
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.runInBackground) as? Bool {
+      runInBackground = v
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.backgroundAudio) as? Bool {
+      backgroundAudio = v
     }
     lastUpdateCheck = UserDefaults.standard.object(forKey: Keys.lastUpdateCheck) as? Date
     updateRemindAfter = UserDefaults.standard.object(forKey: Keys.updateRemindAfter) as? Date

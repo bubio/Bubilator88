@@ -57,6 +57,12 @@ final class FDDSound {
     }
   }
 
+  /// Silences every FDD and tape sound without touching `volume`. Carried
+  /// over to the engine that the next `start` builds.
+  var muted = false {
+    didSet { engine?.mainMixerNode.outputVolume = muted ? 0 : 1 }
+  }
+
   /// Volume for FDD sounds (0.0 - 1.0)
   var volume: Float = 0.2 {
     didSet {
@@ -236,6 +242,7 @@ final class FDDSound {
     do {
       try engine.start()
       for node in nodes { node.play() }
+      engine.mainMixerNode.outputVolume = muted ? 0 : 1
       self.engine = engine
       self.playerNodes = nodes
       isEnabled = true

@@ -49,6 +49,14 @@ struct GeneralSettingsTab: View {
       }
 
       Section {
+        Toggle("Keep running in the background", isOn: $settings.runInBackground)
+        Toggle("Play sound in the background", isOn: $settings.backgroundAudio)
+          .disabled(!settings.runInBackground)
+      }
+      .onChange(of: settings.runInBackground) { viewModel.applyBackgroundPolicy() }
+      .onChange(of: settings.backgroundAudio) { viewModel.applyBackgroundPolicy() }
+
+      Section {
         Toggle("Show disk image thumbnails in Finder", isOn: $settings.diskThumbnails)
         Text("When on, Finder briefly boots each disk image to show its screen as the icon.")
           .settingsDescriptionStyle()
