@@ -43,6 +43,28 @@ scripts/lint.sh
 
 Lint is not wired into the build; see Code Style for why.
 
+### Checking What a First-Time User Gets
+
+Verify changes to signing, entitlements, the `Info.plist` type and document
+declarations, the Quick Look extensions or `release.yml` on a fresh macOS VM,
+not on the development Mac. LaunchServices there keeps every build Xcode ever
+registered (DerivedData, `build/`) and past "Open With" choices, so it shows
+which copy wins rather than what an installed DMG does — v1.5.0 shipped Quick
+Look extensions that macOS refused to register, and nothing on the
+development Mac showed it.
+
+```bash
+# Needs Tart: brew install openai/tools/tart (the old cirruslabs/cli tap is stale).
+# Takes a DMG or a release tag; --bios lets .d88 thumbnails boot.
+scripts/vm_release_check.sh --bios ~/Library/Application\ Support/Bubilator88 \
+  path/to.dmg some.b88s some.d88
+```
+
+To test unreleased code, run `release.yml` by hand (workflow_dispatch builds
+the DMG as an artifact without attaching it to a release) and pass that DMG.
+To ask Quick Look for a thumbnail, use `scripts/ql_thumbnail_check.swift`:
+`qlmanage -t` hangs on app thumbnail extensions on macOS 27.
+
 ## The Core Is a Separate Repository
 
 The emulation core is the public Swift package
