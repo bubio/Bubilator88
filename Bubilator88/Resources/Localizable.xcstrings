@@ -5056,17 +5056,6 @@
         }
       }
     },
-    "Rhythm Samples" : {
-      "comment" : "About credit category",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "リズム音源"
-          }
-        }
-      }
-    },
     "Right Button" : {
       "localizations" : {
         "ja" : {
