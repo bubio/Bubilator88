@@ -129,6 +129,7 @@ PC-8801 の起動には実機の ROM ファイルが必要です（本プロジ�
 ├── FONT.ROM         フォント ROM
 ├── KANJI1.ROM       漢字 ROM（第1水準）
 ├── KANJI2.ROM       漢字 ROM（第2水準）
+├── JISYO.ROM        辞書 ROM（かな漢字変換）
 ├── DISK.ROM         サブ CPU ファームウェア（8KB）
 ├── N88_0.ROM        N88 拡張 ROM バンク 0
 ├── N88_1.ROM        N88 拡張 ROM バンク 1

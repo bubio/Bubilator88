@@ -38,6 +38,7 @@ enum BIOSFiles {
       (.font, ["FONT.ROM"]),
       (.kanji1, ["KANJI1.ROM"]),
       (.kanji2, ["KANJI2.ROM"]),
+      (.dictionary, ["JISYO.ROM"]),
       // Sub-CPU firmware, 8KB.
       (.disk, ["DISK.ROM"]),
     ]
