@@ -27,6 +27,12 @@ enum BIOSFiles {
     return Array(data)
   }
 
+  /// The dictionary ROM, JISYO.ROM (512KB), when present. Not a `PC88.ROM`:
+  /// it is loaded with `PC88.loadDictionaryROM`.
+  static func loadDictionary(from directory: URL) -> [UInt8]? {
+    (try? Data(contentsOf: directory.appending(component: "JISYO.ROM"))).map(Array.init)
+  }
+
   /// Every ROM image present in `directory`, N88-BASIC first. Only
   /// N88-BASIC is required; the rest are loaded when found.
   static func load(from directory: URL) -> [(PC88.ROM, [UInt8])] {
@@ -38,7 +44,6 @@ enum BIOSFiles {
       (.font, ["FONT.ROM"]),
       (.kanji1, ["KANJI1.ROM"]),
       (.kanji2, ["KANJI2.ROM"]),
-      (.dictionary, ["JISYO.ROM"]),
       // Sub-CPU firmware, 8KB.
       (.disk, ["DISK.ROM"]),
     ]

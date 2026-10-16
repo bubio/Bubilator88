@@ -21,6 +21,9 @@ extension EmulatorViewModel {
     for (rom, data) in roms {
       pc88.loadROM(rom, data: data)
     }
+    if let dictionary = BIOSFiles.loadDictionary(from: appSupport) {
+      pc88.loadDictionaryROM(dictionary)
+    }
     if roms.contains(where: { $0.0 == .n88Basic }) {
       romLoaded = true
     } else {
