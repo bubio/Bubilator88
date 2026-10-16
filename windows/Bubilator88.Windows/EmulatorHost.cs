@@ -80,6 +80,7 @@ internal sealed unsafe class EmulatorHost : IDisposable
         LoadRom(romDir, "FONT.ROM", NativeApi.RomFont);
         LoadRom(romDir, "KANJI1.ROM", NativeApi.RomKanji1);
         LoadRom(romDir, "KANJI2.ROM", NativeApi.RomKanji2);
+        LoadRom(romDir, "JISYO.ROM", NativeApi.RomJisyo);
         for (int bank = 0; bank < 4; bank++)
             LoadRom(romDir, $"N88_{bank}.ROM", NativeApi.RomN88Ext0 + bank);
 

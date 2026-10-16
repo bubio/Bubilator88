@@ -129,6 +129,7 @@ Place them in *~/Library/Application Support/Bubilator88/*.
 ├── FONT.ROM         Font ROM
 ├── KANJI1.ROM       Kanji ROM (level 1)
 ├── KANJI2.ROM       Kanji ROM (level 2)
+├── JISYO.ROM        Dictionary ROM (kana-kanji conversion)
 ├── DISK.ROM         Sub CPU firmware (8KB)
 ├── N88_0.ROM        N88 extension ROM bank 0
 ├── N88_1.ROM        N88 extension ROM bank 1

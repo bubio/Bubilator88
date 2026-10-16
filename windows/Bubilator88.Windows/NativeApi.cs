@@ -25,6 +25,7 @@ internal static unsafe partial class NativeApi
     public const int RomFont = 3;
     public const int RomKanji1 = 4;
     public const int RomKanji2 = 5;
+    public const int RomJisyo = 6;
     public const int RomN88Ext0 = 10; // +0..+3 for banks 0..3
 
     // DIP SW2 base values (boot mode).

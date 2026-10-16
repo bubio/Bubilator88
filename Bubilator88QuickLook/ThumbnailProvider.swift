@@ -76,7 +76,8 @@ final class ThumbnailProvider: QLThumbnailProvider {
     guard roms.contains(where: { $0.0 == .n88Basic }),
           let data = try? Data(contentsOf: url) else { return nil }
     let disks = D88Disk.parseAll(data: Array(data))
-    guard let frame = BootSnapshot.capture(roms: roms, disks: disks,
+    let dictionary = BIOSFiles.loadDictionary(from: BIOSFiles.directory)
+    guard let frame = BootSnapshot.capture(roms: roms, dictionaryROM: dictionary, disks: disks,
                                            deadline: .now + Self.diskBootBudget) else { return nil }
     return makeImage(rgba: frame.pixels, width: PC88.frameWidth, height: PC88.frameHeight)
   }
