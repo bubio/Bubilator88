@@ -185,16 +185,18 @@ jobs:
           files: ${{ steps.dmg.outputs.name }}
           tag_name: ${{ steps.version.outputs.ref }}
           draft: false
-          prerelease: false
+          prerelease: ${{ github.event.release.prerelease }}
           generate_release_notes: false
 
   # Bump the Homebrew cask in bubio/homebrew-bubilator88 to the freshly
-  # released version + DMG checksum. Only runs for real published releases
+  # released version + DMG checksum. Only runs for published, non-prerelease releases
   # (not workflow_dispatch dev builds). Requires a HOMEBREW_TAP_TOKEN secret
   # with contents:write on the tap repo.
   update-tap:
     needs: build
-    if: github.event_name == 'release' && needs.build.result == 'success'
+    if: >-
+      github.event_name == 'release' && !github.event.release.prerelease &&
+      needs.build.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout tap
