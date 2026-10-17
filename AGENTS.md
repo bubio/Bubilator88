@@ -161,7 +161,11 @@ Updating these docs:
   them each time.
 - Unit tests use the Swift Testing framework (`@Test`); UI tests use XCTest.
 - BIOS files are never bundled — they are loaded from
-  `~/Library/Application Support/Bubilator88/`.
+  `~/Library/Application Support/Bubilator88/`. The one exception is the
+  substitute kanji ROMs in `Shared/SubstituteKanji/`, generated from the
+  public-domain Shinonome fonts and the core's built-in 8×8 font by
+  `scripts/make_substitute_kanji_rom.py` and
+  used only when the user has no `KANJI1.ROM` / `KANJI2.ROM`.
 - No additional LSI-level classes unless explicitly justified.
 
 ## Windows Native Port

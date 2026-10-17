@@ -118,7 +118,7 @@ brew install --cask bubio/bubilator88/bubilator88
 
 ## ROM Files
 
-PC-8801 の起動には実機の ROM ファイルが必要です（本プロジェクトには含まれていません）。リズム音源用 WAV は無くても代替音で鳴ります。
+PC-8801 の起動には実機の ROM ファイルが必要です（本プロジェクトには含まれていません）。リズム音源用 WAV は無くても代替音で鳴り、漢字 ROM は無くても同梱の代替（[東雲フォント](http://openlab.ring.gr.jp/efont/shinonome/)から作成）で漢字が表示されます。
 
 *~/Library/Application Support/Bubilator88/* に配置してください。
 
@@ -126,8 +126,8 @@ PC-8801 の起動には実機の ROM ファイルが必要です（本プロジ�
 ~/Library/Application Support/Bubilator88/
 ├── N88.ROM          N88-BASIC ROM（必須）
 ├── N80.ROM          N-BASIC ROM
-├── FONT.ROM         フォント ROM
-├── KANJI1.ROM       漢字 ROM（第1水準）
+├── FONT.ROM         フォント ROM ※任意。無ければ内蔵フォント
+├── KANJI1.ROM       漢字 ROM（第1水準）※任意。無ければ同梱の代替
 ├── KANJI2.ROM       漢字 ROM（第2水準）
 ├── JISYO.ROM        辞書 ROM（かな漢字変換）
 ├── DISK.ROM         サブ CPU ファームウェア（8KB）

@@ -708,6 +708,18 @@ final class EmulatorViewModel {
     }
   }
 
+  /// Develop menu: load the built-in font, the bundled substitute kanji ROMs
+  /// and the bundled rhythm samples even when the user's files exist. Not
+  /// persisted; `loadROMs()` applies them, so they take effect at the next
+  /// reset.
+  var forceBuiltInFont = false
+  var forceBuiltInKanji = false
+  var forceBuiltInRhythm = false
+
+  /// The core's built-in 8×8 font, captured in `init` before any FONT.ROM
+  /// overwrites it, for `forceBuiltInFont`.
+  @ObservationIgnored private(set) var builtInFont: [UInt8] = []
+
   /// Debug-only experiment: suppress text layer overlay while keeping
   /// graphics and attribute-graphics rendering intact.
   var debugTextLayerEnabled: Bool = true {
@@ -984,7 +996,9 @@ final class EmulatorViewModel {
   // MARK: - Init
 
   init() {
-    self.pc88 = PC88()
+    let machine = PC88()
+    self.pc88 = machine
+    self.builtInFont = (0...255).flatMap { machine.glyph(for: UInt8($0)) }
     self.pixelBuffer = Array(repeating: 0, count: PC88.frameBufferSize)
     activeClock8MHz = clock8MHz
     pc88.dipSw1 = _bootModeStorage.dipSw1

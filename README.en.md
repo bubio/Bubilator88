@@ -118,7 +118,7 @@ Download the latest version from the [Releases](https://github.com/bubio/Bubilat
 
 ## ROM Files
 
-Booting a PC-8801 needs ROM files from real hardware (they are not included in this project). The rhythm WAV files are optional: without them, bundled substitute sounds play.
+Booting a PC-8801 needs ROM files from real hardware (they are not included in this project). The rhythm WAV files are optional: without them, bundled substitute sounds play. The kanji ROMs are optional too: without them, bundled substitutes made from the [Shinonome fonts](http://openlab.ring.gr.jp/efont/shinonome/) draw the kanji.
 
 Place them in *~/Library/Application Support/Bubilator88/*.
 
@@ -126,8 +126,8 @@ Place them in *~/Library/Application Support/Bubilator88/*.
 ~/Library/Application Support/Bubilator88/
 ├── N88.ROM          N88-BASIC ROM (required)
 ├── N80.ROM          N-BASIC ROM
-├── FONT.ROM         Font ROM
-├── KANJI1.ROM       Kanji ROM (level 1)
+├── FONT.ROM         Font ROM *optional; built-in font otherwise
+├── KANJI1.ROM       Kanji ROM (level 1) *optional; bundled substitute otherwise
 ├── KANJI2.ROM       Kanji ROM (level 2)
 ├── JISYO.ROM        Dictionary ROM (kana-kanji conversion)
 ├── DISK.ROM         Sub CPU firmware (8KB)

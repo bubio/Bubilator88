@@ -24,6 +24,7 @@
 | `rom_sweep.py` | D88 を一括起動し、起動失敗 (黒画面・BASIC プロンプト等) を分類 |
 | `d88_inspect.py` | D88 のヘッダ・トラック・セクタ構成を表示し、形式の破綻を列挙 (イメージ破損とエミュレータのバグの切り分け) |
 | `pbios_check.py` | 回帰シナリオを代替 BIOS (pbios) で走らせ、到達画面を比較 |
+| `substitute_kanji_check.py` | 回帰シナリオを同梱の代替漢字 ROM で走らせ、実 ROM の参照画面と比較 |
 | `capi_trace_compare.py` | 2 つの C ABI DLL に同じ入力を与え、出力 (映像・音・FDD・保存) を比較 |
 | `tstate_diff.py` | BubiC と命令単位の T-state を比較 (入力は `patches/bubic-cpu-trace.patch` で作る) |
 | `ppm_contact_sheet.py` | BootTester の PPM を 1 枚の PNG に並べて目視確認 |
@@ -81,3 +82,4 @@
 | `build-windows-package.ps1` | Windows 版を単一 EXE と共有ランタイム版の 2 種でビルド |
 | `convert-png-to-ico.ps1` | 正方形 PNG からマルチ解像度 `.ico` を生成 |
 | `par_list_to_presets.py` | 88PAR コードリストをチートプリセット JSON に変換 |
+| `make_substitute_kanji_rom.py` | 東雲フォントとコアの内蔵 8×8 フォントから代替漢字 ROM (`Shared/SubstituteKanji/`) を生成。`--compare` で実 ROM と枠の過不足を比較 |
