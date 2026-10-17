@@ -6,9 +6,9 @@ import SwiftUI
 /// Used to print GRPH graphic-character legends on the software keyboard
 /// directly from the currently-loaded `FontROM`, so the engraving always
 /// matches what the emulator actually displays for that character code. No
-/// external font asset is bundled — the glyph comes from the user's FONT.ROM
-/// (and is blank when no font ROM is loaded, since the built-in fallback font
-/// has no graphics characters).
+/// external font asset is bundled — the glyph comes from the user's FONT.ROM,
+/// or from the core's built-in font (graphics characters included) when there
+/// is none.
 struct FontGlyphView: View {
   /// Eight rows of 8 pixels. MSB (bit 7) is the leftmost pixel.
   let rows: [UInt8]
