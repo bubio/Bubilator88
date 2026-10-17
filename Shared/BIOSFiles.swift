@@ -34,7 +34,9 @@ enum BIOSFiles {
   }
 
   /// Every ROM image present in `directory`, N88-BASIC first. Only
-  /// N88-BASIC is required; the rest are loaded when found.
+  /// N88-BASIC is required; the rest are loaded when found. The kanji ROMs
+  /// fall back to the bundled substitutes drawn from the Shinonome fonts
+  /// (`scripts/make_substitute_kanji_rom.py`).
   static func load(from directory: URL) -> [(PC88.ROM, [UInt8])] {
     var files: [(PC88.ROM, [String])] = [
       (.n88Basic, ["N88.ROM"]),
@@ -51,12 +53,31 @@ enum BIOSFiles {
     files += (0..<4).map { (.n88Ext(bank: $0), ["N88_\($0).ROM", "N88EXT\($0).ROM"]) }
 
     return files.compactMap { rom, names in
-      for name in names {
-        if let data = try? Data(contentsOf: directory.appending(component: name)) {
+      var urls = names.map { directory.appending(component: $0) }
+      if let bundled = substitute(for: rom) {
+        urls.append(bundled)
+      }
+      for url in urls {
+        if let data = try? Data(contentsOf: url) {
           return (rom, Array(data))
         }
       }
       return nil
+    }
+  }
+
+  /// The bundled stand-in for `rom`, read even when the user has the real
+  /// one. Nil for ROMs without a stand-in.
+  static func loadSubstitute(for rom: PC88.ROM) -> [UInt8]? {
+    substitute(for: rom).flatMap { try? Data(contentsOf: $0) }.map(Array.init)
+  }
+
+  /// The bundled stand-in for `rom`, if there is one.
+  private static func substitute(for rom: PC88.ROM) -> URL? {
+    switch rom {
+    case .kanji1: Bundle.main.url(forResource: "SubstituteKANJI1", withExtension: "ROM")
+    case .kanji2: Bundle.main.url(forResource: "SubstituteKANJI2", withExtension: "ROM")
+    default: nil
     }
   }
 }

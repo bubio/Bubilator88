@@ -78,8 +78,9 @@ internal sealed unsafe class EmulatorHost : IDisposable
         LoadRom(romDir, "N80.ROM", NativeApi.RomN80);
         LoadRom(romDir, "DISK.ROM", NativeApi.RomDisk);
         LoadRom(romDir, "FONT.ROM", NativeApi.RomFont);
-        LoadRom(romDir, "KANJI1.ROM", NativeApi.RomKanji1);
-        LoadRom(romDir, "KANJI2.ROM", NativeApi.RomKanji2);
+        // The kanji ROMs fall back to the bundled Shinonome-based substitutes.
+        LoadRom(romDir, "KANJI1.ROM", NativeApi.RomKanji1, substitute: "SubstituteKANJI1.ROM");
+        LoadRom(romDir, "KANJI2.ROM", NativeApi.RomKanji2, substitute: "SubstituteKANJI2.ROM");
         LoadRom(romDir, "JISYO.ROM", NativeApi.RomJisyo);
         for (int bank = 0; bank < 4; bank++)
             LoadRom(romDir, $"N88_{bank}.ROM", NativeApi.RomN88Ext0 + bank);
@@ -106,14 +107,17 @@ internal sealed unsafe class EmulatorHost : IDisposable
         }
     }
 
-    private void LoadRom(string dir, string name, int kind, bool required = false)
+    private void LoadRom(string dir, string name, int kind, bool required = false,
+                         string? substitute = null)
     {
         string path = Path.Combine(dir, name);
         if (!File.Exists(path))
         {
             if (required)
                 throw new FileNotFoundException($"Required ROM missing: {path}");
-            return;
+            if (substitute is null || DeploymentFiles.Find(substitute) is not string bundled)
+                return;
+            path = bundled;
         }
         byte[] data = File.ReadAllBytes(path);
         fixed (byte* p = data)

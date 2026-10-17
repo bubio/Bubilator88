@@ -49,7 +49,7 @@ struct SoftwareKeyboardView: View {
 
   /// Resolve a key's GRPH graphic glyph from the loaded FontROM, but only when
   /// GRPH is active and the key has a graphic character. Returns nil otherwise
-  /// (including when no font ROM is loaded and the glyph would be blank).
+  /// (including when the glyph is blank).
   private func graphGlyph(for cap: PC88KeyCap) -> [UInt8]? {
     guard graphActive, let code = cap.graphCode else { return nil }
     let glyph = viewModel.pc88.glyph(for: code)

@@ -21,6 +21,17 @@ extension EmulatorViewModel {
     for (rom, data) in roms {
       pc88.loadROM(rom, data: data)
     }
+    // Develop menu overrides, loaded over whatever the user supplied.
+    if forceBuiltInFont {
+      pc88.loadROM(.font, data: builtInFont)
+    }
+    if forceBuiltInKanji {
+      for rom in [PC88.ROM.kanji1, .kanji2] {
+        if let data = BIOSFiles.loadSubstitute(for: rom) {
+          pc88.loadROM(rom, data: data)
+        }
+      }
+    }
     if let dictionary = BIOSFiles.loadDictionary(from: appSupport) {
       pc88.loadDictionaryROM(dictionary)
     }
@@ -41,7 +52,7 @@ extension EmulatorViewModel {
     // rhythm part is never silent.
     let rhythmNames = ["BD", "SD", "TOP", "HH", "TOM", "RIM"]
     for (index, name) in rhythmNames.enumerated() {
-      let userFile = appSupport.appending(component: "2608_\(name).WAV")
+      let userFile = forceBuiltInRhythm ? nil : appSupport.appending(component: "2608_\(name).WAV")
       let bundled = Bundle.main.url(forResource: "Rhythm_\(name)", withExtension: "wav")
       for url in [userFile, bundled].compactMap({ $0 }) {
         if let wavData = try? Data(contentsOf: url),

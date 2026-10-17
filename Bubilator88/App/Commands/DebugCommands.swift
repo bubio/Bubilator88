@@ -77,6 +77,15 @@ struct DebugCommands: Commands {
 
         Divider()
 
+        // Not persisted; each takes effect at the next reset.
+        Toggle("Use Built-in Font ROM", isOn: $viewModel.forceBuiltInFont)
+
+        Toggle("Use Built-in Kanji ROM", isOn: $viewModel.forceBuiltInKanji)
+
+        Toggle("Use Built-in Rhythm Samples", isOn: $viewModel.forceBuiltInRhythm)
+
+        Divider()
+
         Toggle("Preserve Pitch at Fast Speeds", isOn: $viewModel.pitchPreservingSpeed)
 
         Toggle("Force YM2203 (OPN)", isOn: $viewModel.forceOPNMode)

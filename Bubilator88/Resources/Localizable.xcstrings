@@ -3375,6 +3375,17 @@
         }
       }
     },
+    "Kanji Font" : {
+      "comment" : "About credit category",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "漢字フォント"
+          }
+        }
+      }
+    },
     "Keep running in the background" : {
       "localizations" : {
         "ja" : {
@@ -6683,6 +6694,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使い方: Bubilator88 [-オプション ...] イメージファイル [イメージ番号] [イメージファイル [イメージ番号]]"
+          }
+        }
+      }
+    },
+    "Use Built-in Font ROM" : {
+      "comment" : "Develop menu toggle; takes effect at the next reset",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内蔵FONT.ROMを使う"
+          }
+        }
+      }
+    },
+    "Use Built-in Kanji ROM" : {
+      "comment" : "Develop menu toggle; takes effect at the next reset",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内蔵漢字ROMを使う"
+          }
+        }
+      }
+    },
+    "Use Built-in Rhythm Samples" : {
+      "comment" : "Develop menu toggle; takes effect at the next reset",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内蔵リズム音源を使う"
           }
         }
       }

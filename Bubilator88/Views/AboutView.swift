@@ -26,6 +26,7 @@ struct AboutView: View {
     Credit(category: String(localized: "Reference", comment: "About credit category"), title: "X88000", author: "Manuke", url: "https://quagma.sakura.ne.jp/manuke/x88000.html"),
     Credit(category: String(localized: "Technical Docs", comment: "About credit category"), title: "PC-8801についてのページ", author: "youkan", url: "http://www.maroon.dti.ne.jp/youkan/pc88/"),
     Credit(category: String(localized: "Technical Docs", comment: "About credit category"), title: "PC-8801 VRAM情報", author: nil, url: "http://mydocuments.g2.xrea.com/html/p8/vraminfo.html"),
+    Credit(category: String(localized: "Kanji Font", comment: "About credit category"), title: "東雲フォント", author: "/efont/", url: "http://openlab.ring.gr.jp/efont/shinonome/"),
     Credit(category: String(localized: "Scaling", comment: "About credit category"), title: "xBRZ", author: "Zenju", url: "https://sourceforge.net/projects/xbrz/"),
     Credit(category: String(localized: "AI Upscale", comment: "About credit category"), title: "Real-ESRGAN", author: nil, url: "https://github.com/xinntao/Real-ESRGAN"),
     Credit(category: String(localized: "AI Coding", comment: "About credit category"), title: "Claude Code", author: "Anthropic", url: "https://claude.ai/code"),
