@@ -1863,8 +1863,8 @@ public sealed partial class MainWindow : Window
         return string.Join(", ", names);
     }
 
-    /// Brief non-modal notification (mirrors the macOS showToast), auto-removed
-    /// after ~1.2 s. Sits over the screen panel, bottom-center.
+    /// Brief non-modal notification over the bottom center of the screen panel.
+    /// Removed after three seconds.
     private async void ShowToast(string message)
     {
         try
@@ -1887,7 +1887,7 @@ public sealed partial class MainWindow : Window
             };
             Grid.SetRow(toast, 1);
             Root.Children.Add(toast);
-            await Task.Delay(1200);
+            await Task.Delay(TimeSpan.FromSeconds(3));
             Root.Children.Remove(toast);
         }
         catch { /* best-effort UI */ }
