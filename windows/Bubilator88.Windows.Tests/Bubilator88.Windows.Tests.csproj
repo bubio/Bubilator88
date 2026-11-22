@@ -40,7 +40,7 @@
     <Compile Include="..\Bubilator88.Windows\WindowPosition.cs" Link="Linked\WindowPosition.cs" />
     <Compile Include="..\Bubilator88.Windows\RhythmSampleFiles.cs" Link="Linked\RhythmSampleFiles.cs" />
     <Compile Include="..\Bubilator88.Windows\DeploymentFiles.cs" Link="Linked\DeploymentFiles.cs" />
-    <None Include="..\..\Bubilator88\Resources\Rhythm_*.wav">
+    <None Include="..\..\Shared\Rhythm\Rhythm_*.wav">
       <Link>%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

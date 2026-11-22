@@ -89,6 +89,40 @@
 		</dict>
 		<dict>
 			<key>UTTypeIdentifier</key>
+			<string>com.bubio.bubilator88.vgm</string>
+			<key>UTTypeDescription</key>
+			<string>VGM Sound File</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>vgm</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.bubio.bubilator88.vgz</string>
+			<key>UTTypeDescription</key>
+			<string>Compressed VGM Sound File</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>vgz</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
 			<string>com.goldenhawk.cdrwin-cuesheet</string>
 			<key>UTTypeDescription</key>
 			<string>CD Cue Sheet</string>

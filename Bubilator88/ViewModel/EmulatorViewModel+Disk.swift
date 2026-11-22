@@ -47,65 +47,11 @@ extension EmulatorViewModel {
     // Install extended RAM (capacity from Settings; default 128KB).
     pc88.installExtRAM(cards: Settings.shared.extramCards, banksPerCard: 4)
 
-    // YM2608 rhythm WAV samples (fmgen format: signed 16-bit PCM). A file in
-    // Application Support wins; otherwise the bundled stand-in is used so the
-    // rhythm part is never silent.
-    let rhythmNames = ["BD", "SD", "TOP", "HH", "TOM", "RIM"]
-    for (index, name) in rhythmNames.enumerated() {
-      let userFile = forceBuiltInRhythm ? nil : appSupport.appending(component: "2608_\(name).WAV")
-      let bundled = Bundle.main.url(forResource: "Rhythm_\(name)", withExtension: "wav")
-      for url in [userFile, bundled].compactMap({ $0 }) {
-        if let wavData = try? Data(contentsOf: url),
-           let (samples, sampleRate) = parseWAV(wavData) {
-          pc88.loadRhythmSample(index: index, data: samples, sampleRate: sampleRate)
-          break
-        }
-      }
+    // YM2608 rhythm WAV samples: Application Support first, else bundled.
+    for rhythm in RhythmSamples.load(userDirectory: forceBuiltInRhythm ? nil : appSupport) {
+      pc88.loadRhythmSample(index: rhythm.index, data: rhythm.samples,
+                            sampleRate: rhythm.sampleRate)
     }
-  }
-
-  /// Parse a WAV file and extract signed 16-bit PCM samples.
-  private func parseWAV(_ data: Data) -> (samples: [Int16], sampleRate: Int)? {
-    guard data.count > 44 else { return nil }
-    // Verify RIFF header
-    guard data[0] == 0x52, data[1] == 0x49, data[2] == 0x46, data[3] == 0x46 else { return nil }
-    // Verify WAVE format
-    guard data[8] == 0x57, data[9] == 0x41, data[10] == 0x56, data[11] == 0x45 else { return nil }
-
-    // Find "fmt " and "data" chunks
-    var sampleRate = 44100
-    var bitsPerSample = 16
-    var numChannels = 1
-    var dataOffset = 0
-    var dataSize = 0
-
-    var offset = 12
-    while offset + 8 <= data.count {
-      let chunkID = String(bytes: data[offset..<offset+4], encoding: .ascii) ?? ""
-      let chunkSize = Int(data[offset+4]) | Int(data[offset+5]) << 8 |
-        Int(data[offset+6]) << 16 | Int(data[offset+7]) << 24
-      if chunkID == "fmt " {
-        numChannels = Int(data[offset+10]) | Int(data[offset+11]) << 8
-        sampleRate = Int(data[offset+12]) | Int(data[offset+13]) << 8 |
-          Int(data[offset+14]) << 16 | Int(data[offset+15]) << 24
-        bitsPerSample = Int(data[offset+22]) | Int(data[offset+23]) << 8
-      } else if chunkID == "data" {
-        dataOffset = offset + 8
-        dataSize = chunkSize
-        break
-      }
-      offset += 8 + chunkSize
-      if chunkSize & 1 != 0 { offset += 1 }  // Word-align
-    }
-
-    guard dataOffset > 0, bitsPerSample == 16 else { return nil }
-    let sampleCount = min(dataSize, data.count - dataOffset) / (2 * numChannels)
-    var samples = [Int16](repeating: 0, count: sampleCount)
-    for i in 0..<sampleCount {
-      let byteOffset = dataOffset + i * 2 * numChannels
-      samples[i] = Int16(bitPattern: UInt16(data[byteOffset]) | UInt16(data[byteOffset+1]) << 8)
-    }
-    return (samples, sampleRate)
   }
 
   // MARK: - Drive state types

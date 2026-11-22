@@ -136,8 +136,12 @@ jobs:
         run: |
           APP="${{ steps.locate.outputs.app }}"
           codesign --force --deep --sign - --preserve-metadata=entitlements "$APP"
-          codesign -d --entitlements - "$APP/Contents/PlugIns/Bubilator88QuickLook.appex" 2>&1 \
-            | grep -q com.apple.security.app-sandbox
+          for appex in "$APP"/Contents/PlugIns/*.appex; do
+            if ! codesign -d --entitlements - "$appex" 2>&1 | grep -q com.apple.security.app-sandbox; then
+              echo "::error::$appex is not sandboxed"
+              exit 1
+            fi
+          done
           for bundle in "$APP" "$APP"/Contents/PlugIns/*.appex; do
             if codesign -d --entitlements - "$bundle" 2>&1 | grep -q get-task-allow; then
               echo "::error::$bundle carries get-task-allow"
