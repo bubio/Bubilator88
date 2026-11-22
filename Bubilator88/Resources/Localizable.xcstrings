@@ -7,6 +7,16 @@
     "  %@ ✓" : {
 
     },
+    "When on, your Discord profile shows the game on screen." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オンにすると、画面のゲームをDiscordのプロフィールに表示します。"
+          }
+        }
+      }
+    },
     "\"%@\" contains no disk image entries." : {
       "comment" : "Error: an m3u/m3u8 playlist has only blank or comment lines. %@ is the playlist path",
       "localizations" : {
@@ -6112,6 +6122,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Finderでディスクイメージのサムネイルを表示"
+          }
+        }
+      }
+    },
+    "Show the game you're playing in Discord" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プレイ中のゲームをDiscordに表示"
           }
         }
       }

@@ -140,6 +140,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       // After the flush, so the disk files and the state's embedded images
       // agree.
       viewModel?.saveResumeState()
+      // Discord also drops the activity when the socket closes; clearing it
+      // first just makes it disappear at once.
+      viewModel?.discordPresence.stopAndWait()
     }
     if let monitor = shortcutMonitor {
       NSEvent.removeMonitor(monitor)

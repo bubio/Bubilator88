@@ -62,6 +62,13 @@ struct GeneralSettingsTab: View {
           .settingsDescriptionStyle()
       }
 
+      Section {
+        Toggle("Show the game you're playing in Discord", isOn: $settings.discordPresence)
+        Text("When on, your Discord profile shows the game on screen.")
+          .settingsDescriptionStyle()
+      }
+      .onChange(of: settings.discordPresence) { viewModel.updateDiscordPresence() }
+
       Section("AI Tool Control (MCP)") {
         Toggle("Allow control from AI tools", isOn: $viewModel.automationEnabled)
         Text("When on, AI tools that support MCP can operate and inspect the emulator.")
