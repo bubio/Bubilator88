@@ -28,6 +28,9 @@
     "CloneCD Control File" : {
 
     },
+    "Compressed VGM Sound File" : {
+
+    },
     "D88 Disk Image" : {
 
     },
@@ -60,6 +63,9 @@
           }
         }
       }
+    },
+    "VGM Sound File" : {
+
     }
   },
   "version" : "1.0"

@@ -118,9 +118,11 @@ if ls "$S/bios/"*.ROM >/dev/null 2>&1; then
 fi
 
 echo "-- extension entitlements"
-codesign -d --entitlements - \
-  /Applications/Bubilator88.app/Contents/PlugIns/Bubilator88QuickLook.appex 2>&1 \
-  | grep -o 'com.apple.security[a-z.-]*' | sort -u
+for appex in /Applications/Bubilator88.app/Contents/PlugIns/*.appex; do
+  echo "$(basename "$appex"):"
+  codesign -d --entitlements - "$appex" 2>&1 \
+    | grep -o 'com.apple.security[a-z.-]*' | sort -u
+done
 
 echo "-- first launch"
 open -a /Applications/Bubilator88.app
@@ -131,6 +133,7 @@ sleep 3
 echo "-- registered extensions"
 pluginkit -m -v -i com.bubio.Bubilator88.QuickLook
 pluginkit -m -v -i com.bubio.Bubilator88.QuickLookPreview
+pluginkit -m -v -i com.bubio.Bubilator88.VGMPreview
 
 echo "-- .d88 handler"
 "$S/d88_handler"

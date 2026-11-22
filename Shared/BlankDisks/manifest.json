@@ -1,6 +1,6 @@
 {
-  "core_revision": "839f24608440fae2e9f59db58fbd194998807f3d",
-  "core_version": "1.14.0",
+  "core_revision": "cba38fffa277ae2560de81017590d275c7b40740",
+  "core_version": "1.15.0",
   "images": {
     "2D-basic.d88": {
       "size": 348848,
