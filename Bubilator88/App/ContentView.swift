@@ -476,7 +476,7 @@ struct ContentView: View {
       }
 
       // Recording indicator (shown only while recording)
-      if viewModel.audioRecorder.isRecording {
+      if viewModel.isRecording {
         Button {
           viewModel.stopRecording()
         } label: {
@@ -486,8 +486,11 @@ struct ContentView: View {
             .font(.system(size: 20))
         }
         .buttonStyle(.plain)
-        .help(String(localized: "Stop audio recording",
-                     comment: "Status bar record button tooltip"))
+        .help(viewModel.vgmRecorder.isRecording
+          ? String(localized: "Stop VGM recording",
+                   comment: "Status bar record button tooltip while recording VGM")
+          : String(localized: "Stop audio recording",
+                   comment: "Status bar record button tooltip"))
       }
 
       if viewModel.videoRecorder.isRecording {

@@ -328,7 +328,8 @@ final class Settings {
 
   // MARK: - Audio Recording
 
-  /// Audio recording format: "wav" (default), "alac", or "aac".
+  /// Audio recording format: "wav" (default), "alac", "aac", or the sound
+  /// chip log formats "vgm" and "vgz".
   var recordingFormat: String = "wav" {
     didSet { UserDefaults.standard.set(recordingFormat, forKey: Keys.recordingFormat) }
   }
@@ -823,7 +824,7 @@ final class Settings {
     }
     screenshotDirectory = UserDefaults.standard.string(forKey: Keys.screenshotDirectory)
     if let v = UserDefaults.standard.string(forKey: Keys.recordingFormat),
-       ["wav", "alac", "aac"].contains(v) {
+       ["wav", "alac", "aac", "vgm", "vgz"].contains(v) {
       recordingFormat = v
     }
     if let v = UserDefaults.standard.object(forKey: Keys.recordingAutoSave) as? Bool {

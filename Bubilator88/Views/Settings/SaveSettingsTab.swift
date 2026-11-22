@@ -28,10 +28,14 @@ struct SaveSettingsTab: View {
           Text("WAV").tag("wav")
           Text("Apple Lossless (.caf)").tag("alac")
           Text("AAC (.m4a)").tag("aac")
+          Text("VGM").tag("vgm")
+          Text("VGZ (compressed VGM)").tag("vgz")
         }
         .pickerStyle(.menu)
 
         let isAAC = settings.recordingFormat == "aac"
+        let isVGM = ["vgm", "vgz"].contains(settings.recordingFormat)
+        // A VGM file is register writes, not audio: it has no channel layout.
         if isAAC {
           HStack {
             Text("Channels")
@@ -39,7 +43,7 @@ struct SaveSettingsTab: View {
             Text("Stereo only")
               .foregroundStyle(.secondary)
           }
-        } else {
+        } else if !isVGM {
           Picker("Channels", selection: $settings.recordingSeparation) {
             Text("Separated (8ch)").tag("separated")
             Text("Stereo (2ch)").tag("stereo")
@@ -53,7 +57,10 @@ struct SaveSettingsTab: View {
           setDirectory: { settings.recordingDirectory = $0 }
         )
 
-        if !isAAC && settings.recordingSeparation == "separated" {
+        if isVGM {
+          Text("Saves the sound chip's performance for VGM players, without the beeper.")
+            .settingsDescriptionStyle()
+        } else if !isAAC && settings.recordingSeparation == "separated" {
           Text("Separated records FM, SSG, ADPCM, and Rhythm into 8 discrete channels for DAW import (Logic, Audacity). Media players cannot play it back correctly — use Stereo for listening.")
             .settingsDescriptionStyle()
         } else {

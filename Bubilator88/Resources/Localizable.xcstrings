@@ -288,6 +288,17 @@
         }
       }
     },
+    "Recording failed: %@" : {
+      "comment" : "Recording error toast with the reason",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "録音に失敗しました: %@"
+          }
+        }
+      }
+    },
     "Register With" : {
       "comment" : "Settings picker: which AI tool to show the registration for",
       "localizations" : {
@@ -360,6 +371,57 @@
         }
       }
     },
+    "Saves the sound chip's performance for VGM players, without the beeper." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音源チップの演奏データを VGM プレイヤー向けに保存します。ビープ音は含まれません。"
+          }
+        }
+      }
+    },
+    "Start VGM Recording" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VGM 録音を開始"
+          }
+        }
+      }
+    },
+    "Start VGM Recording…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VGM 録音を開始…"
+          }
+        }
+      }
+    },
+    "Stop VGM Recording" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VGM 録音を停止"
+          }
+        }
+      }
+    },
+    "Stop VGM recording" : {
+      "comment" : "Status bar record button tooltip while recording VGM",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VGM 録音を停止"
+          }
+        }
+      }
+    },
     "Terminal" : {
       "comment" : "AI tool picker section: terminal-based tools",
       "localizations" : {
@@ -418,6 +480,19 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "現在この操作はできません。"
+          }
+        }
+      }
+    },
+    "VGM" : {
+      "shouldTranslate" : false
+    },
+    "VGZ (compressed VGM)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VGZ（圧縮した VGM）"
           }
         }
       }
