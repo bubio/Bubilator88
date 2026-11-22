@@ -312,7 +312,7 @@ final class AudioRecorder {
   }
 
   /// Sanitize a string for use as a file-name component.
-  private static func sanitize(_ s: String) -> String {
+  static func sanitize(_ s: String) -> String {
     let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return "Bubilator88" }
     let bad = CharacterSet(charactersIn: "/\\:*?\"<>|")

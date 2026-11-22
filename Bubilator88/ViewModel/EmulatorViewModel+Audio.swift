@@ -40,9 +40,16 @@ extension EmulatorViewModel {
 
   // MARK: - Recording
 
-  /// True while a recording session is active. Published through
-  /// AudioRecorder so SwiftUI views can observe it.
-  var isRecording: Bool { audioRecorder.isRecording }
+  /// True while an audio or VGM recording session is active. Published
+  /// through the recorders so SwiftUI views can observe it.
+  var isRecording: Bool { audioRecorder.isRecording || vgmRecorder.isRecording }
+
+  /// Whether the selected format logs the sound chip (VGM) rather than
+  /// capturing audio. A VGM log counts emulated time, so it needs neither x1
+  /// speed nor exclusivity with video recording.
+  var recordsSoundChip: Bool {
+    VGMRecorder.Format(rawValue: Settings.shared.recordingFormat) != nil
+  }
 
   /// Default directory for auto-saved recordings: Settings override,
   /// else `~/Music`.
@@ -63,22 +70,32 @@ extension EmulatorViewModel {
     }
   }
 
-  /// Base name for the recording file: the mounted disk's file name
-  /// (without extension) if available, else "Bubilator88".
+  /// Base name for the recording file: the mounted disk's name if there is
+  /// one, else "Bubilator88".
   private var recordingBaseName: String {
+    recordingDiskName ?? "Bubilator88"
+  }
+
+  /// The mounted disk's file name (without extension), else its name, or
+  /// `nil` with no disk in drive 0.
+  private var recordingDiskName: String? {
     if let fileName = drive0FileName, !fileName.isEmpty {
       return (fileName as NSString).deletingPathExtension
     }
     if drive0Name != "Empty", !drive0Name.isEmpty {
       return drive0Name
     }
-    return "Bubilator88"
+    return nil
   }
 
   /// Start a recording session. Honors Settings.recordingAutoSave — when
   /// false, shows an NSOpenPanel to let the user pick the parent folder.
   func startRecording() {
     guard !isRecording else { return }
+    if let format = VGMRecorder.Format(rawValue: Settings.shared.recordingFormat) {
+      startVGMRecording(format: format)
+      return
+    }
     // Mutually exclusive with video recording.
     guard !videoRecorder.isRecording else {
       showToast(String(localized: "Stop video recording first",
@@ -99,21 +116,7 @@ extension EmulatorViewModel {
     let effectiveSeparation: AudioRecorder.ChannelMode =
       format.supportsSeparated ? requestedSeparation : .stereo
 
-    let baseDir: URL
-    if Settings.shared.recordingAutoSave {
-      baseDir = defaultRecordingDirectory
-    } else {
-      let panel = NSOpenPanel()
-      panel.canChooseDirectories = true
-      panel.canChooseFiles = false
-      panel.canCreateDirectories = true
-      panel.prompt = String(localized: "Choose", comment: "Choose folder prompt")
-      panel.message = String(localized: "Choose a folder to save the recording",
-                             comment: "Save recording message")
-      panel.directoryURL = defaultRecordingDirectory
-      guard panel.runModal() == .OK, let chosen = panel.url else { return }
-      baseDir = chosen
-    }
+    guard let baseDir = chooseRecordingDirectory() else { return }
 
     // Separated mode taps per-channel buffers that are only populated while
     // immersiveOutputEnabled == true. Force it on for the session; stop
@@ -144,8 +147,76 @@ extension EmulatorViewModel {
     }
   }
 
+  /// The folder a new recording goes in: the preset one when auto-saving,
+  /// else the one the user picks. `nil` if they cancel.
+  private func chooseRecordingDirectory() -> URL? {
+    if Settings.shared.recordingAutoSave {
+      return defaultRecordingDirectory
+    }
+    let panel = NSOpenPanel()
+    panel.canChooseDirectories = true
+    panel.canChooseFiles = false
+    panel.canCreateDirectories = true
+    panel.prompt = String(localized: "Choose", comment: "Choose folder prompt")
+    panel.message = String(localized: "Choose a folder to save the recording",
+                           comment: "Save recording message")
+    panel.directoryURL = defaultRecordingDirectory
+    guard panel.runModal() == .OK else { return nil }
+    return panel.url
+  }
+
+  private func startVGMRecording(format: VGMRecorder.Format) {
+    guard let baseDir = chooseRecordingDirectory() else { return }
+    do {
+      // With no disk the file still needs a name, but the GD3 game title
+      // stays empty rather than naming the emulator.
+      try vgmRecorder.start(baseDirectory: baseDir, format: format,
+                            baseName: recordingBaseName,
+                            gameName: recordingDiskName ?? "")
+    } catch {
+      showToast(String(format: String(localized: "Recording failed: %@",
+                                      comment: "Recording error toast with the reason"),
+                       error.localizedDescription))
+      return
+    }
+    emuQueue.async { [weak self] in
+      self?.pc88.startVGMLogging()
+    }
+    showToast(String(format: String(localized: "Recording to %@",
+                                    comment: "Recording started toast"),
+                     vgmRecorder.lastOutputURL?.lastPathComponent ?? ""))
+  }
+
+  /// Stop the VGM log and write its file. Synchronous so it also finishes
+  /// during app termination.
+  private func stopVGMRecording() {
+    let gameName = vgmRecorder.gameName
+    let log = emuQueue.sync { pc88.stopVGMLogging(gameName: gameName) }
+    let url: URL
+    do {
+      // No log means the core's session was gone and no file was written;
+      // saying "stopped" would imply the file named at start exists.
+      guard let written = try vgmRecorder.finish(writing: log) else {
+        showToast(String(localized: "Recording failed", comment: "Recording error toast"))
+        return
+      }
+      url = written
+    } catch {
+      showToast(String(format: String(localized: "Recording failed: %@",
+                                      comment: "Recording error toast with the reason"),
+                       error.localizedDescription))
+      return
+    }
+    NSWorkspace.shared.activateFileViewerSelecting([url])
+    showToast(String(localized: "Recording stopped", comment: "Recording stopped toast"))
+  }
+
   /// Stop the current recording session and reveal the output file in Finder.
   func stopRecording() {
+    if vgmRecorder.isRecording {
+      stopVGMRecording()
+      return
+    }
     guard isRecording else { return }
     let url = audioRecorder.lastOutputURL
     audioRecorder.stop()

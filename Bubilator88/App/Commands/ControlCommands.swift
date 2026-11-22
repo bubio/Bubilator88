@@ -60,9 +60,21 @@ struct ControlCommands: Commands {
       Button {
         viewModel.toggleRecording()
       } label: {
-        if viewModel.audioRecorder.isRecording {
+        if viewModel.vgmRecorder.isRecording {
+          Label("Stop VGM Recording",
+                systemImage: "stop.circle")
+        } else if viewModel.isRecording {
           Label("Stop Audio Recording",
                 systemImage: "stop.circle")
+        } else if viewModel.recordsSoundChip {
+          // VGM logs emulated time, so it needs no x1 and may run
+          // alongside a video recording; say so by naming it.
+          Label(
+            Settings.shared.recordingAutoSave
+              ? "Start VGM Recording"
+              : "Start VGM Recording…",
+            systemImage: "record.circle"
+          )
         } else if viewModel.emulationSpeed != .x1 {
           // Audio is sampled at wall-clock; faster emulation speeds yield
           // pitch-shifted/desynced output. Force x1 first.
@@ -78,9 +90,8 @@ struct ControlCommands: Commands {
         }
       }
       .keyboardShortcut("r", modifiers: [.command, .shift])
-      .disabled(viewModel.videoRecorder.isRecording
-        || (!viewModel.audioRecorder.isRecording
-          && viewModel.emulationSpeed != .x1))
+      .disabled(!viewModel.isRecording && !viewModel.recordsSoundChip
+        && (viewModel.videoRecorder.isRecording || viewModel.emulationSpeed != .x1))
       .disabled(!viewModel.allows(.recording))
 
       Button {

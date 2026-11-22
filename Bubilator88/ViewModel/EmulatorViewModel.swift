@@ -944,6 +944,9 @@ final class EmulatorViewModel {
   /// Multichannel audio recorder (FM/SSG/ADPCM/Rhythm/Mix).
   let audioRecorder = AudioRecorder()
 
+  /// Sound chip (VGM) recorder; runs alongside anything else.
+  let vgmRecorder = VGMRecorder()
+
   /// Screen + audio video recorder (mutually exclusive with audioRecorder).
   let videoRecorder = VideoRecorder()
 
