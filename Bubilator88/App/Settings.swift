@@ -52,6 +52,7 @@ final class Settings {
     static let runInBackground           = "runInBackground"
     static let backgroundAudio           = "backgroundAudio"
     static let automationEnabled         = "automationEnabled"
+    static let discordPresence           = "discordPresence"
     static let automationPort            = "automationPort"
     static let automationToken           = "automationToken"
     static let automationClient          = "automationClient"
@@ -223,6 +224,11 @@ final class Settings {
   /// running. Off, it is muted until the window is seen again.
   var backgroundAudio: Bool = false {
     didSet { UserDefaults.standard.set(backgroundAudio, forKey: Keys.backgroundAudio) }
+  }
+
+  /// Show the game on screen as the user's Discord activity.
+  var discordPresence: Bool = false {
+    didSet { UserDefaults.standard.set(discordPresence, forKey: Keys.discordPresence) }
   }
 
   /// Serve the MCP tools to AI agents on 127.0.0.1:`automationPort`.
@@ -719,6 +725,9 @@ final class Settings {
     }
     if let v = UserDefaults.standard.object(forKey: Keys.automationEnabled) as? Bool {
       automationEnabled = v
+    }
+    if let v = UserDefaults.standard.object(forKey: Keys.discordPresence) as? Bool {
+      discordPresence = v
     }
     if let v = UserDefaults.standard.object(forKey: Keys.automationPort) as? Int {
       automationPort = v

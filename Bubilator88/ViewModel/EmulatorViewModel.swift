@@ -957,6 +957,14 @@ final class EmulatorViewModel {
   /// notifications to keep file I/O infrequent.
   let diskWriteBackScheduler = DiskWriteBackScheduler()
 
+  /// The game on screen as the user's Discord activity.
+  let discordPresence = DiscordPresence()
+
+  /// What the machine last booted, and when. Set only at a reset, a state
+  /// load or a tape put in under BASIC, so mounting or swapping disks
+  /// mid-game leaves it alone.
+  @ObservationIgnored var discordGame: DiscordGame?
+
   /// Synthesised cassette-rewind sound played while ⌘Z is held.
   let rewindSound = RewindSound()
   let gameController = GameControllerManager()
@@ -1445,6 +1453,7 @@ final class EmulatorViewModel {
     heldKeys.removeAll()
     clearRewindBuffer()
     renderScreen()
+    noteGameBooted()
     if wasRunning { start() }
   }
 
@@ -1773,6 +1782,7 @@ final class EmulatorViewModel {
     activeClock8MHz = pc88.clock8MHz
     renderScreen()
     clearRewindBuffer()
+    noteGameBooted()
     if wasRunning { start() }
   }
 

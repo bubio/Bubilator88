@@ -163,6 +163,7 @@ extension EmulatorViewModel {
     if romLoaded { loadROMs() }
     clearRewindBuffer()
     renderScreen()
+    noteGameBooted()
     // `EmulatorMetalView.updateDrawLoop()` pauses the draw loop when
     // `window.occlusionState` says the window is not visible, to save power.
     // Launched from an external launcher such as FlipDisk, the Bubilator88

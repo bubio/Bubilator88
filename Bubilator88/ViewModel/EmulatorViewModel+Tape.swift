@@ -54,6 +54,7 @@ extension EmulatorViewModel {
     // Set here rather than waiting for the 4Hz sampler, so the menus and the
     // status bar update on the same run loop turn as the mount.
     isTapeMounted = true
+    noteTapeInserted()
     return true
   }
 
