@@ -40,11 +40,13 @@ nonisolated enum Gzip {
   /// Expand `data`, a single-member gzip file, refusing output larger than
   /// `limit` bytes so a hostile file cannot exhaust memory.
   static func decompress(_ data: Data, limit: Int) throws(DecompressError) -> Data {
-    let bytes = [UInt8](data)
+    // Zero-based indices; a file read whole already is, so no copy is made.
+    let bytes = data.startIndex == 0 ? data : Data(data)
     guard bytes.count >= 18, bytes[0] == 0x1F, bytes[1] == 0x8B, bytes[2] == 0x08 else {
       throw .notGzip
     }
     let flags = bytes[3]
+    guard flags & 0xE0 == 0 else { throw .corrupt }  // reserved bits
     var position = 10
     if flags & 0x04 != 0 {  // FEXTRA
       guard position + 2 <= bytes.count else { throw .corrupt }
@@ -69,7 +71,7 @@ nonisolated enum Gzip {
         output.append(chunk)
       }
       // Only one member is read; its trailer is the last eight bytes.
-      try filter.write(Data(bytes[position..<(bytes.count - 8)]))
+      try filter.write(bytes[position..<(bytes.count - 8)])
       try filter.finalize()
     } catch {
       throw overflowed ? .tooLarge : .corrupt

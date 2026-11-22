@@ -79,23 +79,30 @@ final class VGMStream: @unchecked Sendable {
 
   /// Keep `queuedBuffers` buffers scheduled. Runs on `queue`.
   private func refill() {
-    while true {
-      let buffer: AVAudioPCMBuffer? = render.withLock { state in
-        guard !state.stopped, state.pending < Self.queuedBuffers else { return nil }
-        let pcm = state.player.render(maxFrames: Self.bufferFrames)
-        guard !pcm.isEmpty else { return nil }
-        guard let buffer = makeBuffer(pcm) else {
-          // The frames are gone; end here rather than wait for a buffer
-          // that never comes.
-          state.stopped = true
-          position.withLock { $0.finished = true }
-          return nil
-        }
-        state.pending += 1
-        return buffer
+    while render.withLock({ !$0.stopped && $0.pending < Self.queuedBuffers && !$0.player.isFinished }) {
+      // Allocated before rendering, so a failure loses no frames.
+      guard let buffer = AVAudioPCMBuffer(pcmFormat: format,
+                                          frameCapacity: AVAudioFrameCount(Self.bufferFrames)),
+            let channels = buffer.floatChannelData else {
+        // Not seen in practice. With nothing queued, no completion will
+        // call back here, so end instead of stalling.
+        if render.withLock({ $0.pending == 0 }) { position.withLock { $0.finished = true } }
+        return
       }
-      guard let buffer else { break }
-      let frames = Int(buffer.frameLength)
+      let frames: Int = render.withLock { state in
+        guard !state.stopped else { return 0 }
+        let pcm = state.player.render(maxFrames: Self.bufferFrames)
+        // The player's output is interleaved; the standard format is not.
+        let frames = min(pcm.count / 2, Self.bufferFrames)
+        for i in 0..<frames {
+          channels[0][i] = pcm[i * 2]
+          channels[1][i] = pcm[i * 2 + 1]
+        }
+        if frames > 0 { state.pending += 1 }
+        return frames
+      }
+      guard frames > 0 else { return }
+      buffer.frameLength = AVAudioFrameCount(frames)
       node.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
         guard let self else { return }
         queue.async { self.played(frames) }
@@ -115,17 +122,5 @@ final class VGMStream: @unchecked Sendable {
       if done { $0.finished = true }
     }
     refill()
-  }
-
-  private func makeBuffer(_ pcm: [Float]) -> AVAudioPCMBuffer? {
-    let frames = pcm.count / 2
-    guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames)),
-          let channels = buffer.floatChannelData else { return nil }
-    buffer.frameLength = AVAudioFrameCount(frames)
-    for i in 0..<frames {
-      channels[0][i] = pcm[i * 2]
-      channels[1][i] = pcm[i * 2 + 1]
-    }
-    return buffer
   }
 }

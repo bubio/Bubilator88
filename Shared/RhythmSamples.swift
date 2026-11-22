@@ -11,17 +11,24 @@ enum RhythmSamples {
   /// synthesizers take.
   static let names = ["BD", "SD", "TOP", "HH", "TOM", "RIM"]
 
+  struct Sample: Sendable {
+    /// Position in `names`.
+    let index: Int
+    let samples: [Int16]
+    let sampleRate: Int
+  }
+
   /// The samples for every sound that could be read, with its index.
   /// `userDirectory` holds the `2608_*.WAV` files; `nil` uses only the
   /// bundled ones.
   static func load(userDirectory: URL?,
-                   bundle: Bundle = .main) -> [(index: Int, samples: [Int16], sampleRate: Int)] {
+                   bundle: Bundle = .main) -> [Sample] {
     names.enumerated().compactMap { index, name in
       let userFile = userDirectory?.appending(component: "2608_\(name).WAV")
       let bundled = bundle.url(forResource: "Rhythm_\(name)", withExtension: "wav")
       for url in [userFile, bundled].compactMap({ $0 }) {
         if let data = try? Data(contentsOf: url), let (samples, sampleRate) = parseWAV(data) {
-          return (index, samples, sampleRate)
+          return Sample(index: index, samples: samples, sampleRate: sampleRate)
         }
       }
       return nil
@@ -66,6 +73,8 @@ enum RhythmSamples {
 
     guard dataOffset > 0, bitsPerSample == 16, numChannels > 0 else { return nil }
     let sampleCount = min(dataSize, data.count - dataOffset) / (2 * numChannels)
+    // An empty file falls back to the bundled sound rather than silence.
+    guard sampleCount > 0 else { return nil }
     var samples = [Int16](repeating: 0, count: sampleCount)
     for i in 0..<sampleCount {
       let byteOffset = dataOffset + i * 2 * numChannels

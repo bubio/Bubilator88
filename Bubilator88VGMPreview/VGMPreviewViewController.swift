@@ -12,12 +12,12 @@ import QuickLookUI
 /// Look's default preview.
 final class VGMPreviewViewController: NSViewController, QLPreviewingController {
   /// Files larger than this, before or after `.vgz` expansion, are refused:
-  /// every command becomes an event in memory, and real logs are far
-  /// smaller.
-  private static let maximumFileSize = 16 * 1024 * 1024
+  /// every command becomes an event in memory. The worst case, 16MB of
+  /// nothing but register writes, peaks at about 300MB in the extension.
+  private nonisolated static let maximumFileSize = 16 * 1024 * 1024
 
   /// A looped file repeats its loop once, then ends.
-  private static let loops = 1
+  private nonisolated static let loops = 1
 
   private enum PreviewError: Error {
     case tooLarge
@@ -25,14 +25,17 @@ final class VGMPreviewViewController: NSViewController, QLPreviewingController {
   }
 
   private var file: VGMFile?
-  private var rhythm: [(index: Int, samples: [Int16], sampleRate: Int)] = []
   private var stream: VGMStream?
   private var timer: Timer?
+  /// Counts `preparePreviewOfFile` calls, so a load that finishes after a
+  /// later one has started is dropped.
+  private var generation = 0
+  private var rhythm: [RhythmSamples.Sample] = []
 
   private let titleLabel = NSTextField(labelWithString: "")
   private let detailLabel = NSTextField(labelWithString: "")
   private let playButton = NSButton()
-  private let progress = NSProgressIndicator()
+  private let progress = ProgressBar()
   private let timeLabel = NSTextField(labelWithString: "")
 
   override func loadView() {
@@ -42,56 +45,73 @@ final class VGMPreviewViewController: NSViewController, QLPreviewingController {
     detailLabel.textColor = .secondaryLabelColor
     detailLabel.lineBreakMode = .byTruncatingTail
 
-    playButton.bezelStyle = .circular
+    // A bare symbol: the glass bar is the control's surface.
+    playButton.isBordered = false
     playButton.imagePosition = .imageOnly
-    playButton.controlSize = .large
+    playButton.symbolConfiguration = .init(pointSize: 15, weight: .semibold)
+    playButton.contentTintColor = .white
     playButton.target = self
     playButton.action = #selector(togglePlayback)
-
-    progress.style = .bar
-    progress.isIndeterminate = false
-    progress.minValue = 0
-    progress.maxValue = 1
 
     timeLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
     timeLabel.textColor = .secondaryLabelColor
 
+    // Finder's preview pane is far narrower than the spacebar panel: the
+    // labels truncate, the bar shrinks, and the time goes last.
+    for label in [titleLabel, detailLabel] {
+      label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    }
+    progress.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    progress.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
     let controls = NSStackView(views: [playButton, progress, timeLabel])
-    controls.spacing = 10
+    controls.setVisibilityPriority(.detachOnlyIfNecessary, for: timeLabel)
+    controls.spacing = 12
     controls.alignment = .centerY
-    let column = NSStackView(views: [titleLabel, detailLabel, controls])
+    controls.edgeInsets = NSEdgeInsets(top: 0, left: 14, bottom: 0, right: 14)
+    // The transport sits on a Liquid Glass capsule, as in the system's
+    // audio preview.
+    let bar = NSGlassEffectView()
+    bar.contentView = controls
+    bar.cornerRadius = 22
+    // Dark glass with light contents in both modes, so the transport reads
+    // on any background: Finder's preview pane is light in light mode.
+    bar.appearance = NSAppearance(named: .darkAqua)
+    bar.tintColor = NSColor.black.withAlphaComponent(0.15)
+    let column = NSStackView(views: [titleLabel, detailLabel, bar])
     column.orientation = .vertical
     column.alignment = .leading
     column.spacing = 6
     column.setCustomSpacing(14, after: detailLabel)
     column.translatesAutoresizingMaskIntoConstraints = false
 
-    // The system background, as the save-state preview uses, so the text
-    // reads the same in light and dark mode rather than over Quick Look's
-    // grey.
-    let root = NSBox()
-    root.boxType = .custom
-    root.borderWidth = 0
-    root.cornerRadius = 0
-    root.fillColor = .windowBackgroundColor
-    root.contentViewMargins = .zero
+    // No background of its own: Quick Look's shows through, as it does
+    // behind the system's audio preview.
+    let root = NSView()
     root.addSubview(column)
     NSLayoutConstraint.activate([
-      column.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 20),
-      column.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -20),
+      column.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
+      column.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
       column.centerYAnchor.constraint(equalTo: root.centerYAnchor),
-      controls.widthAnchor.constraint(equalTo: column.widthAnchor),
+      bar.widthAnchor.constraint(equalTo: column.widthAnchor),
+      bar.heightAnchor.constraint(equalToConstant: 44),
     ])
     view = root
-    preferredContentSize = NSSize(width: 480, height: 140)
+    preferredContentSize = NSSize(width: 480, height: 150)
     showStopped()
   }
 
   func preparePreviewOfFile(at url: URL) async throws {
+    // Quick Look may reuse this controller: drop the previous file first,
+    // which also disables Play while this one loads.
+    generation += 1
+    let current = generation
+    file = nil
     stopPlayback()
-    // Inflating and parsing can take a moment on a large file; keep it off
-    // the main thread.
-    let (file, rhythm) = try await Task.detached { try Self.load(url) }.value
+    titleLabel.stringValue = url.lastPathComponent
+    detailLabel.isHidden = true
+    let (file, rhythm) = try await Self.load(url)
+    guard current == generation else { throw CancellationError() }
     self.file = file
     self.rhythm = rhythm
 
@@ -105,15 +125,19 @@ final class VGMPreviewViewController: NSViewController, QLPreviewingController {
     showStopped()
   }
 
-  private nonisolated static func load(_ url: URL) throws
-    -> (VGMFile, [(index: Int, samples: [Int16], sampleRate: Int)]) {
+  /// Read, expand and parse off the main thread; a large `.vgz` takes a
+  /// moment.
+  @concurrent private nonisolated static func load(_ url: URL) async throws
+    -> (VGMFile, [RhythmSamples.Sample]) {
     let handle = try FileHandle(forReadingFrom: url)
     defer { try? handle.close() }
     var data = try handle.read(upToCount: maximumFileSize + 1) ?? Data()
     guard data.count <= maximumFileSize else { throw PreviewError.tooLarge }
     if Gzip.isGzip(data) {
+      try Task.checkCancellation()
       data = try Gzip.decompress(data, limit: maximumFileSize)
     }
+    try Task.checkCancellation()
     let file = try VGMFile(bytes: [UInt8](data))
     // Nothing to play; Quick Look's default preview says more.
     guard file.samples(loops: loops) > 0 else { throw PreviewError.empty }
@@ -137,24 +161,31 @@ final class VGMPreviewViewController: NSViewController, QLPreviewingController {
     }
     // A paused engine may have stopped on an output device change, and
     // playing a node on a stopped engine raises; start over instead.
-    if let stream, !stream.isRunning {
-      stream.stop()
-      self.stream = nil
-    }
-    if stream == nil {
-      guard let file, let player = try? VGMPlayer(file: file, loops: Self.loops) else { return }
-      for sample in rhythm {
-        try? player.loadRhythmSample(index: sample.index, samples: sample.samples,
-                                     sampleRate: sample.sampleRate)
-      }
-      stream = try? VGMStream(player: player)
-    }
-    guard let stream else { return }
+    if stream?.isRunning == false { stopPlayback() }
+    // Without an output to play to there is no stream; the next press
+    // tries again.
+    guard let stream = stream ?? makeStream() else { return }
+    self.stream = stream
     stream.play()
     setButton(playing: true)
-    timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
-      MainActor.assumeIsolated { self?.tick() }
+    let timer = Timer(timeInterval: 0.2, repeats: true) { [weak self] timer in
+      // Nothing else invalidates it if the controller goes without
+      // `viewWillDisappear`.
+      guard let self else { return timer.invalidate() }
+      MainActor.assumeIsolated { self.tick() }
     }
+    // Common modes, so the position keeps moving while the panel is resized.
+    RunLoop.main.add(timer, forMode: .common)
+    self.timer = timer
+  }
+
+  private func makeStream() -> VGMStream? {
+    guard let file, let player = try? VGMPlayer(file: file, loops: Self.loops) else { return nil }
+    for sample in rhythm {
+      try? player.loadRhythmSample(index: sample.index, samples: sample.samples,
+                                   sampleRate: sample.sampleRate)
+    }
+    return try? VGMStream(player: player)
   }
 
   private func tick() {
@@ -186,7 +217,7 @@ final class VGMPreviewViewController: NSViewController, QLPreviewingController {
   }
 
   private func showPosition(_ played: Int, of total: Int) {
-    progress.doubleValue = total > 0 ? Double(played) / Double(total) : 0
+    progress.fraction = total > 0 ? Double(played) / Double(total) : 0
     timeLabel.stringValue = "\(Self.time(played)) / \(Self.time(total))"
   }
 
